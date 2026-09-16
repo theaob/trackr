@@ -65,9 +65,7 @@ export default function IssueCard({ issue, index, onClick }: IssueCardProps) {
           {/* Bottom Row: Key, Type, Priority, Story Points, Assignee */}
           <div className="flex items-center justify-between mt-1 pt-1">
             <div className="flex items-center gap-1.5">
-              {/* Icon only: the type name is spelled out in the issue detail,
-                  and the board has no room to repeat it on every card. */}
-              <IssueTypeBadge type={issue.type} size="xs" showLabel={false} />
+              <IssueTypeBadge type={issue.type} size="xs" />
               <span className="text-[11px] font-semibold text-jira-gray-600 group-hover:underline">
                 {issue.key}
               </span>

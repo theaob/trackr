@@ -124,12 +124,15 @@ export function IssueTypeBadge({
   type,
   size = "xs",
   className = "",
-  showLabel = true,
+  showLabel = false,
 }: {
   type: IssueType;
   size?: "xs" | "sm" | "md";
   className?: string;
-  /** Off on dense surfaces such as board cards, where the icon carries it. */
+  /**
+   * The type name is spelled out on the issue detail only. Everywhere else the
+   * coloured icon carries it, so lists stay dense and their columns line up.
+   */
   showLabel?: boolean;
 }) {
   const config = ISSUE_TYPE_CONFIG[type] || ISSUE_TYPE_CONFIG.TASK;

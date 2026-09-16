@@ -320,7 +320,7 @@ export default function IssueDetailModal({
         {/* Header Bar */}
         <div className="flex items-center justify-between px-6 py-3 border-b border-jira-gray-200 bg-jira-gray-50 shrink-0">
           <div className="flex items-center gap-2.5">
-            <IssueTypeBadge type={currentIssue.type} size="sm" />
+            <IssueTypeBadge type={currentIssue.type} size="sm" showLabel />
             <span className="text-sm font-bold text-jira-gray-700">{currentIssue.key}</span>
           </div>
 
