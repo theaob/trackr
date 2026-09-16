@@ -29,7 +29,7 @@ export async function getProjectSprints(projectId: string) {
               select: { id: true, key: true, title: true, type: true },
             },
           },
-          orderBy: { order: "asc" },
+          orderBy: [{ order: "asc" }, { createdAt: "asc" }],
           take: SPRINT_ISSUE_LIMIT,
         },
       },

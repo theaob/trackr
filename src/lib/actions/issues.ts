@@ -15,6 +15,7 @@ import {
 import { getCurrentUser } from "@/lib/auth/session";
 import { findMentionedUsers } from "@/lib/mentions";
 import { createIssueWithKey } from "@/lib/issueKeys";
+import { planColumnOrder } from "@/lib/boardOrder";
 
 const USER_SELECT = { select: DISPLAY_USER_SELECT } as const;
 
@@ -56,7 +57,7 @@ export async function getProjectIssues(projectId: string) {
           orderBy: { createdAt: "desc" },
         },
       },
-      orderBy: [{ order: "asc" }, { createdAt: "desc" }],
+      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
       take: 200,
     });
     return issues;
@@ -116,7 +117,7 @@ export async function getBoardIssues(projectId: string, activeSprintId?: string 
           },
         },
       },
-      orderBy: [{ order: "asc" }, { createdAt: "desc" }],
+      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
       take: 150,
     });
     return issues;
@@ -199,7 +200,7 @@ export async function getBacklogIssues(projectId: string) {
             },
           },
         },
-        orderBy: [{ order: "asc" }, { createdAt: "desc" }],
+        orderBy: [{ order: "asc" }, { createdAt: "asc" }],
         take: 300,
       }),
       prisma.issue.findMany({
@@ -218,7 +219,7 @@ export async function getBacklogIssues(projectId: string) {
             },
           },
         },
-        orderBy: [{ order: "asc" }, { createdAt: "desc" }],
+        orderBy: [{ order: "asc" }, { createdAt: "asc" }],
         take: 100,
       }),
     ]);
@@ -280,7 +281,7 @@ export async function getAllCrossProjectIssues(projectId?: string) {
           orderBy: { createdAt: "desc" },
         },
       },
-      orderBy: [{ order: "asc" }, { createdAt: "desc" }],
+      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
       take: 100,
     });
     return issues;
@@ -830,6 +831,9 @@ export async function updateIssue(
   }
 }
 
+/** Guards against a caller submitting an unreasonable reordering payload. */
+const MAX_REORDER_BATCH = 500;
+
 export async function updateIssueStatusAndOrder(
   issueId: string,
   newStatus: IssueStatus,
@@ -840,7 +844,14 @@ export async function updateIssueStatusAndOrder(
     assigneeId?: string | null;
     parentId?: string | null;
     priority?: PriorityLevel;
-  }
+  },
+  /**
+   * Every issue in the destination column, in the order the board now shows
+   * them. Supplying it persists the whole column; without it only the moved
+   * issue's position is stored, which leaves its neighbours on stale values and
+   * lets the board rearrange itself on the next load.
+   */
+  orderedIssueIds?: string[]
 ) {
   try {
     const projectId = await projectIdForIssue(issueId);
@@ -865,9 +876,31 @@ export async function updateIssueStatusAndOrder(
 
     const statusChanged = existing.status !== newStatus;
 
+    // Reordering is confined to the project being edited, whatever ids the
+    // caller supplies.
+    const siblingIds = (orderedIssueIds ?? [])
+      .filter((id) => id !== issueId)
+      .slice(0, MAX_REORDER_BATCH);
+
+    const validSiblingIds = siblingIds.length
+      ? (
+          await prisma.issue.findMany({
+            where: { id: { in: siblingIds }, projectId },
+            select: { id: true },
+          })
+        ).map((row) => row.id)
+      : [];
+
+    const { resolvedOrder, siblingWrites } = planColumnOrder(
+      issueId,
+      orderedIssueIds,
+      validSiblingIds,
+      newOrder
+    );
+
     const updatePayload: Record<string, any> = {
       status: newStatus,
-      order: newOrder,
+      order: resolvedOrder,
     };
 
     if (extraData) {
@@ -882,24 +915,31 @@ export async function updateIssueStatusAndOrder(
       }
     }
 
-    const updated = await prisma.issue.update({
-      where: { id: issueId },
-      data: updatePayload,
-      include: {
-        project: true,
-        assignee: USER_SELECT,
-        reporter: USER_SELECT,
-        version: true,
-        parent: {
-          select: {
-            id: true,
-            key: true,
-            title: true,
-            type: true,
+    // The moved issue and its new neighbours are written together: a partial
+    // write would leave the column in an order nobody asked for.
+    const [updated] = await prisma.$transaction([
+      prisma.issue.update({
+        where: { id: issueId },
+        data: updatePayload,
+        include: {
+          project: true,
+          assignee: USER_SELECT,
+          reporter: USER_SELECT,
+          version: true,
+          parent: {
+            select: {
+              id: true,
+              key: true,
+              title: true,
+              type: true,
+            },
           },
         },
-      },
-    });
+      }),
+      ...siblingWrites.map(({ id, order }) =>
+        prisma.issue.update({ where: { id }, data: { order } })
+      ),
+    ]);
 
     if (statusChanged) {
       await prisma.activityLog.create({

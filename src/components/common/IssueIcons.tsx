@@ -124,27 +124,34 @@ export function IssueTypeBadge({
   type,
   size = "xs",
   className = "",
+  showLabel = true,
 }: {
   type: IssueType;
   size?: "xs" | "sm" | "md";
   className?: string;
+  /** Off on dense surfaces such as board cards, where the icon carries it. */
+  showLabel?: boolean;
 }) {
   const config = ISSUE_TYPE_CONFIG[type] || ISSUE_TYPE_CONFIG.TASK;
   const iconSize = size === "xs" ? "w-2.5 h-2.5" : size === "sm" ? "w-3 h-3" : "w-3.5 h-3.5";
-  const padding =
+  const labelledPadding =
     size === "xs"
       ? "px-1.5 py-0.5 text-[10px]"
       : size === "sm"
       ? "px-2 py-0.5 text-[11px]"
       : "px-2.5 py-1 text-xs";
+  // Square padding when there is no text to sit beside the icon.
+  const iconOnlyPadding = size === "xs" ? "p-1" : size === "sm" ? "p-1.5" : "p-2";
+  const padding = showLabel ? labelledPadding : iconOnlyPadding;
 
   return (
     <span
       title={`Issue Type: ${config.label}`}
-      className={`inline-flex items-center gap-1 font-semibold rounded ${padding} ${config.bg} ${config.text} border ${config.border} shrink-0 select-none shadow-2xs ${className}`}
+      aria-label={showLabel ? undefined : `Issue Type: ${config.label}`}
+      className={`inline-flex items-center ${showLabel ? "gap-1" : ""} font-semibold rounded ${padding} ${config.bg} ${config.text} border ${config.border} shrink-0 select-none shadow-2xs ${className}`}
     >
       <IssueTypeIcon type={type} className={iconSize} />
-      <span>{config.label}</span>
+      {showLabel && <span>{config.label}</span>}
     </span>
   );
 }
