@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validatePersonalAccessToken } from "@/lib/auth/tokens";
+import { TOKEN_PREFIX, validatePersonalAccessToken } from "@/lib/auth/tokens";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         authenticated: false,
-        error: "Missing or malformed Authorization header. Expected: Bearer <jira_pat_...>",
+        error: `Missing or malformed Authorization header. Expected: Bearer <${TOKEN_PREFIX}...>`,
       },
       { status: 401 }
     );

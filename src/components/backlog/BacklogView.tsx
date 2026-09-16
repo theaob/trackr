@@ -696,8 +696,12 @@ export default function BacklogView({
                                     <GripVertical className="w-3.5 h-3.5" />
                                   </div>
 
-                                  <IssueTypeBadge type={issue.type} size="xs" />
-                                  <span className="text-xs font-bold text-jira-gray-600 group-hover:text-jira-blue">
+                                  {/* Fixed-width type and key columns so every row's key starts at the
+                                      same x and the titles line up beneath each other. */}
+                                  <span className="w-[70px] shrink-0 flex">
+                                    <IssueTypeBadge type={issue.type} size="xs" />
+                                  </span>
+                                  <span className="min-w-[88px] shrink-0 text-xs font-bold text-jira-gray-600 group-hover:text-jira-blue">
                                     {issue.key}
                                   </span>
 
@@ -705,7 +709,7 @@ export default function BacklogView({
                                     {issue.title}
                                   </span>
                                   {issue.parent && (
-                                    <span className="text-[10px] bg-purple-100 text-purple-800 font-semibold px-1.5 py-0.5 rounded shrink-0">
+                                    <span className="text-[10px] bg-purple-100 text-purple-800 font-semibold px-1.5 py-0.5 rounded shrink-0 max-w-[150px] truncate">
                                       {issue.parent.title}
                                     </span>
                                   )}
@@ -870,8 +874,11 @@ export default function BacklogView({
                               <GripVertical className="w-3.5 h-3.5" />
                             </div>
 
-                            <IssueTypeBadge type={issue.type} size="xs" />
-                            <span className="text-xs font-bold text-jira-gray-600 group-hover:text-jira-blue">
+                            {/* Fixed-width type and key columns, matching the sprint rows above. */}
+                            <span className="w-[70px] shrink-0 flex">
+                              <IssueTypeBadge type={issue.type} size="xs" />
+                            </span>
+                            <span className="min-w-[88px] shrink-0 text-xs font-bold text-jira-gray-600 group-hover:text-jira-blue">
                               {issue.key}
                             </span>
 
@@ -879,7 +886,7 @@ export default function BacklogView({
                               {issue.title}
                             </span>
                             {issue.parent && (
-                              <span className="text-[10px] bg-purple-100 text-purple-800 font-semibold px-1.5 py-0.5 rounded shrink-0">
+                              <span className="text-[10px] bg-purple-100 text-purple-800 font-semibold px-1.5 py-0.5 rounded shrink-0 max-w-[150px] truncate">
                                 {issue.parent.title}
                               </span>
                             )}

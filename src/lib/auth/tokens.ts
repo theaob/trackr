@@ -2,13 +2,24 @@ import crypto from "crypto";
 import prisma from "@/lib/db";
 import { PUBLIC_USER_SELECT, SessionUser } from "@/lib/auth/publicUser";
 
+/**
+ * Marks a string as a Trackr personal access token.
+ *
+ * Secret scanners key off a fixed prefix like this, and validation rejects
+ * anything without it before touching the database.
+ */
+export const TOKEN_PREFIX = "trackr_pat_";
+
+/** How much of a token is stored in the clear, for display: prefix + 5 chars. */
+export const TOKEN_DISPLAY_PREFIX_LENGTH = TOKEN_PREFIX.length + 5;
+
 /** Personal access tokens are stored as a SHA-256 digest, never in the clear. */
 export function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
 export function generateRawToken(): string {
-  return `jira_pat_${crypto.randomBytes(24).toString("hex")}`;
+  return `${TOKEN_PREFIX}${crypto.randomBytes(24).toString("hex")}`;
 }
 
 export type TokenValidationResult =
@@ -29,7 +40,7 @@ export async function validatePersonalAccessToken(
   rawToken: string
 ): Promise<TokenValidationResult> {
   try {
-    if (!rawToken || !rawToken.startsWith("jira_pat_")) {
+    if (!rawToken || !rawToken.startsWith(TOKEN_PREFIX)) {
       return { valid: false, error: "Invalid token format" };
     }
 

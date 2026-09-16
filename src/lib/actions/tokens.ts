@@ -3,7 +3,11 @@
 import prisma from "@/lib/db";
 import { CreateTokenResult, PersonalAccessToken } from "@/types";
 import { requireUser, toActionError } from "@/lib/auth/guards";
-import { generateRawToken, hashToken } from "@/lib/auth/tokens";
+import {
+  TOKEN_DISPLAY_PREFIX_LENGTH,
+  generateRawToken,
+  hashToken,
+} from "@/lib/auth/tokens";
 
 
 /**
@@ -45,7 +49,7 @@ export async function createPersonalAccessToken(params: {
     const userId = user.id;
     const rawToken = generateRawToken();
     const tokenHash = hashToken(rawToken);
-    const tokenPrefix = rawToken.slice(0, 14); // e.g. "jira_pat_ab123"
+    const tokenPrefix = rawToken.slice(0, TOKEN_DISPLAY_PREFIX_LENGTH); // e.g. "trackr_pat_ab123"
     const lastFour = rawToken.slice(-4);
 
     const expiresAt =
