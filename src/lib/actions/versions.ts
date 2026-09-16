@@ -4,10 +4,19 @@ import prisma from "@/lib/db";
 import { VersionStatus } from "@/types";
 import { revalidatePath } from "next/cache";
 import { triggerWebhooks } from "./webhooks";
+import { PUBLIC_USER_SELECT } from "@/lib/auth/publicUser";
+import {
+  projectIdForVersion,
+  requireProjectAccess,
+  requireProjectPermission,
+  toActionError,
+} from "@/lib/auth/guards";
 
 
 export async function getProjectVersions(projectId: string) {
   try {
+    await requireProjectAccess(projectId);
+
     const versions = await prisma.version.findMany({
       where: { projectId },
       include: {
@@ -66,14 +75,16 @@ export async function getProjectVersions(projectId: string) {
 
 export async function getVersionById(id: string) {
   try {
+    await requireProjectAccess(await projectIdForVersion(id));
+
     return await prisma.version.findUnique({
       where: { id },
       include: {
         project: true,
         issues: {
           include: {
-            assignee: true,
-            reporter: true,
+            assignee: { select: PUBLIC_USER_SELECT },
+            reporter: { select: PUBLIC_USER_SELECT },
           },
           orderBy: { createdAt: "asc" },
         },
@@ -93,6 +104,8 @@ export async function createVersion(data: {
   releaseDate?: string | Date | null;
 }) {
   try {
+    await requireProjectPermission(data.projectId, "MANAGE_VERSIONS");
+
     const project = await prisma.project.findUnique({
       where: { id: data.projectId },
       select: { key: true },
@@ -113,10 +126,9 @@ export async function createVersion(data: {
     try {
       revalidatePath(`/projects/${project.key}/releases`);
     } catch {}
-    return { success: true, version };
+    return { success: true as const, version };
   } catch (error) {
-    console.error("Failed to create version:", error);
-    return { success: false, error: "Failed to create version" };
+    return toActionError(error, "Failed to create version");
   }
 }
 
@@ -131,6 +143,8 @@ export async function updateVersion(
   }
 ) {
   try {
+    await requireProjectPermission(await projectIdForVersion(id), "MANAGE_VERSIONS");
+
     const existing = await prisma.version.findUnique({
       where: { id },
       include: { project: true },
@@ -155,10 +169,9 @@ export async function updateVersion(
     try {
       revalidatePath(`/projects/${existing.project.key}/releases`);
     } catch {}
-    return { success: true, version: updated };
+    return { success: true as const, version: updated };
   } catch (error) {
-    console.error("Failed to update version:", error);
-    return { success: false, error: "Failed to update version" };
+    return toActionError(error, "Failed to update version");
   }
 }
 
@@ -170,11 +183,24 @@ export async function releaseVersion(
   }
 ) {
   try {
+    const projectId = await projectIdForVersion(id);
+    await requireProjectPermission(projectId, "MANAGE_VERSIONS");
+
     const existing = await prisma.version.findUnique({
       where: { id },
       include: { project: true },
     });
     if (!existing) throw new Error("Version not found");
+
+    if (data.moveUnresolvedToVersionId) {
+      const target = await prisma.version.findUnique({
+        where: { id: data.moveUnresolvedToVersionId },
+        select: { projectId: true },
+      });
+      if (!target || target.projectId !== projectId) {
+        return { success: false, error: "Target version not found in this project" };
+      }
+    }
 
     const releaseDate = data.releaseDate ? new Date(data.releaseDate) : new Date();
 
@@ -204,16 +230,17 @@ export async function releaseVersion(
     } catch {}
 
     triggerWebhooks("version:released", updated, existing.projectId);
-    return { success: true, version: updated };
+    return { success: true as const, version: updated };
   } catch (error) {
-    console.error("Failed to release version:", error);
-    return { success: false, error: "Failed to release version" };
+    return toActionError(error, "Failed to release version");
   }
 }
 
 
 export async function archiveVersion(id: string, archive: boolean) {
   try {
+    await requireProjectPermission(await projectIdForVersion(id), "MANAGE_VERSIONS");
+
     const existing = await prisma.version.findUnique({
       where: { id },
       include: { project: true },
@@ -230,15 +257,16 @@ export async function archiveVersion(id: string, archive: boolean) {
     try {
       revalidatePath(`/projects/${existing.project.key}/releases`);
     } catch {}
-    return { success: true, version: updated };
+    return { success: true as const, version: updated };
   } catch (error) {
-    console.error("Failed to archive version:", error);
-    return { success: false, error: "Failed to archive version" };
+    return toActionError(error, "Failed to archive version");
   }
 }
 
 export async function deleteVersion(id: string) {
   try {
+    await requireProjectPermission(await projectIdForVersion(id), "MANAGE_VERSIONS");
+
     const existing = await prisma.version.findUnique({
       where: { id },
       include: { project: true },
@@ -250,23 +278,24 @@ export async function deleteVersion(id: string) {
     try {
       revalidatePath(`/projects/${existing.project.key}/releases`);
     } catch {}
-    return { success: true };
+    return { success: true as const };
   } catch (error) {
-    console.error("Failed to delete version:", error);
-    return { success: false, error: "Failed to delete version" };
+    return toActionError(error, "Failed to delete version");
   }
 }
 
 export async function getVersionReleaseNotesData(versionId: string) {
   try {
+    await requireProjectAccess(await projectIdForVersion(versionId));
+
     const version = await prisma.version.findUnique({
       where: { id: versionId },
       include: {
         project: true,
         issues: {
           include: {
-            assignee: true,
-            reporter: true,
+            assignee: { select: PUBLIC_USER_SELECT },
+            reporter: { select: PUBLIC_USER_SELECT },
           },
           orderBy: [{ type: "asc" }, { key: "asc" }],
         },

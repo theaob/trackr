@@ -31,6 +31,9 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 
+# Runtime data (avatars, generated session secret)
+/data/
+
 # SQLite Database
 *.db
 *.db-journal

@@ -1,9 +1,12 @@
 import React, { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { getProjectByKey, getAllUsers } from "@/lib/actions/projects";
+import { getProjectByKey, getProjectUsers } from "@/lib/actions/projects";
 import { getBacklogIssues } from "@/lib/actions/issues";
 import { getProjectSprints } from "@/lib/actions/sprints";
 import BacklogView from "@/components/backlog/BacklogView";
+import { requirePageUser } from "@/lib/auth/page";
+
+export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: { projectKey: string };
@@ -11,12 +14,14 @@ interface PageProps {
 }
 
 export default async function BacklogPage({ params, searchParams }: PageProps) {
+  await requirePageUser();
+
   const project = await getProjectByKey(params.projectKey);
   if (!project) notFound();
 
   const [issues, users, sprints] = await Promise.all([
     getBacklogIssues(project.id),
-    getAllUsers(),
+    getProjectUsers(project.id),
     getProjectSprints(project.id),
   ]);
 

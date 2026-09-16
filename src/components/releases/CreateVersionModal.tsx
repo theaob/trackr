@@ -69,7 +69,7 @@ export default function CreateVersionModal({
           releaseDate: releaseDate || null,
         });
 
-        if (res.success && res.version) {
+        if (res.success) {
           onSaved(res.version as unknown as Version);
           onClose();
         } else {
@@ -84,7 +84,7 @@ export default function CreateVersionModal({
           releaseDate: releaseDate || null,
         });
 
-        if (res.success && res.version) {
+        if (res.success) {
           onSaved(res.version as unknown as Version);
           onClose();
         } else {

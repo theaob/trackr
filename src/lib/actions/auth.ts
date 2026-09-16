@@ -2,30 +2,29 @@
 
 import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import crypto from "crypto";
+import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import {
+  PUBLIC_USER_SELECT,
+  endSession,
+  getCurrentUser,
+  startSession,
+} from "@/lib/auth/session";
+import { AuthError, requireAnyProjectAdmin, toActionError } from "@/lib/auth/guards";
+import { loadSsoConfig, ssoHasVerificationKey } from "@/lib/auth/sso";
 
-// Helper to hash password using PBKDF2 with salt
-export async function hashPassword(password: string): Promise<string> {
-  const salt = crypto.randomBytes(16).toString("hex");
-  const hash = crypto.pbkdf2Sync(password, salt, 10000, 64, "sha512").toString("hex");
-  return `${salt}:${hash}`;
+const MIN_PASSWORD_LENGTH = 8;
+
+/** The signed-in user, for client components that need to refresh it. */
+export async function getSessionUser() {
+  return getCurrentUser();
 }
 
-// Helper to verify password
-export async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
-  if (!storedHash) return false;
-  const parts = storedHash.split(":");
-  if (parts.length !== 2) {
-    // Fallback for simple SHA-256 legacy or plain fallback
-    const simpleHash = crypto.createHash("sha256").update(password).digest("hex");
-    return simpleHash === storedHash || password === storedHash;
-  }
-  const [salt, originalHash] = parts;
-  const testHash = crypto.pbkdf2Sync(password, salt, 10000, 64, "sha512").toString("hex");
-  return originalHash === testHash;
-}
-
-// Register a new independent user account
+/**
+ * Register an independent local account and sign it in.
+ *
+ * New accounts deliberately receive no project memberships: access is granted
+ * by a project administrator, or by creating a project of their own.
+ */
 export async function registerUser(data: {
   name: string;
   email: string;
@@ -33,130 +32,183 @@ export async function registerUser(data: {
   role?: string;
 }) {
   try {
-    const trimmedEmail = data.email.trim().toLowerCase();
-    const trimmedName = data.name.trim();
+    const email = data.email.trim().toLowerCase();
+    const name = data.name.trim();
 
-    if (!trimmedEmail || !trimmedName) {
+    if (!email || !name) {
       return { success: false, error: "Name and Email are required." };
     }
 
+    if (!data.password || data.password.length < MIN_PASSWORD_LENGTH) {
+      return {
+        success: false,
+        error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters long.`,
+      };
+    }
+
     const existingUser = await prisma.user.findUnique({
-      where: { email: trimmedEmail },
+      where: { email },
+      select: { id: true },
     });
 
     if (existingUser) {
       return { success: false, error: "An account with this email address already exists." };
     }
 
-    const passwordHash = data.password ? await hashPassword(data.password) : null;
-    const userRole = data.role || "Developer";
-
-    const newUser = await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
-        name: trimmedName,
-        email: trimmedEmail,
-        passwordHash,
+        name,
+        email,
+        passwordHash: await hashPassword(data.password),
         authProvider: "LOCAL",
-        role: userRole,
+        role: data.role || "Developer",
       },
+      select: PUBLIC_USER_SELECT,
     });
 
-    // Auto add to existing projects as MEMBER
-    const allProjects = await prisma.project.findMany({ select: { id: true } });
-    for (const proj of allProjects) {
-      await prisma.projectMember.upsert({
-        where: {
-          projectId_userId: {
-            projectId: proj.id,
-            userId: newUser.id,
-          },
-        },
-        create: {
-          projectId: proj.id,
-          userId: newUser.id,
-          role: "MEMBER",
-        },
-        update: {},
-      });
-    }
+    startSession(user.id);
 
     try {
       revalidatePath("/projects");
     } catch {}
 
-    return { success: true, user: newUser };
+    return { success: true as const, user };
   } catch (error) {
-    console.error("Failed to register user:", error);
-    return { success: false, error: "Failed to create user account" };
+    return toActionError(error, "Failed to create user account");
   }
 }
 
-// Login with credentials (Email & Password)
+/**
+ * Sign in with email and password.
+ *
+ * Fails closed: an account without a usable password hash (SSO-only, or never
+ * given one) cannot be signed into on this path.
+ */
 export async function loginWithCredentials(email: string, password?: string) {
+  const genericFailure = { success: false as const, error: "Incorrect email or password." };
+
   try {
     const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail || !password) return genericFailure;
+
     const user = await prisma.user.findUnique({
       where: { email: trimmedEmail },
+      select: { id: true, passwordHash: true },
     });
 
-    if (!user) {
-      return { success: false, error: "No user found with this email address." };
+    if (!user || !user.passwordHash) return genericFailure;
+
+    const { valid, needsRehash } = await verifyPassword(password, user.passwordHash);
+    if (!valid) return genericFailure;
+
+    if (needsRehash) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash: await hashPassword(password) },
+      });
     }
 
-    if (password && user.passwordHash) {
-      const isValid = await verifyPassword(password, user.passwordHash);
-      if (!isValid) {
-        return { success: false, error: "Incorrect password." };
-      }
-    }
+    const safeUser = await prisma.user.findUniqueOrThrow({
+      where: { id: user.id },
+      select: PUBLIC_USER_SELECT,
+    });
 
-    return { success: true, user };
+    startSession(safeUser.id);
+
+    try {
+      revalidatePath("/projects");
+    } catch {}
+
+    return { success: true as const, user: safeUser };
   } catch (error) {
     console.error("Failed to login user:", error);
     return { success: false, error: "Authentication failed." };
   }
 }
 
-// Fetch SSO Configuration
-export async function getSsoConfig() {
+/** Change the signed-in user's own password. */
+export async function changeOwnPassword(currentPassword: string, newPassword: string) {
   try {
-    let config = await prisma.ssoConfig.findUnique({
-      where: { id: "default" },
-    });
+    const session = await getCurrentUser();
+    if (!session) throw new AuthError("You must be signed in to change your password.", 401);
 
-    if (!config) {
-      config = await prisma.ssoConfig.create({
-        data: {
-          id: "default",
-          enabled: true,
-          providerName: "Enterprise SAML/OIDC SSO",
-          issuerUrl: "https://sso.internal.company.com/auth/realms/master",
-          clientId: "trackr-client-id",
-          allowSelfSignedCerts: true,
-          autoProvisionUsers: true,
-          defaultRole: "Developer",
-        },
-      });
+    if (!newPassword || newPassword.length < MIN_PASSWORD_LENGTH) {
+      return {
+        success: false,
+        error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters long.`,
+      };
     }
 
-    return config;
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: session.id },
+      select: { passwordHash: true },
+    });
+
+    // An account with no password yet (SSO-provisioned) can set one; an account
+    // that has one must prove it knows the current value.
+    if (user.passwordHash) {
+      const { valid } = await verifyPassword(currentPassword, user.passwordHash);
+      if (!valid) return { success: false, error: "Current password is incorrect." };
+    }
+
+    await prisma.user.update({
+      where: { id: session.id },
+      data: { passwordHash: await hashPassword(newPassword) },
+    });
+
+    return { success: true as const };
   } catch (error) {
-    console.error("Failed to fetch SSO config:", error);
-    return {
-      id: "default",
-      enabled: true,
-      providerName: "Enterprise SAML/OIDC SSO",
-      issuerUrl: "https://sso.internal.company.com/auth/realms/master",
-      clientId: "trackr-client-id",
-      certificate: null,
-      allowSelfSignedCerts: true,
-      autoProvisionUsers: true,
-      defaultRole: "Developer",
-    };
+    return toActionError(error, "Failed to change password");
   }
 }
 
-// Update SSO Configuration
+export async function logout() {
+  endSession();
+  try {
+    revalidatePath("/", "layout");
+  } catch {}
+  return { success: true as const };
+}
+
+/**
+ * Non-sensitive SSO details for the sign-in screen. Never exposes key material.
+ */
+export async function getSsoPublicConfig() {
+  try {
+    const config = await loadSsoConfig();
+    return {
+      enabled: config.enabled && ssoHasVerificationKey(config),
+      providerName: config.providerName,
+    };
+  } catch (error) {
+    console.error("Failed to fetch SSO config:", error);
+    return { enabled: false, providerName: "Enterprise SSO" };
+  }
+}
+
+/**
+ * Full SSO configuration for the settings screen, minus the client secret;
+ * `hasClientSecret` reports whether one is stored.
+ */
+export async function getSsoConfig() {
+  try {
+    await requireAnyProjectAdmin();
+    const config = await loadSsoConfig();
+
+    const { clientSecret, ...rest } = config;
+    return {
+      ...rest,
+      clientSecret: "",
+      hasClientSecret: !!clientSecret,
+      configured: ssoHasVerificationKey(config),
+    };
+  } catch (error) {
+    if (error instanceof AuthError) return null;
+    console.error("Failed to fetch SSO config:", error);
+    return null;
+  }
+}
+
 export async function updateSsoConfig(data: {
   enabled?: boolean;
   providerName?: string;
@@ -164,133 +216,60 @@ export async function updateSsoConfig(data: {
   clientId?: string | null;
   clientSecret?: string | null;
   certificate?: string | null;
-  allowSelfSignedCerts?: boolean;
   autoProvisionUsers?: boolean;
   defaultRole?: string;
 }) {
   try {
-    const updated = await prisma.ssoConfig.upsert({
+    await requireAnyProjectAdmin();
+
+    const certificate = data.certificate?.trim() || null;
+    if (certificate && !certificate.includes("-----BEGIN CERTIFICATE-----")) {
+      return {
+        success: false,
+        error: "The signing certificate must be a PEM-encoded X.509 certificate.",
+      };
+    }
+
+    const update: Record<string, unknown> = {};
+    if (data.enabled !== undefined) update.enabled = data.enabled;
+    if (data.providerName !== undefined) update.providerName = data.providerName;
+    if (data.issuerUrl !== undefined) update.issuerUrl = data.issuerUrl?.trim() || null;
+    if (data.clientId !== undefined) update.clientId = data.clientId?.trim() || null;
+    if (data.certificate !== undefined) update.certificate = certificate;
+    if (data.autoProvisionUsers !== undefined) {
+      update.autoProvisionUsers = data.autoProvisionUsers;
+    }
+    if (data.defaultRole !== undefined) update.defaultRole = data.defaultRole;
+
+    // An empty client secret means "leave the stored one alone" so that the
+    // settings form does not have to round-trip the value.
+    if (data.clientSecret) update.clientSecret = data.clientSecret.trim();
+
+    await loadSsoConfig();
+    const updated = await prisma.ssoConfig.update({
       where: { id: "default" },
-      create: {
-        id: "default",
-        enabled: data.enabled ?? true,
-        providerName: data.providerName || "Enterprise SAML/OIDC SSO",
-        issuerUrl: data.issuerUrl || null,
-        clientId: data.clientId || null,
-        clientSecret: data.clientSecret || null,
-        certificate: data.certificate || null,
-        allowSelfSignedCerts: data.allowSelfSignedCerts ?? true,
-        autoProvisionUsers: data.autoProvisionUsers ?? true,
-        defaultRole: data.defaultRole || "Developer",
-      },
-      update: { ...data },
+      data: update,
     });
 
-    try {
-      revalidatePath("/projects");
-    } catch {}
-
-    return { success: true, config: updated };
-  } catch (error) {
-    console.error("Failed to update SSO config:", error);
-    return { success: false, error: "Failed to update SSO configuration" };
-  }
-}
-
-// Process SSO Authentication Flow (Supports self-signed certificates)
-export async function processSsoLogin(data: {
-  email: string;
-  name: string;
-  ssoSubjectId?: string;
-  certificatePEM?: string;
-}) {
-  try {
-    const config = await getSsoConfig();
-
-    if (!config.enabled) {
-      return { success: false, error: "SSO Authentication is currently disabled by administrator." };
+    if (updated.enabled && !ssoHasVerificationKey(updated as any)) {
+      return {
+        success: false,
+        error:
+          "SSO cannot be enabled without an X.509 signing certificate or a client secret to verify tokens with.",
+      };
     }
 
-    const trimmedEmail = data.email.trim().toLowerCase();
-    const trimmedName = data.name.trim();
-
-    // Verify self-signed certificate if provided in request or config
-    const certToValidate = data.certificatePEM || config.certificate;
-    let certValidated = true;
-
-    if (certToValidate) {
-      try {
-        // Parse certificate block
-        if (!certToValidate.includes("-----BEGIN CERTIFICATE-----")) {
-          console.warn("SSO Certificate format check: missing standard X.509 PEM headers.");
-        }
-        // Self-signed certificate validation check passed
-        certValidated = true;
-      } catch (certErr) {
-        console.error("SSO Certificate parsing issue:", certErr);
-      }
-    }
-
-    let user = await prisma.user.findUnique({
-      where: { email: trimmedEmail },
-    });
-
-    if (user) {
-      // Update SSO details
-      user = await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          authProvider: "SSO",
-          ssoSubjectId: data.ssoSubjectId || user.ssoSubjectId || `sso_${Date.now()}`,
-        },
-      });
-    } else {
-      if (!config.autoProvisionUsers) {
-        return { success: false, error: "User auto-provisioning is disabled for SSO logins." };
-      }
-
-      // Auto provision new user via SSO
-      user = await prisma.user.create({
-        data: {
-          name: trimmedName,
-          email: trimmedEmail,
-          authProvider: "SSO",
-          ssoSubjectId: data.ssoSubjectId || `sso_${Date.now()}`,
-          role: config.defaultRole || "Developer",
-        },
-      });
-
-      // Auto add to existing projects
-      const allProjects = await prisma.project.findMany({ select: { id: true } });
-      for (const proj of allProjects) {
-        await prisma.projectMember.upsert({
-          where: {
-            projectId_userId: {
-              projectId: proj.id,
-              userId: user.id,
-            },
-          },
-          create: {
-            projectId: proj.id,
-            userId: user.id,
-            role: "MEMBER",
-          },
-          update: {},
-        });
-      }
-    }
-
+    const { clientSecret, ...rest } = updated;
     return {
-      success: true,
-      user,
-      ssoDetails: {
-        providerName: config.providerName,
-        selfSignedAllowed: config.allowSelfSignedCerts,
-        certValidated,
+      success: true as const,
+      config: {
+        ...rest,
+        clientSecret: "",
+        hasClientSecret: !!clientSecret,
+        configured: ssoHasVerificationKey(updated as any),
       },
     };
   } catch (error) {
-    console.error("SSO Authentication processing failed:", error);
-    return { success: false, error: "SSO Authentication failed" };
+    return toActionError(error, "Failed to update SSO configuration");
   }
 }

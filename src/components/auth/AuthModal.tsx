@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { User } from "@/types";
 import { useCurrentUser } from "@/context/UserContext";
-import { registerUser, loginWithCredentials, processSsoLogin, getSsoConfig } from "@/lib/actions/auth";
+import { registerUser, loginWithCredentials, getSsoPublicConfig } from "@/lib/actions/auth";
 import {
   Shield,
   KeyRound,
@@ -26,9 +26,16 @@ interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: (user: User) => void;
+  /** The dedicated sign-in page renders this with no way to dismiss it. */
+  dismissible?: boolean;
 }
 
-export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
+export default function AuthModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  dismissible = true,
+}: AuthModalProps) {
   const { setCurrentUser, setUsers, users } = useCurrentUser();
   const [activeTab, setActiveTab] = useState<"login" | "register" | "sso">("login");
 
@@ -49,7 +56,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
   // Fetch SSO Config on open
   useEffect(() => {
     if (isOpen) {
-      getSsoConfig().then((cfg) => setSsoConfig(cfg));
+      getSsoPublicConfig().then((cfg) => setSsoConfig(cfg));
     }
   }, [isOpen]);
 
@@ -106,36 +113,15 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     }
   };
 
-  const handleSsoLogin = async (simulatedEmail?: string, simulatedName?: string) => {
+  /**
+   * SSO is completed by the identity provider, not by this form: the start
+   * endpoint mints a nonce and state, then redirects to the IdP. Nothing here
+   * can assert an identity.
+   */
+  const handleSsoLogin = () => {
     setError(null);
-    setSuccessMsg(null);
     setLoading(true);
-
-    const targetEmail = simulatedEmail || email || "enterprise.user@company.com";
-    const targetName = simulatedName || name || "Enterprise SSO User";
-
-    try {
-      const res = await processSsoLogin({
-        email: targetEmail,
-        name: targetName,
-        ssoSubjectId: `sso_${Date.now()}`,
-      });
-
-      if (res.success && res.user) {
-        const ssoUser = res.user as unknown as User;
-        setCurrentUser(ssoUser);
-        setUsers(users.some((u) => u.id === ssoUser.id) ? users : [...users, ssoUser]);
-        setSuccessMsg(`SSO Girişi Başarılı! (Self-Signed Sertifika Doğrulandı: ${res.ssoDetails?.certValidated ? "EVET" : "VARSAYILAN"})`);
-        if (onSuccess) onSuccess(ssoUser);
-        setTimeout(() => onClose(), 1200);
-      } else {
-        setError(res.error || "SSO doğrulama hatası.");
-      }
-    } catch (err: any) {
-      setError(err.message || "SSO girişi başarısız.");
-    } finally {
-      setLoading(false);
-    }
+    window.location.href = "/api/v1/auth/sso/start";
   };
 
   return (
@@ -154,12 +140,14 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="text-jira-gray-400 hover:text-white p-1 rounded-md transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          {dismissible && (
+            <button
+              onClick={onClose}
+              className="text-jira-gray-400 hover:text-white p-1 rounded-md transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
         {/* Tab Navigation */}
@@ -198,9 +186,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
           >
             <Building2 className="w-3.5 h-3.5" />
             <span>SSO Entegrasyonu</span>
-            <span className="bg-emerald-100 text-emerald-800 text-[9px] font-bold px-1.5 py-0.2 rounded-full border border-emerald-300">
-              Self-Signed
-            </span>
           </button>
         </div>
 
@@ -244,6 +229,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                   <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
                   <input
                     type="password"
+                    required
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -261,21 +247,24 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                 <span>Giriş Yap</span>
               </button>
 
-              <div className="relative py-2 flex items-center justify-center">
-                <div className="border-t border-jira-gray-200 w-full absolute"></div>
-                <span className="bg-white px-3 text-[11px] text-jira-gray-500 relative font-medium">veya</span>
-              </div>
+              {ssoConfig?.enabled && (
+                <>
+                  <div className="relative py-2 flex items-center justify-center">
+                    <div className="border-t border-jira-gray-200 w-full absolute"></div>
+                    <span className="bg-white px-3 text-[11px] text-jira-gray-500 relative font-medium">veya</span>
+                  </div>
 
-              {/* SSO Direct Action */}
-              <button
-                type="button"
-                onClick={() => handleSsoLogin()}
-                disabled={loading}
-                className="w-full py-2 bg-jira-navy hover:bg-jira-navy/90 text-white text-xs font-semibold rounded-md flex items-center justify-center gap-2 border border-jira-navy transition-colors"
-              >
-                <Building2 className="w-4 h-4 text-emerald-400" />
-                <span>{ssoConfig?.providerName || "Kurumsal SSO"} ile Giriş Yap</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={handleSsoLogin}
+                    disabled={loading}
+                    className="w-full py-2 bg-jira-navy hover:bg-jira-navy/90 text-white text-xs font-semibold rounded-md flex items-center justify-center gap-2 border border-jira-navy transition-colors"
+                  >
+                    <Building2 className="w-4 h-4 text-emerald-400" />
+                    <span>{ssoConfig?.providerName || "Kurumsal SSO"} ile Giriş Yap</span>
+                  </button>
+                </>
+              )}
             </form>
           )}
 
@@ -319,7 +308,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                   <input
                     type="password"
                     required
-                    placeholder="Minimum 6 karakter"
+                    minLength={8}
+                    placeholder="Minimum 8 karakter"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue outline-none text-jira-navy"
@@ -353,63 +343,57 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
             </form>
           )}
 
-          {/* TAB 3: SSO IDENTITY PROVIDER DETAILS */}
+          {/* TAB 3: SSO IDENTITY PROVIDER STATUS */}
           {activeTab === "sso" && (
             <div className="space-y-4 text-xs">
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-jira-navy">SSO Sağlayıcısı:</span>
-                  <span className="font-semibold text-jira-blue">{ssoConfig?.providerName || "Keycloak / SAML 2.0"}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-jira-navy">Issuer / Metadata URL:</span>
-                  <span className="font-mono text-[11px] text-jira-gray-700 truncate max-w-[240px]">
-                    {ssoConfig?.issuerUrl || "https://sso.internal.company.com/auth"}
+                  <span className="font-semibold text-jira-blue">
+                    {ssoConfig?.providerName || "Yapılandırılmadı"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-jira-navy">Self-Signed Cert Desteği:</span>
-                  <span className="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-[10px]">
-                    <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                    ETKİN (Olay Günlüğü Aktif)
-                  </span>
+                  <span className="font-bold text-jira-navy">Durum:</span>
+                  {ssoConfig?.enabled ? (
+                    <span className="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-[10px]">
+                      <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                      ETKİN
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 text-[10px]">
+                      <AlertCircle className="w-3 h-3 text-amber-700" />
+                      DEVRE DIŞI
+                    </span>
+                  )}
                 </div>
               </div>
 
               <div className="border border-jira-gray-200 rounded-lg p-3 bg-white space-y-3">
-                <h4 className="font-bold text-jira-navy flex items-center gap-1.5">
-                  <ExternalLink className="w-3.5 h-3.5 text-jira-blue" />
-                  <span>Hızlı SSO Bağlantı Testi (Simülasyon)</span>
-                </h4>
-                <p className="text-jira-gray-600 text-[11px]">
-                  Öz-imzalı (Self-Signed) sertifikanız ile IdP üzerinden örnek bir kullanıcı hesabı ile anında oturum açın:
+                <p className="text-jira-gray-600 text-[11px] leading-relaxed">
+                  SSO oturumu kimlik sağlayıcınız (IdP) tarafından imzalanan bir ID
+                  token ile açılır. Trackr yalnızca imzası, issuer, audience, süre ve
+                  nonce değerleri doğrulanan tokenları kabul eder; bu ekrandan kimlik
+                  bildirilemez.
                 </p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                {ssoConfig?.enabled ? (
                   <button
-                    onClick={() => handleSsoLogin("lead.dev@company.com", "Selin Arslan (Lead)")}
+                    type="button"
+                    onClick={handleSsoLogin}
                     disabled={loading}
-                    className="p-2.5 bg-jira-gray-100 hover:bg-jira-gray-200 border border-jira-gray-300 rounded-md text-left transition-colors flex items-center justify-between"
+                    className="w-full py-2 bg-jira-navy hover:bg-jira-navy/90 text-white text-xs font-semibold rounded-md flex items-center justify-center gap-2 border border-jira-navy transition-colors"
                   >
-                    <div>
-                      <div className="font-bold text-jira-navy">Selin Arslan</div>
-                      <div className="text-[10px] text-jira-gray-600">lead.dev@company.com</div>
-                    </div>
-                    <Building2 className="w-4 h-4 text-jira-blue" />
+                    <ExternalLink className="w-4 h-4 text-emerald-400" />
+                    <span>Kimlik Sağlayıcıya Yönlendir</span>
                   </button>
-
-                  <button
-                    onClick={() => handleSsoLogin("qa.eng@company.com", "Deniz Kaya (QA)")}
-                    disabled={loading}
-                    className="p-2.5 bg-jira-gray-100 hover:bg-jira-gray-200 border border-jira-gray-300 rounded-md text-left transition-colors flex items-center justify-between"
-                  >
-                    <div>
-                      <div className="font-bold text-jira-navy">Deniz Kaya</div>
-                      <div className="text-[10px] text-jira-gray-600">qa.eng@company.com</div>
-                    </div>
-                    <Building2 className="w-4 h-4 text-emerald-600" />
-                  </button>
-                </div>
+                ) : (
+                  <p className="text-[11px] text-jira-gray-500">
+                    Yönetici, Proje Ayarları &rarr; SSO sekmesinden issuer, client id ve
+                    X.509 sertifikası (veya client secret) tanımladığında bu seçenek
+                    etkinleşir.
+                  </p>
+                )}
               </div>
             </div>
           )}

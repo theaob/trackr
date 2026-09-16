@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validatePersonalAccessToken } from "@/lib/actions/tokens";
+import { validatePersonalAccessToken } from "@/lib/auth/tokens";
 
 export const dynamic = "force-dynamic";
 
@@ -16,15 +16,12 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const token = authHeader.replace("Bearer ", "").trim();
+  const token = authHeader.slice("Bearer ".length).trim();
   const result = await validatePersonalAccessToken(token);
 
-  if (!result.valid || !result.user) {
+  if (!result.valid) {
     return NextResponse.json(
-      {
-        authenticated: false,
-        error: result.error || "Invalid or expired token",
-      },
+      { authenticated: false, error: result.error },
       { status: 401 }
     );
   }

@@ -1,46 +1,83 @@
+import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { processSsoLogin, getSsoConfig } from "@/lib/actions/auth";
+import { loginWithIdToken } from "@/lib/auth/sso";
+import { SSO_STATE_COOKIE, parseSsoState } from "@/lib/auth/ssoState";
+import { startSession } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
+function timingSafeEquals(a: string, b: string): boolean {
+  const left = Buffer.from(a, "utf8");
+  const right = Buffer.from(b, "utf8");
+  if (left.length !== right.length) return false;
+  return crypto.timingSafeEqual(left, right);
+}
+
+/**
+ * Identity provider callback.
+ *
+ * A session is created only from an ID token whose signature, issuer,
+ * audience, expiry and nonce all verify against the stored configuration.
+ * No identity is ever taken from request parameters.
+ */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json().catch(() => ({}));
-    const email = body.email || body.user?.email;
-    const name = body.name || body.user?.name || email?.split("@")[0] || "SSO User";
-    const ssoSubjectId = body.sub || body.subjectId || body.nameID;
+    const contentType = request.headers.get("content-type") || "";
 
-    if (!email) {
-      return NextResponse.json(
-        { success: false, error: "SSO assertion missing required email claim." },
-        { status: 400 }
+    let idToken: string | undefined;
+    let state: string | undefined;
+    let wantsHtmlRedirect = false;
+
+    if (contentType.includes("application/json")) {
+      const body = await request.json().catch(() => ({} as any));
+      idToken = body?.id_token;
+      state = body?.state;
+    } else {
+      // OIDC form_post response mode.
+      const form = await request.formData().catch(() => null);
+      idToken = (form?.get("id_token") as string | null) ?? undefined;
+      state = (form?.get("state") as string | null) ?? undefined;
+      wantsHtmlRedirect = true;
+
+      const providerError = form?.get("error");
+      if (typeof providerError === "string" && providerError) {
+        return fail(request, "The identity provider rejected the login.", 401, wantsHtmlRedirect);
+      }
+    }
+
+    if (!idToken) {
+      return fail(request, "SSO response did not include an ID token.", 400, wantsHtmlRedirect);
+    }
+
+    const pending = parseSsoState(request.cookies.get(SSO_STATE_COOKIE)?.value);
+    if (!pending) {
+      return fail(
+        request,
+        "This login attempt has expired. Start again from the sign-in page.",
+        400,
+        wantsHtmlRedirect
       );
     }
 
-    const config = await getSsoConfig();
-
-    if (config.allowSelfSignedCerts) {
-      // Configure Node/HTTPS TLS bypass for self-signed certificates
-      process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+    if (!state || !timingSafeEquals(state, pending.state)) {
+      return fail(request, "SSO state did not match this login attempt.", 400, wantsHtmlRedirect);
     }
 
-    const result = await processSsoLogin({
-      email,
-      name,
-      ssoSubjectId,
-      certificatePEM: config.certificate || undefined,
-    });
+    const result = await loginWithIdToken(idToken, pending.nonce);
 
     if (!result.success) {
-      return NextResponse.json({ success: false, error: result.error }, { status: 401 });
+      return fail(request, result.error, result.status, wantsHtmlRedirect);
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "SSO authentication successful",
-      user: result.user,
-      ssoDetails: result.ssoDetails,
-    });
+    startSession(result.user.id);
+
+    const response = wantsHtmlRedirect
+      ? NextResponse.redirect(new URL("/projects", request.nextUrl.origin), 303)
+      : NextResponse.json({ success: true, user: result.user });
+
+    // The attempt is single-use.
+    response.cookies.delete({ name: SSO_STATE_COOKIE, path: "/api/v1/auth/sso" });
+    return response;
   } catch (error) {
     console.error("SSO Callback Error:", error);
     return NextResponse.json(
@@ -50,28 +87,33 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams;
-  const email = searchParams.get("email");
-  const name = searchParams.get("name") || email?.split("@")[0] || "SSO User";
+function fail(
+  request: NextRequest,
+  message: string,
+  status: number,
+  redirect: boolean
+): NextResponse {
+  const response = redirect
+    ? NextResponse.redirect(
+        new URL(`/login?sso_error=${encodeURIComponent(message)}`, request.nextUrl.origin),
+        303
+      )
+    : NextResponse.json({ success: false, error: message }, { status });
 
-  if (!email) {
-    return NextResponse.json(
-      { error: "Missing email parameter in SSO GET callback" },
-      { status: 400 }
-    );
-  }
+  response.cookies.delete({ name: SSO_STATE_COOKIE, path: "/api/v1/auth/sso" });
+  return response;
+}
 
-  const result = await processSsoLogin({
-    email,
-    name,
-    ssoSubjectId: `sso_get_${Date.now()}`,
-  });
-
-  if (!result.success) {
-    return NextResponse.json({ success: false, error: result.error }, { status: 401 });
-  }
-
-  // Redirect to project directory on successful SSO login
-  return NextResponse.redirect(new URL(`/projects?sso_login=success&user=${encodeURIComponent(result.user!.email)}`, request.url));
+/**
+ * Logging in from query parameters is not supported: it allowed anyone to
+ * assume any identity by visiting a URL.
+ */
+export async function GET() {
+  return NextResponse.json(
+    {
+      error:
+        "SSO login must be completed with a signed ID token posted by the identity provider. Start at /api/v1/auth/sso/start.",
+    },
+    { status: 405, headers: { Allow: "POST" } }
+  );
 }

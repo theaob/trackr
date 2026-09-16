@@ -1,12 +1,19 @@
 "use server";
 
 import prisma from "@/lib/db";
-import { revalidatePath } from "next/cache";
+import { requireUser, toActionError } from "@/lib/auth/guards";
 
-export async function getUserNotifications(userId: string) {
+/**
+ * Notifications belong to the signed-in user.
+ *
+ * Every entry point below ignores any caller-supplied user id and scopes the
+ * query to the session, so one account can never read or clear another's.
+ */
+export async function getUserNotifications(_userId?: string) {
   try {
+    const user = await requireUser();
     return await prisma.notification.findMany({
-      where: { userId },
+      where: { userId: user.id },
       orderBy: { createdAt: "desc" },
       take: 30,
     });
@@ -18,48 +25,33 @@ export async function getUserNotifications(userId: string) {
 
 export async function markNotificationAsRead(id: string) {
   try {
-    const updated = await prisma.notification.update({
-      where: { id },
+    const user = await requireUser();
+
+    // Scoped update: a notification belonging to someone else matches nothing.
+    const result = await prisma.notification.updateMany({
+      where: { id, userId: user.id },
       data: { read: true },
     });
-    return { success: true, notification: updated };
+
+    if (result.count === 0) {
+      return { success: false as const, error: "Notification not found" };
+    }
+
+    return { success: true as const };
   } catch (error) {
-    console.error("Failed to mark notification as read:", error);
-    return { success: false, error: "Failed to update notification" };
+    return toActionError(error, "Failed to update notification");
   }
 }
 
-export async function markAllNotificationsAsRead(userId: string) {
+export async function markAllNotificationsAsRead(_userId?: string) {
   try {
+    const user = await requireUser();
     await prisma.notification.updateMany({
-      where: { userId, read: false },
+      where: { userId: user.id, read: false },
       data: { read: true },
     });
-    return { success: true };
+    return { success: true as const };
   } catch (error) {
-    console.error("Failed to mark all notifications as read:", error);
-    return { success: false, error: "Failed to update notifications" };
-  }
-}
-
-export async function createNotification(
-  userId: string,
-  title: string,
-  message: string,
-  link?: string
-) {
-  try {
-    const notification = await prisma.notification.create({
-      data: {
-        userId,
-        title,
-        message,
-        link: link || null,
-      },
-    });
-    return { success: true, notification };
-  } catch (error) {
-    console.error("Failed to create notification:", error);
-    return { success: false, error: "Failed to create notification" };
+    return toActionError(error, "Failed to update notifications");
   }
 }

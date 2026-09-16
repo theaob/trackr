@@ -4,16 +4,31 @@ import prisma from "@/lib/db";
 import { IssueStatus, IssueType, PriorityLevel } from "@/types";
 import { revalidatePath } from "next/cache";
 import { triggerWebhooks } from "./webhooks";
+import { PUBLIC_USER_SELECT } from "@/lib/auth/publicUser";
+import {
+  accessibleProjectIds,
+  projectIdForIssue,
+  requireProjectAccess,
+  requireProjectPermission,
+  requireUser,
+  toActionError,
+} from "@/lib/auth/guards";
+import { findMentionedUsers } from "@/lib/mentions";
+import { createIssueWithKey } from "@/lib/issueKeys";
+
+const USER_SELECT = { select: PUBLIC_USER_SELECT } as const;
 
 
 export async function getProjectIssues(projectId: string) {
   try {
+    await requireProjectAccess(projectId);
+
     const issues = await prisma.issue.findMany({
       where: { projectId },
       include: {
         project: true,
-        assignee: true,
-        reporter: true,
+        assignee: USER_SELECT,
+        reporter: USER_SELECT,
         parent: {
           select: {
             id: true,
@@ -24,19 +39,19 @@ export async function getProjectIssues(projectId: string) {
         },
         children: {
           include: {
-            assignee: true,
+            assignee: USER_SELECT,
           },
           orderBy: { createdAt: "asc" },
         },
         comments: {
           include: {
-            author: true,
+            author: USER_SELECT,
           },
           orderBy: { createdAt: "desc" },
         },
         activityLogs: {
           include: {
-            user: true,
+            user: USER_SELECT,
           },
           orderBy: { createdAt: "desc" },
         },
@@ -51,16 +66,46 @@ export async function getProjectIssues(projectId: string) {
   }
 }
 
+/**
+ * Epics only, for the parent pickers in the project chrome. Kept separate so
+ * the layout does not have to load the project's issues to find them.
+ */
+export async function getProjectEpics(projectId: string) {
+  try {
+    await requireProjectAccess(projectId);
+
+    return await prisma.issue.findMany({
+      where: { projectId, type: "EPIC" },
+      select: {
+        id: true,
+        key: true,
+        title: true,
+        type: true,
+        status: true,
+        priority: true,
+        projectId: true,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 200,
+    });
+  } catch (error) {
+    console.error("Failed to fetch project epics:", error);
+    return [];
+  }
+}
+
 export async function getBoardIssues(projectId: string, activeSprintId?: string | null) {
   try {
+    await requireProjectAccess(projectId);
+
     const issues = await prisma.issue.findMany({
       where: activeSprintId
         ? { projectId, sprintId: activeSprintId }
         : { projectId, sprintId: null, status: { not: "BACKLOG" } },
       include: {
         project: true,
-        assignee: true,
-        reporter: true,
+        assignee: USER_SELECT,
+        reporter: USER_SELECT,
         version: true,
         parent: {
           select: {
@@ -83,14 +128,16 @@ export async function getBoardIssues(projectId: string, activeSprintId?: string 
 
 export async function getIssueByKeyOrId(keyOrId: string) {
   try {
+    await requireUser();
+
     const issue = await prisma.issue.findFirst({
       where: {
         OR: [{ id: keyOrId }, { key: keyOrId }, { key: keyOrId.toUpperCase() }],
       },
       include: {
         project: true,
-        assignee: true,
-        reporter: true,
+        assignee: USER_SELECT,
+        reporter: USER_SELECT,
         version: true,
         sprint: true,
         parent: {
@@ -103,24 +150,28 @@ export async function getIssueByKeyOrId(keyOrId: string) {
         },
         children: {
           include: {
-            assignee: true,
+            assignee: USER_SELECT,
           },
           orderBy: { createdAt: "asc" },
         },
         comments: {
           include: {
-            author: true,
+            author: USER_SELECT,
           },
           orderBy: { createdAt: "desc" },
         },
         activityLogs: {
           include: {
-            user: true,
+            user: USER_SELECT,
           },
           orderBy: { createdAt: "desc" },
         },
       },
     });
+
+    if (!issue) return null;
+    await requireProjectAccess(issue.projectId);
+
     return issue;
   } catch (error) {
     console.error("Failed to fetch issue by key or id:", error);
@@ -130,14 +181,16 @@ export async function getIssueByKeyOrId(keyOrId: string) {
 
 export async function getBacklogIssues(projectId: string) {
   try {
+    await requireProjectAccess(projectId);
+
     // Return issues in sprints (up to 300) + top backlog items (up to 100)
     const [sprintIssues, backlogIssues] = await Promise.all([
       prisma.issue.findMany({
         where: { projectId, sprintId: { not: null } },
         include: {
           project: true,
-          assignee: true,
-          reporter: true,
+          assignee: USER_SELECT,
+          reporter: USER_SELECT,
           version: true,
           parent: {
             select: {
@@ -155,8 +208,8 @@ export async function getBacklogIssues(projectId: string) {
         where: { projectId, sprintId: null, status: "BACKLOG" },
         include: {
           project: true,
-          assignee: true,
-          reporter: true,
+          assignee: USER_SELECT,
+          reporter: USER_SELECT,
           version: true,
           parent: {
             select: {
@@ -181,12 +234,25 @@ export async function getBacklogIssues(projectId: string) {
 
 export async function getAllCrossProjectIssues(projectId?: string) {
   try {
+    const user = await requireUser();
+
+    // Never reaches beyond the projects the caller belongs to.
+    let where: any;
+    if (projectId) {
+      await requireProjectAccess(projectId);
+      where = { projectId };
+    } else {
+      const ids = await accessibleProjectIds(user.id);
+      if (ids.length === 0) return [];
+      where = { projectId: { in: ids } };
+    }
+
     const issues = await prisma.issue.findMany({
-      where: projectId ? { projectId } : undefined,
+      where,
       include: {
         project: true,
-        assignee: true,
-        reporter: true,
+        assignee: USER_SELECT,
+        reporter: USER_SELECT,
         version: true,
         parent: {
           select: {
@@ -198,19 +264,19 @@ export async function getAllCrossProjectIssues(projectId?: string) {
         },
         children: {
           include: {
-            assignee: true,
+            assignee: USER_SELECT,
           },
           orderBy: { createdAt: "asc" },
         },
         comments: {
           include: {
-            author: true,
+            author: USER_SELECT,
           },
           orderBy: { createdAt: "desc" },
         },
         activityLogs: {
           include: {
-            user: true,
+            user: USER_SELECT,
           },
           orderBy: { createdAt: "desc" },
         },
@@ -244,11 +310,19 @@ export interface PaginatedIssuesParams {
 }
 
 export async function getPaginatedIssues(params: PaginatedIssuesParams) {
+  const empty = { issues: [], totalCount: 0, page: 1, pageSize: 50, totalPages: 0 };
+
   try {
+    const user = await requireUser();
     const where: any = {};
 
     if (params.projectId && params.projectId !== "ALL") {
+      await requireProjectAccess(params.projectId);
       where.projectId = params.projectId;
+    } else {
+      const ids = await accessibleProjectIds(user.id);
+      if (ids.length === 0) return empty;
+      where.projectId = { in: ids };
     }
 
     if (params.type && params.type !== "ALL") {
@@ -329,8 +403,8 @@ export async function getPaginatedIssues(params: PaginatedIssuesParams) {
         where,
         include: {
           project: true,
-          assignee: true,
-          reporter: true,
+          assignee: USER_SELECT,
+          reporter: USER_SELECT,
           version: true,
           parent: {
             select: {
@@ -340,14 +414,9 @@ export async function getPaginatedIssues(params: PaginatedIssuesParams) {
               type: true,
             },
           },
-          comments: {
-            include: { author: true },
-            orderBy: { createdAt: "desc" },
-          },
-          activityLogs: {
-            include: { user: true },
-            orderBy: { createdAt: "desc" },
-          },
+          // Comment and activity threads are loaded by the detail modal, not
+          // eagerly for every row of the table.
+          _count: { select: { comments: true } },
         },
         orderBy,
         skip,
@@ -367,13 +436,7 @@ export async function getPaginatedIssues(params: PaginatedIssuesParams) {
     };
   } catch (error) {
     console.error("Failed to fetch paginated issues:", error);
-    return {
-      issues: [],
-      totalCount: 0,
-      page: 1,
-      pageSize: 50,
-      totalPages: 0,
-    };
+    return empty;
   }
 }
 
@@ -392,79 +455,72 @@ export async function createIssue(data: {
   storyPoints?: number | null;
 }) {
   try {
+    const { user } = await requireProjectPermission(data.projectId, "CREATE_ISSUE");
+
+    const title = data.title?.trim();
+    if (!title) return { success: false, error: "Issue title is required" };
+
     const project = await prisma.project.findUnique({
       where: { id: data.projectId },
       select: { key: true },
     });
-
     if (!project) throw new Error("Project not found");
 
-    // Fast indexed count to determine next key
-    const issueCount = await prisma.issue.count({
-      where: { projectId: data.projectId },
+    const related = await validateIssueRelations(data.projectId, {
+      sprintId: data.sprintId,
+      versionId: data.versionId,
+      parentId: data.parentId,
+      assigneeId: data.assigneeId,
     });
+    if (related.error) return { success: false, error: related.error };
 
-    let nextNum = issueCount + 1;
-    let nextKey = `${project.key}-${nextNum}`;
-    while (await prisma.issue.findUnique({ where: { key: nextKey }, select: { id: true } })) {
-      nextNum++;
-      nextKey = `${project.key}-${nextNum}`;
-    }
+    // The reporter is always the caller: it is an audit field, not an input.
+    const reporterId = user.id;
 
-    if (data.sprintId) {
-      const targetSprint = await prisma.sprint.findUnique({
-        where: { id: data.sprintId },
-      });
-      if (!targetSprint) throw new Error("Sprint not found");
-      if (targetSprint.status === "COMPLETED") {
-        return { success: false, error: "Cannot add items to finished sprints" };
-      }
-    }
-
-    const newIssue = await prisma.issue.create({
-      data: {
-        key: nextKey,
-        title: data.title.trim(),
-        description: data.description || "",
-        type: data.type,
-        priority: data.priority || "MEDIUM",
-        status: data.status || "TODO",
-        storyPoints: data.storyPoints ?? null,
-        projectId: data.projectId,
-        sprintId: data.sprintId || null,
-        versionId: data.versionId || null,
-        assigneeId: data.assigneeId || null,
-        reporterId: data.reporterId || null,
-        parentId: data.parentId || null,
-      },
-      include: {
-        assignee: true,
-        reporter: true,
-        version: true,
-        parent: {
-          select: {
-            id: true,
-            key: true,
-            title: true,
-            type: true,
+    const newIssue = await createIssueWithKey(data.projectId, project.key, (key) =>
+      prisma.issue.create({
+        data: {
+          key,
+          title,
+          description: data.description || "",
+          type: data.type,
+          priority: data.priority || "MEDIUM",
+          status: data.status || "TODO",
+          storyPoints: data.storyPoints ?? null,
+          projectId: data.projectId,
+          sprintId: data.sprintId || null,
+          versionId: data.versionId || null,
+          assigneeId: data.assigneeId || null,
+          reporterId,
+          parentId: data.parentId || null,
+        },
+        include: {
+          assignee: USER_SELECT,
+          reporter: USER_SELECT,
+          version: true,
+          parent: {
+            select: {
+              id: true,
+              key: true,
+              title: true,
+              type: true,
+            },
           },
         },
+      })
+    );
+
+    await prisma.activityLog.create({
+      data: {
+        issueId: newIssue.id,
+        userId: reporterId,
+        action: "CREATED",
+        field: "issue",
+        newValue: newIssue.key,
       },
     });
 
-    if (data.reporterId) {
-      await prisma.activityLog.create({
-        data: {
-          issueId: newIssue.id,
-          userId: data.reporterId,
-          action: "CREATED",
-          field: "issue",
-          newValue: newIssue.key,
-        },
-      });
-    }
-
-    if (data.assigneeId && data.assigneeId !== data.reporterId) {
+    if (data.assigneeId && data.assigneeId !== reporterId) {
       await prisma.notification.create({
         data: {
           userId: data.assigneeId,
@@ -475,44 +531,32 @@ export async function createIssue(data: {
       });
     }
 
-    // Notify users mentioned in issue description
-    if (data.description) {
-      const allUsers = await prisma.user.findMany();
-      const descLower = data.description.toLowerCase();
-      const mentionedUsers = allUsers.filter((u) => {
-        if (u.id === data.reporterId || u.id === data.assigneeId) return false;
-        const fullNamePattern = `@${u.name.toLowerCase()}`;
-        const bracketPattern = `@[${u.name.toLowerCase()}]`;
-        const firstNamePattern = `@${u.name.split(" ")[0].toLowerCase()}`;
-        return (
-          descLower.includes(fullNamePattern) ||
-          descLower.includes(bracketPattern) ||
-          new RegExp(`\\b${firstNamePattern}\\b`, "i").test(data.description!)
-        );
+    const mentioned = await findMentionedUsers(data.projectId, data.description || "", {
+      exclude: [reporterId, data.assigneeId],
+    });
+
+    if (mentioned.length > 0) {
+      const snippet = (data.description || "").slice(0, 60);
+      const ellipsis = (data.description || "").length > 60 ? "..." : "";
+
+      await prisma.notification.createMany({
+        data: mentioned.map((mUser) => ({
+          userId: mUser.id,
+          title: `Mentioned in ${newIssue.key}`,
+          message: `You were mentioned in ${newIssue.key}: "${snippet}${ellipsis}"`,
+          link: `/projects/${project.key}/board?selectedIssue=${newIssue.key}`,
+        })),
       });
 
-      for (const mUser of mentionedUsers) {
-        await prisma.notification.create({
-          data: {
-            userId: mUser.id,
-            title: `Mentioned in ${newIssue.key}`,
-            message: `You were mentioned in ${newIssue.key}: "${data.description.slice(0, 60)}${data.description.length > 60 ? "..." : ""}"`,
-            link: `/projects/${project.key}/board?selectedIssue=${newIssue.key}`,
-          },
-        });
-
-        if (data.reporterId) {
-          await prisma.activityLog.create({
-            data: {
-              issueId: newIssue.id,
-              userId: data.reporterId,
-              action: "MENTIONED",
-              field: "description",
-              newValue: mUser.name,
-            },
-          });
-        }
-      }
+      await prisma.activityLog.createMany({
+        data: mentioned.map((mUser) => ({
+          issueId: newIssue.id,
+          userId: reporterId,
+          action: "MENTIONED",
+          field: "description",
+          newValue: mUser.name,
+        })),
+      });
     }
 
     try {
@@ -520,13 +564,74 @@ export async function createIssue(data: {
     } catch {}
 
     triggerWebhooks("issue:created", newIssue, data.projectId);
-    return { success: true, issue: newIssue };
+    return { success: true as const, issue: newIssue };
   } catch (error) {
-    console.error("Failed to create issue:", error);
-    return { success: false, error: "Failed to create issue" };
+    return toActionError(error, "Failed to create issue");
   }
 }
 
+/**
+ * Confirm that every record an issue is being linked to belongs to the same
+ * project, and that an assignee is actually a member of it. Without this, ids
+ * from another project could be attached by a caller that crafts the request.
+ */
+async function validateIssueRelations(
+  projectId: string,
+  links: {
+    sprintId?: string | null;
+    versionId?: string | null;
+    parentId?: string | null;
+    assigneeId?: string | null;
+  }
+): Promise<{ error?: string }> {
+  if (links.sprintId) {
+    const sprint = await prisma.sprint.findUnique({
+      where: { id: links.sprintId },
+      select: { projectId: true, status: true },
+    });
+    if (!sprint || sprint.projectId !== projectId) {
+      return { error: "Sprint not found in this project" };
+    }
+    if (sprint.status === "COMPLETED") {
+      return { error: "Cannot add items to finished sprints" };
+    }
+  }
+
+  if (links.versionId) {
+    const version = await prisma.version.findUnique({
+      where: { id: links.versionId },
+      select: { projectId: true },
+    });
+    if (!version || version.projectId !== projectId) {
+      return { error: "Release version not found in this project" };
+    }
+  }
+
+  if (links.parentId) {
+    const parent = await prisma.issue.findUnique({
+      where: { id: links.parentId },
+      select: { projectId: true },
+    });
+    if (!parent || parent.projectId !== projectId) {
+      return { error: "Parent issue not found in this project" };
+    }
+  }
+
+  if (links.assigneeId) {
+    const [membership, project] = await Promise.all([
+      prisma.projectMember.findUnique({
+        where: { projectId_userId: { projectId, userId: links.assigneeId } },
+        select: { userId: true },
+      }),
+      prisma.project.findUnique({ where: { id: projectId }, select: { leadId: true } }),
+    ]);
+    if (!membership && project?.leadId !== links.assigneeId) {
+      return { error: "Assignee is not a member of this project" };
+    }
+  }
+
+  return {};
+}
 
 export async function updateIssue(
   id: string,
@@ -541,10 +646,14 @@ export async function updateIssue(
     sprintId?: string | null;
     versionId?: string | null;
     parentId?: string | null;
+    /** Ignored: the actor is taken from the session. */
     updatedByUserId?: string;
   }
 ) {
   try {
+    const projectId = await projectIdForIssue(id);
+    const { user } = await requireProjectPermission(projectId, "EDIT_ISSUE");
+
     const existing = await prisma.issue.findUnique({
       where: { id },
       include: { project: true },
@@ -552,15 +661,19 @@ export async function updateIssue(
 
     if (!existing) throw new Error("Issue not found");
 
-    if (data.sprintId && data.sprintId !== existing.sprintId) {
-      const targetSprint = await prisma.sprint.findUnique({
-        where: { id: data.sprintId },
-      });
-      if (!targetSprint) throw new Error("Sprint not found");
-      if (targetSprint.status === "COMPLETED") {
-        return { success: false, error: "Cannot add items to finished sprints" };
-      }
+    const related = await validateIssueRelations(projectId, {
+      sprintId: data.sprintId !== existing.sprintId ? data.sprintId : null,
+      versionId: data.versionId !== existing.versionId ? data.versionId : null,
+      parentId: data.parentId !== existing.parentId ? data.parentId : null,
+      assigneeId: data.assigneeId !== existing.assigneeId ? data.assigneeId : null,
+    });
+    if (related.error) return { success: false, error: related.error };
+
+    if (data.parentId && data.parentId === id) {
+      return { success: false, error: "An issue cannot be its own parent" };
     }
+
+    const actorId = user.id;
 
     const updated = await prisma.issue.update({
       where: { id },
@@ -577,8 +690,8 @@ export async function updateIssue(
         ...(data.parentId !== undefined && { parentId: data.parentId }),
       },
       include: {
-        assignee: true,
-        reporter: true,
+        assignee: USER_SELECT,
+        reporter: USER_SELECT,
         version: true,
         parent: {
           select: {
@@ -590,31 +703,31 @@ export async function updateIssue(
         },
         children: {
           include: {
-            assignee: true,
+            assignee: USER_SELECT,
           },
         },
         comments: {
           include: {
-            author: true,
+            author: USER_SELECT,
           },
           orderBy: { createdAt: "desc" },
         },
         activityLogs: {
           include: {
-            user: true,
+            user: USER_SELECT,
           },
           orderBy: { createdAt: "desc" },
         },
       },
     });
 
-    // Record activity logs if changes happened and user is provided
-    if (data.updatedByUserId) {
+    // Record activity logs for the changes that actually happened.
+    {
       if (data.status && data.status !== existing.status) {
         await prisma.activityLog.create({
           data: {
             issueId: id,
-            userId: data.updatedByUserId,
+            userId: actorId,
             action: "STATUS_CHANGED",
             field: "status",
             oldValue: existing.status,
@@ -622,7 +735,7 @@ export async function updateIssue(
           },
         });
 
-        if (existing.assigneeId && existing.assigneeId !== data.updatedByUserId) {
+        if (existing.assigneeId && existing.assigneeId !== actorId) {
           await prisma.notification.create({
             data: {
               userId: existing.assigneeId,
@@ -638,7 +751,7 @@ export async function updateIssue(
         await prisma.activityLog.create({
           data: {
             issueId: id,
-            userId: data.updatedByUserId,
+            userId: actorId,
             action: "PRIORITY_CHANGED",
             field: "priority",
             oldValue: existing.priority,
@@ -651,7 +764,7 @@ export async function updateIssue(
         await prisma.activityLog.create({
           data: {
             issueId: id,
-            userId: data.updatedByUserId,
+            userId: actorId,
             action: "ASSIGNMENT_CHANGED",
             field: "assignee",
             oldValue: existing.assigneeId || "Unassigned",
@@ -659,7 +772,7 @@ export async function updateIssue(
           },
         });
 
-        if (data.assigneeId && data.assigneeId !== data.updatedByUserId) {
+        if (data.assigneeId && data.assigneeId !== actorId) {
           await prisma.notification.create({
             data: {
               userId: data.assigneeId,
@@ -671,51 +784,38 @@ export async function updateIssue(
         }
       }
 
-      // Check if description was updated with user mentions
+      // Notify project members newly mentioned in the description.
       if (
         data.description !== undefined &&
         data.description !== existing.description &&
         data.description
       ) {
-        const allUsers = await prisma.user.findMany();
-        const descLower = data.description.toLowerCase();
-        const prevDescLower = (existing.description || "").toLowerCase();
-
-        const mentionedUsers = allUsers.filter((u) => {
-          if (u.id === data.updatedByUserId || u.id === existing.assigneeId) return false;
-          const fullNamePattern = `@${u.name.toLowerCase()}`;
-          const bracketPattern = `@[${u.name.toLowerCase()}]`;
-          const firstNamePattern = `@${u.name.split(" ")[0].toLowerCase()}`;
-          const isNowMentioned =
-            descLower.includes(fullNamePattern) ||
-            descLower.includes(bracketPattern) ||
-            new RegExp(`\\b${firstNamePattern}\\b`, "i").test(data.description!);
-          const wasMentioned =
-            prevDescLower.includes(fullNamePattern) ||
-            prevDescLower.includes(bracketPattern) ||
-            new RegExp(`\\b${firstNamePattern}\\b`, "i").test(existing.description || "");
-
-          return isNowMentioned && !wasMentioned;
+        const mentioned = await findMentionedUsers(projectId, data.description, {
+          exclude: [actorId, existing.assigneeId],
+          previousText: existing.description,
         });
 
-        for (const mUser of mentionedUsers) {
-          await prisma.notification.create({
-            data: {
+        if (mentioned.length > 0) {
+          const snippet = data.description.slice(0, 60);
+          const ellipsis = data.description.length > 60 ? "..." : "";
+
+          await prisma.notification.createMany({
+            data: mentioned.map((mUser) => ({
               userId: mUser.id,
               title: `Mentioned in ${existing.key}`,
-              message: `You were mentioned in ${existing.key}: "${data.description.slice(0, 60)}${data.description.length > 60 ? "..." : ""}"`,
+              message: `You were mentioned in ${existing.key}: "${snippet}${ellipsis}"`,
               link: `/projects/${existing.project.key}/board?selectedIssue=${existing.key}`,
-            },
+            })),
           });
 
-          await prisma.activityLog.create({
-            data: {
+          await prisma.activityLog.createMany({
+            data: mentioned.map((mUser) => ({
               issueId: id,
-              userId: data.updatedByUserId,
+              userId: actorId,
               action: "MENTIONED",
               field: "description",
               newValue: mUser.name,
-            },
+            })),
           });
         }
       }
@@ -725,10 +825,9 @@ export async function updateIssue(
       revalidatePath(`/projects/${existing.project.key}`);
     } catch {}
     triggerWebhooks("issue:updated", { issue: updated, changes: data }, existing.projectId);
-    return { success: true, issue: updated };
+    return { success: true as const, issue: updated };
   } catch (error) {
-    console.error("Failed to update issue:", error);
-    return { success: false, error: "Failed to update issue" };
+    return toActionError(error, "Failed to update issue");
   }
 }
 
@@ -736,6 +835,7 @@ export async function updateIssueStatusAndOrder(
   issueId: string,
   newStatus: IssueStatus,
   newOrder: number,
+  /** Ignored: the actor is taken from the session. */
   userId?: string,
   extraData?: {
     assigneeId?: string | null;
@@ -744,12 +844,25 @@ export async function updateIssueStatusAndOrder(
   }
 ) {
   try {
+    const projectId = await projectIdForIssue(issueId);
+    const { user } = await requireProjectPermission(projectId, "MOVE_ISSUE");
+    const actorId = user.id;
+
     const existing = await prisma.issue.findUnique({
       where: { id: issueId },
       include: { project: true },
     });
 
     if (!existing) throw new Error("Issue not found");
+
+    if (extraData) {
+      const related = await validateIssueRelations(projectId, {
+        parentId: extraData.parentId !== existing.parentId ? extraData.parentId : null,
+        assigneeId:
+          extraData.assigneeId !== existing.assigneeId ? extraData.assigneeId : null,
+      });
+      if (related.error) return { success: false, error: related.error };
+    }
 
     const statusChanged = existing.status !== newStatus;
 
@@ -775,8 +888,8 @@ export async function updateIssueStatusAndOrder(
       data: updatePayload,
       include: {
         project: true,
-        assignee: true,
-        reporter: true,
+        assignee: USER_SELECT,
+        reporter: USER_SELECT,
         version: true,
         parent: {
           select: {
@@ -789,11 +902,11 @@ export async function updateIssueStatusAndOrder(
       },
     });
 
-    if (statusChanged && userId) {
+    if (statusChanged) {
       await prisma.activityLog.create({
         data: {
           issueId,
-          userId,
+          userId: actorId,
           action: "STATUS_CHANGED",
           field: "status",
           oldValue: existing.status,
@@ -801,7 +914,7 @@ export async function updateIssueStatusAndOrder(
         },
       });
 
-      if (existing.assigneeId && existing.assigneeId !== userId) {
+      if (existing.assigneeId && existing.assigneeId !== actorId) {
         await prisma.notification.create({
           data: {
             userId: existing.assigneeId,
@@ -822,15 +935,17 @@ export async function updateIssueStatusAndOrder(
       { issueId, key: existing.key, status: newStatus, order: newOrder },
       existing.projectId
     );
-    return { success: true, issue: updated };
+    return { success: true as const, issue: updated };
   } catch (error) {
-    console.error("Failed to update issue status & order:", error);
-    return { success: false, error: "Failed to update issue position" };
+    return toActionError(error, "Failed to update issue position");
   }
 }
 
 export async function deleteIssue(id: string) {
   try {
+    const projectId = await projectIdForIssue(id);
+    await requireProjectPermission(projectId, "DELETE_ISSUE");
+
     const issue = await prisma.issue.findUnique({
       where: { id },
       include: { project: true },
@@ -848,11 +963,9 @@ export async function deleteIssue(id: string) {
       { id: issue.id, key: issue.key, title: issue.title },
       issue.projectId
     );
-    return { success: true };
+    return { success: true as const };
   } catch (error) {
-    console.error("Failed to delete issue:", error);
-
-    return { success: false, error: "Failed to delete issue" };
+    return toActionError(error, "Failed to delete issue");
   }
 }
 
