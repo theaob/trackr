@@ -77,7 +77,7 @@ npm start
 | `DATABASE_URL` | `file:./dev.db` | Prisma SQLite connection string. |
 | `AUTH_SECRET` | generated | Signs session cookies; 32+ characters. Generate with `openssl rand -hex 32`. When unset, a random secret is written to `<data dir>/.session-secret` on first use, so sessions survive restarts but not a new volume. |
 | `TRACKR_DATA_DIR` | `./data` | Where avatars and the generated session secret live. |
-| `TRACKR_ALLOW_PRIVATE_WEBHOOKS` | `0` | Set to `1` to let webhooks target loopback, link-local and private addresses. Off by default so a webhook cannot be pointed at internal services. |
+| `TRACKR_ALLOW_PRIVATE_WEBHOOKS` | `0` | Set to `1` to let webhooks target loopback, link-local and private addresses. Off by default so a webhook cannot be pointed at internal services. The bundled `/api/mock-webhook-receiver` is on localhost, so trying it out needs this set. |
 | `TRACKR_SEED_PASSWORD` | `trackr-demo` | Password given to the demo accounts by `db:seed`. |
 
 ### 4. Database Management
