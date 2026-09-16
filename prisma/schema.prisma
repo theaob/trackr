@@ -1,0 +1,257 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id             String        @id @default(cuid())
+  name           String
+  email          String        @unique
+  avatarUrl      String?
+  role           String        @default("Developer")
+  assignedIssues Issue[]       @relation("Assignee")
+  reportedIssues Issue[]       @relation("Reporter")
+  comments       Comment[]
+  activityLogs   ActivityLog[]
+  notifications       Notification[]
+  ledProjects         Project[]
+  projectMembers      ProjectMember[]
+  personalAccessTokens PersonalAccessToken[]
+  createdAt           DateTime      @default(now())
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  key         String   @unique
+  description String?
+  category    String   @default("Software")
+  leadId      String?
+  lead        User?    @relation(fields: [leadId], references: [id])
+  members     ProjectMember[]
+  issues       Issue[]
+  sprints      Sprint[]
+  versions     Version[]
+  customFields CustomField[]
+  webhooks     Webhook[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   @default("MEMBER") // "ADMIN", "MEMBER", "VIEWER"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+}
+
+model Sprint {
+  id        String    @id @default(cuid())
+  name      String
+  goal      String?
+  status    String    @default("FUTURE") // "FUTURE", "ACTIVE", "COMPLETED"
+  startDate DateTime?
+  endDate   DateTime?
+  projectId String
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issues    Issue[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Version {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  status      String    @default("UNRELEASED") // "UNRELEASED", "RELEASED", "ARCHIVED"
+  startDate   DateTime?
+  releaseDate DateTime?
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issues      Issue[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([projectId, status])
+}
+
+model CustomField {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  type        String   @default("TEXT") // "TEXT", "NUMBER", "SELECT", "MULTI_SELECT", "CHECKBOX", "DATE", "URL"
+  options     String?  // JSON string array of options for SELECT / MULTI_SELECT
+  required    Boolean  @default(false)
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  values      CustomFieldValue[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model CustomFieldValue {
+  id            String      @id @default(cuid())
+  issueId       String
+  issue         Issue       @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  customFieldId String
+  customField   CustomField @relation(fields: [customFieldId], references: [id], onDelete: Cascade)
+  value         String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([issueId, customFieldId])
+  @@index([issueId])
+  @@index([customFieldId])
+}
+
+model Issue {
+  id          String        @id @default(cuid())
+  key         String        @unique
+  title       String
+  description String?
+  type        String        @default("TASK") // "EPIC", "STORY", "TASK", "BUG", "SUBTASK"
+  priority    String        @default("MEDIUM") // "LOWEST", "LOW", "MEDIUM", "HIGH", "HIGHEST"
+  status      String        @default("TODO") // "BACKLOG", "TODO", "IN_PROGRESS", "IN_REVIEW", "DONE"
+  order       Int           @default(0)
+  storyPoints Int?
+  projectId   String
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sprintId    String?
+  sprint      Sprint?       @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  versionId   String?
+  version     Version?      @relation(fields: [versionId], references: [id], onDelete: SetNull)
+  assigneeId  String?
+  assignee    User?         @relation("Assignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  reporterId  String?
+  reporter    User?         @relation("Reporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  parentId    String?
+  parent      Issue?        @relation("IssueHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Issue[]       @relation("IssueHierarchy")
+  comments    Comment[]
+  activityLogs ActivityLog[]
+  customFieldValues CustomFieldValue[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([projectId, status])
+  @@index([projectId, sprintId])
+  @@index([projectId, versionId])
+  @@index([projectId, createdAt])
+  @@index([versionId])
+  @@index([assigneeId])
+  @@index([status])
+  @@index([priority])
+  @@index([type])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  issueId   String
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([issueId])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  issueId   String
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    String
+  field     String?
+  oldValue  String?
+  newValue  String?
+  createdAt DateTime @default(now())
+
+  @@index([issueId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+}
+
+model PersonalAccessToken {
+  id          String    @id @default(cuid())
+  name        String
+  tokenHash   String    @unique
+  tokenPrefix String
+  lastFour    String
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime?
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+model Webhook {
+  id          String            @id @default(cuid())
+  name        String
+  url         String
+  secret      String?
+  events      String            // JSON string array of events: ["issue:created", "issue:updated", ...]
+  enabled     Boolean           @default(true)
+  projectId   String?
+  project     Project?          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  deliveries  WebhookDelivery[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([projectId])
+  @@index([enabled])
+}
+
+model WebhookDelivery {
+  id             String   @id @default(cuid())
+  webhookId      String
+  webhook        Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  event          String
+  url            String
+  status         Int
+  success        Boolean
+  durationMs     Int
+  requestPayload String   // Full JSON payload sent
+  responseBody   String?  // Truncated response body received
+  error          String?
+  createdAt      DateTime @default(now())
+
+  @@index([webhookId])
+  @@index([createdAt])
+}
+
+
+

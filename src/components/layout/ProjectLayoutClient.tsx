@@ -1,0 +1,75 @@
+"use client";
+
+import React, { useState } from "react";
+import { Project, User, Sprint, Issue } from "@/types";
+import Navbar from "./Navbar";
+import Sidebar from "./Sidebar";
+import CreateIssueModal from "@/components/issues/CreateIssueModal";
+import CreateProjectModal from "@/components/projects/CreateProjectModal";
+import { SearchProvider } from "@/context/SearchContext";
+import { useRouter } from "next/navigation";
+
+interface ProjectLayoutClientProps {
+  projects: Project[];
+  currentProject: Project;
+  users: User[];
+  sprints: Sprint[];
+  epics: Issue[];
+  children: React.ReactNode;
+}
+
+export default function ProjectLayoutClient({
+  projects,
+  currentProject,
+  users,
+  sprints,
+  epics,
+  children,
+}: ProjectLayoutClientProps) {
+  const router = useRouter();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
+
+  return (
+    <SearchProvider>
+      <div className="flex flex-col h-screen w-screen overflow-hidden bg-white text-jira-navy font-sans antialiased">
+        {/* Top Navbar */}
+        <Navbar
+          projects={projects}
+          currentProject={currentProject}
+          onCreateIssueClick={() => setIsCreateModalOpen(true)}
+          onCreateProjectClick={() => setIsCreateProjectModalOpen(true)}
+        />
+
+        {/* Main Workspace Body: Sidebar + Content */}
+        <div className="flex-1 flex overflow-hidden">
+          <Sidebar project={currentProject} />
+          <main className="flex-1 flex flex-col overflow-hidden bg-white">{children}</main>
+        </div>
+
+        {/* Global Create Issue Modal */}
+        {isCreateModalOpen && (
+          <CreateIssueModal
+            project={currentProject}
+            allProjects={projects}
+            users={users}
+            sprints={sprints}
+            epics={epics}
+            onClose={() => setIsCreateModalOpen(false)}
+            onIssueCreated={() => {
+              router.refresh();
+            }}
+          />
+        )}
+
+        {/* Global Create Project Modal */}
+        {isCreateProjectModalOpen && (
+          <CreateProjectModal
+            users={users}
+            onClose={() => setIsCreateProjectModalOpen(false)}
+          />
+        )}
+      </div>
+    </SearchProvider>
+  );
+}

@@ -1,0 +1,430 @@
+"use client";
+
+import React, { useState, useMemo } from "react";
+import { Project, Version, VersionStatus } from "@/types";
+import { archiveVersion, deleteVersion } from "@/lib/actions/versions";
+import CreateVersionModal from "./CreateVersionModal";
+import ReleaseVersionModal from "./ReleaseVersionModal";
+import ReleaseNotesModal from "./ReleaseNotesModal";
+import {
+  Rocket,
+  Plus,
+  Search,
+  Calendar,
+  MoreHorizontal,
+  FileText,
+  Edit2,
+  Archive,
+  Trash2,
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  ChevronRight,
+  Package,
+} from "lucide-react";
+import { format } from "date-fns";
+
+interface ReleasesViewProps {
+  project: Project;
+  initialVersions: Version[];
+}
+
+export default function ReleasesView({
+  project,
+  initialVersions,
+}: ReleasesViewProps) {
+  const [versions, setVersions] = useState<Version[]>(initialVersions);
+  const [statusTab, setStatusTab] = useState<VersionStatus | "ALL">("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Modals state
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingVersion, setEditingVersion] = useState<Version | null>(null);
+  const [releasingVersion, setReleasingVersion] = useState<Version | null>(null);
+  const [notesVersion, setNotesVersion] = useState<Version | null>(null);
+
+  // Filtered versions
+  const filteredVersions = useMemo(() => {
+    return versions.filter((v) => {
+      if (statusTab !== "ALL" && v.status !== statusTab) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesName = v.name.toLowerCase().includes(q);
+        const matchesDesc = v.description?.toLowerCase().includes(q);
+        if (!matchesName && !matchesDesc) return false;
+      }
+      return true;
+    });
+  }, [versions, statusTab, searchQuery]);
+
+  // Overall Stats
+  const totalCount = versions.length;
+  const unreleasedCount = versions.filter((v) => v.status === "UNRELEASED").length;
+  const releasedCount = versions.filter((v) => v.status === "RELEASED").length;
+
+  const handleVersionSaved = (saved: Version) => {
+    setVersions((prev) => {
+      const idx = prev.findIndex((v) => v.id === saved.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = { ...next[idx], ...saved };
+        return next;
+      }
+      return [saved, ...prev];
+    });
+  };
+
+  const handleArchiveToggle = async (v: Version) => {
+    const willArchive = v.status !== "ARCHIVED";
+    const res = await archiveVersion(v.id, willArchive);
+    if (res.success && res.version) {
+      setVersions((prev) =>
+        prev.map((item) => (item.id === v.id ? (res.version as unknown as Version) : item))
+      );
+    }
+  };
+
+  const handleDelete = async (v: Version) => {
+    if (!confirm(`Are you sure you want to delete version "${v.name}"?`)) return;
+    const res = await deleteVersion(v.id);
+    if (res.success) {
+      setVersions((prev) => prev.filter((item) => item.id !== v.id));
+    }
+  };
+
+  return (
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-white">
+      {/* Top Header */}
+      <div className="px-6 pt-6 pb-4 border-b border-jira-gray-200 shrink-0 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 bg-jira-blue/10 rounded text-jira-blue">
+                <Rocket className="w-5 h-5 text-jira-blue" />
+              </div>
+              <h1 className="text-xl font-bold text-jira-navy tracking-tight">Releases</h1>
+            </div>
+            <p className="text-xs text-jira-gray-600">
+              Manage software versions, track completion progress, and generate release notes.
+            </p>
+          </div>
+
+          <button
+            onClick={() => {
+              setEditingVersion(null);
+              setIsCreateModalOpen(true);
+            }}
+            className="text-xs font-semibold px-3.5 py-2 rounded bg-jira-blue text-white hover:bg-jira-blue-hover transition-colors flex items-center gap-1.5 shadow-xs"
+          >
+            <Plus className="w-4 h-4" />
+            Create Version
+          </button>
+        </div>
+
+        {/* Stats Row */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="p-3 bg-jira-gray-50 border border-jira-gray-200 rounded-lg flex items-center justify-between">
+            <span className="text-xs font-medium text-jira-gray-600">Total Versions</span>
+            <span className="text-lg font-bold text-jira-navy">{totalCount}</span>
+          </div>
+          <div className="p-3 bg-amber-50/50 border border-amber-200/60 rounded-lg flex items-center justify-between">
+            <span className="text-xs font-medium text-amber-800">Unreleased</span>
+            <span className="text-lg font-bold text-amber-900">{unreleasedCount}</span>
+          </div>
+          <div className="p-3 bg-emerald-50/50 border border-emerald-200/60 rounded-lg flex items-center justify-between">
+            <span className="text-xs font-medium text-emerald-800">Released</span>
+            <span className="text-lg font-bold text-emerald-900">{releasedCount}</span>
+          </div>
+        </div>
+
+        {/* Filters and Search Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+          {/* Status Tabs */}
+          <div className="flex items-center gap-1.5 text-xs">
+            {[
+              { id: "ALL", label: "All Versions" },
+              { id: "UNRELEASED", label: "Unreleased" },
+              { id: "RELEASED", label: "Released" },
+              { id: "ARCHIVED", label: "Archived" },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setStatusTab(tab.id as any)}
+                className={`px-3 py-1.5 rounded-md font-medium whitespace-nowrap transition-colors ${
+                  statusTab === tab.id
+                    ? "bg-jira-blue text-white font-semibold shadow-xs"
+                    : "bg-jira-gray-100 text-jira-gray-700 hover:bg-jira-gray-200"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Search Bar */}
+          <div className="relative w-64">
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-jira-gray-500" />
+            <input
+              type="text"
+              placeholder="Search versions..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-white border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Versions List */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        {filteredVersions.length === 0 ? (
+          <div className="py-20 flex flex-col items-center justify-center text-jira-gray-500 gap-3">
+            <Package className="w-10 h-10 text-jira-gray-400 stroke-1" />
+            <h3 className="text-sm font-semibold text-jira-navy">No versions found</h3>
+            <p className="text-xs text-jira-gray-500 max-w-sm text-center">
+              {searchQuery || statusTab !== "ALL"
+                ? "Try clearing filters to view other release versions."
+                : "Organize your project deliveries and plan releases by creating your first version."}
+            </p>
+            {(!searchQuery && statusTab === "ALL") && (
+              <button
+                onClick={() => {
+                  setEditingVersion(null);
+                  setIsCreateModalOpen(true);
+                }}
+                className="mt-2 text-xs font-semibold px-3 py-1.5 rounded bg-jira-blue text-white hover:bg-jira-blue-hover"
+              >
+                + Create Version
+              </button>
+            )}
+          </div>
+        ) : (
+          filteredVersions.map((version) => {
+            const counts = version.issueCount || {
+              total: 0,
+              done: 0,
+              inProgress: 0,
+              todo: 0,
+              storyPoints: 0,
+              completedStoryPoints: 0,
+            };
+
+            const percentDone =
+              counts.total > 0 ? Math.round((counts.done / counts.total) * 100) : 0;
+            const percentInProgress =
+              counts.total > 0 ? Math.round((counts.inProgress / counts.total) * 100) : 0;
+            const percentTodo =
+              counts.total > 0 ? Math.round((counts.todo / counts.total) * 100) : 0;
+
+            const isOverdue =
+              version.status === "UNRELEASED" &&
+              version.releaseDate &&
+              new Date(version.releaseDate) < new Date();
+
+            return (
+              <div
+                key={version.id}
+                className="bg-white border border-jira-gray-300 hover:border-jira-blue/50 rounded-lg p-5 shadow-xs transition-all space-y-4"
+              >
+                {/* Card Top: Name, Status, Dates, Actions */}
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2.5">
+                      <h3 className="text-base font-bold text-jira-navy">{version.name}</h3>
+
+                      {version.status === "RELEASED" ? (
+                        <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          RELEASED
+                        </span>
+                      ) : version.status === "ARCHIVED" ? (
+                        <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-jira-gray-200 text-jira-gray-700">
+                          ARCHIVED
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-amber-600" />
+                          UNRELEASED
+                        </span>
+                      )}
+
+                      {isOverdue && (
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3 text-rose-600" />
+                          OVERDUE
+                        </span>
+                      )}
+                    </div>
+
+                    {version.description && (
+                      <p className="text-xs text-jira-gray-600 line-clamp-2 max-w-xl">
+                        {version.description}
+                      </p>
+                    )}
+
+                    {/* Dates */}
+                    <div className="flex items-center gap-4 text-xs text-jira-gray-500 pt-1">
+                      {version.startDate && (
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5" />
+                          Start: {format(new Date(version.startDate), "MMM d, yyyy")}
+                        </span>
+                      )}
+                      {version.releaseDate && (
+                        <span
+                          className={`flex items-center gap-1 ${
+                            isOverdue ? "text-rose-600 font-semibold" : ""
+                          }`}
+                        >
+                          <Calendar className="w-3.5 h-3.5" />
+                          Release: {format(new Date(version.releaseDate), "MMM d, yyyy")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Top Right Action Buttons */}
+                  <div className="flex items-center gap-2">
+                    {version.status === "UNRELEASED" && (
+                      <button
+                        onClick={() => setReleasingVersion(version)}
+                        className="text-xs font-semibold px-3 py-1.5 rounded bg-jira-green text-white hover:bg-jira-green/90 transition-colors flex items-center gap-1.5 shadow-xs"
+                      >
+                        <Rocket className="w-3.5 h-3.5" />
+                        Release
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => setNotesVersion(version)}
+                      className="text-xs font-semibold px-3 py-1.5 rounded border border-jira-gray-300 bg-white hover:bg-jira-gray-100 text-jira-navy transition-colors flex items-center gap-1.5"
+                      title="Generate and view release notes"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-jira-blue" />
+                      Release Notes
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setEditingVersion(version);
+                        setIsCreateModalOpen(true);
+                      }}
+                      className="p-1.5 text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-100 rounded border border-jira-gray-200"
+                      title="Edit version"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+
+                    <button
+                      onClick={() => handleArchiveToggle(version)}
+                      className="p-1.5 text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-100 rounded border border-jira-gray-200"
+                      title={version.status === "ARCHIVED" ? "Unarchive version" : "Archive version"}
+                    >
+                      <Archive className="w-3.5 h-3.5" />
+                    </button>
+
+                    <button
+                      onClick={() => handleDelete(version)}
+                      className="p-1.5 text-jira-gray-600 hover:text-jira-red hover:bg-jira-red/10 rounded border border-jira-gray-200"
+                      title="Delete version"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Progress Bar & Issue Metrics */}
+                <div className="pt-2 border-t border-jira-gray-200 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-jira-navy">
+                      Progress: <strong>{percentDone}% Done</strong>
+                    </span>
+                    <div className="flex items-center gap-3 text-jira-gray-600">
+                      <span>
+                        <strong>{counts.done}</strong> of <strong>{counts.total}</strong> issues done
+                      </span>
+                      {counts.storyPoints > 0 && (
+                        <span>
+                          • <strong>{counts.completedStoryPoints}</strong> of{" "}
+                          <strong>{counts.storyPoints}</strong> pts
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Multi-tone progress bar */}
+                  <div className="w-full h-2.5 bg-jira-gray-200 rounded-full overflow-hidden flex">
+                    <div
+                      style={{ width: `${percentDone}%` }}
+                      className="bg-jira-green transition-all duration-300"
+                      title={`${counts.done} Done (${percentDone}%)`}
+                    />
+                    <div
+                      style={{ width: `${percentInProgress}%` }}
+                      className="bg-jira-blue transition-all duration-300"
+                      title={`${counts.inProgress} In Progress (${percentInProgress}%)`}
+                    />
+                    <div
+                      style={{ width: `${percentTodo}%` }}
+                      className="bg-jira-gray-400 transition-all duration-300"
+                      title={`${counts.todo} To Do (${percentTodo}%)`}
+                    />
+                  </div>
+
+                  {/* Legend */}
+                  <div className="flex items-center gap-4 text-[11px] text-jira-gray-600 pt-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-jira-green" />
+                      <span>Done ({counts.done})</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-jira-blue" />
+                      <span>In Progress ({counts.inProgress})</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-jira-gray-400" />
+                      <span>To Do ({counts.todo})</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Modals */}
+      <CreateVersionModal
+        projectId={project.id}
+        version={editingVersion}
+        isOpen={isCreateModalOpen}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setEditingVersion(null);
+        }}
+        onSaved={handleVersionSaved}
+      />
+
+      {releasingVersion && (
+        <ReleaseVersionModal
+          version={releasingVersion}
+          otherVersions={versions}
+          isOpen={Boolean(releasingVersion)}
+          onClose={() => setReleasingVersion(null)}
+          onReleased={(updated) => {
+            handleVersionSaved(updated);
+            setReleasingVersion(null);
+          }}
+        />
+      )}
+
+      {notesVersion && (
+        <ReleaseNotesModal
+          version={notesVersion}
+          isOpen={Boolean(notesVersion)}
+          onClose={() => setNotesVersion(null)}
+        />
+      )}
+    </div>
+  );
+}
