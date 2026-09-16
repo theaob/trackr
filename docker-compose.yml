@@ -1,0 +1,20 @@
+services:
+  trackr:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: trackr:latest
+    container_name: trackr-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=file:/app/data/dev.db
+    volumes:
+      - trackr_data:/app/data
+
+volumes:
+  trackr_data:
+    driver: local

@@ -59,6 +59,30 @@ npm start
 
 ---
 
+## 🐳 Docker Deployment
+
+### Run with Docker Compose (Recommended)
+```bash
+docker compose up -d
+```
+Open [http://localhost:3000](http://localhost:3000). Data is automatically persisted in the `trackr_data` volume.
+
+### Run with Docker CLI
+```bash
+# Build the image locally
+docker build -t trackr:latest .
+
+# Run the container with persistent storage
+docker run -d -p 3000:3000 -v trackr_data:/app/data --name trackr-app trackr:latest
+```
+
+### Pull & Run from GitHub Container Registry (GHCR)
+```bash
+docker run -d -p 3000:3000 -v trackr_data:/app/data --name trackr-app ghcr.io/theaob/trackr:latest
+```
+
+---
+
 ## 🛠 Tech Stack
 
 - **Framework**: Next.js 14 (App Router)
