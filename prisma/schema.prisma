@@ -258,13 +258,15 @@ model WebhookDelivery {
 
 model SsoConfig {
   id                   String   @id @default("default")
-  enabled              Boolean  @default(true)
+  // Off until an administrator supplies key material to verify tokens with.
+  enabled              Boolean  @default(false)
   providerName         String   @default("Enterprise SSO / SAML / OIDC")
-  issuerUrl            String?  // IdP Issuer / Metadata URL
-  clientId             String?  // Client ID or Entity ID
-  clientSecret         String?  // Client Secret if OIDC
-  certificate          String?  // PEM format X.509 Certificate (Self-Signed Supported)
-  allowSelfSignedCerts Boolean  @default(true) // Enable self-signed certificate validation
+  issuerUrl            String?  // IdP issuer, used for discovery and the `iss` claim check
+  clientId             String?  // OIDC client id, checked against the `aud` claim
+  clientSecret         String?  // Verifies HS* signed ID tokens
+  certificate          String?  // PEM X.509 certificate, verifies RS* signed ID tokens
+  // Deprecated: previously disabled TLS verification process-wide. Unused.
+  allowSelfSignedCerts Boolean  @default(false)
   autoProvisionUsers   Boolean  @default(true) // Auto-create user on first SSO login
   defaultRole          String   @default("Developer")
   updatedAt            DateTime @updatedAt

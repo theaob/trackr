@@ -3,16 +3,27 @@
 import prisma from "@/lib/db";
 import { ProjectRole } from "@/types";
 import { revalidatePath } from "next/cache";
+import { PUBLIC_USER_SELECT } from "@/lib/auth/session";
+import {
+  requireProjectAccess,
+  requireProjectPermission,
+  toActionError,
+} from "@/lib/auth/guards";
+import { ensureProjectMembersSeeded } from "@/lib/projectMembers";
+
+const VALID_ROLES: ProjectRole[] = ["ADMIN", "MEMBER", "VIEWER"];
 
 export async function getProjectMembers(projectId: string) {
   try {
+    await requireProjectAccess(projectId);
+
     // Auto-seed members for project if none exist yet
     await ensureProjectMembersSeeded(projectId);
 
     const members = await prisma.projectMember.findMany({
       where: { projectId },
       include: {
-        user: true,
+        user: { select: PUBLIC_USER_SELECT },
       },
       orderBy: [
         { role: "asc" }, // ADMIN, MEMBER, VIEWER alphabetical or custom
@@ -33,6 +44,12 @@ export async function addProjectMember(
   role: ProjectRole = "MEMBER"
 ) {
   try {
+    await requireProjectPermission(projectId, "MANAGE_ACCESS");
+
+    if (!VALID_ROLES.includes(role)) {
+      return { success: false, error: "Unknown project role." };
+    }
+
     const existing = await prisma.projectMember.findUnique({
       where: {
         projectId_userId: {
@@ -53,7 +70,7 @@ export async function addProjectMember(
         role,
       },
       include: {
-        user: true,
+        user: { select: PUBLIC_USER_SELECT },
       },
     });
 
@@ -68,8 +85,7 @@ export async function addProjectMember(
 
     return { success: true, member };
   } catch (error) {
-    console.error("Failed to add project member:", error);
-    return { success: false, error: "Failed to add project member" };
+    return toActionError(error, "Failed to add project member");
   }
 }
 
@@ -79,12 +95,35 @@ export async function updateProjectMemberRole(
   newRole: ProjectRole
 ) {
   try {
+    await requireProjectPermission(projectId, "MANAGE_ACCESS");
+
+    if (!VALID_ROLES.includes(newRole)) {
+      return { success: false, error: "Unknown project role." };
+    }
+
     const project = await prisma.project.findUnique({ where: { id: projectId } });
     if (project?.leadId === userId && newRole !== "ADMIN") {
       return {
         success: false,
         error: "The designated Project Lead must always retain the Administrator role.",
       };
+    }
+
+    if (newRole !== "ADMIN") {
+      const [current, adminCount] = await Promise.all([
+        prisma.projectMember.findUnique({
+          where: { projectId_userId: { projectId, userId } },
+          select: { role: true },
+        }),
+        prisma.projectMember.count({ where: { projectId, role: "ADMIN" } }),
+      ]);
+
+      if (current?.role === "ADMIN" && adminCount <= 1) {
+        return {
+          success: false,
+          error: "A project must keep at least one administrator.",
+        };
+      }
     }
 
     const updated = await prisma.projectMember.update({
@@ -98,7 +137,7 @@ export async function updateProjectMemberRole(
         role: newRole,
       },
       include: {
-        user: true,
+        user: { select: PUBLIC_USER_SELECT },
       },
     });
 
@@ -112,18 +151,34 @@ export async function updateProjectMemberRole(
 
     return { success: true, member: updated };
   } catch (error) {
-    console.error("Failed to update project member role:", error);
-    return { success: false, error: "Failed to update project member role" };
+    return toActionError(error, "Failed to update project member role");
   }
 }
 
 export async function removeProjectMember(projectId: string, userId: string) {
   try {
+    await requireProjectPermission(projectId, "MANAGE_ACCESS");
+
     const project = await prisma.project.findUnique({ where: { id: projectId } });
     if (project?.leadId === userId) {
       return {
         success: false,
         error: "Cannot remove the designated Project Lead from the project.",
+      };
+    }
+
+    const [target, adminCount] = await Promise.all([
+      prisma.projectMember.findUnique({
+        where: { projectId_userId: { projectId, userId } },
+        select: { role: true },
+      }),
+      prisma.projectMember.count({ where: { projectId, role: "ADMIN" } }),
+    ]);
+
+    if (target?.role === "ADMIN" && adminCount <= 1) {
+      return {
+        success: false,
+        error: "A project must keep at least one administrator.",
       };
     }
 
@@ -146,55 +201,6 @@ export async function removeProjectMember(projectId: string, userId: string) {
 
     return { success: true };
   } catch (error) {
-    console.error("Failed to remove project member:", error);
-    return { success: false, error: "Failed to remove project member" };
-  }
-}
-
-export async function ensureProjectMembersSeeded(projectId: string) {
-  try {
-    const count = await prisma.projectMember.count({
-      where: { projectId },
-    });
-
-    if (count > 0) return;
-
-    // Fetch project and all organization users
-    const [project, allUsers] = await Promise.all([
-      prisma.project.findUnique({ where: { id: projectId } }),
-      prisma.user.findMany({ orderBy: { createdAt: "asc" } }),
-    ]);
-
-    if (!project || allUsers.length === 0) return;
-
-    // Seed team members with sensible default roles:
-    // - Project Lead -> ADMIN
-    // - QA Engineer (Marcus Vance) -> VIEWER (Stakeholder demo)
-    // - Others -> MEMBER
-    for (const user of allUsers) {
-      let role: ProjectRole = "MEMBER";
-      if (user.id === project.leadId) {
-        role = "ADMIN";
-      } else if (user.role.toLowerCase().includes("qa")) {
-        role = "VIEWER";
-      }
-
-      await prisma.projectMember.upsert({
-        where: {
-          projectId_userId: {
-            projectId,
-            userId: user.id,
-          },
-        },
-        create: {
-          projectId,
-          userId: user.id,
-          role,
-        },
-        update: {},
-      });
-    }
-  } catch (error) {
-    console.error("Failed to seed project members:", error);
+    return toActionError(error, "Failed to remove project member");
   }
 }

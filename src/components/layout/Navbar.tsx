@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Project, User } from "@/types";
 import { useCurrentUser } from "@/context/UserContext";
 import { useSearch } from "@/context/SearchContext";
@@ -20,13 +21,14 @@ import {
   Camera,
   Trash2,
   Loader2,
+  LogOut,
 } from "lucide-react";
 import PersonalAccessTokensModal from "@/components/auth/PersonalAccessTokensModal";
-import AuthModal from "@/components/auth/AuthModal";
 import { TrackrLogo } from "@/components/common/TrackrLogo";
 import UserAvatar from "@/components/common/UserAvatar";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
-import { resolveUserProjectRole, ROLE_CONFIG } from "@/lib/permissions";
+import { resolveUserProjectRole } from "@/lib/permissions";
+import { logout } from "@/lib/actions/auth";
 
 interface NavbarProps {
   projects: Project[];
@@ -41,6 +43,7 @@ export default function Navbar({
   onCreateIssueClick,
   onCreateProjectClick,
 }: NavbarProps) {
+  const router = useRouter();
   const { currentUser, users, setCurrentUser, setUsers } = useCurrentUser();
   const permissions = useProjectPermissions(currentProject);
   const { searchQuery, setSearchQuery } = useSearch();
@@ -53,9 +56,20 @@ export default function Navbar({
   const [showProjectMenu, setShowProjectMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showTokensModal, setShowTokensModal] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await logout();
+      router.replace("/login");
+      router.refresh();
+    } finally {
+      setSigningOut(false);
+    }
+  };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -291,19 +305,8 @@ export default function Navbar({
                 </div>
               </div>
 
-              {/* Personal Access Tokens & Auth Triggers */}
+              {/* Personal Access Tokens */}
               <div className="py-1 border-b border-jira-gray-200">
-                <button
-                  onClick={() => {
-                    setShowUserMenu(false);
-                    setShowAuthModal(true);
-                  }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-jira-blue hover:bg-jira-blue-light/30 transition-colors"
-                >
-                  <Shield className="w-3.5 h-3.5 text-jira-blue" />
-                  <span>Giriş Yap / Kayıt Ol (SSO)</span>
-                </button>
-
                 <button
                   onClick={() => {
                     setShowUserMenu(false);
@@ -316,44 +319,20 @@ export default function Navbar({
                 </button>
               </div>
 
-              <div className="px-3 py-1.5 text-[11px] font-semibold text-jira-gray-600 uppercase tracking-wider">
-                Switch Teammate (Simulated Session)
+              <div className="py-1">
+                <button
+                  onClick={handleSignOut}
+                  disabled={signingOut}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-jira-navy hover:bg-jira-gray-100 transition-colors disabled:opacity-50"
+                >
+                  {signingOut ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-jira-gray-500" />
+                  ) : (
+                    <LogOut className="w-3.5 h-3.5 text-jira-gray-600" />
+                  )}
+                  <span>Sign out</span>
+                </button>
               </div>
-
-              {users.map((u) => {
-                const uRole = resolveUserProjectRole(u.id, currentProject);
-                const uRoleCfg = uRole ? ROLE_CONFIG[uRole] : { name: "No Access", badgeBg: "bg-gray-100", badgeText: "text-gray-600", border: "border-gray-200" };
-
-                return (
-                  <button
-                    key={u.id}
-                    onClick={() => {
-                      setCurrentUser(u);
-                      setShowUserMenu(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-left text-sm hover:bg-jira-gray-100 transition-colors ${
-                      u.id === currentUser?.id ? "bg-jira-blue-light/50 font-semibold text-jira-blue" : "text-jira-navy"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <UserAvatar user={u} size="sm" />
-                      <div className="truncate">
-                        <div className="text-xs font-medium truncate">{u.name}</div>
-                        <div className="flex items-center gap-1.5 text-[10px] text-jira-gray-600">
-                          <span>{u.role}</span>
-                          <span>•</span>
-                          <span
-                            className={`font-semibold px-1 py-0.2 rounded text-[9px] border ${uRoleCfg.badgeBg} ${uRoleCfg.badgeText} ${uRoleCfg.border}`}
-                          >
-                            {uRoleCfg.name}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    {u.id === currentUser?.id && <Check className="w-4 h-4 text-jira-blue shrink-0" />}
-                  </button>
-                );
-              })}
             </div>
           )}
         </div>
@@ -365,11 +344,6 @@ export default function Navbar({
         onClose={() => setShowTokensModal(false)}
       />
 
-      {/* Auth & SSO Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-      />
     </header>
   );
 }

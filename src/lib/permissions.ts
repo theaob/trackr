@@ -140,13 +140,10 @@ export function resolveUserProjectRole(
     return member.role as ProjectRole;
   }
 
-  // If explicit project membership list exists and user is not in it
-  if (memberList.length > 0) {
-    return null;
-  }
-
-  // Default fallback if no members exist yet
-  return "MEMBER";
+  // Not a member: no access. There is deliberately no permissive fallback for
+  // projects with an empty membership list -- server-side checks in
+  // lib/auth/guards.ts resolve roles the same way.
+  return null;
 }
 
 export function canManageProject(role: ProjectRole | null | undefined): boolean {
