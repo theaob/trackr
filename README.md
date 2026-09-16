@@ -1,6 +1,6 @@
-# Jira Software Clone
+# Trackr
 
-A full-stack, responsive Jira clone built with **Next.js 14**, **TypeScript**, **Tailwind CSS**, and **SQLite with Prisma ORM**.
+A modern, full-stack agile project management and issue tracking platform built with **Next.js 14**, **TypeScript**, **Tailwind CSS**, and **SQLite with Prisma ORM**.
 
 ---
 

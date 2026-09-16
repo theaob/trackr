@@ -4,8 +4,11 @@ import { UserProvider } from "@/context/UserContext";
 import { getAllUsers } from "@/lib/actions/projects";
 
 export const metadata: Metadata = {
-  title: "Jira Software Clone",
-  description: "Agile project management and issue tracking system",
+  title: "Trackr - Agile Project Management",
+  description: "High-performance agile project management and issue tracking platform",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default async function RootLayout({

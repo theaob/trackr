@@ -230,7 +230,7 @@ export default function PersonalAccessTokensModal({
                   <KeyRound className="w-8 h-8 text-jira-gray-400 mx-auto mb-2" />
                   <h4 className="text-sm font-bold text-jira-navy">No personal access tokens</h4>
                   <p className="text-xs text-jira-gray-500 max-w-sm mx-auto mt-1 mb-4">
-                    Generate a token to interact with the Jira clone API from your IDE, CI/CD pipeline, or scripts.
+                    Generate a token to interact with the Trackr API from your IDE, CI/CD pipeline, or scripts.
                   </p>
                   <button
                     onClick={() => setView("create")}
@@ -352,7 +352,7 @@ export default function PersonalAccessTokensModal({
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. GitHub Actions CI, VS Code Jira, Data Export Script"
+                  placeholder="e.g. GitHub Actions CI, VS Code Trackr, Data Export Script"
                   value={tokenName}
                   onChange={(e) => setTokenName(e.target.value)}
                   className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue outline-none"

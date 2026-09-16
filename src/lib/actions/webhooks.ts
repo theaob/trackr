@@ -154,11 +154,14 @@ async function deliverWebhook(
   const startTime = Date.now();
   const payloadString = JSON.stringify(payload);
 
+  const deliveryId = crypto.randomUUID();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "User-Agent": "Jira-Webhook-Engine/1.0",
+    "User-Agent": "Trackr-Webhook-Engine/1.0",
+    "X-Trackr-Event": event,
+    "X-Trackr-Delivery": deliveryId,
     "X-Jira-Event": event,
-    "X-Jira-Delivery": crypto.randomUUID(),
+    "X-Jira-Delivery": deliveryId,
   };
 
   if (webhook.secret) {
@@ -294,7 +297,7 @@ export async function testWebhook(webhookId: string): Promise<{
       timestamp: new Date().toISOString(),
       projectId: webhook.projectId,
       data: {
-        message: "This is a test webhook trigger from Jira Clone",
+        message: "This is a test webhook trigger from Trackr",
         webhookId: webhook.id,
         webhookName: webhook.name,
       },

@@ -19,6 +19,7 @@ import {
   Shield,
 } from "lucide-react";
 import PersonalAccessTokensModal from "@/components/auth/PersonalAccessTokensModal";
+import { TrackrLogo } from "@/components/common/TrackrLogo";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
 import { resolveUserProjectRole, ROLE_CONFIG } from "@/lib/permissions";
 
@@ -47,14 +48,11 @@ export default function Navbar({
     <header className="h-14 border-b border-jira-gray-300 bg-white px-4 flex items-center justify-between select-none z-30 relative shadow-sm">
       {/* Left side: Logo & Navigation */}
       <div className="flex items-center gap-6">
-        <Link href={`/projects/${currentProject.key}/board`} className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded bg-jira-blue flex items-center justify-center text-white font-bold shadow-inner">
-            <Layers className="w-5 h-5 text-white" />
-          </div>
-          <div className="flex flex-col leading-none">
-            <span className="font-bold text-jira-navy tracking-tight text-base">Jira Clone</span>
-            <span className="text-[10px] text-jira-gray-600 font-medium tracking-wide uppercase">Software</span>
-          </div>
+        <Link
+          href={`/projects/${currentProject.key}/board`}
+          className="flex items-center gap-2 group hover:opacity-95 transition-opacity"
+        >
+          <TrackrLogo size="md" />
         </Link>
 
         {/* Project Selector */}
