@@ -3,8 +3,13 @@ import { getAllProjectsWithStats, getAllUsers, getProjects } from "@/lib/actions
 import ProjectsDirectoryView from "@/components/projects/ProjectsDirectoryView";
 import Navbar from "@/components/layout/Navbar";
 import { SearchProvider } from "@/context/SearchContext";
+import { requirePageUser } from "@/lib/auth/page";
+
+export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage() {
+  await requirePageUser();
+
   const [projectsWithStats, users, allProjects] = await Promise.all([
     getAllProjectsWithStats(),
     getAllUsers(),

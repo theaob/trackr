@@ -1,6 +1,6 @@
 import prisma from "@/lib/db";
 import { IdTokenClaims, verifyIdToken } from "@/lib/auth/oidc";
-import { PUBLIC_USER_SELECT, SessionUser } from "@/lib/auth/session";
+import { PUBLIC_USER_SELECT, SessionUser } from "@/lib/auth/publicUser";
 
 export interface SsoConfigRecord {
   id: string;

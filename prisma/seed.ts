@@ -1,11 +1,28 @@
 import { PrismaClient } from "@prisma/client";
+import crypto from "crypto";
 
 const prisma = new PrismaClient();
+
+/**
+ * Demo accounts need a real credential: sign-in fails closed for users with no
+ * password hash. Override with TRACKR_SEED_PASSWORD; change it after seeding.
+ */
+const SEED_PASSWORD = process.env.TRACKR_SEED_PASSWORD || "trackr-demo";
+
+// Mirrors the format in src/lib/auth/password.ts.
+function hashPassword(password: string): string {
+  const salt = crypto.randomBytes(16);
+  const derived = crypto.pbkdf2Sync(password, salt, 210_000, 64, "sha512");
+  return ["pbkdf2", "sha512", 210_000, salt.toString("base64"), derived.toString("base64")].join("$");
+}
 
 async function main() {
   console.log("Seeding database...");
 
+  const passwordHash = hashPassword(SEED_PASSWORD);
+
   // Clean existing data
+  await prisma.projectMember.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.activityLog.deleteMany();
   await prisma.comment.deleteMany();
@@ -21,6 +38,8 @@ async function main() {
       email: "alex.chen@acme.dev",
       role: "Tech Lead",
       avatarUrl: null,
+      passwordHash,
+      authProvider: "LOCAL",
     },
   });
 
@@ -30,6 +49,8 @@ async function main() {
       email: "sarah.c@acme.dev",
       role: "Product Manager",
       avatarUrl: null,
+      passwordHash,
+      authProvider: "LOCAL",
     },
   });
 
@@ -39,6 +60,8 @@ async function main() {
       email: "david.k@acme.dev",
       role: "Frontend Engineer",
       avatarUrl: null,
+      passwordHash,
+      authProvider: "LOCAL",
     },
   });
 
@@ -48,6 +71,8 @@ async function main() {
       email: "elena.r@acme.dev",
       role: "Backend Architect",
       avatarUrl: null,
+      passwordHash,
+      authProvider: "LOCAL",
     },
   });
 
@@ -57,6 +82,8 @@ async function main() {
       email: "marcus.v@acme.dev",
       role: "QA Engineer",
       avatarUrl: null,
+      passwordHash,
+      authProvider: "LOCAL",
     },
   });
 
@@ -552,7 +579,27 @@ async function main() {
     ],
   });
 
+  // Explicit project membership. Access is membership-driven, so seeded
+  // projects carry their own member rows rather than relying on a backfill.
+  const allUsers = [alex, sarah, david, elena, marcus];
+
+  for (const proj of [project, voyProject, orionProject]) {
+    await prisma.projectMember.createMany({
+      data: allUsers.map((user) => ({
+        projectId: proj.id,
+        userId: user.id,
+        role:
+          user.id === proj.leadId
+            ? "ADMIN"
+            : user.id === marcus.id
+            ? "VIEWER" // QA stakeholder: read-only, to exercise the role
+            : "MEMBER",
+      })),
+    });
+  }
+
   console.log("Seeding completed successfully!");
+  console.log(`Demo accounts share the password: ${SEED_PASSWORD}`);
 }
 
 main()

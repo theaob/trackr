@@ -178,7 +178,7 @@ export default function ReleaseNotesModal({
                 </div>
                 {version.description && (
                   <p className="text-xs text-jira-gray-700 mt-2 italic">
-                    "{version.description}"
+                    &ldquo;{version.description}&rdquo;
                   </p>
                 )}
               </div>

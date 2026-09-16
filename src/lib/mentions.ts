@@ -1,5 +1,5 @@
 import prisma from "@/lib/db";
-import { PUBLIC_USER_SELECT } from "@/lib/auth/session";
+import { PUBLIC_USER_SELECT } from "@/lib/auth/publicUser";
 
 /**
  * Escape a string for literal use inside a regular expression.
@@ -30,7 +30,10 @@ export function mentionsUser(text: string, name: string): boolean {
   const firstName = name.split(" ")[0];
   if (!firstName) return false;
 
-  return new RegExp(`\\B@${escapeRegExp(firstName)}\\b`, "i").test(text);
+  // \B before @ keeps "alex@example.com" from counting as a mention; the
+  // trailing lookahead stands in for \b, which would never match after a name
+  // that ends in punctuation such as "C++".
+  return new RegExp(`\\B@${escapeRegExp(firstName)}(?!\\w)`, "i").test(text);
 }
 
 /**

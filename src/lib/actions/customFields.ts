@@ -3,9 +3,18 @@
 import prisma from "@/lib/db";
 import { CustomFieldType } from "@/types";
 import { revalidatePath } from "next/cache";
+import {
+  projectIdForCustomField,
+  projectIdForIssue,
+  requireProjectAccess,
+  requireProjectPermission,
+  toActionError,
+} from "@/lib/auth/guards";
 
 export async function getProjectCustomFields(projectId: string) {
   try {
+    await requireProjectAccess(projectId);
+
     const fields = await prisma.customField.findMany({
       where: { projectId },
       orderBy: { createdAt: "asc" },
@@ -26,6 +35,8 @@ export async function createCustomField(data: {
   required?: boolean;
 }) {
   try {
+    await requireProjectPermission(data.projectId, "PROJECT_ADMIN");
+
     const project = await prisma.project.findUnique({
       where: { id: data.projectId },
       select: { key: true },
@@ -50,10 +61,9 @@ export async function createCustomField(data: {
     try {
       revalidatePath(`/projects/${project.key}/settings`);
     } catch {}
-    return { success: true, field };
+    return { success: true as const, field };
   } catch (error) {
-    console.error("Failed to create custom field:", error);
-    return { success: false, error: "Failed to create custom field" };
+    return toActionError(error, "Failed to create custom field");
   }
 }
 
@@ -68,6 +78,8 @@ export async function updateCustomField(
   }
 ) {
   try {
+    await requireProjectPermission(await projectIdForCustomField(id), "PROJECT_ADMIN");
+
     const existing = await prisma.customField.findUnique({
       where: { id },
       include: { project: true },
@@ -95,15 +107,16 @@ export async function updateCustomField(
     try {
       revalidatePath(`/projects/${existing.project.key}/settings`);
     } catch {}
-    return { success: true, field: updated };
+    return { success: true as const, field: updated };
   } catch (error) {
-    console.error("Failed to update custom field:", error);
-    return { success: false, error: "Failed to update custom field" };
+    return toActionError(error, "Failed to update custom field");
   }
 }
 
 export async function deleteCustomField(id: string) {
   try {
+    await requireProjectPermission(await projectIdForCustomField(id), "PROJECT_ADMIN");
+
     const existing = await prisma.customField.findUnique({
       where: { id },
       include: { project: true },
@@ -115,15 +128,16 @@ export async function deleteCustomField(id: string) {
     try {
       revalidatePath(`/projects/${existing.project.key}/settings`);
     } catch {}
-    return { success: true };
+    return { success: true as const };
   } catch (error) {
-    console.error("Failed to delete custom field:", error);
-    return { success: false, error: "Failed to delete custom field" };
+    return toActionError(error, "Failed to delete custom field");
   }
 }
 
 export async function getIssueCustomFieldValues(issueId: string) {
   try {
+    await requireProjectAccess(await projectIdForIssue(issueId));
+
     const values = await prisma.customFieldValue.findMany({
       where: { issueId },
       include: { customField: true },
@@ -141,6 +155,10 @@ export async function setIssueCustomFieldValue(
   value: string
 ) {
   try {
+    const projectId = await projectIdForIssue(issueId);
+    await requireProjectPermission(projectId, "EDIT_ISSUE");
+    await assertFieldsBelongToProject(projectId, [customFieldId]);
+
     const trimmed = (value ?? "").trim();
 
     if (trimmed === "") {
@@ -148,7 +166,7 @@ export async function setIssueCustomFieldValue(
       await prisma.customFieldValue.deleteMany({
         where: { issueId, customFieldId },
       });
-      return { success: true, value: null };
+      return { success: true as const, value: null };
     }
 
     const val = await prisma.customFieldValue.upsert({
@@ -167,10 +185,9 @@ export async function setIssueCustomFieldValue(
       include: { customField: true },
     });
 
-    return { success: true, value: val };
+    return { success: true as const, value: val };
   } catch (error) {
-    console.error("Failed to set custom field value:", error);
-    return { success: false, error: "Failed to set custom field value" };
+    return toActionError(error, "Failed to set custom field value");
   }
 }
 
@@ -179,8 +196,16 @@ export async function batchSetIssueCustomFieldValues(
   values: Record<string, string>
 ) {
   try {
+    const projectId = await projectIdForIssue(issueId);
+    await requireProjectPermission(projectId, "EDIT_ISSUE");
+
     const entries = Object.entries(values);
-    if (entries.length === 0) return { success: true };
+    if (entries.length === 0) return { success: true as const };
+
+    await assertFieldsBelongToProject(
+      projectId,
+      entries.map(([customFieldId]) => customFieldId)
+    );
 
     await prisma.$transaction(
       entries.map(([customFieldId, rawVal]) => {
@@ -207,9 +232,25 @@ export async function batchSetIssueCustomFieldValues(
       })
     );
 
-    return { success: true };
+    return { success: true as const };
   } catch (error) {
-    console.error("Failed to batch set custom field values:", error);
-    return { success: false, error: "Failed to batch set custom field values" };
+    return toActionError(error, "Failed to batch set custom field values");
+  }
+}
+
+/**
+ * Custom field values are addressed by issue and field id, so confirm the
+ * fields are defined on the same project as the issue before writing them.
+ */
+async function assertFieldsBelongToProject(projectId: string, fieldIds: string[]) {
+  const ids = Array.from(new Set(fieldIds));
+  if (ids.length === 0) return;
+
+  const count = await prisma.customField.count({
+    where: { id: { in: ids }, projectId },
+  });
+
+  if (count !== ids.length) {
+    throw new Error("Custom field does not belong to this project");
   }
 }

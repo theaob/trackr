@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { PUBLIC_USER_SELECT } from "@/lib/auth/session";
+import { PUBLIC_USER_SELECT } from "@/lib/auth/publicUser";
 import {
   accessibleProjectIds,
   canAccessProject,
@@ -185,7 +185,7 @@ export async function createProject(data: {
     try {
       revalidatePath("/projects");
     } catch {}
-    return { success: true, project };
+    return { success: true as const, project };
   } catch (error) {
     return toActionError(error, "Failed to create project");
   }
@@ -261,7 +261,7 @@ export async function updateProject(
     try {
       revalidatePath(`/projects/${updated.key}`);
     } catch {}
-    return { success: true, project: updated };
+    return { success: true as const, project: updated };
   } catch (error) {
     return toActionError(error, "Failed to update project");
   }

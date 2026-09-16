@@ -72,7 +72,7 @@ export async function registerUser(data: {
       revalidatePath("/projects");
     } catch {}
 
-    return { success: true, user };
+    return { success: true as const, user };
   } catch (error) {
     return toActionError(error, "Failed to create user account");
   }
@@ -119,7 +119,7 @@ export async function loginWithCredentials(email: string, password?: string) {
       revalidatePath("/projects");
     } catch {}
 
-    return { success: true, user: safeUser };
+    return { success: true as const, user: safeUser };
   } catch (error) {
     console.error("Failed to login user:", error);
     return { success: false, error: "Authentication failed." };
@@ -156,7 +156,7 @@ export async function changeOwnPassword(currentPassword: string, newPassword: st
       data: { passwordHash: await hashPassword(newPassword) },
     });
 
-    return { success: true };
+    return { success: true as const };
   } catch (error) {
     return toActionError(error, "Failed to change password");
   }
@@ -167,7 +167,7 @@ export async function logout() {
   try {
     revalidatePath("/", "layout");
   } catch {}
-  return { success: true };
+  return { success: true as const };
 }
 
 /**
@@ -261,7 +261,7 @@ export async function updateSsoConfig(data: {
 
     const { clientSecret, ...rest } = updated;
     return {
-      success: true,
+      success: true as const,
       config: {
         ...rest,
         clientSecret: "",

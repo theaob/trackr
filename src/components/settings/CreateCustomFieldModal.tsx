@@ -78,7 +78,7 @@ export default function CreateCustomFieldModal({
         required,
       });
 
-      if (res.success && res.field) {
+      if (res.success) {
         onCreated(res.field as unknown as CustomField);
         onClose();
       } else {

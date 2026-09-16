@@ -3,7 +3,7 @@
 import prisma from "@/lib/db";
 import { ProjectRole } from "@/types";
 import { revalidatePath } from "next/cache";
-import { PUBLIC_USER_SELECT } from "@/lib/auth/session";
+import { PUBLIC_USER_SELECT } from "@/lib/auth/publicUser";
 import {
   requireProjectAccess,
   requireProjectPermission,
@@ -83,7 +83,7 @@ export async function addProjectMember(
       } catch {}
     }
 
-    return { success: true, member };
+    return { success: true as const, member };
   } catch (error) {
     return toActionError(error, "Failed to add project member");
   }
@@ -149,7 +149,7 @@ export async function updateProjectMemberRole(
       } catch {}
     }
 
-    return { success: true, member: updated };
+    return { success: true as const, member: updated };
   } catch (error) {
     return toActionError(error, "Failed to update project member role");
   }
@@ -199,7 +199,7 @@ export async function removeProjectMember(projectId: string, userId: string) {
       } catch {}
     }
 
-    return { success: true };
+    return { success: true as const };
   } catch (error) {
     return toActionError(error, "Failed to remove project member");
   }

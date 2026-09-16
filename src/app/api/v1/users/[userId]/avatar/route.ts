@@ -1,89 +1,132 @@
-"use server";
-
 import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 import prisma from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth/session";
+import { avatarDir } from "@/lib/paths";
 
-const AVATAR_DIR = path.join(process.cwd(), "data", "avatars");
+export const dynamic = "force-dynamic";
+
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const EXTENSIONS = [".webp", ".png", ".jpg", ".jpeg", ".gif"];
+const CONTENT_TYPES: Record<string, string> = {
+  ".webp": "image/webp",
+  ".png": "image/png",
+  ".gif": "image/gif",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+};
+const EXTENSION_FOR_TYPE: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+  "image/gif": ".gif",
+};
 
-async function ensureAvatarDir() {
-  await fs.mkdir(AVATAR_DIR, { recursive: true });
+/**
+ * The id becomes part of a filename, so only the cuid shape Prisma generates is
+ * accepted. Without this, a crafted id such as "../../config" escapes the
+ * avatar directory.
+ */
+function isSafeUserId(userId: string): boolean {
+  return /^[A-Za-z0-9_-]{1,64}$/.test(userId);
 }
 
-// GET — serve avatar image from disk
+async function ensureAvatarDir() {
+  await fs.mkdir(avatarDir(), { recursive: true });
+}
+
+async function removeExistingAvatars(userId: string) {
+  for (const ext of EXTENSIONS) {
+    try {
+      await fs.unlink(path.join(avatarDir(), `${userId}${ext}`));
+    } catch {
+      // Not present with this extension.
+    }
+  }
+}
+
+/** Only the owner of an avatar may change or remove it. */
+async function authorizeSelf(userId: string) {
+  if (!isSafeUserId(userId)) {
+    return NextResponse.json({ error: "Invalid user id" }, { status: 400 });
+  }
+
+  const session = await getCurrentUser();
+  if (!session) {
+    return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  }
+  if (session.id !== userId) {
+    return NextResponse.json(
+      { error: "You can only change your own avatar" },
+      { status: 403 }
+    );
+  }
+  return null;
+}
+
+// GET - serve avatar image from disk
 export async function GET(
   _request: NextRequest,
   { params }: { params: { userId: string } }
 ) {
   const { userId } = params;
 
+  if (!isSafeUserId(userId)) {
+    return NextResponse.json({ error: "Invalid user id" }, { status: 400 });
+  }
+
+  // Avatars are only served to signed-in users, like the rest of the app.
+  const session = await getCurrentUser();
+  if (!session) {
+    return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  }
+
   try {
     await ensureAvatarDir();
 
-    // Try common extensions
-    const extensions = [".webp", ".png", ".jpg", ".jpeg", ".gif"];
-    for (const ext of extensions) {
-      const filePath = path.join(AVATAR_DIR, `${userId}${ext}`);
+    for (const ext of EXTENSIONS) {
+      const filePath = path.join(avatarDir(), `${userId}${ext}`);
       try {
         const data = await fs.readFile(filePath);
-        const contentType =
-          ext === ".webp"
-            ? "image/webp"
-            : ext === ".png"
-            ? "image/png"
-            : ext === ".gif"
-            ? "image/gif"
-            : "image/jpeg";
-
         return new NextResponse(data, {
           status: 200,
           headers: {
-            "Content-Type": contentType,
-            "Cache-Control": "public, max-age=3600, must-revalidate",
+            "Content-Type": CONTENT_TYPES[ext],
+            "Cache-Control": "private, max-age=3600, must-revalidate",
           },
         });
       } catch {
-        // File doesn't exist with this extension, try next
+        // Not present with this extension; try the next one.
       }
     }
 
     return NextResponse.json({ error: "Avatar not found" }, { status: 404 });
   } catch {
-    return NextResponse.json(
-      { error: "Failed to read avatar" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to read avatar" }, { status: 500 });
   }
 }
 
-// POST — upload avatar image
+// POST - upload avatar image
 export async function POST(
   request: NextRequest,
   { params }: { params: { userId: string } }
 ) {
   const { userId } = params;
 
-  try {
-    // Verify user exists
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
+  const denied = await authorizeSelf(userId);
+  if (denied) return denied;
 
+  try {
     const formData = await request.formData();
     const file = formData.get("avatar") as File | null;
 
     if (!file) {
-      return NextResponse.json(
-        { error: "No file provided" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    if (!ALLOWED_TYPES.includes(file.type)) {
+    const ext = EXTENSION_FOR_TYPE[file.type];
+    if (!ext) {
       return NextResponse.json(
         { error: "Invalid file type. Allowed: JPEG, PNG, WebP, GIF" },
         { status: 400 }
@@ -98,103 +141,48 @@ export async function POST(
     }
 
     await ensureAvatarDir();
+    await removeExistingAvatars(userId);
 
-    // Remove any existing avatar files for this user
-    const extensions = [".webp", ".png", ".jpg", ".jpeg", ".gif"];
-    for (const ext of extensions) {
-      try {
-        await fs.unlink(path.join(AVATAR_DIR, `${userId}${ext}`));
-      } catch {
-        // Ignore if file doesn't exist
-      }
-    }
-
-    // Determine extension from mime type
-    const extMap: Record<string, string> = {
-      "image/jpeg": ".jpg",
-      "image/png": ".png",
-      "image/webp": ".webp",
-      "image/gif": ".gif",
-    };
-    const ext = extMap[file.type] || ".png";
-    const filePath = path.join(AVATAR_DIR, `${userId}${ext}`);
-
-    // Write file to disk
     const buffer = Buffer.from(await file.arrayBuffer());
-    await fs.writeFile(filePath, buffer);
+    await fs.writeFile(path.join(avatarDir(), `${userId}${ext}`), buffer);
 
-    // Update user's avatarUrl in database
     const avatarUrl = `/api/v1/users/${userId}/avatar?t=${Date.now()}`;
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: { avatarUrl },
+      select: { id: true, name: true, email: true, avatarUrl: true, role: true },
     });
 
-    return NextResponse.json({
-      success: true,
-      user: {
-        id: updatedUser.id,
-        name: updatedUser.name,
-        email: updatedUser.email,
-        avatarUrl: updatedUser.avatarUrl,
-        role: updatedUser.role,
-      },
-    });
+    return NextResponse.json({ success: true, user: updatedUser });
   } catch (error) {
     console.error("Avatar upload error:", error);
-    return NextResponse.json(
-      { error: "Failed to upload avatar" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to upload avatar" }, { status: 500 });
   }
 }
 
-// DELETE — remove avatar, revert to initials
+// DELETE - remove avatar, revert to initials
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: { userId: string } }
 ) {
   const { userId } = params;
 
+  const denied = await authorizeSelf(userId);
+  if (denied) return denied;
+
   try {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
     await ensureAvatarDir();
+    await removeExistingAvatars(userId);
 
-    // Remove any existing avatar files
-    const extensions = [".webp", ".png", ".jpg", ".jpeg", ".gif"];
-    for (const ext of extensions) {
-      try {
-        await fs.unlink(path.join(AVATAR_DIR, `${userId}${ext}`));
-      } catch {
-        // Ignore
-      }
-    }
-
-    // Clear avatarUrl in database
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: { avatarUrl: null },
+      select: { id: true, name: true, email: true, avatarUrl: true, role: true },
     });
 
-    return NextResponse.json({
-      success: true,
-      user: {
-        id: updatedUser.id,
-        name: updatedUser.name,
-        email: updatedUser.email,
-        avatarUrl: updatedUser.avatarUrl,
-        role: updatedUser.role,
-      },
-    });
+    return NextResponse.json({ success: true, user: updatedUser });
   } catch (error) {
     console.error("Avatar delete error:", error);
-    return NextResponse.json(
-      { error: "Failed to delete avatar" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete avatar" }, { status: 500 });
   }
 }

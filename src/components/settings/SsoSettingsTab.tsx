@@ -24,7 +24,6 @@ export default function SsoSettingsTab() {
     clientId: "trackr-client-id",
     clientSecret: "",
     certificate: "",
-    allowSelfSignedCerts: true,
     autoProvisionUsers: true,
     defaultRole: "Developer",
   });
@@ -35,7 +34,9 @@ export default function SsoSettingsTab() {
 
   useEffect(() => {
     getSsoConfig().then((cfg) => {
+      // null means the caller is not a project administrator.
       if (cfg) setConfig(cfg);
+      else setMsg({ type: "error", text: "SSO ayarlarını görüntüleme yetkiniz yok." });
       setLoading(false);
     });
   }, []);
@@ -158,27 +159,20 @@ export default function SsoSettingsTab() {
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-purple-700" />
               <div>
-                <h4 className="font-bold text-purple-900">Self-Signed (Öz-İmzalı) Sertifika Ayarları</h4>
+                <h4 className="font-bold text-purple-900">Token İmza Doğrulama Anahtarı</h4>
                 <p className="text-[11px] text-purple-700 mt-0.5">
-                  İç ağdaki öz-imzalı sertifikaya sahip IdP sunucuları için TLS doğrulaması ve PEM sertifikası tanımı.
+                  ID token imzalarının doğrulandığı anahtar. RS256 için IdP&apos;nin X.509
+                  sertifikası, HS256 için client secret kullanılır. Anahtar tanımlanmadan
+                  SSO etkinleştirilemez.
                 </p>
               </div>
             </div>
 
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={config.allowSelfSignedCerts}
-                onChange={(e) => setConfig({ ...config, allowSelfSignedCerts: e.target.checked })}
-                className="w-4 h-4 accent-purple-700"
-              />
-              <span className="font-bold text-purple-900 text-xs">Self-Signed Sertifikalara İzin Ver</span>
-            </label>
           </div>
 
           <div>
             <label className="block font-semibold text-purple-900 mb-1 flex items-center justify-between">
-              <span>X.509 PEM Sertifikası (Opsiyonel)</span>
+              <span>X.509 PEM Sertifikası</span>
               <span className="text-[10px] text-purple-700 font-normal">-----BEGIN CERTIFICATE----- ... -----END CERTIFICATE-----</span>
             </label>
             <textarea

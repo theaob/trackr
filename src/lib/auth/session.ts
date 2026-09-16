@@ -5,27 +5,14 @@ import { cookies } from "next/headers";
 import { cache } from "react";
 import prisma from "@/lib/db";
 import { dataDir } from "@/lib/paths";
+import { PUBLIC_USER_SELECT, SessionUser } from "@/lib/auth/publicUser";
+
+export { PUBLIC_USER_SELECT };
+export type { SessionUser };
 
 export const SESSION_COOKIE = "trackr_session";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
 const SECRET_FILE = ".session-secret";
-
-/** Columns that are safe to hand to a client component. */
-export const PUBLIC_USER_SELECT = {
-  id: true,
-  name: true,
-  email: true,
-  avatarUrl: true,
-  role: true,
-} as const;
-
-export interface SessionUser {
-  id: string;
-  name: string;
-  email: string;
-  avatarUrl: string | null;
-  role: string;
-}
 
 let cachedSecret: Buffer | null = null;
 

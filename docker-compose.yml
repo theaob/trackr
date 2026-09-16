@@ -12,6 +12,11 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - DATABASE_URL=file:/app/data/dev.db
+      # Signs session cookies. Generate with: openssl rand -hex 32
+      # Without it a secret is generated into the data volume on first start.
+      - AUTH_SECRET=${AUTH_SECRET:-}
+      # Set to 1 only if your webhook receivers live on a private network.
+      - TRACKR_ALLOW_PRIVATE_WEBHOOKS=${TRACKR_ALLOW_PRIVATE_WEBHOOKS:-0}
     volumes:
       - trackr_data:/app/data
 

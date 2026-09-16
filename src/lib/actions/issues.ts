@@ -4,7 +4,7 @@ import prisma from "@/lib/db";
 import { IssueStatus, IssueType, PriorityLevel } from "@/types";
 import { revalidatePath } from "next/cache";
 import { triggerWebhooks } from "./webhooks";
-import { PUBLIC_USER_SELECT } from "@/lib/auth/session";
+import { PUBLIC_USER_SELECT } from "@/lib/auth/publicUser";
 import {
   accessibleProjectIds,
   projectIdForIssue,
@@ -62,6 +62,34 @@ export async function getProjectIssues(projectId: string) {
     return issues;
   } catch (error) {
     console.error("Failed to fetch project issues:", error);
+    return [];
+  }
+}
+
+/**
+ * Epics only, for the parent pickers in the project chrome. Kept separate so
+ * the layout does not have to load the project's issues to find them.
+ */
+export async function getProjectEpics(projectId: string) {
+  try {
+    await requireProjectAccess(projectId);
+
+    return await prisma.issue.findMany({
+      where: { projectId, type: "EPIC" },
+      select: {
+        id: true,
+        key: true,
+        title: true,
+        type: true,
+        status: true,
+        priority: true,
+        projectId: true,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 200,
+    });
+  } catch (error) {
+    console.error("Failed to fetch project epics:", error);
     return [];
   }
 }
@@ -536,7 +564,7 @@ export async function createIssue(data: {
     } catch {}
 
     triggerWebhooks("issue:created", newIssue, data.projectId);
-    return { success: true, issue: newIssue };
+    return { success: true as const, issue: newIssue };
   } catch (error) {
     return toActionError(error, "Failed to create issue");
   }
@@ -797,7 +825,7 @@ export async function updateIssue(
       revalidatePath(`/projects/${existing.project.key}`);
     } catch {}
     triggerWebhooks("issue:updated", { issue: updated, changes: data }, existing.projectId);
-    return { success: true, issue: updated };
+    return { success: true as const, issue: updated };
   } catch (error) {
     return toActionError(error, "Failed to update issue");
   }
@@ -907,7 +935,7 @@ export async function updateIssueStatusAndOrder(
       { issueId, key: existing.key, status: newStatus, order: newOrder },
       existing.projectId
     );
-    return { success: true, issue: updated };
+    return { success: true as const, issue: updated };
   } catch (error) {
     return toActionError(error, "Failed to update issue position");
   }
@@ -935,7 +963,7 @@ export async function deleteIssue(id: string) {
       { id: issue.id, key: issue.key, title: issue.title },
       issue.projectId
     );
-    return { success: true };
+    return { success: true as const };
   } catch (error) {
     return toActionError(error, "Failed to delete issue");
   }

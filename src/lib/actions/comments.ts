@@ -3,15 +3,32 @@
 import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { triggerWebhooks } from "./webhooks";
+import { PUBLIC_USER_SELECT } from "@/lib/auth/publicUser";
+import {
+  projectIdForComment,
+  projectIdForIssue,
+  requireProjectPermission,
+  toActionError,
+} from "@/lib/auth/guards";
+import { findMentionedUsers } from "@/lib/mentions";
 
 
-export async function addComment(issueId: string, authorId: string, content: string) {
+export async function addComment(
+  issueId: string,
+  /** Ignored: the author is taken from the session. */
+  authorId: string,
+  content: string
+) {
   try {
-    if (!content.trim()) throw new Error("Comment cannot be empty");
+    const projectId = await projectIdForIssue(issueId);
+    const { user } = await requireProjectPermission(projectId, "ADD_COMMENT");
+    const actorId = user.id;
+
+    if (!content.trim()) return { success: false, error: "Comment cannot be empty" };
 
     const issue = await prisma.issue.findUnique({
       where: { id: issueId },
-      include: { project: true, assignee: true, reporter: true },
+      include: { project: true },
     });
 
     if (!issue) throw new Error("Issue not found");
@@ -20,17 +37,17 @@ export async function addComment(issueId: string, authorId: string, content: str
       data: {
         content: content.trim(),
         issueId,
-        authorId,
+        authorId: actorId,
       },
       include: {
-        author: true,
+        author: { select: PUBLIC_USER_SELECT },
       },
     });
 
     await prisma.activityLog.create({
       data: {
         issueId,
-        userId: authorId,
+        userId: actorId,
         action: "COMMENTED",
         field: "comment",
         newValue: content.slice(0, 40) + (content.length > 40 ? "..." : ""),
@@ -38,7 +55,7 @@ export async function addComment(issueId: string, authorId: string, content: str
     });
 
     // Notify Assignee if not the author
-    if (issue.assigneeId && issue.assigneeId !== authorId) {
+    if (issue.assigneeId && issue.assigneeId !== actorId) {
       await prisma.notification.create({
         data: {
           userId: issue.assigneeId,
@@ -50,7 +67,7 @@ export async function addComment(issueId: string, authorId: string, content: str
     }
 
     // Notify Reporter if not author and not assignee
-    if (issue.reporterId && issue.reporterId !== authorId && issue.reporterId !== issue.assigneeId) {
+    if (issue.reporterId && issue.reporterId !== actorId && issue.reporterId !== issue.assigneeId) {
       await prisma.notification.create({
         data: {
           userId: issue.reporterId,
@@ -61,41 +78,32 @@ export async function addComment(issueId: string, authorId: string, content: str
       });
     }
 
-    // Notify Mentioned Users (@Full Name, @FirstName, or @[Full Name])
-    const allUsers = await prisma.user.findMany();
-    const contentLower = content.toLowerCase();
-    const mentionedUsers = allUsers.filter((u) => {
-      if (u.id === authorId || u.id === issue.assigneeId || u.id === issue.reporterId) {
-        return false;
-      }
-      const fullNamePattern = `@${u.name.toLowerCase()}`;
-      const bracketPattern = `@[${u.name.toLowerCase()}]`;
-      const firstNamePattern = `@${u.name.split(" ")[0].toLowerCase()}`;
-      return (
-        contentLower.includes(fullNamePattern) ||
-        contentLower.includes(bracketPattern) ||
-        new RegExp(`\\b${firstNamePattern}\\b`, "i").test(content)
-      );
+    // Notify project members mentioned in the comment.
+    const mentioned = await findMentionedUsers(projectId, content, {
+      exclude: [actorId, issue.assigneeId, issue.reporterId],
     });
 
-    for (const mUser of mentionedUsers) {
-      await prisma.notification.create({
-        data: {
+    if (mentioned.length > 0) {
+      const snippet = content.slice(0, 60);
+      const ellipsis = content.length > 60 ? "..." : "";
+
+      await prisma.notification.createMany({
+        data: mentioned.map((mUser) => ({
           userId: mUser.id,
           title: `Mentioned in comment on ${issue.key}`,
-          message: `${comment.author.name} mentioned you: "${content.slice(0, 60)}${content.length > 60 ? "..." : ""}"`,
+          message: `${comment.author.name} mentioned you: "${snippet}${ellipsis}"`,
           link: `/projects/${issue.project.key}/board?selectedIssue=${issue.key}`,
-        },
+        })),
       });
 
-      await prisma.activityLog.create({
-        data: {
+      await prisma.activityLog.createMany({
+        data: mentioned.map((mUser) => ({
           issueId,
-          userId: authorId,
+          userId: actorId,
           action: "MENTIONED",
           field: "comment",
           newValue: mUser.name,
-        },
+        })),
       });
     }
 
@@ -110,16 +118,18 @@ export async function addComment(issueId: string, authorId: string, content: str
       },
       issue.projectId
     );
-    return { success: true, comment };
+    return { success: true as const, comment };
   } catch (error) {
-    console.error("Failed to add comment:", error);
-    return { success: false, error: "Failed to post comment" };
+    return toActionError(error, "Failed to post comment");
   }
 }
 
 
 export async function deleteComment(commentId: string) {
   try {
+    const projectId = await projectIdForComment(commentId);
+    const { user, role } = await requireProjectPermission(projectId, "VIEW_PROJECT");
+
     const comment = await prisma.comment.findUnique({
       where: { id: commentId },
       include: {
@@ -131,12 +141,16 @@ export async function deleteComment(commentId: string) {
 
     if (!comment) throw new Error("Comment not found");
 
+    // A comment belongs to its author; project administrators can moderate.
+    if (comment.authorId !== user.id && role !== "ADMIN") {
+      return { success: false, error: "You can only delete your own comments." };
+    }
+
     await prisma.comment.delete({ where: { id: commentId } });
 
     revalidatePath(`/projects/${comment.issue.project.key}`);
-    return { success: true };
+    return { success: true as const };
   } catch (error) {
-    console.error("Failed to delete comment:", error);
-    return { success: false, error: "Failed to delete comment" };
+    return toActionError(error, "Failed to delete comment");
   }
 }

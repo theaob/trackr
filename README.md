@@ -31,8 +31,13 @@ A modern, full-stack agile project management and issue tracking platform built 
   - One-click teammate avatar filter buttons.
   - "Only my issues" toggle.
   - Issue type & priority selectors.
-- 👥 **Teammate Switcher**:
-  - 1-click active session switching between team members (Alex Chen, Sarah Connor, David Kim, Elena Rostova, Marcus Vance) for effortless local testing.
+- 🔐 **Authentication & Access Control**:
+  - Email/password sign-in backed by a signed, http-only session cookie.
+  - PBKDF2-SHA512 password hashing (210k iterations) with transparent upgrades.
+  - Per-project roles (**Administrator**, **Member**, **Viewer**) enforced on the
+    server, not just in the UI.
+  - Optional OIDC single sign-on with real ID token signature verification.
+  - Personal access tokens for the REST API, scoped to the owner's projects.
 - ⚙️ **Project Settings**:
   - Configure project name, description, and review project lead details.
 
@@ -46,13 +51,36 @@ npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+You will be asked to sign in. After seeding, the demo accounts all share the
+password **`trackr-demo`** (override at seed time with `TRACKR_SEED_PASSWORD`):
+
+| Account | Email | Project role |
+| --- | --- | --- |
+| Alex Chen | `alex.chen@acme.dev` | Administrator (Apollo lead) |
+| Sarah Connor | `sarah.c@acme.dev` | Member |
+| David Kim | `david.k@acme.dev` | Member (Voyager lead) |
+| Elena Rostova | `elena.r@acme.dev` | Member (Orion lead) |
+| Marcus Vance | `marcus.v@acme.dev` | Viewer |
+
+> **Change or remove these accounts before exposing an instance to anyone else.**
+
 ### 2. Production Build
 ```bash
 npm run build
 npm start
 ```
 
-### 3. Database Management
+### 3. Configuration
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `DATABASE_URL` | `file:./dev.db` | Prisma SQLite connection string. |
+| `AUTH_SECRET` | generated | Signs session cookies; 32+ characters. Generate with `openssl rand -hex 32`. When unset, a random secret is written to `<data dir>/.session-secret` on first use, so sessions survive restarts but not a new volume. |
+| `TRACKR_DATA_DIR` | `./data` | Where avatars and the generated session secret live. |
+| `TRACKR_ALLOW_PRIVATE_WEBHOOKS` | `0` | Set to `1` to let webhooks target loopback, link-local and private addresses. Off by default so a webhook cannot be pointed at internal services. |
+| `TRACKR_SEED_PASSWORD` | `trackr-demo` | Password given to the demo accounts by `db:seed`. |
+
+### 4. Database Management
 - **Database Schema Push**: `node ./node_modules/prisma/build/index.js db push`
 - **Re-seed Demo Data**: `node ./node_modules/tsx/dist/cli.mjs prisma/seed.ts`
 - **Prisma Studio**: `node ./node_modules/prisma/build/index.js studio`
@@ -111,6 +139,34 @@ npm version patch   # or minor / major
 git push origin main
 ```
 
+## 🔒 Single Sign-On (OIDC)
+
+SSO is **disabled until it is configured**, and a session is only ever created
+from an ID token whose signature, issuer, audience, expiry and nonce all verify.
+
+1. In **Project Settings → SSO**, set the issuer URL, the client id, and either
+   the identity provider's X.509 signing certificate (for `RS256` tokens) or the
+   client secret (for `HS256` tokens).
+2. Register `https://<your-host>/api/v1/auth/sso/callback` as a redirect URI
+   with your provider, using the `form_post` response mode.
+3. Sign-in starts at `/api/v1/auth/sso/start`, which mints a nonce and state,
+   discovers the provider's authorization endpoint, and redirects the browser.
+
+The callback rejects any assertion that does not carry back the state and nonce
+from a login attempt started on this instance.
+
+## 🧪 Tests & Checks
+
+```bash
+npm run typecheck   # tsc --noEmit
+npm run lint        # next lint
+npm test            # vitest run
+npm run build       # production build
+```
+
+CI runs all four on every push and pull request, and the release workflow will
+not publish an image unless they pass.
+
 ## 🛠 Tech Stack
 
 - **Framework**: Next.js 14 (App Router)
@@ -120,3 +176,4 @@ git push origin main
 - **Drag and Drop**: `@hello-pangea/dnd`
 - **Database & ORM**: SQLite (`dev.db`) with Prisma ORM
 - **Dates**: `date-fns`
+- **Tests**: Vitest

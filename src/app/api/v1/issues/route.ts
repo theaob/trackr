@@ -1,42 +1,66 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validatePersonalAccessToken } from "@/lib/actions/tokens";
+import { validatePersonalAccessToken } from "@/lib/auth/tokens";
+import { accessibleProjectIds } from "@/lib/auth/guards";
 import prisma from "@/lib/db";
 
 export const dynamic = "force-dynamic";
+
+const DEFAULT_LIMIT = 50;
+const MAX_LIMIT = 100;
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return NextResponse.json(
-      {
-        error: "Unauthorized. Please provide a Bearer Personal Access Token.",
-      },
+      { error: "Unauthorized. Please provide a Bearer Personal Access Token." },
       { status: 401 }
     );
   }
 
-  const token = authHeader.replace("Bearer ", "").trim();
+  const token = authHeader.slice("Bearer ".length).trim();
   const auth = await validatePersonalAccessToken(token);
 
-  if (!auth.valid || !auth.user) {
-    return NextResponse.json(
-      {
-        error: auth.error || "Invalid or expired token",
-      },
-      { status: 401 }
-    );
+  if (!auth.valid) {
+    return NextResponse.json({ error: auth.error }, { status: 401 });
   }
 
-  // Parse query parameters
+  // A token carries its owner's access and no more: the query is confined to
+  // the projects that user belongs to.
+  const allowedProjectIds = await accessibleProjectIds(auth.user.id);
+  if (allowedProjectIds.length === 0) {
+    return NextResponse.json({
+      authenticatedUser: {
+        id: auth.user.id,
+        name: auth.user.name,
+        email: auth.user.email,
+      },
+      count: 0,
+      issues: [],
+    });
+  }
+
   const { searchParams } = new URL(request.url);
   const projectKey = searchParams.get("projectKey");
   const limitParam = searchParams.get("limit");
-  const limit = limitParam ? Math.min(parseInt(limitParam, 10) || 50, 100) : 50;
+  const limit = limitParam
+    ? Math.min(Math.max(parseInt(limitParam, 10) || DEFAULT_LIMIT, 1), MAX_LIMIT)
+    : DEFAULT_LIMIT;
 
-  const where: any = {};
+  const where: any = { projectId: { in: allowedProjectIds } };
+
   if (projectKey) {
-    where.project = { key: projectKey.toUpperCase() };
+    const project = await prisma.project.findUnique({
+      where: { key: projectKey.toUpperCase() },
+      select: { id: true },
+    });
+
+    // An inaccessible or unknown key is reported the same way, so the endpoint
+    // does not confirm the existence of projects the caller cannot see.
+    if (!project || !allowedProjectIds.includes(project.id)) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+    where.projectId = project.id;
   }
 
   const issues = await prisma.issue.findMany({

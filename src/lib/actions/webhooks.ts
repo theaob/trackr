@@ -4,6 +4,44 @@ import crypto from "crypto";
 import prisma from "@/lib/db";
 import { Webhook, WebhookDelivery, WebhookEvent } from "@/types";
 import { revalidatePath } from "next/cache";
+import {
+  AuthError,
+  requireAnyProjectAdmin,
+  requireProjectPermission,
+  toActionError,
+} from "@/lib/auth/guards";
+import { checkWebhookUrl } from "@/lib/webhookUrl";
+
+/**
+ * A webhook is administered by the project it belongs to. Instance-wide
+ * webhooks (no project) are restricted to users who administer some project.
+ */
+async function requireWebhookAdmin(projectId: string | null | undefined) {
+  if (projectId) {
+    await requireProjectPermission(projectId, "PROJECT_ADMIN");
+    return;
+  }
+  await requireAnyProjectAdmin();
+}
+
+async function requireWebhookAdminById(webhookId: string) {
+  const webhook = await prisma.webhook.findUnique({
+    where: { id: webhookId },
+    select: { projectId: true },
+  });
+  if (!webhook) throw new AuthError("Webhook not found.", 404);
+  await requireWebhookAdmin(webhook.projectId);
+  return webhook;
+}
+
+/** The signing secret never leaves the server; only its presence is reported. */
+function toClientWebhook(webhook: {
+  secret: string | null;
+  [key: string]: unknown;
+}) {
+  const { secret, ...rest } = webhook;
+  return { ...rest, secret: null, hasSecret: !!secret } as unknown as Webhook;
+}
 
 /**
  * Calculate HMAC SHA-256 signature for payload
@@ -17,15 +55,17 @@ function computeHmacSignature(secret: string, payload: string): string {
  */
 export async function getProjectWebhooks(projectId?: string): Promise<Webhook[]> {
   try {
+    await requireWebhookAdmin(projectId);
+
     const where: any = projectId
       ? { OR: [{ projectId }, { projectId: null }] }
-      : {};
+      : { projectId: null };
 
     const webhooks = await prisma.webhook.findMany({
       where,
       orderBy: { createdAt: "desc" },
     });
-    return webhooks as unknown as Webhook[];
+    return webhooks.map(toClientWebhook);
   } catch (error) {
     console.error("Failed to fetch webhooks:", error);
     return [];
@@ -44,13 +84,15 @@ export async function createWebhook(data: {
 }) {
   try {
     const { name, url, secret, events, projectId } = data;
+    await requireWebhookAdmin(projectId);
 
     if (!name || name.trim() === "") {
       return { success: false, error: "Webhook name is required" };
     }
 
-    if (!url || (!url.startsWith("http://") && !url.startsWith("https://"))) {
-      return { success: false, error: "Valid HTTP or HTTPS URL is required" };
+    const urlCheck = await checkWebhookUrl(url?.trim() || "");
+    if (!urlCheck.ok) {
+      return { success: false, error: urlCheck.error! };
     }
 
     if (!events || events.length === 0) {
@@ -68,10 +110,9 @@ export async function createWebhook(data: {
       },
     });
 
-    return { success: true, webhook: webhook as unknown as Webhook };
-  } catch (error: any) {
-    console.error("Failed to create webhook:", error);
-    return { success: false, error: error?.message || "Failed to create webhook" };
+    return { success: true as const, webhook: toClientWebhook(webhook) };
+  } catch (error) {
+    return toActionError(error, "Failed to create webhook");
   }
 }
 
@@ -89,11 +130,14 @@ export async function updateWebhook(
   }
 ) {
   try {
+    await requireWebhookAdminById(id);
+
     const updateData: any = {};
     if (data.name !== undefined) updateData.name = data.name.trim();
     if (data.url !== undefined) {
-      if (!data.url.startsWith("http://") && !data.url.startsWith("https://")) {
-        return { success: false, error: "Valid HTTP or HTTPS URL is required" };
+      const urlCheck = await checkWebhookUrl(data.url.trim());
+      if (!urlCheck.ok) {
+        return { success: false, error: urlCheck.error! };
       }
       updateData.url = data.url.trim();
     }
@@ -106,10 +150,9 @@ export async function updateWebhook(
       data: updateData,
     });
 
-    return { success: true, webhook: updated as unknown as Webhook };
-  } catch (error: any) {
-    console.error("Failed to update webhook:", error);
-    return { success: false, error: error?.message || "Failed to update webhook" };
+    return { success: true as const, webhook: toClientWebhook(updated) };
+  } catch (error) {
+    return toActionError(error, "Failed to update webhook");
   }
 }
 
@@ -118,11 +161,11 @@ export async function updateWebhook(
  */
 export async function deleteWebhook(id: string) {
   try {
+    await requireWebhookAdminById(id);
     await prisma.webhook.delete({ where: { id } });
-    return { success: true };
-  } catch (error: any) {
-    console.error("Failed to delete webhook:", error);
-    return { success: false, error: error?.message || "Failed to delete webhook" };
+    return { success: true as const };
+  } catch (error) {
+    return toActionError(error, "Failed to delete webhook");
   }
 }
 
@@ -131,6 +174,8 @@ export async function deleteWebhook(id: string) {
  */
 export async function getWebhookDeliveries(webhookId: string): Promise<WebhookDelivery[]> {
   try {
+    await requireWebhookAdminById(webhookId);
+
     const deliveries = await prisma.webhookDelivery.findMany({
       where: { webhookId },
       orderBy: { createdAt: "desc" },
@@ -172,23 +217,34 @@ async function deliverWebhook(
   let responseBody: string | null = null;
   let errorMsg: string | null = null;
 
-  try {
+  // Re-check at delivery time: the host may resolve differently now than it
+  // did when the webhook was saved.
+  const urlCheck = await checkWebhookUrl(webhook.url);
+
+  if (!urlCheck.ok) {
+    errorMsg = urlCheck.error || "Webhook URL is not allowed";
+  } else {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000); // 8s timeout
 
-    const res = await fetch(webhook.url, {
-      method: "POST",
-      headers,
-      body: payloadString,
-      signal: controller.signal,
-    });
+    try {
+      const res = await fetch(webhook.url, {
+        method: "POST",
+        headers,
+        body: payloadString,
+        signal: controller.signal,
+        // Following a redirect would sidestep the address check above.
+        redirect: "manual",
+      });
 
-    clearTimeout(timeout);
-    status = res.status;
-    const text = await res.text();
-    responseBody = text.slice(0, 1000); // Truncate to first 1000 chars
-  } catch (err: any) {
-    errorMsg = err?.message || "Request failed";
+      status = res.status;
+      const text = await res.text();
+      responseBody = text.slice(0, 1000); // Truncate to first 1000 chars
+    } catch (err: any) {
+      errorMsg = err?.message || "Request failed";
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   const durationMs = Date.now() - startTime;
@@ -287,6 +343,8 @@ export async function testWebhook(webhookId: string): Promise<{
   deliveryId?: string;
 }> {
   try {
+    await requireWebhookAdminById(webhookId);
+
     const webhook = await prisma.webhook.findUnique({ where: { id: webhookId } });
     if (!webhook) {
       return { success: false, status: 0, durationMs: 0, error: "Webhook not found" };
@@ -306,12 +364,15 @@ export async function testWebhook(webhookId: string): Promise<{
     const result = await deliverWebhook(webhook, "webhook:test", testPayload);
     return result;
   } catch (error: any) {
+    if (error instanceof AuthError) {
+      return { success: false, status: 0, durationMs: 0, error: error.message };
+    }
     console.error("Failed to test webhook:", error);
     return {
       success: false,
       status: 0,
       durationMs: 0,
-      error: error?.message || "Failed to test webhook",
+      error: "Failed to test webhook",
     };
   }
 }
