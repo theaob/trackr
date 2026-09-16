@@ -47,6 +47,10 @@ RUN groupadd --system --gid 1001 nodejs && \
 RUN mkdir -p /app/data /app/prisma && \
     chown -R nextjs:nodejs /app/data /app/prisma
 
+# Declare volume BEFORE switching user so Docker initializes it
+# with the correct directory ownership (nextjs:nodejs)
+VOLUME ["/app/data"]
+
 # Copy standalone build and static assets
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
@@ -65,8 +69,6 @@ RUN chmod +x ./docker-entrypoint.sh
 USER nextjs
 
 EXPOSE 3000
-
-VOLUME ["/app/data"]
 
 ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD ["node", "server.js"]
