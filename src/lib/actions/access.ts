@@ -5,8 +5,10 @@ import { ProjectRole } from "@/types";
 import { revalidatePath } from "next/cache";
 import { PUBLIC_USER_SELECT } from "@/lib/auth/publicUser";
 import {
+  isProjectTeamMember,
   requireProjectAccess,
   requireProjectPermission,
+  requireUser,
   toActionError,
 } from "@/lib/auth/guards";
 import { ensureProjectMembersSeeded } from "@/lib/projectMembers";
@@ -15,7 +17,15 @@ const VALID_ROLES: ProjectRole[] = ["ADMIN", "MEMBER", "VIEWER"];
 
 export async function getProjectMembers(projectId: string) {
   try {
+    // The roster carries the team's email addresses, so it is restricted to
+    // the team. Read access gained only because a project is published to
+    // anonymous viewers is not enough.
+    const user = await requireUser();
     await requireProjectAccess(projectId);
+
+    if (!(await isProjectTeamMember(user.id, projectId))) {
+      return [];
+    }
 
     // Auto-seed members for project if none exist yet
     await ensureProjectMembersSeeded(projectId);

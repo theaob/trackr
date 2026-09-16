@@ -14,7 +14,7 @@ interface PageProps {
 }
 
 export default async function SettingsPage({ params }: PageProps) {
-  await requirePageUser();
+  await requirePageUser(`/projects/${params.projectKey}/settings`);
 
   const project = await getProjectByKey(params.projectKey);
   if (!project) notFound();

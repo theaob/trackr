@@ -3,7 +3,7 @@
 import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { triggerWebhooks } from "./webhooks";
-import { PUBLIC_USER_SELECT } from "@/lib/auth/publicUser";
+import { DISPLAY_USER_SELECT } from "@/lib/auth/publicUser";
 import {
   projectIdForComment,
   projectIdForIssue,
@@ -40,7 +40,7 @@ export async function addComment(
         authorId: actorId,
       },
       include: {
-        author: { select: PUBLIC_USER_SELECT },
+        author: { select: DISPLAY_USER_SELECT },
       },
     });
 

@@ -19,3 +19,18 @@ export interface SessionUser {
   avatarUrl: string | null;
   role: string;
 }
+
+/**
+ * A user as shown next to content: an avatar, a name and a job title.
+ *
+ * Deliberately excludes the email address. Issue assignees, reporters, comment
+ * authors and activity entries are readable by anyone who can read the project,
+ * including visitors to a published one, so contact details must not ride along
+ * with them.
+ */
+export const DISPLAY_USER_SELECT = {
+  id: true,
+  name: true,
+  avatarUrl: true,
+  role: true,
+} as const;

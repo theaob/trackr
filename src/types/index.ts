@@ -7,7 +7,11 @@ export type VersionStatus = "UNRELEASED" | "RELEASED" | "ARCHIVED";
 export interface User {
   id: string;
   name: string;
-  email: string;
+  /**
+   * Absent wherever a user appears beside content (assignee, reporter, comment
+   * author), and blank for callers who are not on the project's team.
+   */
+  email?: string;
   avatarUrl: string | null;
   role: string;
 }
@@ -176,6 +180,8 @@ export interface Project {
   key: string;
   description: string | null;
   category: string;
+  /** When true, visitors with no session get read-only access. */
+  allowAnonymousViewers?: boolean;
   leadId: string | null;
   lead?: User | null;
   members?: ProjectMember[];

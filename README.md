@@ -36,6 +36,8 @@ A modern, full-stack agile project management and issue tracking platform built 
   - PBKDF2-SHA512 password hashing (210k iterations) with transparent upgrades.
   - Per-project roles (**Administrator**, **Member**, **Viewer**) enforced on the
     server, not just in the UI.
+  - Optional **public projects**: a project can grant read-only access to
+    visitors with no account.
   - Optional OIDC single sign-on with real ID token signature verification.
   - Personal access tokens for the REST API, scoped to the owner's projects.
 - ⚙️ **Project Settings**:
@@ -138,6 +140,29 @@ npm version patch   # or minor / major
 # Push commit to main (or push tags)
 git push origin main
 ```
+
+## 🌍 Public projects
+
+A project can be opened to people without an account, one project at a time.
+In **Project Settings → General → Visibility**, a project administrator ticks
+*"Allow anyone to view this project without signing in"*.
+
+Visitors then get the **Viewer** role on that project alone:
+
+- They can read the board, backlog, issues and releases, and change nothing —
+  Viewer carries `VIEW_PROJECT` and no other permission, so every write is
+  refused by the same table that governs signed-in users.
+- Private projects stay invisible; the project directory shows a visitor only
+  what is published.
+- Email addresses are withheld. Assignees, reporters and comment authors are
+  shown by name and avatar only, and the member roster is limited to the
+  project's own team.
+- The landing page sends a visitor to a published project rather than to the
+  sign-in screen. Requesting a private one offers sign-in and returns them to
+  where they were headed.
+
+Everything in a published project is readable by anyone with the link, so treat
+the switch as publishing.
 
 ## ⬆️ Upgrading from a version without authentication
 

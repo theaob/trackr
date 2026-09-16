@@ -4,7 +4,7 @@ import prisma from "@/lib/db";
 import { VersionStatus } from "@/types";
 import { revalidatePath } from "next/cache";
 import { triggerWebhooks } from "./webhooks";
-import { PUBLIC_USER_SELECT } from "@/lib/auth/publicUser";
+import { DISPLAY_USER_SELECT } from "@/lib/auth/publicUser";
 import {
   projectIdForVersion,
   requireProjectAccess,
@@ -83,8 +83,8 @@ export async function getVersionById(id: string) {
         project: true,
         issues: {
           include: {
-            assignee: { select: PUBLIC_USER_SELECT },
-            reporter: { select: PUBLIC_USER_SELECT },
+            assignee: { select: DISPLAY_USER_SELECT },
+            reporter: { select: DISPLAY_USER_SELECT },
           },
           orderBy: { createdAt: "asc" },
         },
@@ -294,8 +294,8 @@ export async function getVersionReleaseNotesData(versionId: string) {
         project: true,
         issues: {
           include: {
-            assignee: { select: PUBLIC_USER_SELECT },
-            reporter: { select: PUBLIC_USER_SELECT },
+            assignee: { select: DISPLAY_USER_SELECT },
+            reporter: { select: DISPLAY_USER_SELECT },
           },
           orderBy: [{ type: "asc" }, { key: "asc" }],
         },
@@ -308,20 +308,20 @@ export async function getVersionReleaseNotesData(versionId: string) {
     const bugs = version.issues.filter((i) => i.type === "BUG");
     const technical = version.issues.filter((i) => i.type === "SUBTASK" || i.type === "EPIC");
 
-    // Collect contributors
-    const contributorMap = new Map<string, { name: string; email: string; avatarUrl?: string | null }>();
+    // Collect contributors. Release notes credit people by name; their email
+    // addresses are not needed and would travel to anyone who can read the
+    // project, including visitors to a published one.
+    const contributorMap = new Map<string, { name: string; avatarUrl?: string | null }>();
     for (const i of version.issues) {
       if (i.assignee) {
         contributorMap.set(i.assignee.id, {
           name: i.assignee.name,
-          email: i.assignee.email,
           avatarUrl: i.assignee.avatarUrl,
         });
       }
       if (i.reporter) {
         contributorMap.set(i.reporter.id, {
           name: i.reporter.name,
-          email: i.reporter.email,
           avatarUrl: i.reporter.avatarUrl,
         });
       }

@@ -1,18 +1,22 @@
 import { redirect } from "next/navigation";
 import { getProjects } from "@/lib/actions/projects";
-import { requirePageUser } from "@/lib/auth/page";
+import { getCurrentUser } from "@/lib/auth/session";
 
 // Reads the session cookie and the database on every request; without this the
 // redirect target would be baked in at build time from the build's database.
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  await requirePageUser();
+  // No session is required: a visitor still sees any project published to
+  // anonymous viewers, and only lands on the sign-in screen when there is
+  // genuinely nothing for them.
+  const [user, projects] = await Promise.all([getCurrentUser(), getProjects()]);
 
-  const projects = await getProjects();
   if (projects.length > 0) {
     redirect(`/projects/${projects[0].key}/board`);
   }
+
+  if (!user) redirect("/login");
 
   return (
     <div className="flex h-screen w-screen items-center justify-center p-4">

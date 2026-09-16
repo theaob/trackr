@@ -6,17 +6,32 @@ import { PUBLIC_USER_SELECT } from "@/lib/auth/publicUser";
 import {
   accessibleProjectIds,
   canAccessProject,
+  isProjectTeamMember,
+  teamProjectIds,
   requireProjectAccess,
   requireProjectPermission,
   requireUser,
   toActionError,
 } from "@/lib/auth/guards";
+import { getCurrentUser } from "@/lib/auth/session";
 import { ensureProjectMembersSeeded } from "@/lib/projectMembers";
 
 const PROJECT_INCLUDE = {
   lead: { select: PUBLIC_USER_SELECT },
   members: { select: { userId: true, role: true } },
 } as const;
+
+/**
+ * Strip the project lead's email address unless the caller is on that project's
+ * team. A published project exposes its issues, not its team's contact details.
+ */
+function hideLeadEmail<T extends { id: string; lead?: { email: string } | null }>(
+  project: T,
+  teamIds: Set<string>
+): T {
+  if (!project.lead || teamIds.has(project.id)) return project;
+  return { ...project, lead: { ...project.lead, email: "" } };
+}
 
 /**
  * Projects created before membership rows existed have an empty member list,
@@ -43,20 +58,28 @@ function backfillLegacyProjectMembers(): Promise<void> {
   return backfillPromise;
 }
 
-/** Projects the signed-in user is a member or lead of. */
+/**
+ * Projects the caller can see: those they lead or belong to, plus any project
+ * published to anonymous viewers. Works without a session.
+ */
 export async function getProjects() {
   try {
-    const user = await requireUser();
+    const user = await getCurrentUser();
     await backfillLegacyProjectMembers();
 
-    const ids = await accessibleProjectIds(user.id);
+    const ids = await accessibleProjectIds(user?.id ?? null);
     if (ids.length === 0) return [];
 
-    return await prisma.project.findMany({
-      where: { id: { in: ids } },
-      include: PROJECT_INCLUDE,
-      orderBy: { createdAt: "asc" },
-    });
+    const [projects, teamIds] = await Promise.all([
+      prisma.project.findMany({
+        where: { id: { in: ids } },
+        include: PROJECT_INCLUDE,
+        orderBy: { createdAt: "asc" },
+      }),
+      teamProjectIds(user?.id),
+    ]);
+
+    return projects.map((project) => hideLeadEmail(project, teamIds));
   } catch (error) {
     console.error("Failed to fetch projects:", error);
     return [];
@@ -65,7 +88,6 @@ export async function getProjects() {
 
 export async function getProjectByKey(key: string) {
   try {
-    await requireUser();
     await backfillLegacyProjectMembers();
 
     const project = await prisma.project.findUnique({
@@ -79,7 +101,7 @@ export async function getProjectByKey(key: string) {
     if (!project) return null;
     if (!(await canAccessProject(project.id))) return null;
 
-    return project;
+    return hideLeadEmail(project, await teamProjectIds((await getCurrentUser())?.id));
   } catch (error) {
     console.error(`Failed to fetch project with key ${key}:`, error);
     return null;
@@ -103,10 +125,17 @@ export async function getAllUsers() {
   }
 }
 
-/** Members of a single project, for assignee and mention pickers. */
+/**
+ * Members of a single project, for assignee and mention pickers.
+ *
+ * On a published project this is readable by visitors and by signed-in
+ * non-members, so email addresses are withheld from anyone who is not on the
+ * team: the issues are public, the team's contact details are not.
+ */
 export async function getProjectUsers(projectId: string) {
   try {
-    await requireProjectAccess(projectId);
+    const { user: caller } = await requireProjectAccess(projectId);
+    const onTheTeam = await isProjectTeamMember(caller?.id, projectId);
 
     const [members, project] = await Promise.all([
       prisma.projectMember.findMany({
@@ -122,7 +151,10 @@ export async function getProjectUsers(projectId: string) {
     const byId = new Map(members.map((m) => [m.user.id, m.user]));
     if (project?.lead) byId.set(project.lead.id, project.lead);
 
-    return Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name));
+    const users = Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name));
+    if (onTheTeam) return users;
+
+    return users.map((user) => ({ ...user, email: "" }));
   } catch (error) {
     console.error("Failed to fetch project users:", error);
     return [];
@@ -193,10 +225,10 @@ export async function createProject(data: {
 
 export async function getAllProjectsWithStats() {
   try {
-    const user = await requireUser();
+    const user = await getCurrentUser();
     await backfillLegacyProjectMembers();
 
-    const ids = await accessibleProjectIds(user.id);
+    const ids = await accessibleProjectIds(user?.id ?? null);
     if (ids.length === 0) return [];
 
     // Counts are aggregated in SQL; loading every issue row to call .length on
@@ -224,14 +256,17 @@ export async function getAllProjectsWithStats() {
       openCounts.map((row) => [row.projectId, row._count._all])
     );
 
+    const teamIds = await teamProjectIds(user?.id);
+
     return projects.map((p) => ({
       id: p.id,
       name: p.name,
       key: p.key,
       description: p.description,
       category: p.category,
-      lead: p.lead,
+      lead: hideLeadEmail(p, teamIds).lead,
       leadId: p.leadId,
+      allowAnonymousViewers: p.allowAnonymousViewers,
       members: p.members,
       totalIssues: p._count.issues,
       openIssues: openByProject.get(p.id) ?? 0,
@@ -245,7 +280,7 @@ export async function getAllProjectsWithStats() {
 
 export async function updateProject(
   id: string,
-  data: { name?: string; description?: string }
+  data: { name?: string; description?: string; allowAnonymousViewers?: boolean }
 ) {
   try {
     await requireProjectPermission(id, "PROJECT_ADMIN");
@@ -255,6 +290,11 @@ export async function updateProject(
       data: {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.description !== undefined && { description: data.description }),
+        // Publishing a project to anonymous viewers is an administrator
+        // decision, and grants read-only access only.
+        ...(data.allowAnonymousViewers !== undefined && {
+          allowAnonymousViewers: data.allowAnonymousViewers,
+        }),
       },
     });
 

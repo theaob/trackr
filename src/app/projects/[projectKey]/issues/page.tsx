@@ -1,11 +1,10 @@
 import React, { Suspense } from "react";
-import { notFound } from "next/navigation";
 import { getProjectByKey, getProjectUsers, getProjects } from "@/lib/actions/projects";
 import { getPaginatedIssues } from "@/lib/actions/issues";
 import { getProjectSprints } from "@/lib/actions/sprints";
 import { getProjectVersions } from "@/lib/actions/versions";
 import IssuesListView from "@/components/issues/IssuesListView";
-import { requirePageUser } from "@/lib/auth/page";
+import { denyPageAccess } from "@/lib/auth/page";
 
 export const dynamic = "force-dynamic";
 
@@ -15,10 +14,8 @@ interface PageProps {
 }
 
 export default async function IssuesPage({ params, searchParams }: PageProps) {
-  await requirePageUser();
-
   const project = await getProjectByKey(params.projectKey);
-  if (!project) notFound();
+  if (!project) return denyPageAccess(`/projects/${params.projectKey}/issues`);
 
   const [allProjects, paginatedData, users, sprints, versions] = await Promise.all([
     getProjects(),

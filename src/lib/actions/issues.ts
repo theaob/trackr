@@ -4,19 +4,19 @@ import prisma from "@/lib/db";
 import { IssueStatus, IssueType, PriorityLevel } from "@/types";
 import { revalidatePath } from "next/cache";
 import { triggerWebhooks } from "./webhooks";
-import { PUBLIC_USER_SELECT } from "@/lib/auth/publicUser";
+import { DISPLAY_USER_SELECT } from "@/lib/auth/publicUser";
 import {
   accessibleProjectIds,
   projectIdForIssue,
   requireProjectAccess,
   requireProjectPermission,
-  requireUser,
   toActionError,
 } from "@/lib/auth/guards";
+import { getCurrentUser } from "@/lib/auth/session";
 import { findMentionedUsers } from "@/lib/mentions";
 import { createIssueWithKey } from "@/lib/issueKeys";
 
-const USER_SELECT = { select: PUBLIC_USER_SELECT } as const;
+const USER_SELECT = { select: DISPLAY_USER_SELECT } as const;
 
 
 export async function getProjectIssues(projectId: string) {
@@ -128,8 +128,6 @@ export async function getBoardIssues(projectId: string, activeSprintId?: string 
 
 export async function getIssueByKeyOrId(keyOrId: string) {
   try {
-    await requireUser();
-
     const issue = await prisma.issue.findFirst({
       where: {
         OR: [{ id: keyOrId }, { key: keyOrId }, { key: keyOrId.toUpperCase() }],
@@ -234,15 +232,16 @@ export async function getBacklogIssues(projectId: string) {
 
 export async function getAllCrossProjectIssues(projectId?: string) {
   try {
-    const user = await requireUser();
+    // Readable without a session, but only ever within the projects the caller
+    // can see -- for a visitor that is the published ones alone.
+    const user = await getCurrentUser();
 
-    // Never reaches beyond the projects the caller belongs to.
     let where: any;
     if (projectId) {
       await requireProjectAccess(projectId);
       where = { projectId };
     } else {
-      const ids = await accessibleProjectIds(user.id);
+      const ids = await accessibleProjectIds(user?.id ?? null);
       if (ids.length === 0) return [];
       where = { projectId: { in: ids } };
     }
@@ -313,14 +312,14 @@ export async function getPaginatedIssues(params: PaginatedIssuesParams) {
   const empty = { issues: [], totalCount: 0, page: 1, pageSize: 50, totalPages: 0 };
 
   try {
-    const user = await requireUser();
+    const user = await getCurrentUser();
     const where: any = {};
 
     if (params.projectId && params.projectId !== "ALL") {
       await requireProjectAccess(params.projectId);
       where.projectId = params.projectId;
     } else {
-      const ids = await accessibleProjectIds(user.id);
+      const ids = await accessibleProjectIds(user?.id ?? null);
       if (ids.length === 0) return empty;
       where.projectId = { in: ids };
     }
@@ -365,11 +364,11 @@ export async function getPaginatedIssues(params: PaginatedIssuesParams) {
       }
     }
 
-    if (params.preset === "MY_OPEN" && params.currentUserId) {
-      where.assigneeId = params.currentUserId;
+    if (params.preset === "MY_OPEN" && user) {
+      where.assigneeId = user.id;
       where.status = { not: "DONE" };
-    } else if (params.preset === "REPORTED_BY_ME" && params.currentUserId) {
-      where.reporterId = params.currentUserId;
+    } else if (params.preset === "REPORTED_BY_ME" && user) {
+      where.reporterId = user.id;
     } else if (params.preset === "DONE") {
       where.status = "DONE";
     } else if (params.preset === "HIGH_PRIORITY") {

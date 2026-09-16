@@ -4,13 +4,24 @@ import LoginView from "@/components/auth/LoginView";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Only same-site paths are honoured, so a crafted ?next= cannot bounce someone
+ * to another host after signing in.
+ */
+function safeNext(next?: string): string {
+  if (!next || !next.startsWith("/") || next.startsWith("//")) return "/projects";
+  return next;
+}
+
 export default async function LoginPage({
   searchParams,
 }: {
   searchParams?: { sso_error?: string; next?: string };
 }) {
-  const user = await getCurrentUser();
-  if (user) redirect("/projects");
+  const destination = safeNext(searchParams?.next);
 
-  return <LoginView ssoError={searchParams?.sso_error} />;
+  const user = await getCurrentUser();
+  if (user) redirect(destination);
+
+  return <LoginView ssoError={searchParams?.sso_error} next={destination} />;
 }

@@ -45,7 +45,7 @@ export default function MentionInput({
     return users.filter(
       (u) =>
         u.name.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q) ||
+        (u.email ?? "").toLowerCase().includes(q) ||
         (u.role && u.role.toLowerCase().includes(q))
     );
   }, [users, mentionQuery]);

@@ -12,6 +12,8 @@ import {
 import {
   Save,
   Check,
+  Globe,
+  Lock,
   ShieldCheck,
   Sliders,
   Plus,
@@ -63,6 +65,9 @@ export default function ProjectSettingsView({
   // General Settings State
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description || "");
+  const [allowAnonymousViewers, setAllowAnonymousViewers] = useState(
+    !!project.allowAnonymousViewers
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -92,6 +97,7 @@ export default function ProjectSettingsView({
     const res = await updateProject(project.id, {
       name: name.trim(),
       description: description.trim(),
+      allowAnonymousViewers,
     });
 
     setIsSaving(false);
@@ -345,6 +351,51 @@ export default function ProjectSettingsView({
                 <ShieldCheck className="w-3.5 h-3.5 text-jira-blue" />
                 Lead Admin
               </span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-2">
+              Visibility
+            </label>
+            <div
+              className={`p-4 rounded-lg border ${
+                allowAnonymousViewers
+                  ? "bg-amber-50/60 border-amber-300"
+                  : "bg-jira-gray-50 border-jira-gray-300"
+              }`}
+            >
+              <label className="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={allowAnonymousViewers}
+                  disabled={!permissions.canManageProject}
+                  onChange={(e) => setAllowAnonymousViewers(e.target.checked)}
+                  className="w-4 h-4 mt-0.5 accent-jira-blue disabled:cursor-not-allowed"
+                />
+                <div>
+                  <div className="font-bold text-jira-navy flex items-center gap-2">
+                    {allowAnonymousViewers ? (
+                      <Globe className="w-4 h-4 text-amber-700" />
+                    ) : (
+                      <Lock className="w-4 h-4 text-jira-gray-600" />
+                    )}
+                    <span>Allow anyone to view this project without signing in</span>
+                  </div>
+                  <p className="text-[11px] text-jira-gray-600 mt-1 leading-relaxed">
+                    Visitors get the <strong>Viewer</strong> role: they can read the board,
+                    backlog, issues and releases, and can change nothing. Team member email
+                    addresses are not exposed. Everything in this project becomes readable by
+                    anyone who has the link.
+                  </p>
+                </div>
+              </label>
+
+              {allowAnonymousViewers && (
+                <p className="text-[11px] text-amber-900 font-semibold mt-3 pl-7">
+                  This project is public. Anyone with the link can read every issue in it.
+                </p>
+              )}
             </div>
           </div>
 
