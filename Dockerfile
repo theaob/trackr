@@ -3,7 +3,7 @@
 # 1. Base image
 FROM node:20-slim AS base
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends openssl sqlite3 ca-certificates && \
+    apt-get install -y --no-install-recommends openssl sqlite3 ca-certificates gosu && \
     rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
@@ -66,7 +66,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modul
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 
-USER nextjs
+# Entrypoint runs as root to fix volume permissions,
+# then drops to nextjs via gosu
 
 EXPOSE 3000
 
