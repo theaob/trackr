@@ -1,35 +1,44 @@
 # syntax=docker/dockerfile:1
 
-# 1. Base image
+# 1. Base image – only runtime dependencies (shared by builder & runner)
 FROM node:20-slim AS base
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends openssl sqlite3 ca-certificates gosu && \
-    rm -rf /var/lib/apt/lists/*
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update && \
+    apt-get install -y --no-install-recommends openssl sqlite3 ca-certificates gosu
 WORKDIR /app
 
-# 2. Dependencies
+# 2. Dependencies – cached separately so source changes don't re-install
 FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --no-audit
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --no-audit
 
-# 3. Builder
-FROM base AS builder
+# 3. Prisma generate – only re-runs when schema changes
+FROM base AS prisma
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
+COPY prisma/schema.prisma ./prisma/schema.prisma
+RUN node ./node_modules/prisma/build/index.js generate
+
+# 4. Builder – full build with Next.js cache preserved across builds
+FROM base AS builder
+WORKDIR /app
+COPY --from=prisma /app/node_modules ./node_modules
 COPY . .
 
-# Generate Prisma Client & prepare seeded template database
+# Prepare seeded template database
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_URL="file:/app/prisma/template.db"
-RUN node ./node_modules/prisma/build/index.js generate
 RUN node ./node_modules/prisma/build/index.js db push --skip-generate
 RUN node ./node_modules/tsx/dist/cli.mjs prisma/seed.ts
 
-# Build Next.js standalone application
-RUN npm run build
+# Build Next.js with persistent cache
+RUN --mount=type=cache,target=/app/.next/cache \
+    npm run build
 
-# 4. Production Runner
+# 5. Production Runner – minimal final image
 FROM base AS runner
 WORKDIR /app
 
