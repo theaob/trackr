@@ -304,6 +304,26 @@ export default function IssuesListView({
     );
   }, [selectedIssueId, issues]);
 
+  // The list query does not carry comment and activity threads -- loading them
+  // for every row costs far more than the table ever shows. Fetch the full
+  // record for the one issue on display instead.
+  useEffect(() => {
+    if (!selectedIssue || selectedIssue.comments) return;
+
+    let cancelled = false;
+    const targetId = selectedIssue.id;
+
+    getIssueByKeyOrId(targetId).then((fetched) => {
+      if (cancelled || !fetched) return;
+      const typed = fetched as unknown as Issue;
+      setIssues((prev) => prev.map((i) => (i.id === typed.id ? typed : i)));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedIssue]);
+
   // Export to CSV
   const handleExportCSV = () => {
     const headers = [
