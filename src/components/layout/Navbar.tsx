@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import Link from "next/link";
 import { Project, User } from "@/types";
 import { useCurrentUser } from "@/context/UserContext";
@@ -17,9 +17,13 @@ import {
   FolderGit2,
   KeyRound,
   Shield,
+  Camera,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 import PersonalAccessTokensModal from "@/components/auth/PersonalAccessTokensModal";
 import { TrackrLogo } from "@/components/common/TrackrLogo";
+import UserAvatar from "@/components/common/UserAvatar";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
 import { resolveUserProjectRole, ROLE_CONFIG } from "@/lib/permissions";
 
@@ -36,12 +40,67 @@ export default function Navbar({
   onCreateIssueClick,
   onCreateProjectClick,
 }: NavbarProps) {
-  const { currentUser, users, setCurrentUser } = useCurrentUser();
+  const { currentUser, users, setCurrentUser, setUsers } = useCurrentUser();
   const permissions = useProjectPermissions(currentProject);
   const { searchQuery, setSearchQuery } = useSearch();
-  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const accessibleProjects = useMemo(() => {
+    if (!currentUser) return projects;
+    return projects.filter((proj) => resolveUserProjectRole(currentUser.id, proj) !== null);
+  }, [projects, currentUser]);
+
   const [showProjectMenu, setShowProjectMenu] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [showTokensModal, setShowTokensModal] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUser) return;
+
+    setAvatarUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("avatar", file);
+
+      const res = await fetch(`/api/v1/users/${currentUser.id}/avatar`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setCurrentUser({ ...currentUser, avatarUrl: data.user.avatarUrl });
+        setUsers(users.map((u) => u.id === currentUser.id ? { ...u, avatarUrl: data.user.avatarUrl } : u));
+      }
+    } catch (err) {
+      console.error("Avatar upload failed:", err);
+    } finally {
+      setAvatarUploading(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  };
+
+  const handleAvatarDelete = async () => {
+    if (!currentUser) return;
+
+    setAvatarUploading(true);
+    try {
+      const res = await fetch(`/api/v1/users/${currentUser.id}/avatar`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        setCurrentUser({ ...currentUser, avatarUrl: null });
+        setUsers(users.map((u) => u.id === currentUser.id ? { ...u, avatarUrl: null } : u));
+      }
+    } catch (err) {
+      console.error("Avatar delete failed:", err);
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
 
 
   return (
@@ -74,7 +133,7 @@ export default function Navbar({
               <div className="px-3 py-2 text-[11px] font-semibold text-jira-gray-600 uppercase tracking-wider border-b border-jira-gray-200">
                 Recent Projects
               </div>
-              {projects.map((proj) => (
+              {accessibleProjects.map((proj) => (
                 <Link
                   key={proj.id}
                   href={`/projects/${proj.key}/board`}
@@ -166,17 +225,7 @@ export default function Navbar({
             }}
             className="flex items-center gap-2 pl-2 pr-1.5 py-1 rounded-full hover:bg-jira-gray-100 transition-colors border border-transparent hover:border-jira-gray-300"
           >
-            {currentUser?.avatarUrl ? (
-              <img
-                src={currentUser.avatarUrl}
-                alt={currentUser.name}
-                className="w-7 h-7 rounded-full object-cover border border-jira-gray-300"
-              />
-            ) : (
-              <div className="w-7 h-7 rounded-full bg-jira-blue text-white text-xs font-bold flex items-center justify-center">
-                {currentUser?.name.charAt(0) || "U"}
-              </div>
-            )}
+            <UserAvatar user={currentUser} size="md" className="border border-jira-gray-300" />
             <span className="text-xs font-medium text-jira-navy hidden sm:inline max-w-[100px] truncate">
               {currentUser?.name}
             </span>
@@ -205,6 +254,41 @@ export default function Navbar({
                 </div>
               </div>
 
+              {/* Avatar Management */}
+              <div className="py-1 border-b border-jira-gray-200">
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                />
+                <div className="flex items-center gap-1 px-2">
+                  <button
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={avatarUploading}
+                    className="flex-1 flex items-center gap-2.5 px-1 py-2 text-xs font-medium text-jira-navy hover:bg-jira-gray-100 transition-colors rounded disabled:opacity-50"
+                  >
+                    {avatarUploading ? (
+                      <Loader2 className="w-3.5 h-3.5 text-jira-blue animate-spin" />
+                    ) : (
+                      <Camera className="w-3.5 h-3.5 text-jira-blue" />
+                    )}
+                    <span>{currentUser?.avatarUrl ? "Change Avatar" : "Upload Avatar"}</span>
+                  </button>
+                  {currentUser?.avatarUrl && (
+                    <button
+                      onClick={handleAvatarDelete}
+                      disabled={avatarUploading}
+                      className="p-2 text-jira-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                      title="Remove avatar"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Personal Access Tokens Trigger */}
               <div className="py-1 border-b border-jira-gray-200">
                 <button
@@ -225,7 +309,7 @@ export default function Navbar({
 
               {users.map((u) => {
                 const uRole = resolveUserProjectRole(u.id, currentProject);
-                const uRoleCfg = ROLE_CONFIG[uRole];
+                const uRoleCfg = uRole ? ROLE_CONFIG[uRole] : { name: "No Access", badgeBg: "bg-gray-100", badgeText: "text-gray-600", border: "border-gray-200" };
 
                 return (
                   <button
@@ -239,17 +323,7 @@ export default function Navbar({
                     }`}
                   >
                     <div className="flex items-center gap-2 truncate">
-                      {u.avatarUrl ? (
-                        <img
-                          src={u.avatarUrl}
-                          alt={u.name}
-                          className="w-6 h-6 rounded-full object-cover shrink-0"
-                        />
-                      ) : (
-                        <div className="w-6 h-6 rounded-full bg-jira-gray-300 text-jira-gray-700 text-xs font-bold flex items-center justify-center shrink-0">
-                          {u.name.charAt(0)}
-                        </div>
-                      )}
+                      <UserAvatar user={u} size="sm" />
                       <div className="truncate">
                         <div className="text-xs font-medium truncate">{u.name}</div>
                         <div className="flex items-center gap-1.5 text-[10px] text-jira-gray-600">

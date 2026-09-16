@@ -20,7 +20,7 @@ async function main() {
       name: "Alex Chen",
       email: "alex.chen@acme.dev",
       role: "Tech Lead",
-      avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      avatarUrl: null,
     },
   });
 
@@ -29,7 +29,7 @@ async function main() {
       name: "Sarah Connor",
       email: "sarah.c@acme.dev",
       role: "Product Manager",
-      avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
+      avatarUrl: null,
     },
   });
 
@@ -38,7 +38,7 @@ async function main() {
       name: "David Kim",
       email: "david.k@acme.dev",
       role: "Frontend Engineer",
-      avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+      avatarUrl: null,
     },
   });
 
@@ -47,7 +47,7 @@ async function main() {
       name: "Elena Rostova",
       email: "elena.r@acme.dev",
       role: "Backend Architect",
-      avatarUrl: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80",
+      avatarUrl: null,
     },
   });
 
@@ -56,7 +56,7 @@ async function main() {
       name: "Marcus Vance",
       email: "marcus.v@acme.dev",
       role: "QA Engineer",
-      avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
+      avatarUrl: null,
     },
   });
 

@@ -115,17 +115,18 @@ export const PERMISSION_DESCRIPTIONS: Record<
   },
 };
 
-export function hasPermission(role: ProjectRole, permission: ProjectPermission): boolean {
+export function hasPermission(role: ProjectRole | null | undefined, permission: ProjectPermission): boolean {
+  if (!role) return false;
   const allowed = ROLE_PERMISSIONS[role] || [];
   return allowed.includes(permission);
 }
 
 export function resolveUserProjectRole(
   userId?: string | null,
-  project?: Project | null,
-  members?: ProjectMember[] | null
-): ProjectRole {
-  if (!userId) return "VIEWER";
+  project?: any | null,
+  members?: any[] | null
+): ProjectRole | null {
+  if (!userId) return null;
 
   // Project Lead is automatically Project Administrator
   if (project?.leadId && project.leadId === userId) {
@@ -134,43 +135,48 @@ export function resolveUserProjectRole(
 
   // Check explicit project membership list
   const memberList = members || project?.members || [];
-  const member = memberList.find((m) => m.userId === userId);
+  const member = memberList.find((m: any) => m.userId === userId);
   if (member) {
-    return member.role;
+    return member.role as ProjectRole;
   }
 
-  // Default fallback for organization users
+  // If explicit project membership list exists and user is not in it
+  if (memberList.length > 0) {
+    return null;
+  }
+
+  // Default fallback if no members exist yet
   return "MEMBER";
 }
 
-export function canManageProject(role: ProjectRole): boolean {
+export function canManageProject(role: ProjectRole | null | undefined): boolean {
   return hasPermission(role, "PROJECT_ADMIN");
 }
 
-export function canManageAccess(role: ProjectRole): boolean {
+export function canManageAccess(role: ProjectRole | null | undefined): boolean {
   return hasPermission(role, "MANAGE_ACCESS");
 }
 
-export function canManageSprints(role: ProjectRole): boolean {
+export function canManageSprints(role: ProjectRole | null | undefined): boolean {
   return hasPermission(role, "MANAGE_SPRINTS");
 }
 
-export function canCreateIssue(role: ProjectRole): boolean {
+export function canCreateIssue(role: ProjectRole | null | undefined): boolean {
   return hasPermission(role, "CREATE_ISSUE");
 }
 
-export function canEditIssue(role: ProjectRole): boolean {
+export function canEditIssue(role: ProjectRole | null | undefined): boolean {
   return hasPermission(role, "EDIT_ISSUE");
 }
 
-export function canDeleteIssue(role: ProjectRole): boolean {
+export function canDeleteIssue(role: ProjectRole | null | undefined): boolean {
   return hasPermission(role, "DELETE_ISSUE");
 }
 
-export function canMoveIssue(role: ProjectRole): boolean {
+export function canMoveIssue(role: ProjectRole | null | undefined): boolean {
   return hasPermission(role, "MOVE_ISSUE");
 }
 
-export function canAddComment(role: ProjectRole): boolean {
+export function canAddComment(role: ProjectRole | null | undefined): boolean {
   return hasPermission(role, "ADD_COMMENT");
 }

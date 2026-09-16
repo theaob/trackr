@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Project, Issue, User, Sprint, Version, IssueType, PriorityLevel, IssueStatus } from "@/types";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
+import UserAvatar from "@/components/common/UserAvatar";
 
 import { useCurrentUser } from "@/context/UserContext";
 import { useSearch } from "@/context/SearchContext";
@@ -710,17 +711,12 @@ export default function IssuesListView({
                             </span>
                           )}
                           {issue.assignee ? (
-                            issue.assignee.avatarUrl ? (
-                              <img
-                                src={issue.assignee.avatarUrl}
-                                alt={issue.assignee.name}
-                                className="w-5 h-5 rounded-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-5 h-5 rounded-full bg-jira-blue text-white text-[9px] font-bold flex items-center justify-center">
-                                {issue.assignee.name.charAt(0)}
-                              </div>
-                            )
+                            <UserAvatar
+                              user={issue.assignee}
+                              size="xs"
+                              showTooltip
+                              tooltipPrefix="Assignee"
+                            />
                           ) : (
                             <span className="text-jira-gray-400">Unassigned</span>
                           )}
@@ -841,17 +837,11 @@ export default function IssuesListView({
                             <div className="space-y-3 pt-2">
                               {selectedIssue.comments?.map((comment: any) => (
                                 <div key={comment.id} className="flex gap-2.5 text-xs">
-                                  {comment.author?.avatarUrl ? (
-                                    <img
-                                      src={comment.author.avatarUrl}
-                                      alt={comment.author.name}
-                                      className="w-6 h-6 rounded-full object-cover shrink-0 mt-0.5"
-                                    />
-                                  ) : (
-                                    <div className="w-6 h-6 rounded-full bg-jira-gray-300 text-jira-navy text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
-                                      {comment.author?.name?.charAt(0) || "U"}
-                                    </div>
-                                  )}
+                                  <UserAvatar
+                                    user={comment.author}
+                                    size="sm"
+                                    className="mt-0.5"
+                                  />
                                   <div className="flex-1 bg-jira-gray-50 p-2.5 rounded border border-jira-gray-200">
                                     <div className="flex items-center justify-between mb-1">
                                       <span className="font-bold text-jira-navy">
@@ -1094,13 +1084,7 @@ export default function IssuesListView({
                         <td className="py-2 px-3">
                           {issue.assignee ? (
                             <div className="flex items-center gap-1.5">
-                              {issue.assignee.avatarUrl ? (
-                                <img
-                                  src={issue.assignee.avatarUrl}
-                                  alt={issue.assignee.name}
-                                  className="w-5 h-5 rounded-full object-cover"
-                                />
-                              ) : null}
+                              <UserAvatar user={issue.assignee} size="xs" />
                               <span>{issue.assignee.name}</span>
                             </div>
                           ) : (

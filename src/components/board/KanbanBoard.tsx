@@ -5,14 +5,15 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import { Project, Issue, User, IssueStatus, IssueType, PriorityLevel, Sprint } from "@/types";
 import KanbanColumn from "./KanbanColumn";
-import BoardFilters from "./BoardFilters";
+import BoardFilters, { SwimlaneGroupBy } from "./BoardFilters";
 import IssueDetailModal from "@/components/issues/IssueDetailModal";
 import CreateIssueModal from "@/components/issues/CreateIssueModal";
+import UserAvatar from "@/components/common/UserAvatar";
 import { updateIssueStatusAndOrder, getIssueByKeyOrId } from "@/lib/actions/issues";
 import { useCurrentUser } from "@/context/UserContext";
 import { useSearch } from "@/context/SearchContext";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
-import { Zap, Play, CheckCircle } from "lucide-react";
+import { ChevronDown, ChevronRight, Layers, User as UserIcon, Bookmark, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
 interface KanbanBoardProps {
@@ -31,6 +32,14 @@ const COLUMNS: { id: IssueStatus; title: string; wipLimit?: number }[] = [
   { id: "DONE", title: "Done" },
 ];
 
+interface Swimlane {
+  id: string;
+  title: string;
+  user?: User | null;
+  epic?: Issue | null;
+  priority?: PriorityLevel;
+}
+
 export default function KanbanBoard({
   project,
   initialIssues,
@@ -40,7 +49,6 @@ export default function KanbanBoard({
   initialSelectedIssueKey,
 }: KanbanBoardProps) {
   const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const selectedIssueKey =
     searchParams?.get("selectedIssue") || searchParams?.get("issue") || initialSelectedIssueKey;
@@ -49,9 +57,14 @@ export default function KanbanBoard({
   const permissions = useProjectPermissions(project);
   const { searchQuery: contextSearchQuery } = useSearch();
   const searchQuery = propSearchQuery ?? contextSearchQuery;
+
   const [issues, setIssues] = useState<Issue[]>(initialIssues);
   const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // Grouping / Swimlane state
+  const [groupBy, setGroupBy] = useState<SwimlaneGroupBy>("NONE");
+  const [collapsedLanes, setCollapsedLanes] = useState<Record<string, boolean>>({});
 
   // Sync issues if initialIssues prop updates
   useEffect(() => {
@@ -159,7 +172,6 @@ export default function KanbanBoard({
       if (activeSprint) {
         if (issue.sprintId !== activeSprint.id) return false;
       } else {
-        // If no active sprint, show non-backlog issues
         if (issue.status === "BACKLOG") return false;
       }
 
@@ -206,44 +218,181 @@ export default function KanbanBoard({
     selectedPriority,
   ]);
 
-  // Handle Drag & Drop
-  const handleDragEnd = async (result: DropResult) => {
-    if (!permissions.canMoveIssue) {
-      return;
+  // Epics list for parent selectors and swimlanes
+  const epics = useMemo(() => issues.filter((i) => i.type === "EPIC"), [issues]);
+
+  // Build Swimlanes based on groupBy
+  const swimlanes = useMemo<Swimlane[]>(() => {
+    if (groupBy === "NONE") {
+      return [{ id: "ALL", title: "" }];
     }
 
-    const { source, destination, draggableId } = result;
+    if (groupBy === "ASSIGNEE") {
+      const userLanes: Swimlane[] = users.map((u) => ({
+        id: u.id,
+        title: u.name,
+        user: u,
+      }));
+      userLanes.push({
+        id: "UNASSIGNED",
+        title: "Unassigned",
+        user: null,
+      });
+      return userLanes;
+    }
 
+    if (groupBy === "EPIC") {
+      const epicLanes: Swimlane[] = epics.map((epic) => ({
+        id: epic.id,
+        title: `${epic.title} (${epic.key})`,
+        epic: epic,
+      }));
+      epicLanes.push({
+        id: "NO_EPIC",
+        title: "Issues without Epic",
+        epic: null,
+      });
+      return epicLanes;
+    }
+
+    if (groupBy === "PRIORITY") {
+      const priorities: PriorityLevel[] = ["HIGHEST", "HIGH", "MEDIUM", "LOW", "LOWEST"];
+      return priorities.map((p) => ({
+        id: p,
+        title: `${p.charAt(0) + p.slice(1).toLowerCase()} Priority`,
+        priority: p,
+      }));
+    }
+
+    return [{ id: "ALL", title: "" }];
+  }, [groupBy, users, epics]);
+
+  // Get issues for a specific cell (swimlane + status)
+  const getCellIssues = (swimlaneId: string, status: IssueStatus): Issue[] => {
+    const list = filteredIssues.filter((issue) => {
+      if (issue.status !== status) return false;
+
+      if (groupBy === "NONE") return true;
+
+      if (groupBy === "ASSIGNEE") {
+        if (swimlaneId === "UNASSIGNED") return !issue.assigneeId;
+        return issue.assigneeId === swimlaneId;
+      }
+
+      if (groupBy === "EPIC") {
+        if (swimlaneId === "NO_EPIC") return !issue.parentId;
+        return issue.parentId === swimlaneId;
+      }
+
+      if (groupBy === "PRIORITY") {
+        return issue.priority === swimlaneId;
+      }
+
+      return true;
+    });
+
+    // Sort deterministically by order ascending, then by createdAt
+    return list.sort((a, b) => {
+      const orderA = a.order ?? 0;
+      const orderB = b.order ?? 0;
+      if (orderA !== orderB) return orderA - orderB;
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
+  };
+
+  // Helper to parse droppableId format "laneId::status" or "status"
+  const parseDroppableId = (droppableId: string) => {
+    if (droppableId.includes("::")) {
+      const [laneId, status] = droppableId.split("::");
+      return { laneId, status: status as IssueStatus };
+    }
+    return { laneId: "ALL", status: droppableId as IssueStatus };
+  };
+
+  // Handle Drag & Drop with proper ordering & swimlane attribute updates
+  const handleDragEnd = async (result: DropResult) => {
+    if (!permissions.canMoveIssue) return;
+
+    const { source, destination, draggableId } = result;
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) {
       return;
     }
 
-    const sourceStatus = source.droppableId as IssueStatus;
-    const destStatus = destination.droppableId as IssueStatus;
+    const src = parseDroppableId(source.droppableId);
+    const dest = parseDroppableId(destination.droppableId);
 
-    // Optimistic Update
-    const updatedIssues = Array.from(issues);
-    const movedIndex = updatedIssues.findIndex((i) => i.id === draggableId);
-    if (movedIndex === -1) return;
+    const targetIssue = issues.find((i) => i.id === draggableId);
+    if (!targetIssue) return;
 
-    const [movedIssue] = updatedIssues.splice(movedIndex, 1);
-    const updatedMovedIssue = {
-      ...movedIssue,
-      status: destStatus,
+    // Prepare extra swimlane field updates
+    const extraData: { assigneeId?: string | null; parentId?: string | null; priority?: PriorityLevel } = {};
+    let updatedAssignee = targetIssue.assignee;
+    let updatedParent = targetIssue.parent;
+    let updatedPriority = targetIssue.priority;
+
+    if (groupBy === "ASSIGNEE" && dest.laneId !== src.laneId) {
+      const newAssigneeId = dest.laneId === "UNASSIGNED" ? null : dest.laneId;
+      extraData.assigneeId = newAssigneeId;
+      updatedAssignee = newAssigneeId ? users.find((u) => u.id === newAssigneeId) || null : null;
+    } else if (groupBy === "EPIC" && dest.laneId !== src.laneId) {
+      const newParentId = dest.laneId === "NO_EPIC" ? null : dest.laneId;
+      extraData.parentId = newParentId;
+      updatedParent = newParentId ? epics.find((e) => e.id === newParentId) || null : null;
+    } else if (groupBy === "PRIORITY" && dest.laneId !== src.laneId) {
+      const newPriority = dest.laneId as PriorityLevel;
+      extraData.priority = newPriority;
+      updatedPriority = newPriority;
+    }
+
+    // Target cell items (excluding moved issue)
+    const targetCellIssues = getCellIssues(dest.laneId, dest.status).filter((i) => i.id !== draggableId);
+
+    const updatedTargetIssue: Issue = {
+      ...targetIssue,
+      status: dest.status,
+      priority: updatedPriority,
+      assigneeId: extraData.assigneeId !== undefined ? extraData.assigneeId : targetIssue.assigneeId,
+      assignee: updatedAssignee,
+      parentId: extraData.parentId !== undefined ? extraData.parentId : targetIssue.parentId,
+      parent: updatedParent as any,
     };
 
-    // Reinsert
-    updatedIssues.splice(destination.index, 0, updatedMovedIssue);
-    setIssues(updatedIssues);
+    // Insert at destination index
+    targetCellIssues.splice(destination.index, 0, updatedTargetIssue);
+
+    // Reassign contiguous order indexes to target cell items
+    const orderMap = new Map<string, number>();
+    targetCellIssues.forEach((item, idx) => {
+      orderMap.set(item.id, idx);
+    });
+
+    // Update global issues state deterministically
+    setIssues((prevIssues) =>
+      prevIssues.map((item) => {
+        if (orderMap.has(item.id)) {
+          if (item.id === draggableId) {
+            return { ...updatedTargetIssue, order: orderMap.get(item.id)! };
+          }
+          return { ...item, order: orderMap.get(item.id)! };
+        }
+        return item;
+      })
+    );
 
     // Persist via Server Action
-    await updateIssueStatusAndOrder(
+    const res = await updateIssueStatusAndOrder(
       draggableId,
-      destStatus,
+      dest.status,
       destination.index,
-      currentUser?.id
+      currentUser?.id,
+      extraData
     );
+
+    if (res.success && res.issue) {
+      const serverIssue = res.issue as unknown as Issue;
+      setIssues((prev) => prev.map((i) => (i.id === serverIssue.id ? { ...i, ...serverIssue } : i)));
+    }
   };
 
   // Update handlers
@@ -265,25 +414,9 @@ export default function KanbanBoard({
     setIssues((prev) => [newIssue, ...prev]);
   };
 
-  // Group issues by column status
-  const issuesByColumn = useMemo(() => {
-    const map: Record<IssueStatus, Issue[]> = {
-      BACKLOG: [],
-      TODO: [],
-      IN_PROGRESS: [],
-      IN_REVIEW: [],
-      DONE: [],
-    };
-    filteredIssues.forEach((issue) => {
-      if (map[issue.status]) {
-        map[issue.status].push(issue);
-      }
-    });
-    return map;
-  }, [filteredIssues]);
-
-  // Epics list for parent selectors
-  const epics = useMemo(() => issues.filter((i) => i.type === "EPIC"), [issues]);
+  const toggleLaneCollapse = (laneId: string) => {
+    setCollapsedLanes((prev) => ({ ...prev, [laneId]: !prev[laneId] }));
+  };
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden px-6 pt-5 bg-white">
@@ -338,24 +471,166 @@ export default function KanbanBoard({
           onToggleOnlyMyIssues={() => setOnlyMyIssues(!onlyMyIssues)}
           onClearFilters={handleClearFilters}
           hasActiveFilters={hasActiveFilters}
+          groupBy={groupBy}
+          onSelectGroupBy={setGroupBy}
         />
       </div>
 
       {/* Kanban Board Columns Container */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden py-4">
+      <div className="flex-1 overflow-x-auto overflow-y-auto py-4">
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="flex items-start gap-4 h-full min-w-max pb-2">
-            {COLUMNS.map((col) => (
-              <KanbanColumn
-                key={col.id}
-                id={col.id}
-                title={col.title}
-                wipLimit={col.wipLimit}
-                issues={issuesByColumn[col.id] || []}
-                onIssueClick={(issue) => setActiveIssue(issue)}
-              />
-            ))}
-          </div>
+          {groupBy === "NONE" ? (
+            /* Default Single Grid Board */
+            <div className="flex items-start gap-4 h-full min-w-max pb-2">
+              {COLUMNS.map((col) => (
+                <KanbanColumn
+                  key={col.id}
+                  id={col.id}
+                  title={col.title}
+                  wipLimit={col.wipLimit}
+                  issues={getCellIssues("ALL", col.id)}
+                  onIssueClick={(issue) => setActiveIssue(issue)}
+                />
+              ))}
+            </div>
+          ) : (
+            /* Swimlane / Lane Grouped Board */
+            <div className="flex flex-col gap-6 min-w-max pb-6">
+              {/* Column Headers Sticky Row */}
+              <div className="flex items-center gap-4 sticky top-0 bg-white z-20 pb-2 border-b border-jira-gray-200">
+                {COLUMNS.map((col) => {
+                  const totalInCol = swimlanes.reduce(
+                    (acc, lane) => acc + getCellIssues(lane.id, col.id).length,
+                    0
+                  );
+                  const isOverLimit = col.wipLimit && totalInCol > col.wipLimit;
+
+                  return (
+                    <div
+                      key={col.id}
+                      className="w-72 shrink-0 flex items-center justify-between px-3 py-2 bg-jira-gray-100 rounded-md border border-jira-gray-200"
+                    >
+                      <h3 className="text-xs font-bold text-jira-navy uppercase tracking-wider">
+                        {col.title}
+                      </h3>
+                      <span
+                        className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          isOverLimit
+                            ? "bg-rose-100 text-rose-700 font-bold animate-pulse"
+                            : "bg-jira-gray-200 text-jira-gray-700"
+                        }`}
+                      >
+                        {totalInCol}
+                        {col.wipLimit ? ` / ${col.wipLimit}` : ""}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Swimlane Rows */}
+              {swimlanes.map((lane) => {
+                const isCollapsed = collapsedLanes[lane.id];
+                const laneIssueCount = COLUMNS.reduce(
+                  (acc, col) => acc + getCellIssues(lane.id, col.id).length,
+                  0
+                );
+
+                return (
+                  <div
+                    key={lane.id}
+                    className="flex flex-col rounded-lg border border-jira-gray-200 bg-jira-gray-50/50 overflow-hidden shadow-2xs"
+                  >
+                    {/* Swimlane Header Bar */}
+                    <div
+                      onClick={() => toggleLaneCollapse(lane.id)}
+                      className="flex items-center justify-between px-4 py-2.5 bg-jira-gray-100/80 hover:bg-jira-gray-200/80 border-b border-jira-gray-200 cursor-pointer select-none transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <button className="text-jira-gray-600 hover:text-jira-navy transition-colors">
+                          {isCollapsed ? (
+                            <ChevronRight className="w-4 h-4" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4" />
+                          )}
+                        </button>
+
+                        {/* Swimlane Identity Rendering */}
+                        {groupBy === "ASSIGNEE" && (
+                          <div className="flex items-center gap-2">
+                            {lane.user ? (
+                              <UserAvatar user={lane.user} size="sm" />
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-jira-gray-300 flex items-center justify-center text-jira-gray-600">
+                                <UserIcon className="w-3.5 h-3.5" />
+                              </div>
+                            )}
+                            <span className="text-xs font-bold text-jira-navy">
+                              {lane.title}
+                            </span>
+                            {lane.user?.role && (
+                              <span className="text-[10px] bg-jira-gray-200 text-jira-gray-700 px-1.5 py-0.5 rounded font-medium">
+                                {lane.user.role}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {groupBy === "EPIC" && (
+                          <div className="flex items-center gap-2">
+                            <Bookmark className="w-4 h-4 text-purple-600 fill-purple-100" />
+                            <span className="text-xs font-bold text-jira-navy">
+                              {lane.title}
+                            </span>
+                          </div>
+                        )}
+
+                        {groupBy === "PRIORITY" && (
+                          <div className="flex items-center gap-2">
+                            <AlertCircle
+                              className={`w-4 h-4 ${
+                                lane.priority === "HIGHEST" || lane.priority === "HIGH"
+                                  ? "text-rose-600"
+                                  : lane.priority === "MEDIUM"
+                                  ? "text-amber-600"
+                                  : "text-blue-600"
+                              }`}
+                            />
+                            <span className="text-xs font-bold text-jira-navy">
+                              {lane.title}
+                            </span>
+                          </div>
+                        )}
+
+                        <span className="text-xs text-jira-gray-500 font-medium ml-1">
+                          ({laneIssueCount} issue{laneIssueCount !== 1 ? "s" : ""})
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Swimlane Columns Content */}
+                    {!isCollapsed && (
+                      <div className="flex items-start gap-4 p-3 bg-white">
+                        {COLUMNS.map((col) => (
+                          <KanbanColumn
+                            key={`${lane.id}::${col.id}`}
+                            id={col.id}
+                            droppableId={`${lane.id}::${col.id}`}
+                            title={col.title}
+                            wipLimit={col.wipLimit}
+                            showHeader={false}
+                            minHeightClass="min-h-[110px]"
+                            issues={getCellIssues(lane.id, col.id)}
+                            onIssueClick={(issue) => setActiveIssue(issue)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </DragDropContext>
       </div>
 

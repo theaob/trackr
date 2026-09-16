@@ -736,7 +736,12 @@ export async function updateIssueStatusAndOrder(
   issueId: string,
   newStatus: IssueStatus,
   newOrder: number,
-  userId?: string
+  userId?: string,
+  extraData?: {
+    assigneeId?: string | null;
+    parentId?: string | null;
+    priority?: PriorityLevel;
+  }
 ) {
   try {
     const existing = await prisma.issue.findUnique({
@@ -748,11 +753,39 @@ export async function updateIssueStatusAndOrder(
 
     const statusChanged = existing.status !== newStatus;
 
-    await prisma.issue.update({
+    const updatePayload: Record<string, any> = {
+      status: newStatus,
+      order: newOrder,
+    };
+
+    if (extraData) {
+      if (extraData.assigneeId !== undefined) {
+        updatePayload.assigneeId = extraData.assigneeId;
+      }
+      if (extraData.parentId !== undefined) {
+        updatePayload.parentId = extraData.parentId;
+      }
+      if (extraData.priority !== undefined) {
+        updatePayload.priority = extraData.priority;
+      }
+    }
+
+    const updated = await prisma.issue.update({
       where: { id: issueId },
-      data: {
-        status: newStatus,
-        order: newOrder,
+      data: updatePayload,
+      include: {
+        project: true,
+        assignee: true,
+        reporter: true,
+        version: true,
+        parent: {
+          select: {
+            id: true,
+            key: true,
+            title: true,
+            type: true,
+          },
+        },
       },
     });
 
@@ -789,7 +822,7 @@ export async function updateIssueStatusAndOrder(
       { issueId, key: existing.key, status: newStatus, order: newOrder },
       existing.projectId
     );
-    return { success: true };
+    return { success: true, issue: updated };
   } catch (error) {
     console.error("Failed to update issue status & order:", error);
     return { success: false, error: "Failed to update issue position" };

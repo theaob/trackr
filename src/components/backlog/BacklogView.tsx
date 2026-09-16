@@ -4,12 +4,13 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Project, Issue, User, Sprint, IssueType } from "@/types";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
+import UserAvatar from "@/components/common/UserAvatar";
 
 import IssueDetailModal from "@/components/issues/IssueDetailModal";
 import CreateIssueModal from "@/components/issues/CreateIssueModal";
 import BacklogContextMenu from "@/components/backlog/BacklogContextMenu";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
-import { createSprint, startSprint, completeSprint, moveIssueToSprint } from "@/lib/actions/sprints";
+import { createSprint, startSprint, completeSprint, moveIssueToSprint, renameSprint, deleteSprint } from "@/lib/actions/sprints";
 import { createIssue, getIssueByKeyOrId } from "@/lib/actions/issues";
 import { useCurrentUser } from "@/context/UserContext";
 import { useSearch } from "@/context/SearchContext";
@@ -27,6 +28,9 @@ import {
   GripVertical,
   Clock,
   AlertCircle,
+  Pencil,
+  Trash2,
+  X,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -163,6 +167,16 @@ export default function BacklogView({
   const [sprintGoal, setSprintGoal] = useState("");
   const [dateError, setDateError] = useState<string | null>(null);
 
+  // Rename Sprint
+  const [renamingSprintId, setRenamingSprintId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
+  // Delete Sprint
+  const [deletingSprintId, setDeletingSprintId] = useState<string | null>(null);
+
+  // Sprint dropdown menu
+  const [sprintMenuOpenId, setSprintMenuOpenId] = useState<string | null>(null);
+
   const openStartSprintModal = (sprint: Sprint) => {
     setStartingSprint(sprint);
     setSprintName(sprint.name);
@@ -237,6 +251,31 @@ export default function BacklogView({
 
   const toggleSprintCollapse = (id: string) => {
     setCollapsedSprints((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleRenameSprint = async (sprintId: string) => {
+    if (!renameValue.trim()) return;
+    const res = await renameSprint(sprintId, renameValue);
+    if (res.success && res.sprint) {
+      setSprints((prev) =>
+        prev.map((s) => (s.id === sprintId ? { ...s, name: res.sprint!.name } : s))
+      );
+    }
+    setRenamingSprintId(null);
+  };
+
+  const handleDeleteSprint = async (sprintId: string) => {
+    const res = await deleteSprint(sprintId);
+    if (res.success) {
+      setSprints((prev) => prev.filter((s) => s.id !== sprintId));
+      // Move issues back to backlog in local state
+      setIssues((prev) =>
+        prev.map((i) => (i.sprintId === sprintId ? { ...i, sprintId: null, status: "BACKLOG" as any } : i))
+      );
+    } else if (res.error) {
+      alert(res.error);
+    }
+    setDeletingSprintId(null);
   };
 
   // Filtered issues
@@ -500,7 +539,28 @@ export default function BacklogView({
                       {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     </button>
 
-                    <h3 className="text-sm font-bold text-jira-navy">{sprint.name}</h3>
+                    {renamingSprintId === sprint.id ? (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          handleRenameSprint(sprint.id);
+                        }}
+                        className="flex items-center gap-1.5"
+                      >
+                        <input
+                          autoFocus
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onBlur={() => handleRenameSprint(sprint.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Escape") setRenamingSprintId(null);
+                          }}
+                          className="text-sm font-bold text-jira-navy bg-white border border-jira-blue rounded px-2 py-0.5 outline-none focus:ring-2 focus:ring-jira-blue/30 w-48"
+                        />
+                      </form>
+                    ) : (
+                      <h3 className="text-sm font-bold text-jira-navy">{sprint.name}</h3>
+                    )}
 
                     {sprint.status === "ACTIVE" && (
                       <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
@@ -558,6 +618,47 @@ export default function BacklogView({
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         <span>Complete Sprint</span>
                       </button>
+                    )}
+
+                    {/* Sprint Actions Menu */}
+                    {permissions.canManageSprints && (
+                      <div className="relative">
+                        <button
+                          onClick={() => setSprintMenuOpenId(sprintMenuOpenId === sprint.id ? null : sprint.id)}
+                          className="p-1.5 hover:bg-jira-gray-200 rounded text-jira-gray-500 hover:text-jira-gray-700 transition-colors"
+                          title="Sprint actions"
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                        </button>
+
+                        {sprintMenuOpenId === sprint.id && (
+                          <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-jira-gray-300 rounded-md shadow-lg py-1 z-50 animate-in fade-in">
+                            <button
+                              onClick={() => {
+                                setRenamingSprintId(sprint.id);
+                                setRenameValue(sprint.name);
+                                setSprintMenuOpenId(null);
+                              }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-jira-navy hover:bg-jira-gray-100 transition-colors"
+                            >
+                              <Pencil className="w-3.5 h-3.5 text-jira-gray-500" />
+                              <span>Rename Sprint</span>
+                            </button>
+                            {sprint.status !== "ACTIVE" && (
+                              <button
+                                onClick={() => {
+                                  setDeletingSprintId(sprint.id);
+                                  setSprintMenuOpenId(null);
+                                }}
+                                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Delete Sprint</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -621,18 +722,12 @@ export default function BacklogView({
                                   )}
 
                                   {issue.assignee ? (
-                                    issue.assignee.avatarUrl ? (
-                                      <img
-                                        src={issue.assignee.avatarUrl}
-                                        alt={issue.assignee.name}
-                                        title={issue.assignee.name}
-                                        className="w-6 h-6 rounded-full object-cover"
-                                      />
-                                    ) : (
-                                      <div className="w-6 h-6 rounded-full bg-jira-blue text-white text-[10px] font-bold flex items-center justify-center">
-                                        {issue.assignee.name.charAt(0)}
-                                      </div>
-                                    )
+                                    <UserAvatar
+                                      user={issue.assignee}
+                                      size="sm"
+                                      showTooltip
+                                      tooltipPrefix="Assignee"
+                                    />
                                   ) : (
                                     <div className="w-6 h-6 rounded-full border border-dashed border-jira-gray-300" />
                                   )}
@@ -801,18 +896,12 @@ export default function BacklogView({
                             )}
 
                             {issue.assignee ? (
-                              issue.assignee.avatarUrl ? (
-                                <img
-                                  src={issue.assignee.avatarUrl}
-                                  alt={issue.assignee.name}
-                                  title={issue.assignee.name}
-                                  className="w-6 h-6 rounded-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-6 h-6 rounded-full bg-jira-blue text-white text-[10px] font-bold flex items-center justify-center">
-                                  {issue.assignee.name.charAt(0)}
-                                </div>
-                              )
+                              <UserAvatar
+                                user={issue.assignee}
+                                size="sm"
+                                showTooltip
+                                tooltipPrefix="Assignee"
+                              />
                             ) : (
                               <div className="w-6 h-6 rounded-full border border-dashed border-jira-gray-300" />
                             )}
@@ -908,6 +997,44 @@ export default function BacklogView({
           </div>
         </div>
       </DragDropContext>
+
+      {/* Delete Sprint Confirmation */}
+      {deletingSprintId && (() => {
+        const sprintToDelete = sprints.find((s) => s.id === deletingSprintId);
+        const issueCount = sprintToDelete ? getSprintIssues(sprintToDelete.id).length : 0;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in">
+            <div className="bg-white w-full max-w-sm rounded-xl shadow-2xl border border-jira-gray-300 p-6 space-y-4">
+              <div className="flex items-center gap-2 text-red-600">
+                <Trash2 className="w-5 h-5" />
+                <h3 className="text-base font-bold">Delete Sprint</h3>
+              </div>
+              <p className="text-sm text-jira-gray-700">
+                Are you sure you want to delete <strong>{sprintToDelete?.name}</strong>?
+                {issueCount > 0 && (
+                  <span className="block mt-1 text-jira-gray-500">
+                    {issueCount} issue{issueCount > 1 ? "s" : ""} will be moved to the backlog.
+                  </span>
+                )}
+              </p>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  onClick={() => setDeletingSprintId(null)}
+                  className="px-3 py-1.5 text-xs font-semibold text-jira-gray-700 hover:bg-jira-gray-100 rounded transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDeleteSprint(deletingSprintId)}
+                  className="px-3 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Start Sprint Modal */}
       {startingSprint && (

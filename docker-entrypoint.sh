@@ -2,7 +2,7 @@
 set -e
 
 # Ensure data directory exists and is owned by nextjs
-mkdir -p /app/data
+mkdir -p /app/data /app/data/avatars
 chown -R nextjs:nodejs /app/data
 
 # If database does not exist, copy from seeded template

@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { User } from "@/types";
+import UserAvatar from "@/components/common/UserAvatar";
 import { AtSign } from "lucide-react";
 
 interface MentionInputProps {
@@ -237,17 +238,11 @@ export default function MentionInput({
                   isSelected ? "bg-jira-blue-subtle/70" : "hover:bg-jira-gray-50"
                 }`}
               >
-                {user.avatarUrl ? (
-                  <img
-                    src={user.avatarUrl}
-                    alt={user.name}
-                    className="w-6 h-6 rounded-full object-cover shrink-0 border border-jira-gray-200"
-                  />
-                ) : (
-                  <div className="w-6 h-6 rounded-full bg-jira-blue text-white text-[10px] font-bold flex items-center justify-center shrink-0">
-                    {user.name.charAt(0)}
-                  </div>
-                )}
+                <UserAvatar
+                  user={user}
+                  size="sm"
+                  className="border border-jira-gray-200"
+                />
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-semibold text-jira-navy truncate">
                     {user.name}

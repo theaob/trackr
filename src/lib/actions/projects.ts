@@ -8,6 +8,9 @@ export async function getProjects() {
     return await prisma.project.findMany({
       include: {
         lead: true,
+        members: {
+          select: { userId: true, role: true },
+        },
       },
       orderBy: { createdAt: "asc" },
     });
@@ -23,6 +26,9 @@ export async function getProjectByKey(key: string) {
       where: { key: key.toUpperCase() },
       include: {
         lead: true,
+        members: {
+          select: { userId: true, role: true },
+        },
         sprints: {
           orderBy: { createdAt: "desc" },
         },
@@ -103,6 +109,9 @@ export async function getAllProjectsWithStats() {
     const projects = await prisma.project.findMany({
       include: {
         lead: true,
+        members: {
+          select: { userId: true, role: true },
+        },
         issues: {
           select: { id: true, status: true },
         },
@@ -121,6 +130,8 @@ export async function getAllProjectsWithStats() {
       description: p.description,
       category: p.category,
       lead: p.lead,
+      leadId: p.leadId,
+      members: p.members,
       totalIssues: p.issues.length,
       openIssues: p.issues.filter((i) => i.status !== "DONE").length,
       activeSprint: p.sprints.length > 0 ? p.sprints[0].name : null,

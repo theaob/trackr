@@ -4,6 +4,9 @@ import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { User } from "@/types";
 import CreateProjectModal from "./CreateProjectModal";
+import UserAvatar from "@/components/common/UserAvatar";
+import { useCurrentUser } from "@/context/UserContext";
+import { resolveUserProjectRole } from "@/lib/permissions";
 import {
   FolderGit2,
   Plus,
@@ -25,6 +28,8 @@ interface ProjectStats {
   description: string | null;
   category: string;
   lead: User | null;
+  leadId?: string | null;
+  members?: any[];
   totalIssues: number;
   openIssues: number;
   activeSprint: string | null;
@@ -39,20 +44,29 @@ export default function ProjectsDirectoryView({
   initialProjects,
   users,
 }: ProjectsDirectoryViewProps) {
+  const { currentUser } = useCurrentUser();
   const [projects, setProjects] = useState<ProjectStats[]>(initialProjects);
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
+  const userAccessibleProjects = useMemo(() => {
+    if (!currentUser) return projects;
+    return projects.filter((p) => {
+      const role = resolveUserProjectRole(currentUser.id, p);
+      return role !== null;
+    });
+  }, [projects, currentUser]);
+
   const filteredProjects = useMemo(() => {
-    if (!searchQuery.trim()) return projects;
+    if (!searchQuery.trim()) return userAccessibleProjects;
     const q = searchQuery.toLowerCase();
-    return projects.filter(
+    return userAccessibleProjects.filter(
       (p) =>
         p.name.toLowerCase().includes(q) ||
         p.key.toLowerCase().includes(q) ||
         p.category.toLowerCase().includes(q)
     );
-  }, [projects, searchQuery]);
+  }, [userAccessibleProjects, searchQuery]);
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-y-auto bg-jira-gray-50/50">
@@ -171,13 +185,9 @@ export default function ProjectsDirectoryView({
                         Lead:
                       </span>
                       <div className="flex items-center gap-1.5">
-                        {project.lead?.avatarUrl ? (
-                          <img
-                            src={project.lead.avatarUrl}
-                            alt={project.lead.name}
-                            className="w-4 h-4 rounded-full object-cover"
-                          />
-                        ) : null}
+                        {project.lead && (
+                          <UserAvatar user={project.lead} size="xs" />
+                        )}
                         <span className="font-medium text-jira-navy">
                           {project.lead?.name || "Unassigned"}
                         </span>

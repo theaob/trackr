@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Issue, IssueStatus, IssueType, PriorityLevel, User, Sprint, Version, CustomField } from "@/types";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
+import UserAvatar from "@/components/common/UserAvatar";
 
 import { useCurrentUser } from "@/context/UserContext";
 import { updateIssue, deleteIssue, getIssueByKeyOrId } from "@/lib/actions/issues";
@@ -470,17 +471,11 @@ export default function IssueDetailModal({
                   {/* New Comment Input */}
                   {permissions.canAddComment ? (
                     <form onSubmit={handleAddComment} className="flex gap-3 items-start">
-                      {currentUser?.avatarUrl ? (
-                        <img
-                          src={currentUser.avatarUrl}
-                          alt={currentUser.name}
-                          className="w-8 h-8 rounded-full object-cover shrink-0 mt-1 border"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-jira-blue text-white text-xs font-bold flex items-center justify-center shrink-0 mt-1">
-                          {currentUser?.name.charAt(0) || "U"}
-                        </div>
-                      )}
+                      <UserAvatar
+                        user={currentUser}
+                        size="lg"
+                        className="mt-1 border"
+                      />
                       <div className="flex-1">
                         <MentionInput
                           value={newComment}
@@ -524,17 +519,7 @@ export default function IssueDetailModal({
                         key={comment.id}
                         className="flex gap-3 group text-sm p-2 rounded-md hover:bg-jira-gray-50"
                       >
-                        {comment.author.avatarUrl ? (
-                          <img
-                            src={comment.author.avatarUrl}
-                            alt={comment.author.name}
-                            className="w-7 h-7 rounded-full object-cover shrink-0"
-                          />
-                        ) : (
-                          <div className="w-7 h-7 rounded-full bg-jira-gray-300 text-jira-gray-700 text-xs font-bold flex items-center justify-center shrink-0">
-                            {comment.author.name.charAt(0)}
-                          </div>
-                        )}
+                        <UserAvatar user={comment.author} size="md" />
                         <div className="flex-1">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -675,13 +660,11 @@ export default function IssueDetailModal({
                 Reporter
               </label>
               <div className="flex items-center gap-2 px-2.5 py-1.5 bg-white border border-jira-gray-300 rounded text-xs text-jira-navy">
-                {currentIssue.reporter?.avatarUrl ? (
-                  <img
-                    src={currentIssue.reporter.avatarUrl}
-                    alt={currentIssue.reporter.name}
-                    className="w-4 h-4 rounded-full object-cover"
-                  />
-                ) : null}
+                <UserAvatar
+                  user={currentIssue.reporter}
+                  size="xs"
+                  className="w-4 h-4"
+                />
                 <span>{currentIssue.reporter?.name || "Anonymous"}</span>
               </div>
             </div>

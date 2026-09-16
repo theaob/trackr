@@ -33,6 +33,7 @@ import CreateCustomFieldModal from "./CreateCustomFieldModal";
 import CreateWebhookModal from "./CreateWebhookModal";
 import WebhookDeliveriesModal from "./WebhookDeliveriesModal";
 import ProjectAccessTab from "./ProjectAccessTab";
+import UserAvatar from "@/components/common/UserAvatar";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
 import {
   CustomFieldIcon,
@@ -323,13 +324,9 @@ export default function ProjectSettingsView({
               Project Lead
             </label>
             <div className="flex items-center gap-3 px-3 py-2 border border-jira-gray-300 rounded bg-jira-gray-50">
-              {project.lead?.avatarUrl ? (
-                <img
-                  src={project.lead.avatarUrl}
-                  alt={project.lead.name}
-                  className="w-6 h-6 rounded-full object-cover"
-                />
-              ) : null}
+              {project.lead && (
+                <UserAvatar user={project.lead} size="sm" />
+              )}
               <span className="font-medium text-jira-navy">{project.lead?.name || "None"}</span>
               <span className="text-xs text-jira-gray-500 ml-auto flex items-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5 text-jira-blue" />

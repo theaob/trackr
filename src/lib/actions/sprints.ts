@@ -178,3 +178,59 @@ export async function moveIssueToSprint(issueId: string, sprintId: string | null
     return { success: false, error: "Failed to move issue to sprint" };
   }
 }
+
+export async function renameSprint(sprintId: string, name: string) {
+  try {
+    const trimmed = name.trim();
+    if (!trimmed) return { success: false, error: "Sprint name cannot be empty" };
+
+    const sprint = await prisma.sprint.findUnique({
+      where: { id: sprintId },
+      include: { project: true },
+    });
+
+    if (!sprint) throw new Error("Sprint not found");
+
+    const updated = await prisma.sprint.update({
+      where: { id: sprintId },
+      data: { name: trimmed },
+    });
+
+    revalidatePath(`/projects/${sprint.project.key}`);
+    return { success: true, sprint: updated };
+  } catch (error) {
+    console.error("Failed to rename sprint:", error);
+    return { success: false, error: "Failed to rename sprint" };
+  }
+}
+
+export async function deleteSprint(sprintId: string) {
+  try {
+    const sprint = await prisma.sprint.findUnique({
+      where: { id: sprintId },
+      include: { project: true, issues: true },
+    });
+
+    if (!sprint) throw new Error("Sprint not found");
+    if (sprint.status === "ACTIVE") {
+      return { success: false, error: "Cannot delete an active sprint. Complete it first." };
+    }
+
+    // Move all issues back to backlog
+    if (sprint.issues.length > 0) {
+      await prisma.issue.updateMany({
+        where: { sprintId },
+        data: { sprintId: null, status: "BACKLOG" },
+      });
+    }
+
+    await prisma.sprint.delete({ where: { id: sprintId } });
+
+    revalidatePath(`/projects/${sprint.project.key}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to delete sprint:", error);
+    return { success: false, error: "Failed to delete sprint" };
+  }
+}
+

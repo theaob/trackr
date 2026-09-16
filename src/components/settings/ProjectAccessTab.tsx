@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { Project, User, ProjectMember, ProjectRole } from "@/types";
+import UserAvatar from "@/components/common/UserAvatar";
 import {
   ROLE_CONFIG,
   ROLE_PERMISSIONS,
@@ -34,7 +35,7 @@ interface ProjectAccessTabProps {
   project: Project;
   initialMembers: ProjectMember[];
   allOrgUsers: User[];
-  currentUserRole: ProjectRole;
+  currentUserRole: ProjectRole | null;
   isProjectLead: boolean;
 }
 
@@ -255,17 +256,11 @@ export default function ProjectAccessTab({
                     {/* User Profile */}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        {member.user.avatarUrl ? (
-                          <img
-                            src={member.user.avatarUrl}
-                            alt={member.user.name}
-                            className="w-8 h-8 rounded-full object-cover border border-jira-gray-200"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-jira-blue text-white font-bold text-xs flex items-center justify-center">
-                            {member.user.name.charAt(0)}
-                          </div>
-                        )}
+                        <UserAvatar
+                          user={member.user}
+                          size="lg"
+                          className="border border-jira-gray-200"
+                        />
                         <div>
                           <div className="font-bold text-jira-navy flex items-center gap-1.5">
                             <span>{member.user.name}</span>

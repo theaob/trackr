@@ -5,6 +5,7 @@ import { Draggable } from "@hello-pangea/dnd";
 import { Issue } from "@/types";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon } from "@/components/common/IssueIcons";
 import { CheckSquare, User as UserIcon } from "lucide-react";
+import UserAvatar from "@/components/common/UserAvatar";
 
 
 interface IssueCardProps {
@@ -79,21 +80,13 @@ export default function IssueCard({ issue, index, onClick }: IssueCardProps) {
               )}
 
               {issue.assignee ? (
-                issue.assignee.avatarUrl ? (
-                  <img
-                    src={issue.assignee.avatarUrl}
-                    alt={issue.assignee.name}
-                    title={`Assignee: ${issue.assignee.name}`}
-                    className="w-5 h-5 rounded-full object-cover border border-white shadow-xs"
-                  />
-                ) : (
-                  <div
-                    title={`Assignee: ${issue.assignee.name}`}
-                    className="w-5 h-5 rounded-full bg-jira-blue text-white text-[10px] font-bold flex items-center justify-center border border-white"
-                  >
-                    {issue.assignee.name.charAt(0)}
-                  </div>
-                )
+                <UserAvatar
+                  user={issue.assignee}
+                  size="xs"
+                  showTooltip
+                  tooltipPrefix="Assignee"
+                  className="border border-white shadow-xs"
+                />
               ) : (
                 <div
                   title="Unassigned"
