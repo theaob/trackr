@@ -22,6 +22,7 @@ import {
   Loader2,
 } from "lucide-react";
 import PersonalAccessTokensModal from "@/components/auth/PersonalAccessTokensModal";
+import AuthModal from "@/components/auth/AuthModal";
 import { TrackrLogo } from "@/components/common/TrackrLogo";
 import UserAvatar from "@/components/common/UserAvatar";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
@@ -52,6 +53,7 @@ export default function Navbar({
   const [showProjectMenu, setShowProjectMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showTokensModal, setShowTokensModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -289,8 +291,19 @@ export default function Navbar({
                 </div>
               </div>
 
-              {/* Personal Access Tokens Trigger */}
+              {/* Personal Access Tokens & Auth Triggers */}
               <div className="py-1 border-b border-jira-gray-200">
+                <button
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    setShowAuthModal(true);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-jira-blue hover:bg-jira-blue-light/30 transition-colors"
+                >
+                  <Shield className="w-3.5 h-3.5 text-jira-blue" />
+                  <span>Giriş Yap / Kayıt Ol (SSO)</span>
+                </button>
+
                 <button
                   onClick={() => {
                     setShowUserMenu(false);
@@ -350,6 +363,12 @@ export default function Navbar({
       <PersonalAccessTokensModal
         isOpen={showTokensModal}
         onClose={() => setShowTokensModal(false)}
+      />
+
+      {/* Auth & SSO Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
       />
     </header>
   );

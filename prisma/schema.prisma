@@ -13,6 +13,9 @@ model User {
   email          String        @unique
   avatarUrl      String?
   role           String        @default("Developer")
+  passwordHash   String?
+  authProvider   String        @default("LOCAL") // "LOCAL", "SSO"
+  ssoSubjectId   String?
   assignedIssues Issue[]       @relation("Assignee")
   reportedIssues Issue[]       @relation("Reporter")
   comments       Comment[]
@@ -252,6 +255,21 @@ model WebhookDelivery {
   @@index([webhookId])
   @@index([createdAt])
 }
+
+model SsoConfig {
+  id                   String   @id @default("default")
+  enabled              Boolean  @default(true)
+  providerName         String   @default("Enterprise SSO / SAML / OIDC")
+  issuerUrl            String?  // IdP Issuer / Metadata URL
+  clientId             String?  // Client ID or Entity ID
+  clientSecret         String?  // Client Secret if OIDC
+  certificate          String?  // PEM format X.509 Certificate (Self-Signed Supported)
+  allowSelfSignedCerts Boolean  @default(true) // Enable self-signed certificate validation
+  autoProvisionUsers   Boolean  @default(true) // Auto-create user on first SSO login
+  defaultRole          String   @default("Developer")
+  updatedAt            DateTime @updatedAt
+}
+
 
 
 

@@ -33,6 +33,7 @@ import CreateCustomFieldModal from "./CreateCustomFieldModal";
 import CreateWebhookModal from "./CreateWebhookModal";
 import WebhookDeliveriesModal from "./WebhookDeliveriesModal";
 import ProjectAccessTab from "./ProjectAccessTab";
+import SsoSettingsTab from "./SsoSettingsTab";
 import UserAvatar from "@/components/common/UserAvatar";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
 import {
@@ -55,7 +56,7 @@ export default function ProjectSettingsView({
   initialWebhooks = [],
   initialMembers = [],
 }: ProjectSettingsViewProps) {
-  const [activeTab, setActiveTab] = useState<"general" | "fields" | "webhooks" | "access">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "fields" | "webhooks" | "access" | "sso">("general");
   const [members, setMembers] = useState<ProjectMember[]>(initialMembers);
   const permissions = useProjectPermissions(project, members);
 
@@ -245,6 +246,18 @@ export default function ProjectSettingsView({
             <span className="ml-1 px-1.5 py-0.2 bg-jira-gray-100 text-jira-gray-700 rounded-full text-[10px] font-bold">
               {members.length}
             </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("sso")}
+            className={`pb-3 text-xs font-semibold border-b-2 flex items-center gap-1.5 transition-colors ${
+              activeTab === "sso"
+                ? "border-jira-blue text-jira-blue"
+                : "border-transparent text-jira-gray-600 hover:text-jira-navy"
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+            SSO & Sertifikalar
           </button>
         </div>
       </div>
@@ -647,6 +660,13 @@ export default function ProjectSettingsView({
             currentUserRole={permissions.role}
             isProjectLead={permissions.isLead}
           />
+        </div>
+      )}
+
+      {/* Tab 5: SSO & Certificates */}
+      {activeTab === "sso" && (
+        <div className="mt-6">
+          <SsoSettingsTab />
         </div>
       )}
 
