@@ -76,12 +76,40 @@ docker build -t trackr:latest .
 docker run -d -p 3000:3000 -v trackr_data:/app/data --name trackr-app trackr:latest
 ```
 
+### Pull & Run from Docker Hub
+```bash
+docker run -d -p 3000:3000 -v trackr_data:/app/data --name trackr-app <DOCKERHUB_USERNAME>/trackr:latest
+```
+
 ### Pull & Run from GitHub Container Registry (GHCR)
 ```bash
 docker run -d -p 3000:3000 -v trackr_data:/app/data --name trackr-app ghcr.io/theaob/trackr:latest
 ```
 
 ---
+
+## 🚀 Automated Releases & Docker Hub CI/CD
+
+Whenever the version is bumped in `package.json` and pushed to `main` (or a `v*` tag is pushed), the GitHub Actions workflow ([`.github/workflows/release.yml`](.github/workflows/release.yml)) automatically:
+1. Detects the new version and ensures it hasn't been released yet.
+2. Creates a formal **GitHub Release** with auto-generated release notes and changelog.
+3. Builds multi-architecture Docker images (`linux/amd64` and `linux/arm64`).
+4. Pushes the versioned images to **Docker Hub** (`:latest`, `:<version>`, `:<major>.<minor>`) and **GHCR**.
+
+### Required GitHub Secrets
+To enable Docker Hub publishing, add the following secrets in GitHub (**Settings > Secrets and variables > Actions**):
+- `DOCKERHUB_USERNAME`: Your Docker Hub username.
+- `DOCKERHUB_TOKEN`: Your Docker Hub Personal Access Token.
+- `DOCKERHUB_REPO` *(optional)*: Defaults to `<DOCKERHUB_USERNAME>/trackr`.
+
+### Releasing a New Version
+```bash
+# Bump version (e.g. 0.1.0 -> 0.1.1 or 0.2.0)
+npm version patch   # or minor / major
+
+# Push commit to main (or push tags)
+git push origin main
+```
 
 ## 🛠 Tech Stack
 

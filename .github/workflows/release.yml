@@ -1,0 +1,158 @@
+name: Release & Publish to Docker Hub
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'package.json'
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      force_release:
+        description: 'Force release and image build even if version tag already exists'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check-version:
+    name: Check Version & Tag
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.version_check.outputs.should_release }}
+      version: ${{ steps.version_check.outputs.version }}
+      tag_name: ${{ steps.version_check.outputs.tag_name }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Detect version and check tag existence
+        id: version_check
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            RAW_TAG="${{ github.ref_name }}"
+            VERSION="${RAW_TAG#v}"
+            TAG_NAME="v$VERSION"
+            echo "Triggered by git tag: $TAG_NAME"
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          else
+            VERSION=$(node -p "require('./package.json').version")
+            TAG_NAME="v$VERSION"
+            echo "Current package.json version: $VERSION ($TAG_NAME)"
+
+            git fetch --tags origin || true
+
+            if git rev-parse "$TAG_NAME" >/dev/null 2>&1 && [[ "${{ github.event.inputs.force_release }}" != "true" ]]; then
+              echo "Tag $TAG_NAME already exists in repository. Skipping release."
+              echo "should_release=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "New version detected: $VERSION ($TAG_NAME)"
+              echo "should_release=true" >> "$GITHUB_OUTPUT"
+              echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+              echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+  release-and-publish:
+    name: Create Release & Push to Docker Hub
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate Docker Hub Secrets
+        run: |
+          if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ] || [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
+            echo "::error::Docker Hub credentials missing! Please add DOCKERHUB_USERNAME and DOCKERHUB_TOKEN to repository secrets (Settings -> Secrets and variables -> Actions)."
+            exit 1
+          fi
+
+      - name: Create Git Tag & GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ needs.check-version.outputs.tag_name }}
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          echo "Processing release for $TAG_NAME..."
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "GitHub release $TAG_NAME already exists."
+          else
+            if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+              gh release create "$TAG_NAME" \
+                --title "Release $TAG_NAME" \
+                --generate-notes
+            else
+              gh release create "$TAG_NAME" \
+                --target "${{ github.sha }}" \
+                --title "Release $TAG_NAME" \
+                --generate-notes
+            fi
+            echo "GitHub release $TAG_NAME created successfully."
+          fi
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ secrets.DOCKERHUB_REPO || format('{0}/trackr', secrets.DOCKERHUB_USERNAME) }}
+            ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest
+            type=raw,value=${{ needs.check-version.outputs.version }}
+            type=semver,pattern={{version}},value=${{ needs.check-version.outputs.tag_name }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.check-version.outputs.tag_name }}
+            type=semver,pattern={{major}},value=${{ needs.check-version.outputs.tag_name }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
