@@ -33,6 +33,20 @@ if [ -z "$AUTH_SECRET" ]; then
   echo "             Set AUTH_SECRET (32+ characters) to keep sessions valid across volumes."
 fi
 
+# A database from a version without authentication has no password hashes, so
+# nobody could sign in and the login form would only say "incorrect password".
+if command -v sqlite3 >/dev/null 2>&1 && [ -f /app/data/dev.db ]; then
+  WITH_PASSWORD=$(sqlite3 /app/data/dev.db \
+    "SELECT COUNT(*) FROM User WHERE passwordHash IS NOT NULL;" 2>/dev/null || echo "")
+  if [ "$WITH_PASSWORD" = "0" ]; then
+    echo "==> [Trackr] ========================== ACTION NEEDED =========================="
+    echo "             No account in this database has a password, so sign-in is not"
+    echo "             possible yet. Set one from a shell in this container:"
+    echo "               docker exec -it trackr-app node scripts/set-password.cjs <email>"
+    echo "             =========================================================================="
+  fi
+fi
+
 if [ "$FRESH_DATABASE" = "1" ]; then
   echo "==> [Trackr] ============================ SECURITY ============================"
   echo "             This database was seeded with demo accounts that share a"

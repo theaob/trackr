@@ -139,6 +139,39 @@ npm version patch   # or minor / major
 git push origin main
 ```
 
+## ⬆️ Upgrading from a version without authentication
+
+Earlier versions had no server-side authentication, and accounts were created
+without a password. Sign-in now fails closed, so **an existing database has no
+account that can sign in** until a password is set. The login screen says so
+when it detects that state.
+
+Set one from the project directory:
+
+```bash
+npm run set-password -- --list                  # which accounts have a password
+npm run set-password -- alex.chen@acme.dev      # generate one, printed once
+npm run set-password -- alex.chen@acme.dev 'a good password'
+```
+
+Or inside a running container:
+
+```bash
+docker exec -it trackr-app node scripts/set-password.cjs --list
+docker exec -it trackr-app node scripts/set-password.cjs alex.chen@acme.dev
+```
+
+Re-seeding (`npm run db:seed`) also works, but it **deletes all existing
+projects, issues and comments** — use it only on a throwaway database.
+
+Two other changes are worth knowing about when upgrading:
+
+- **Access is membership-driven.** Projects created before memberships existed
+  are backfilled once with every user on first load, so nothing disappears, but
+  newly registered accounts no longer join every project automatically.
+- **Set `AUTH_SECRET`.** Without it, a secret is generated into the data
+  directory; replacing that directory signs everyone out.
+
 ## 🔒 Single Sign-On (OIDC)
 
 SSO is **disabled until it is configured**, and a session is only ever created

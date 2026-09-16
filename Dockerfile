@@ -71,6 +71,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma/template.db ./prisma/templ
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
+# Operator tooling. Plain CommonJS, so it runs with the node already in the
+# image: docker exec -it trackr-app node scripts/set-password.cjs <email>
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/set-password.cjs ./scripts/set-password.cjs
+
 # Copy entrypoint script
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh

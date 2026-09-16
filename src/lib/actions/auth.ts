@@ -96,7 +96,22 @@ export async function loginWithCredentials(email: string, password?: string) {
       select: { id: true, passwordHash: true },
     });
 
-    if (!user || !user.passwordHash) return genericFailure;
+    if (!user || !user.passwordHash) {
+      // Databases created before passwords existed have no hashes at all, and
+      // every sign-in would otherwise look like a typo. Report that only when
+      // it is true of the whole instance, so this never becomes a way to test
+      // whether an individual account exists.
+      if (await instanceHasNoPasswords()) {
+        return {
+          success: false as const,
+          error:
+            "No account on this instance has a password set yet. An administrator " +
+            "needs to run `npm run set-password -- <email>` (or `npm run db:seed` " +
+            "to recreate the demo data).",
+        };
+      }
+      return genericFailure;
+    }
 
     const { valid, needsRehash } = await verifyPassword(password, user.passwordHash);
     if (!valid) return genericFailure;
@@ -124,6 +139,15 @@ export async function loginWithCredentials(email: string, password?: string) {
     console.error("Failed to login user:", error);
     return { success: false, error: "Authentication failed." };
   }
+}
+
+/**
+ * True when no account at all can sign in with a password, which is the state
+ * an upgrade from a version without authentication leaves behind.
+ */
+async function instanceHasNoPasswords(): Promise<boolean> {
+  const withPassword = await prisma.user.count({ where: { NOT: { passwordHash: null } } });
+  return withPassword === 0;
 }
 
 /** Change the signed-in user's own password. */
