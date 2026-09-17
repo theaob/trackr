@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Issue, IssueStatus, IssueType, PriorityLevel, User, Sprint, Version, CustomField, IssueLink, WorkflowStatus, WorkflowTransition } from "@/types";
+import { Issue, IssueStatus, IssueType, PriorityLevel, User, Sprint, Version, CustomField, IssueLink, IssueLabel, WorkflowStatus, WorkflowTransition } from "@/types";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
 import UserAvatar from "@/components/common/UserAvatar";
 import IssueLinksSection from "@/components/issues/IssueLinksSection";
+import LabelsSection from "@/components/issues/LabelsSection";
 
 import { useCurrentUser } from "@/context/UserContext";
 import { updateIssue, deleteIssue, getIssueByKeyOrId } from "@/lib/actions/issues";
@@ -162,7 +163,9 @@ export default function IssueDetailModal({
       updatedByUserId: currentUser?.id,
     });
     if (res.success && res.issue) {
-      const typed = res.issue as unknown as Issue;
+      // updateIssue's response doesn't refetch labels/links (loaded separately by
+      // their own sections), so merge onto the current issue instead of replacing it.
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
       setCurrentIssue(typed);
       onIssueUpdated(typed);
     }
@@ -176,7 +179,9 @@ export default function IssueDetailModal({
       updatedByUserId: currentUser?.id,
     });
     if (res.success && res.issue) {
-      const typed = res.issue as unknown as Issue;
+      // updateIssue's response doesn't refetch labels/links (loaded separately by
+      // their own sections), so merge onto the current issue instead of replacing it.
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
       setCurrentIssue(typed);
       onIssueUpdated(typed);
     }
@@ -190,7 +195,9 @@ export default function IssueDetailModal({
       updatedByUserId: currentUser?.id,
     });
     if (res.success && res.issue) {
-      const typed = res.issue as unknown as Issue;
+      // updateIssue's response doesn't refetch labels/links (loaded separately by
+      // their own sections), so merge onto the current issue instead of replacing it.
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
       setCurrentIssue(typed);
       onIssueUpdated(typed);
     }
@@ -204,7 +211,9 @@ export default function IssueDetailModal({
       updatedByUserId: currentUser?.id,
     });
     if (res.success && res.issue) {
-      const typed = res.issue as unknown as Issue;
+      // updateIssue's response doesn't refetch labels/links (loaded separately by
+      // their own sections), so merge onto the current issue instead of replacing it.
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
       setCurrentIssue(typed);
       onIssueUpdated(typed);
     }
@@ -217,7 +226,9 @@ export default function IssueDetailModal({
       updatedByUserId: currentUser?.id,
     });
     if (res.success && res.issue) {
-      const typed = res.issue as unknown as Issue;
+      // updateIssue's response doesn't refetch labels/links (loaded separately by
+      // their own sections), so merge onto the current issue instead of replacing it.
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
       setCurrentIssue(typed);
       onIssueUpdated(typed);
     }
@@ -230,7 +241,9 @@ export default function IssueDetailModal({
       updatedByUserId: currentUser?.id,
     });
     if (res.success && res.issue) {
-      const typed = res.issue as unknown as Issue;
+      // updateIssue's response doesn't refetch labels/links (loaded separately by
+      // their own sections), so merge onto the current issue instead of replacing it.
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
       setCurrentIssue(typed);
       onIssueUpdated(typed);
     }
@@ -243,7 +256,9 @@ export default function IssueDetailModal({
       updatedByUserId: currentUser?.id,
     });
     if (res.success && res.issue) {
-      const typed = res.issue as unknown as Issue;
+      // updateIssue's response doesn't refetch labels/links (loaded separately by
+      // their own sections), so merge onto the current issue instead of replacing it.
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
       setCurrentIssue(typed);
       onIssueUpdated(typed);
     }
@@ -268,7 +283,9 @@ export default function IssueDetailModal({
       updatedByUserId: currentUser?.id,
     });
     if (res.success && res.issue) {
-      const typed = res.issue as unknown as Issue;
+      // updateIssue's response doesn't refetch labels/links (loaded separately by
+      // their own sections), so merge onto the current issue instead of replacing it.
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
       setCurrentIssue(typed);
       onIssueUpdated(typed);
     }
@@ -281,7 +298,9 @@ export default function IssueDetailModal({
       updatedByUserId: currentUser?.id,
     });
     if (res.success && res.issue) {
-      const typed = res.issue as unknown as Issue;
+      // updateIssue's response doesn't refetch labels/links (loaded separately by
+      // their own sections), so merge onto the current issue instead of replacing it.
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
       setCurrentIssue(typed);
       onIssueUpdated(typed);
     }
@@ -295,7 +314,9 @@ export default function IssueDetailModal({
       updatedByUserId: currentUser?.id,
     });
     if (res.success && res.issue) {
-      const typed = res.issue as unknown as Issue;
+      // updateIssue's response doesn't refetch labels/links (loaded separately by
+      // their own sections), so merge onto the current issue instead of replacing it.
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
       setCurrentIssue(typed);
       onIssueUpdated(typed);
     }
@@ -343,6 +364,25 @@ export default function IssueDetailModal({
       ...currentIssue,
       linksAsSource: (currentIssue.linksAsSource || []).filter((l) => l.id !== linkId),
       linksAsTarget: (currentIssue.linksAsTarget || []).filter((l) => l.id !== linkId),
+    };
+    setCurrentIssue(updatedIssue);
+    onIssueUpdated(updatedIssue);
+  };
+
+  // Handle Label added/removed
+  const handleLabelAdded = (issueLabel: IssueLabel) => {
+    const updatedIssue = {
+      ...currentIssue,
+      labels: [...(currentIssue.labels || []).filter((l) => l.labelId !== issueLabel.labelId), issueLabel],
+    };
+    setCurrentIssue(updatedIssue);
+    onIssueUpdated(updatedIssue);
+  };
+
+  const handleLabelRemoved = (labelId: string) => {
+    const updatedIssue = {
+      ...currentIssue,
+      labels: (currentIssue.labels || []).filter((l) => l.labelId !== labelId),
     };
     setCurrentIssue(updatedIssue);
     onIssueUpdated(updatedIssue);
@@ -482,6 +522,18 @@ export default function IssueDetailModal({
                   )}
                 </div>
               )}
+            </div>
+
+            {/* Labels */}
+            <div className="pt-4 border-t border-jira-gray-200">
+              <LabelsSection
+                issueId={currentIssue.id}
+                projectId={currentIssue.projectId}
+                labels={currentIssue.labels}
+                canEdit={permissions.canEditIssue}
+                onLabelAdded={handleLabelAdded}
+                onLabelRemoved={handleLabelRemoved}
+              />
             </div>
 
             {/* Linked Issues */}

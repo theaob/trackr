@@ -64,6 +64,20 @@ export default function IssueCard({ issue, index, onClick, doneStatusNames = ["D
             </div>
           )}
 
+          {/* Labels */}
+          {issue.labels && issue.labels.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1 mb-2">
+              {issue.labels.map((il) => (
+                <span
+                  key={il.id}
+                  className="inline-flex px-1.5 py-0.5 rounded-full bg-jira-gray-100 border border-jira-gray-300 text-[10px] font-medium text-jira-gray-700"
+                >
+                  {il.label.name}
+                </span>
+              ))}
+            </div>
+          )}
+
           {/* Bottom Row: Key, Type, Priority, Story Points, Assignee */}
           <div className="flex items-center justify-between mt-1 pt-1">
             <div className="flex items-center gap-1.5">

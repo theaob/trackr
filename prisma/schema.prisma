@@ -48,8 +48,35 @@ model Project {
   webhooks     Webhook[]
   workflowStatuses    WorkflowStatus[]
   workflowTransitions WorkflowTransition[]
+  labels       Label[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+// Free-text tags, scoped per project like Jira's. No color or description --
+// just a name, created the first time anyone types it on an issue.
+model Label {
+  id        String       @id @default(cuid())
+  projectId String
+  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  issues    IssueLabel[]
+  createdAt DateTime     @default(now())
+
+  @@unique([projectId, name])
+  @@index([projectId])
+}
+
+model IssueLabel {
+  id      String @id @default(cuid())
+  issueId String
+  issue   Issue  @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  labelId String
+  label   Label  @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@unique([issueId, labelId])
+  @@index([issueId])
+  @@index([labelId])
 }
 
 // A project's own set of issue statuses. Issue.status stores the status
@@ -200,6 +227,7 @@ model Issue {
   customFieldValues CustomFieldValue[]
   linksAsSource IssueLink[] @relation("IssueLinkSource")
   linksAsTarget IssueLink[] @relation("IssueLinkTarget")
+  labels      IssueLabel[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 

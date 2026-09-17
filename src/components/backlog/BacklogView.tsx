@@ -739,6 +739,23 @@ export default function BacklogView({
                                       {issue.parent.title}
                                     </span>
                                   )}
+                                  {issue.labels && issue.labels.length > 0 && (
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      {issue.labels.slice(0, 2).map((il) => (
+                                        <span
+                                          key={il.id}
+                                          className="text-[10px] bg-jira-gray-100 border border-jira-gray-300 text-jira-gray-700 font-medium px-1.5 py-0.5 rounded-full"
+                                        >
+                                          {il.label.name}
+                                        </span>
+                                      ))}
+                                      {issue.labels.length > 2 && (
+                                        <span className="text-[10px] text-jira-gray-400">
+                                          +{issue.labels.length - 2}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
 
                                 <div className="flex items-center gap-4 shrink-0">
@@ -912,6 +929,23 @@ export default function BacklogView({
                               <span className="text-[10px] bg-purple-100 text-purple-800 font-semibold px-1.5 py-0.5 rounded shrink-0 max-w-[150px] truncate">
                                 {issue.parent.title}
                               </span>
+                            )}
+                            {issue.labels && issue.labels.length > 0 && (
+                              <div className="flex items-center gap-1 shrink-0">
+                                {issue.labels.slice(0, 2).map((il) => (
+                                  <span
+                                    key={il.id}
+                                    className="text-[10px] bg-jira-gray-100 border border-jira-gray-300 text-jira-gray-700 font-medium px-1.5 py-0.5 rounded-full"
+                                  >
+                                    {il.label.name}
+                                  </span>
+                                ))}
+                                {issue.labels.length > 2 && (
+                                  <span className="text-[10px] text-jira-gray-400">
+                                    +{issue.labels.length - 2}
+                                  </span>
+                                )}
+                              </div>
                             )}
                           </div>
 

@@ -36,6 +36,10 @@ const LINKED_ISSUE_SELECT = {
   project: { select: { key: true, name: true } },
 } as const;
 
+const LABELS_INCLUDE = {
+  labels: { include: { label: true }, orderBy: { label: { name: "asc" } } },
+} as const;
+
 
 export async function getProjectIssues(projectId: string) {
   try {
@@ -73,6 +77,7 @@ export async function getProjectIssues(projectId: string) {
           },
           orderBy: { createdAt: "desc" },
         },
+        ...LABELS_INCLUDE,
       },
       orderBy: [{ order: "asc" }, { createdAt: "asc" }],
       take: 200,
@@ -134,6 +139,7 @@ export async function getBoardIssues(projectId: string, activeSprintId?: string 
             type: true,
           },
         },
+        ...LABELS_INCLUDE,
       },
       orderBy: [{ order: "asc" }, { createdAt: "asc" }],
       take: 150,
@@ -191,6 +197,7 @@ export async function getIssueByKeyOrId(keyOrId: string) {
           include: { source: { select: LINKED_ISSUE_SELECT } },
           orderBy: { createdAt: "asc" },
         },
+        ...LABELS_INCLUDE,
       },
     });
 
@@ -227,6 +234,7 @@ export async function getBacklogIssues(projectId: string) {
               type: true,
             },
           },
+          ...LABELS_INCLUDE,
         },
         orderBy: [{ order: "asc" }, { createdAt: "asc" }],
         take: 300,
@@ -246,6 +254,7 @@ export async function getBacklogIssues(projectId: string) {
               type: true,
             },
           },
+          ...LABELS_INCLUDE,
         },
         orderBy: [{ order: "asc" }, { createdAt: "asc" }],
         take: 100,
@@ -308,6 +317,7 @@ export async function getAllCrossProjectIssues(projectId?: string) {
           },
           orderBy: { createdAt: "desc" },
         },
+        ...LABELS_INCLUDE,
       },
       orderBy: [{ order: "asc" }, { createdAt: "asc" }],
       take: 100,
@@ -333,6 +343,7 @@ export interface PaginatedIssuesParams {
   reporterId?: string;
   sprintId?: string;
   versionId?: string;
+  label?: string;
   sortField?: string;
   sortOrder?: "asc" | "desc";
 }
@@ -391,6 +402,10 @@ export async function getPaginatedIssues(params: PaginatedIssuesParams) {
       } else {
         where.versionId = params.versionId;
       }
+    }
+
+    if (params.label && params.label !== "ALL") {
+      where.labels = { some: { label: { name: params.label } } };
     }
 
     // A single project's own "done" names are known; spanning every
@@ -452,6 +467,7 @@ export async function getPaginatedIssues(params: PaginatedIssuesParams) {
           // Comment and activity threads are loaded by the detail modal, not
           // eagerly for every row of the table.
           _count: { select: { comments: true } },
+          ...LABELS_INCLUDE,
         },
         orderBy,
         skip,

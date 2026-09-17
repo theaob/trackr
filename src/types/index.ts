@@ -127,6 +127,7 @@ export interface Issue {
   customFieldValues?: CustomFieldValue[];
   linksAsSource?: IssueLink[];
   linksAsTarget?: IssueLink[];
+  labels?: IssueLabel[];
   createdAt: string | Date;
   updatedAt: string | Date;
 }
@@ -149,6 +150,21 @@ export interface IssueLink {
   source?: LinkedIssueSummary;
   target?: LinkedIssueSummary;
   createdAt: string | Date;
+}
+
+export interface Label {
+  id: string;
+  projectId: string;
+  name: string;
+  createdAt: string | Date;
+}
+
+/** The join row an issue's `labels` array holds; `label` is the tag itself. */
+export interface IssueLabel {
+  id: string;
+  issueId: string;
+  labelId: string;
+  label: Label;
 }
 
 export type CustomFieldType =

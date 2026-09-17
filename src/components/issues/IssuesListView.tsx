@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Project, Issue, User, Sprint, Version, IssueType, PriorityLevel, IssueStatus, WorkflowStatus } from "@/types";
+import { Project, Issue, User, Sprint, Version, IssueType, PriorityLevel, IssueStatus, WorkflowStatus, Label } from "@/types";
 import { prettifyStatusName } from "@/lib/workflowDisplay";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
 import UserAvatar from "@/components/common/UserAvatar";
@@ -51,6 +51,7 @@ interface IssuesListViewProps {
   sprints: Sprint[];
   versions?: Version[];
   statuses: WorkflowStatus[];
+  labels?: Label[];
   initialSelectedIssueKey?: string;
 }
 
@@ -77,6 +78,7 @@ export default function IssuesListView({
   sprints,
   versions = [],
   statuses,
+  labels = [],
   initialSelectedIssueKey,
 }: IssuesListViewProps) {
   const router = useRouter();
@@ -183,6 +185,7 @@ export default function IssuesListView({
   const [reporterFilter, setReporterFilter] = useState<string>("ALL");
   const [sprintFilter, setSprintFilter] = useState<string>("ALL");
   const [versionFilter, setVersionFilter] = useState<string>("ALL");
+  const [labelFilter, setLabelFilter] = useState<string>("ALL");
 
   // Sorting
   const [sortField, setSortField] = useState<SortField>("createdAt");
@@ -219,6 +222,7 @@ export default function IssuesListView({
         reporterId: reporterFilter,
         sprintId: sprintFilter,
         versionId: versionFilter,
+        label: labelFilter,
         sortField,
         sortOrder,
       });
@@ -250,6 +254,7 @@ export default function IssuesListView({
     reporterFilter,
     sprintFilter,
     versionFilter,
+    labelFilter,
     sortField,
     sortOrder,
     currentUser?.id,
@@ -280,6 +285,7 @@ export default function IssuesListView({
     setReporterFilter("ALL");
     setSprintFilter("ALL");
     setVersionFilter("ALL");
+    setLabelFilter("ALL");
     setPage(1);
   };
 
@@ -292,7 +298,8 @@ export default function IssuesListView({
     assigneeFilter !== "ALL" ||
     reporterFilter !== "ALL" ||
     sprintFilter !== "ALL" ||
-    versionFilter !== "ALL";
+    versionFilter !== "ALL" ||
+    labelFilter !== "ALL";
 
   // Issues displayed on current page
   const filteredAndSortedIssues = issues;
@@ -632,6 +639,25 @@ export default function IssuesListView({
             </select>
           )}
 
+          {/* Label Filter */}
+          {labels.length > 0 && (
+            <select
+              value={labelFilter}
+              onChange={(e) => {
+                setLabelFilter(e.target.value);
+                setPage(1);
+              }}
+              className="text-xs bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-jira-navy font-medium outline-none focus:border-jira-blue"
+            >
+              <option value="ALL">Label: All</option>
+              {labels.map((l) => (
+                <option key={l.id} value={l.name}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+          )}
+
           {/* Sort Field & Order */}
           <div className="flex items-center gap-1 border-l border-jira-gray-300 pl-2 ml-1">
             <span className="text-[11px] text-jira-gray-500">Sort:</span>
@@ -723,6 +749,19 @@ export default function IssuesListView({
                         {issue.title}
                       </h4>
 
+                      {issue.labels && issue.labels.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                          {issue.labels.map((il) => (
+                            <span
+                              key={il.id}
+                              className="inline-flex px-1.5 py-0.5 rounded-full bg-jira-gray-100 border border-jira-gray-300 text-[10px] font-medium text-jira-gray-700"
+                            >
+                              {il.label.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
                       <div className="flex items-center justify-between mt-2 pt-1 text-[11px] text-jira-gray-500">
                         <span>
                           {formatDistanceToNow(new Date(issue.updatedAt), { addSuffix: true })}
@@ -789,6 +828,18 @@ export default function IssuesListView({
                     <h2 className="text-xl font-bold text-jira-navy leading-snug">
                       {selectedIssue.title}
                     </h2>
+                    {selectedIssue.labels && selectedIssue.labels.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                        {selectedIssue.labels.map((il) => (
+                          <span
+                            key={il.id}
+                            className="inline-flex px-2 py-0.5 rounded-full bg-jira-gray-100 border border-jira-gray-300 text-[11px] font-medium text-jira-gray-700"
+                          >
+                            {il.label.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Two Column Layout for Issue Details */}
@@ -1094,7 +1145,21 @@ export default function IssuesListView({
                           <IssueTypeBadge type={issue.type} size="xs" />
                         </td>
                         <td className="py-2 px-3 font-bold text-jira-blue">{issue.key}</td>
-                        <td className="py-2 px-3 font-medium max-w-md truncate">{issue.title}</td>
+                        <td className="py-2 px-3 font-medium max-w-md">
+                          <div className="truncate">{issue.title}</div>
+                          {issue.labels && issue.labels.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1 mt-1">
+                              {issue.labels.map((il) => (
+                                <span
+                                  key={il.id}
+                                  className="inline-flex px-1.5 py-0.5 rounded-full bg-jira-gray-100 border border-jira-gray-300 text-[10px] font-medium text-jira-gray-700"
+                                >
+                                  {il.label.name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </td>
                         <td className="py-2 px-3">
                           <StatusBadge status={issue.status} />
                         </td>
