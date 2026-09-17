@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Issue, IssueStatus, IssueType, PriorityLevel, User, Sprint, Version, CustomField } from "@/types";
+import { Issue, IssueStatus, IssueType, PriorityLevel, User, Sprint, Version, CustomField, IssueLink } from "@/types";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
 import UserAvatar from "@/components/common/UserAvatar";
+import IssueLinksSection from "@/components/issues/IssueLinksSection";
 
 import { useCurrentUser } from "@/context/UserContext";
 import { updateIssue, deleteIssue, getIssueByKeyOrId } from "@/lib/actions/issues";
@@ -302,6 +303,26 @@ export default function IssueDetailModal({
     }
   };
 
+  // Handle Issue Link added/removed
+  const handleIssueLinked = (link: IssueLink) => {
+    const updatedIssue = {
+      ...currentIssue,
+      linksAsSource: [...(currentIssue.linksAsSource || []), link],
+    };
+    setCurrentIssue(updatedIssue);
+    onIssueUpdated(updatedIssue);
+  };
+
+  const handleIssueUnlinked = (linkId: string) => {
+    const updatedIssue = {
+      ...currentIssue,
+      linksAsSource: (currentIssue.linksAsSource || []).filter((l) => l.id !== linkId),
+      linksAsTarget: (currentIssue.linksAsTarget || []).filter((l) => l.id !== linkId),
+    };
+    setCurrentIssue(updatedIssue);
+    onIssueUpdated(updatedIssue);
+  };
+
   // Handle Delete Issue
   const handleDeleteIssue = async () => {
     if (!window.confirm(`Are you sure you want to delete ${currentIssue.key}?`)) return;
@@ -436,6 +457,18 @@ export default function IssueDetailModal({
                   )}
                 </div>
               )}
+            </div>
+
+            {/* Linked Issues */}
+            <div className="pt-4 border-t border-jira-gray-200">
+              <IssueLinksSection
+                issueId={currentIssue.id}
+                linksAsSource={currentIssue.linksAsSource}
+                linksAsTarget={currentIssue.linksAsTarget}
+                canEdit={permissions.canEditIssue}
+                onIssueLinked={handleIssueLinked}
+                onIssueUnlinked={handleIssueUnlinked}
+              />
             </div>
 
             {/* Activity & Comments Section */}

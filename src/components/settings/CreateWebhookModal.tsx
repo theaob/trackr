@@ -34,6 +34,16 @@ const AVAILABLE_EVENTS: {
         label: "Issue Deleted",
         description: "Triggered when an issue is permanently deleted",
       },
+      {
+        event: "issue:linked",
+        label: "Issue Linked",
+        description: "Triggered when a link (blocks, relates to, duplicates) is added between issues",
+      },
+      {
+        event: "issue:unlinked",
+        label: "Issue Unlinked",
+        description: "Triggered when a link between issues is removed",
+      },
     ],
   },
   {

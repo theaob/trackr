@@ -150,6 +150,8 @@ model Issue {
   comments    Comment[]
   activityLogs ActivityLog[]
   customFieldValues CustomFieldValue[]
+  linksAsSource IssueLink[] @relation("IssueLinkSource")
+  linksAsTarget IssueLink[] @relation("IssueLinkTarget")
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -162,6 +164,24 @@ model Issue {
   @@index([status])
   @@index([priority])
   @@index([type])
+}
+
+// A directional relationship between two issues, e.g. "source BLOCKS target".
+// The opposite label ("is blocked by") is derived when rendered from the
+// target's side rather than stored as a second row. Cross-project links are
+// allowed, same as Jira.
+model IssueLink {
+  id        String   @id @default(cuid())
+  type      String   // "BLOCKS", "RELATES_TO", "DUPLICATES"
+  sourceId  String
+  source    Issue    @relation("IssueLinkSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  targetId  String
+  target    Issue    @relation("IssueLinkTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([sourceId, targetId, type])
+  @@index([sourceId])
+  @@index([targetId])
 }
 
 model Comment {

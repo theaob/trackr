@@ -19,6 +19,16 @@ import { planColumnOrder } from "@/lib/boardOrder";
 
 const USER_SELECT = { select: DISPLAY_USER_SELECT } as const;
 
+const LINKED_ISSUE_SELECT = {
+  id: true,
+  key: true,
+  title: true,
+  type: true,
+  status: true,
+  projectId: true,
+  project: { select: { key: true, name: true } },
+} as const;
+
 
 export async function getProjectIssues(projectId: string) {
   try {
@@ -164,6 +174,14 @@ export async function getIssueByKeyOrId(keyOrId: string) {
             user: USER_SELECT,
           },
           orderBy: { createdAt: "desc" },
+        },
+        linksAsSource: {
+          include: { target: { select: LINKED_ISSUE_SELECT } },
+          orderBy: { createdAt: "asc" },
+        },
+        linksAsTarget: {
+          include: { source: { select: LINKED_ISSUE_SELECT } },
+          orderBy: { createdAt: "asc" },
         },
       },
     });

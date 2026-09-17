@@ -101,8 +101,30 @@ export interface Issue {
   comments?: any[];
   activityLogs?: any[];
   customFieldValues?: CustomFieldValue[];
+  linksAsSource?: IssueLink[];
+  linksAsTarget?: IssueLink[];
   createdAt: string | Date;
   updatedAt: string | Date;
+}
+
+/** The other issue's identity as shown in a link row: enough to badge and link to it. */
+export interface LinkedIssueSummary {
+  id: string;
+  key: string;
+  title: string;
+  type: IssueType;
+  status: IssueStatus;
+  projectId: string;
+  project?: { key: string; name: string } | null;
+}
+
+/** Stored once from the source's perspective; each side derives its own label from `type`. */
+export interface IssueLink {
+  id: string;
+  type: string;
+  source?: LinkedIssueSummary;
+  target?: LinkedIssueSummary;
+  createdAt: string | Date;
 }
 
 export type CustomFieldType =
@@ -217,6 +239,8 @@ export type WebhookEvent =
   | "issue:created"
   | "issue:updated"
   | "issue:deleted"
+  | "issue:linked"
+  | "issue:unlinked"
   | "comment:created"
   | "sprint:started"
   | "sprint:completed"
