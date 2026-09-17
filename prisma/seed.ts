@@ -93,7 +93,6 @@ async function main() {
       name: "Apollo Cloud Engine",
       key: "APOLLO",
       description: "Distributed microservices engine and cloud telemetry streaming platform.",
-      category: "Software Development",
       leadId: alex.id,
     },
   });
@@ -382,7 +381,6 @@ async function main() {
       name: "Voyager Mobile App",
       key: "VOY",
       description: "Cross-platform mobile client built with React Native and Expo.",
-      category: "Mobile Development",
       leadId: david.id,
     },
   });
@@ -475,7 +473,6 @@ async function main() {
       name: "Orion Data Platform",
       key: "ORION",
       description: "Distributed analytics query engine and ClickHouse ETL pipeline.",
-      category: "Data & Analytics",
       leadId: elena.id,
     },
   });

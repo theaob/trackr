@@ -331,15 +331,6 @@ export default function ProjectSettingsView({
 
           <div>
             <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-2">
-              Project Category
-            </label>
-            <div className="px-3 py-2 bg-jira-gray-50 border border-jira-gray-300 rounded text-jira-gray-800">
-              {project.category}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-2">
               Project Lead
             </label>
             <div className="flex items-center gap-3 px-3 py-2 border border-jira-gray-300 rounded bg-jira-gray-50">

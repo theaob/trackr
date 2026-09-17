@@ -26,7 +26,6 @@ interface ProjectStats {
   name: string;
   key: string;
   description: string | null;
-  category: string;
   lead: User | null;
   leadId?: string | null;
   members?: any[];
@@ -61,8 +60,7 @@ export default function ProjectsDirectoryView({
     return userAccessibleProjects.filter(
       (p) =>
         p.name.toLowerCase().includes(q) ||
-        p.key.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q)
+        p.key.toLowerCase().includes(q)
     );
   }, [userAccessibleProjects, searchQuery]);
 
@@ -138,9 +136,6 @@ export default function ProjectsDirectoryView({
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[11px] font-mono font-semibold text-jira-gray-500">
                             {project.key}
-                          </span>
-                          <span className="text-[10px] bg-jira-gray-100 text-jira-gray-700 px-1.5 py-0.2 rounded font-medium">
-                            {project.category}
                           </span>
                         </div>
                       </div>
@@ -248,7 +243,6 @@ export default function ProjectsDirectoryView({
                 name: newProj.name,
                 key: newProj.key,
                 description: newProj.description,
-                category: newProj.category,
                 lead: newProj.lead,
                 totalIssues: 0,
                 openIssues: 0,

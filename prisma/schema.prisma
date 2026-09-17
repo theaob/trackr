@@ -32,7 +32,6 @@ model Project {
   name        String
   key         String   @unique
   description String?
-  category    String   @default("Software")
   // Grants VIEWER (read-only) access to visitors with no session. Off by
   // default: a project is private until someone deliberately publishes it.
   allowAnonymousViewers Boolean @default(false)

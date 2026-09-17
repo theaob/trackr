@@ -87,7 +87,6 @@ export async function completeSetup(data: {
         data: {
           name: projectName,
           key: projectKey,
-          category: "Software Development",
           leadId: user.id,
           members: { create: [{ userId: user.id, role: "ADMIN" }] },
           sprints: {

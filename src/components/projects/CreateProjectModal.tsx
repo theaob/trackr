@@ -22,7 +22,6 @@ export default function CreateProjectModal({
   const [key, setKey] = useState("");
   const [keyManuallyEdited, setKeyManuallyEdited] = useState(false);
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("Software Development");
   const [leadId, setLeadId] = useState(users.length > 0 ? users[0].id : "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +57,6 @@ export default function CreateProjectModal({
       name: name.trim(),
       key: key.trim().toUpperCase(),
       description,
-      category,
       leadId: leadId || undefined,
     });
 
@@ -135,23 +133,6 @@ export default function CreateProjectModal({
             <p className="text-[11px] text-jira-gray-500 mt-1">
               Prefix used for all issues in this project (e.g., {key || "KEY"}-1, {key || "KEY"}-2).
             </p>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
-              Category
-            </label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full bg-white border border-jira-gray-300 rounded px-3 py-2 text-jira-navy focus:border-jira-blue outline-none"
-            >
-              <option value="Software Development">Software Development</option>
-              <option value="Mobile Development">Mobile Development</option>
-              <option value="Data & Analytics">Data & Analytics</option>
-              <option value="DevOps & Infrastructure">DevOps & Infrastructure</option>
-              <option value="Product & Design">Product & Design</option>
-            </select>
           </div>
 
           <div>

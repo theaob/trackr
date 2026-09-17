@@ -201,7 +201,6 @@ export interface Project {
   name: string;
   key: string;
   description: string | null;
-  category: string;
   /** When true, visitors with no session get read-only access. */
   allowAnonymousViewers?: boolean;
   leadId: string | null;

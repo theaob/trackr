@@ -165,7 +165,6 @@ export async function createProject(data: {
   name: string;
   key: string;
   description?: string;
-  category?: string;
   leadId?: string;
 }) {
   try {
@@ -198,7 +197,6 @@ export async function createProject(data: {
         name: data.name.trim(),
         key: formattedKey,
         description: data.description || "",
-        category: data.category || "Software Development",
         leadId,
         members: {
           create: Array.from(memberRoles, ([userId, role]) => ({ userId, role })),
@@ -263,7 +261,6 @@ export async function getAllProjectsWithStats() {
       name: p.name,
       key: p.key,
       description: p.description,
-      category: p.category,
       lead: hideLeadEmail(p, teamIds).lead,
       leadId: p.leadId,
       allowAnonymousViewers: p.allowAnonymousViewers,
