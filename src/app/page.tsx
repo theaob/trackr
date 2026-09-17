@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getProjects } from "@/lib/actions/projects";
 import { getCurrentUser } from "@/lib/auth/session";
+import { isSetupNeeded } from "@/lib/actions/setup";
 
 // Reads the session cookie and the database on every request; without this the
 // redirect target would be baked in at build time from the build's database.
@@ -10,7 +11,13 @@ export default async function HomePage() {
   // No session is required: a visitor still sees any project published to
   // anonymous viewers, and only lands on the sign-in screen when there is
   // genuinely nothing for them.
-  const [user, projects] = await Promise.all([getCurrentUser(), getProjects()]);
+  const [user, projects, setupNeeded] = await Promise.all([
+    getCurrentUser(),
+    getProjects(),
+    isSetupNeeded(),
+  ]);
+
+  if (setupNeeded) redirect("/setup");
 
   if (projects.length > 0) {
     redirect(`/projects/${projects[0].key}/board`);

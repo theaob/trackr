@@ -28,9 +28,14 @@ WORKDIR /app
 COPY --from=prisma /app/node_modules ./node_modules
 COPY . .
 
-# Prepare seeded template database
+# Prepare two template databases: an empty one (schema only) that a fresh
+# install boots from by default, sending people to /setup to create the real
+# admin account, and a seeded one used only when TRACKR_SEED_DEMO=1 opts in.
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_URL="file:/app/prisma/template.db"
+RUN node ./node_modules/prisma/build/index.js db push --skip-generate
+
+ENV DATABASE_URL="file:/app/prisma/template-demo.db"
 RUN node ./node_modules/prisma/build/index.js db push --skip-generate
 RUN node ./node_modules/tsx/dist/cli.mjs prisma/seed.ts
 
@@ -66,6 +71,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/prisma/schema.prisma ./prisma/schema.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma/template.db ./prisma/template.db
+COPY --from=builder --chown=nextjs:nodejs /app/prisma/template-demo.db ./prisma/template-demo.db
 
 # Copy Prisma CLI runtime files for startup schema sync
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma

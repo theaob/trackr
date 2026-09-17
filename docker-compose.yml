@@ -17,6 +17,9 @@ services:
       - AUTH_SECRET=${AUTH_SECRET:-}
       # Set to 1 only if your webhook receivers live on a private network.
       - TRACKR_ALLOW_PRIVATE_WEBHOOKS=${TRACKR_ALLOW_PRIVATE_WEBHOOKS:-0}
+      # Set to 1 to boot a fresh instance with seeded demo data instead of an
+      # empty database + setup wizard. Ignored once a database already exists.
+      - TRACKR_SEED_DEMO=${TRACKR_SEED_DEMO:-0}
     volumes:
       - trackr_data:/app/data
 

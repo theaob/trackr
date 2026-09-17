@@ -53,8 +53,21 @@ npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You will be asked to sign in. After seeding, the demo accounts all share the
-password **`trackr-demo`** (override at seed time with `TRACKR_SEED_PASSWORD`):
+A database with no accounts boots straight into **setup mode**: you'll be
+asked to create the admin account and the first project in one step, and land
+on that project's board signed in as its administrator. Setup only runs once
+— as soon as one account exists, `/setup` stops working and normal sign-in
+takes over.
+
+Want the bundled demo dataset (3 sample projects, 5 fake users) instead of a
+blank instance? Seed it explicitly:
+
+```bash
+npm run db:seed
+```
+
+The demo accounts all share the password **`trackr-demo`** (override at seed
+time with `TRACKR_SEED_PASSWORD`):
 
 | Account | Email | Project role |
 | --- | --- | --- |
@@ -65,6 +78,8 @@ password **`trackr-demo`** (override at seed time with `TRACKR_SEED_PASSWORD`):
 | Marcus Vance | `marcus.v@acme.dev` | Viewer |
 
 > **Change or remove these accounts before exposing an instance to anyone else.**
+> Re-seeding **deletes all existing projects, issues and comments** — only run
+> it on a throwaway database.
 
 ### 2. Production Build
 ```bash
@@ -81,6 +96,7 @@ npm start
 | `TRACKR_DATA_DIR` | `./data` | Where avatars and the generated session secret live. |
 | `TRACKR_ALLOW_PRIVATE_WEBHOOKS` | `0` | Set to `1` to let webhooks target loopback, link-local and private addresses. Off by default so a webhook cannot be pointed at internal services. The bundled `/api/mock-webhook-receiver` is on localhost, so trying it out needs this set. |
 | `TRACKR_SEED_PASSWORD` | `trackr-demo` | Password given to the demo accounts by `db:seed`. |
+| `TRACKR_SEED_DEMO` | `0` | Docker only. Set to `1` to boot a fresh container from the seeded demo dataset instead of an empty database + setup wizard. Ignored once a database already exists. |
 
 ### 4. Database Management
 - **Database Schema Push**: `node ./node_modules/prisma/build/index.js db push`
@@ -95,7 +111,11 @@ npm start
 ```bash
 docker compose up -d
 ```
-Open [http://localhost:3000](http://localhost:3000). Data is automatically persisted in the `trackr_data` volume.
+Open [http://localhost:3000](http://localhost:3000) and complete the setup wizard
+to create the admin account. Data is automatically persisted in the `trackr_data`
+volume. Prefer the demo dataset instead? Set `TRACKR_SEED_DEMO=1` before the
+first start (see the Configuration table above) — it only takes effect while
+the database doesn't exist yet.
 
 ### Run with Docker CLI
 ```bash

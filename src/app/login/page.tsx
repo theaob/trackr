@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
+import { isSetupNeeded } from "@/lib/actions/setup";
 import LoginView from "@/components/auth/LoginView";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +20,8 @@ export default async function LoginPage({
   searchParams?: { sso_error?: string; next?: string };
 }) {
   const destination = safeNext(searchParams?.next);
+
+  if (await isSetupNeeded()) redirect("/setup");
 
   const user = await getCurrentUser();
   if (user) redirect(destination);
