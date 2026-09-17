@@ -11,6 +11,7 @@ import {
   toActionError,
 } from "@/lib/auth/guards";
 import { findMentionedUsers } from "@/lib/mentions";
+import { notifyWatchers } from "@/lib/watcherNotify";
 
 
 export async function addComment(
@@ -106,6 +107,14 @@ export async function addComment(
         })),
       });
     }
+
+    await notifyWatchers(
+      issueId,
+      [actorId, issue.assigneeId, issue.reporterId, ...mentioned.map((m) => m.id)],
+      `New comment on ${issue.key}`,
+      `${comment.author.name}: ${content.slice(0, 60)}${content.length > 60 ? "..." : ""}`,
+      `/projects/${issue.project.key}/board?selectedIssue=${issue.key}`
+    );
 
     try {
       revalidatePath(`/projects/${issue.project.key}`);

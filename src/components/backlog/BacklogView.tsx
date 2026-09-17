@@ -31,7 +31,9 @@ import {
   Pencil,
   Trash2,
   X,
+  CalendarClock,
 } from "lucide-react";
+import { isOverdue } from "@/lib/dueDate";
 import { format } from "date-fns";
 
 interface BacklogViewProps {
@@ -761,6 +763,19 @@ export default function BacklogView({
                                 <div className="flex items-center gap-4 shrink-0">
                                   <StatusBadge status={issue.status} />
                                   <PriorityIcon priority={issue.priority} className="w-4 h-4" />
+                                  {issue.dueDate && (
+                                    <span
+                                      className={`inline-flex items-center gap-0.5 text-[11px] font-semibold ${
+                                        isOverdue(issue.dueDate, issue.status, doneStatusNames)
+                                          ? "text-rose-600"
+                                          : "text-jira-gray-500"
+                                      }`}
+                                      title={`Due ${format(new Date(issue.dueDate), "MMM d, yyyy")}`}
+                                    >
+                                      <CalendarClock className="w-3.5 h-3.5" />
+                                      {format(new Date(issue.dueDate), "MMM d")}
+                                    </span>
+                                  )}
 
                                   {issue.storyPoints !== null && (
                                     <span className="w-6 h-5 rounded-full bg-jira-gray-200 text-jira-gray-800 text-[11px] font-bold flex items-center justify-center">
@@ -926,6 +941,19 @@ export default function BacklogView({
                           <div className="flex items-center gap-4 shrink-0">
                             <StatusBadge status={issue.status} />
                             <PriorityIcon priority={issue.priority} className="w-4 h-4" />
+                            {issue.dueDate && (
+                              <span
+                                className={`inline-flex items-center gap-0.5 text-[11px] font-semibold ${
+                                  isOverdue(issue.dueDate, issue.status, doneStatusNames)
+                                    ? "text-rose-600"
+                                    : "text-jira-gray-500"
+                                }`}
+                                title={`Due ${format(new Date(issue.dueDate), "MMM d, yyyy")}`}
+                              >
+                                <CalendarClock className="w-3.5 h-3.5" />
+                                {format(new Date(issue.dueDate), "MMM d")}
+                              </span>
+                            )}
 
                             {issue.storyPoints !== null && (
                               <span className="w-6 h-5 rounded-full bg-jira-gray-200 text-jira-gray-800 text-[11px] font-bold flex items-center justify-center">
@@ -1312,6 +1340,7 @@ export default function BacklogView({
           users={users}
           allIssues={issues}
           sprints={sprints}
+          project={project}
           onClose={handleCloseDetailModal}
           onIssueUpdated={(up) => {
             setIssues((prev) => prev.map((i) => (i.id === up.id ? up : i)));

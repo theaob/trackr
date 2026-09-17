@@ -76,6 +76,31 @@ export async function addIssueLabel(issueId: string, rawName: string) {
   }
 }
 
+const MAX_BULK_BATCH = 200;
+
+/** Attaches one label (find-or-create) to many issues at once, e.g. from the Issues list's bulk toolbar. */
+export async function bulkAddLabel(issueIds: string[], rawName: string) {
+  const ids = Array.from(new Set(issueIds));
+  if (ids.length === 0) return { success: true as const, succeeded: 0, failed: [] as { id: string; error: string }[] };
+  if (ids.length > MAX_BULK_BATCH) {
+    return { success: false as const, error: `Select at most ${MAX_BULK_BATCH} issues at a time.` };
+  }
+
+  const failed: { id: string; error: string }[] = [];
+  let succeeded = 0;
+
+  for (const id of ids) {
+    const res = await addIssueLabel(id, rawName);
+    if (res.success) {
+      succeeded++;
+    } else {
+      failed.push({ id, error: res.error || "Failed to add label" });
+    }
+  }
+
+  return { success: true as const, succeeded, failed };
+}
+
 export async function removeIssueLabel(issueId: string, labelId: string) {
   try {
     const projectId = await projectIdForIssue(issueId);

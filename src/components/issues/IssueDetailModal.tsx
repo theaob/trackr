@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Issue, IssueStatus, IssueType, PriorityLevel, User, Sprint, Version, CustomField, IssueLink, IssueLabel, WorkflowStatus, WorkflowTransition } from "@/types";
+import { Issue, IssueStatus, IssueType, PriorityLevel, User, Sprint, Version, CustomField, IssueLink, IssueLabel, WorkflowStatus, WorkflowTransition, Project } from "@/types";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
 import UserAvatar from "@/components/common/UserAvatar";
 import IssueLinksSection from "@/components/issues/IssueLinksSection";
@@ -16,7 +16,9 @@ import {
   setIssueCustomFieldValue,
 } from "@/lib/actions/customFields";
 import { getProjectWorkflow } from "@/lib/actions/workflows";
+import { getWatchState, toggleWatch } from "@/lib/actions/watchers";
 import { allowedNextStatusNames, prettifyStatusName } from "@/lib/workflowDisplay";
+import { isOverdue } from "@/lib/dueDate";
 import CustomFieldRenderer from "@/components/common/CustomFieldRenderer";
 import MentionInput from "@/components/common/MentionInput";
 import MentionText from "@/components/common/MentionText";
@@ -35,6 +37,8 @@ import {
   ChevronDown,
   Tag,
   Sliders,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 
@@ -44,6 +48,14 @@ interface IssueDetailModalProps {
   allIssues: Issue[];
   sprints?: Sprint[];
   versions?: Version[];
+  /**
+   * The caller's already-loaded project, members included -- role resolution
+   * needs the member list, which the issue's own `project` relation never
+   * carries (see below). Falls back to that relation for callers that don't
+   * have a full project object handy, which only resolves correctly for the
+   * project's lead.
+   */
+  project?: Project | null;
   onClose: () => void;
   onIssueUpdated: (updated: Issue) => void;
   onIssueDeleted: (issueId: string) => void;
@@ -55,6 +67,7 @@ export default function IssueDetailModal({
   allIssues,
   sprints = [],
   versions = [],
+  project,
   onClose,
   onIssueUpdated,
   onIssueDeleted,
@@ -62,7 +75,8 @@ export default function IssueDetailModal({
   const { currentUser } = useCurrentUser();
   const [currentIssue, setCurrentIssue] = useState<Issue | null>(issue);
   const permissions = useProjectPermissions(
-    currentIssue?.project ||
+    project ||
+      currentIssue?.project ||
       (currentIssue?.projectId
         ? ({ id: currentIssue.projectId, key: currentIssue.key.split("-")[0] } as any)
         : null)
@@ -76,6 +90,10 @@ export default function IssueDetailModal({
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [activeTab, setActiveTab] = useState<"comments" | "history">("comments");
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Watch state
+  const [watching, setWatching] = useState(false);
+  const [watcherCount, setWatcherCount] = useState(0);
 
   // Custom Fields State
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
@@ -139,6 +157,42 @@ export default function IssueDetailModal({
       isMounted = false;
     };
   }, [currentIssue?.projectId]);
+
+  // Load watch state for the signed-in caller
+  useEffect(() => {
+    let isMounted = true;
+    if (!currentIssue?.id || !currentUser) return;
+
+    getWatchState(currentIssue.id).then(({ watching, count }) => {
+      if (isMounted) {
+        setWatching(watching);
+        setWatcherCount(count);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentIssue?.id, currentUser]);
+
+  // Escape closes the modal, matching the X button -- unless a nested field
+  // (title edit, add-label input) already handled it and stopped it there.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  const handleToggleWatch = async () => {
+    if (!currentIssue) return;
+    const res = await toggleWatch(currentIssue.id);
+    if (res.success) {
+      setWatching(res.watching);
+      setWatcherCount(res.count);
+    }
+  };
 
   const handleCustomFieldChange = async (fieldId: string, val: string) => {
     setCustomFieldValues((prev) => ({ ...prev, [fieldId]: val }));
@@ -322,6 +376,19 @@ export default function IssueDetailModal({
     }
   };
 
+  // Handle Due Date Change
+  const handleDueDateChange = async (dateStr: string) => {
+    const res = await updateIssue(currentIssue.id, {
+      dueDate: dateStr === "" ? null : dateStr,
+      updatedByUserId: currentUser?.id,
+    });
+    if (res.success && res.issue) {
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
+      setCurrentIssue(typed);
+      onIssueUpdated(typed);
+    }
+  };
+
   // Handle Add Comment
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -411,6 +478,20 @@ export default function IssueDetailModal({
           </div>
 
           <div className="flex items-center gap-3">
+            {currentUser && (
+              <button
+                onClick={handleToggleWatch}
+                className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-xs font-semibold transition-colors ${
+                  watching
+                    ? "text-jira-blue bg-jira-blue-light/60 hover:bg-jira-blue-light"
+                    : "text-jira-gray-500 hover:text-jira-navy hover:bg-jira-gray-200"
+                }`}
+                title={watching ? "Stop watching this issue" : "Watch this issue for updates"}
+              >
+                {watching ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                {watcherCount > 0 && <span>{watcherCount}</span>}
+              </button>
+            )}
             {permissions.canDeleteIssue && (
               <button
                 onClick={handleDeleteIssue}
@@ -447,6 +528,7 @@ export default function IssueDetailModal({
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleSaveTitle();
                       if (e.key === "Escape") {
+                        e.stopPropagation();
                         setTitle(currentIssue.title);
                         setIsEditingTitle(false);
                       }
@@ -819,6 +901,28 @@ export default function IssueDetailModal({
                 value={currentIssue.storyPoints ?? ""}
                 onChange={(e) => handleStoryPointsChange(e.target.value)}
                 className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+              />
+            </div>
+
+            {/* Due Date */}
+            <div>
+              <label className="block text-xs font-bold text-jira-gray-600 uppercase tracking-wider mb-1.5">
+                Due Date
+              </label>
+              <input
+                type="date"
+                disabled={!permissions.canEditIssue}
+                value={currentIssue.dueDate ? format(new Date(currentIssue.dueDate), "yyyy-MM-dd") : ""}
+                onChange={(e) => handleDueDateChange(e.target.value)}
+                className={`w-full bg-white border rounded px-2.5 py-1.5 text-xs focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed ${
+                  isOverdue(
+                    currentIssue.dueDate,
+                    currentIssue.status,
+                    workflowStatuses.filter((s) => s.category === "DONE").map((s) => s.name)
+                  )
+                    ? "border-rose-300 text-rose-700 font-semibold"
+                    : "border-jira-gray-300 text-jira-navy"
+                }`}
               />
             </div>
 

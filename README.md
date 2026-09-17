@@ -31,19 +31,28 @@ A modern, full-stack agile project management and issue tracking platform built 
 - 🎯 **Issue Management**:
   - Issue types: **Epic**, **Story**, **Task**, **Bug**, **Sub-task**.
   - Priority levels: **Highest**, **High**, **Medium**, **Low**, **Lowest**.
-  - Story points estimate badges.
+  - Story points estimate badges and optional due dates, with an overdue
+    indicator on cards, list rows, and the issue detail view.
   - Assignee & reporter assignment.
   - Parent Epic linking.
+  - Issue linking (**Blocks**, **Relates to**, **Duplicates**), including
+    across projects.
+  - Free-text labels, created inline on an issue and filterable from the
+    Issues list.
+  - Bulk actions from the Issues list: select several issues and change their
+    status, assignee, or priority, add a label, or delete them all at once.
 - 📝 **Issue Detail Modal**:
   - Inline editable title and rich description.
-  - Status progression workflow dropdown.
+  - Status progression, constrained to the project's own workflow.
+  - **Watch** an issue you're not assigned to, to get notified on status
+    changes and new comments.
   - Comments timeline with instant commenting and deletion.
   - Immutable activity history (logs who changed status, priority, or created issues).
 - 🔍 **Interactive Filtering**:
   - Quick keyword search across issue keys and summaries.
   - One-click teammate avatar filter buttons.
   - "Only my issues" toggle.
-  - Issue type & priority selectors.
+  - Issue type, priority & label selectors.
 - 🔐 **Authentication & Access Control**:
   - Email/password sign-in backed by a signed, http-only session cookie.
   - PBKDF2-SHA512 password hashing (210k iterations) with transparent upgrades.

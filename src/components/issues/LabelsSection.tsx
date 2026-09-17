@@ -135,6 +135,7 @@ export default function LabelsSection({
                   e.preventDefault();
                   submitLabel(input);
                 } else if (e.key === "Escape") {
+                  e.stopPropagation();
                   resetAddForm();
                 }
               }}

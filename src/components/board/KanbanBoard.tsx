@@ -667,6 +667,7 @@ export default function KanbanBoard({
           users={users}
           allIssues={issues}
           sprints={sprints}
+          project={project}
           onClose={handleCloseDetailModal}
           onIssueUpdated={handleIssueUpdated}
           onIssueDeleted={handleIssueDeleted}

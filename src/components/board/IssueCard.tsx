@@ -4,8 +4,10 @@ import React from "react";
 import { Draggable } from "@hello-pangea/dnd";
 import { Issue } from "@/types";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon } from "@/components/common/IssueIcons";
-import { CheckSquare, User as UserIcon } from "lucide-react";
+import { CheckSquare, User as UserIcon, CalendarClock } from "lucide-react";
 import UserAvatar from "@/components/common/UserAvatar";
+import { isOverdue } from "@/lib/dueDate";
+import { format } from "date-fns";
 
 
 interface IssueCardProps {
@@ -86,6 +88,19 @@ export default function IssueCard({ issue, index, onClick, doneStatusNames = ["D
                 {issue.key}
               </span>
               <PriorityIcon priority={issue.priority} className="w-3.5 h-3.5 ml-0.5" />
+              {issue.dueDate && (
+                <span
+                  className={`inline-flex items-center gap-0.5 text-[10px] font-semibold ${
+                    isOverdue(issue.dueDate, issue.status, doneStatusNames)
+                      ? "text-rose-600"
+                      : "text-jira-gray-500"
+                  }`}
+                  title={`Due ${format(new Date(issue.dueDate), "MMM d, yyyy")}`}
+                >
+                  <CalendarClock className="w-3 h-3" />
+                  {format(new Date(issue.dueDate), "MMM d")}
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-2">

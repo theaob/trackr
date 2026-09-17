@@ -20,6 +20,7 @@ model User {
   reportedIssues Issue[]       @relation("Reporter")
   comments       Comment[]
   activityLogs   ActivityLog[]
+  watchedIssues  Watcher[]
   notifications       Notification[]
   ledProjects         Project[]
   projectMembers      ProjectMember[]
@@ -77,6 +78,22 @@ model IssueLabel {
   @@unique([issueId, labelId])
   @@index([issueId])
   @@index([labelId])
+}
+
+// An opt-in subscription: a user who wants notifications for an issue they
+// aren't the assignee of. The assignee and @mentioned users are notified
+// regardless of this table.
+model Watcher {
+  id        String   @id @default(cuid())
+  issueId   String
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([issueId, userId])
+  @@index([issueId])
+  @@index([userId])
 }
 
 // A project's own set of issue statuses. Issue.status stores the status
@@ -209,6 +226,7 @@ model Issue {
   status      String        @default("TODO") // "BACKLOG", "TODO", "IN_PROGRESS", "IN_REVIEW", "DONE"
   order       Int           @default(0)
   storyPoints Int?
+  dueDate     DateTime?
   projectId   String
   project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   sprintId    String?
@@ -228,6 +246,7 @@ model Issue {
   linksAsSource IssueLink[] @relation("IssueLinkSource")
   linksAsTarget IssueLink[] @relation("IssueLinkTarget")
   labels      IssueLabel[]
+  watchers    Watcher[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -239,6 +258,7 @@ model Issue {
   @@index([assigneeId])
   @@index([status])
   @@index([priority])
+  @@index([dueDate])
   @@index([type])
 }
 

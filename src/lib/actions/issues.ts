@@ -4,6 +4,7 @@ import prisma from "@/lib/db";
 import { IssueStatus, IssueType, PriorityLevel } from "@/types";
 import { revalidatePath } from "next/cache";
 import { triggerWebhooks } from "./webhooks";
+import { notifyWatchers } from "@/lib/watcherNotify";
 import { DISPLAY_USER_SELECT } from "@/lib/auth/publicUser";
 import {
   accessibleProjectIds,
@@ -436,7 +437,7 @@ export async function getPaginatedIssues(params: PaginatedIssuesParams) {
 
     const sortField = params.sortField || "createdAt";
     const sortOrder = params.sortOrder || "desc";
-    const allowedSortFields = ["key", "title", "status", "priority", "storyPoints", "createdAt", "updatedAt"];
+    const allowedSortFields = ["key", "title", "status", "priority", "storyPoints", "dueDate", "createdAt", "updatedAt"];
     const orderBy: any = {};
     if (allowedSortFields.includes(sortField)) {
       orderBy[sortField] = sortOrder;
@@ -504,6 +505,7 @@ export async function createIssue(data: {
   reporterId?: string | null;
   parentId?: string | null;
   storyPoints?: number | null;
+  dueDate?: string | null;
 }) {
   try {
     const { user } = await requireProjectPermission(data.projectId, "CREATE_ISSUE");
@@ -548,6 +550,7 @@ export async function createIssue(data: {
           priority: data.priority || "MEDIUM",
           status,
           storyPoints: data.storyPoints ?? null,
+          dueDate: data.dueDate ? new Date(data.dueDate) : null,
           projectId: data.projectId,
           sprintId: data.sprintId || null,
           versionId: data.versionId || null,
@@ -703,6 +706,7 @@ export async function updateIssue(
     priority?: PriorityLevel;
     type?: IssueType;
     storyPoints?: number | null;
+    dueDate?: string | Date | null;
     assigneeId?: string | null;
     sprintId?: string | null;
     versionId?: string | null;
@@ -755,6 +759,7 @@ export async function updateIssue(
         ...(data.priority !== undefined && { priority: data.priority }),
         ...(data.type !== undefined && { type: data.type }),
         ...(data.storyPoints !== undefined && { storyPoints: data.storyPoints }),
+        ...(data.dueDate !== undefined && { dueDate: data.dueDate ? new Date(data.dueDate) : null }),
         ...(data.assigneeId !== undefined && { assigneeId: data.assigneeId }),
         ...(data.sprintId !== undefined && { sprintId: data.sprintId }),
         ...(data.versionId !== undefined && { versionId: data.versionId }),
@@ -816,6 +821,14 @@ export async function updateIssue(
             },
           });
         }
+
+        await notifyWatchers(
+          id,
+          [actorId, existing.assigneeId],
+          `${existing.key} moved to ${data.status}`,
+          `Status was updated from ${existing.status} to ${data.status}`,
+          `/projects/${existing.project.key}/board?selectedIssue=${existing.key}`
+        );
       }
 
       if (data.priority && data.priority !== existing.priority) {
@@ -1087,5 +1100,67 @@ export async function deleteIssue(id: string) {
   } catch (error) {
     return toActionError(error, "Failed to delete issue");
   }
+}
+
+const MAX_BULK_BATCH = 200;
+
+export interface BulkActionResult {
+  success: true;
+  succeeded: number;
+  /** Per-issue failures (e.g. a disallowed status transition, or no permission on that issue's project). */
+  failed: { id: string; error: string }[];
+}
+
+/**
+ * Applies the same field changes to many issues at once, reusing updateIssue's
+ * per-issue permission and workflow-transition checks rather than a bulk
+ * write -- a selection can span multiple projects (or, for status, several
+ * different workflows), so each issue is validated on its own terms.
+ */
+export async function bulkUpdateIssues(
+  issueIds: string[],
+  changes: { status?: IssueStatus; assigneeId?: string | null; priority?: PriorityLevel }
+): Promise<BulkActionResult | { success: false; error: string }> {
+  const ids = Array.from(new Set(issueIds));
+  if (ids.length === 0) return { success: true, succeeded: 0, failed: [] };
+  if (ids.length > MAX_BULK_BATCH) {
+    return { success: false, error: `Select at most ${MAX_BULK_BATCH} issues at a time.` };
+  }
+
+  const failed: { id: string; error: string }[] = [];
+  let succeeded = 0;
+
+  for (const id of ids) {
+    const res = await updateIssue(id, changes);
+    if (res.success) {
+      succeeded++;
+    } else {
+      failed.push({ id, error: res.error || "Failed to update" });
+    }
+  }
+
+  return { success: true, succeeded, failed };
+}
+
+export async function bulkDeleteIssues(issueIds: string[]): Promise<BulkActionResult | { success: false; error: string }> {
+  const ids = Array.from(new Set(issueIds));
+  if (ids.length === 0) return { success: true, succeeded: 0, failed: [] };
+  if (ids.length > MAX_BULK_BATCH) {
+    return { success: false, error: `Select at most ${MAX_BULK_BATCH} issues at a time.` };
+  }
+
+  const failed: { id: string; error: string }[] = [];
+  let succeeded = 0;
+
+  for (const id of ids) {
+    const res = await deleteIssue(id);
+    if (res.success) {
+      succeeded++;
+    } else {
+      failed.push({ id, error: res.error || "Failed to delete" });
+    }
+  }
+
+  return { success: true, succeeded, failed };
 }
 

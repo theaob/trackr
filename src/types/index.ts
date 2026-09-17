@@ -104,6 +104,7 @@ export interface Issue {
   status: IssueStatus;
   order: number;
   storyPoints: number | null;
+  dueDate: string | Date | null;
   projectId: string;
   project?: Project | null;
   sprintId: string | null;
@@ -128,6 +129,7 @@ export interface Issue {
   linksAsSource?: IssueLink[];
   linksAsTarget?: IssueLink[];
   labels?: IssueLabel[];
+  watchers?: Watcher[];
   createdAt: string | Date;
   updatedAt: string | Date;
 }
@@ -165,6 +167,15 @@ export interface IssueLabel {
   issueId: string;
   labelId: string;
   label: Label;
+}
+
+/** An opt-in subscription to notifications for an issue. */
+export interface Watcher {
+  id: string;
+  issueId: string;
+  userId: string;
+  user: User;
+  createdAt: string | Date;
 }
 
 export type CustomFieldType =
