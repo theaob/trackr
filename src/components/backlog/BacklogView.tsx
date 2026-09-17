@@ -779,32 +779,6 @@ export default function BacklogView({
                                     <div className="w-6 h-6 rounded-full border border-dashed border-jira-gray-300" />
                                   )}
 
-                                  {/* Move to another sprint or backlog */}
-                                  <div className="relative">
-                                    <select
-                                      value={issue.sprintId || ""}
-                                      onClick={(e) => e.stopPropagation()}
-                                      onChange={(e) => {
-                                        e.stopPropagation();
-                                        handleMoveIssue(issue.id, e.target.value || null);
-                                      }}
-                                      className="text-[11px] bg-jira-gray-100 hover:bg-jira-gray-200 border border-jira-gray-300 rounded px-2 py-0.5 text-jira-navy font-medium outline-none cursor-pointer"
-                                    >
-                                      <option value={issue.sprintId || ""}>Move to...</option>
-                                      <option value="">Backlog</option>
-                                      {sprints
-                                        .filter((s) => s.status !== "COMPLETED" || s.id === issue.sprintId)
-                                        .map((s) => (
-                                          <option
-                                            key={s.id}
-                                            value={s.id}
-                                            disabled={s.id === issue.sprintId || s.status === "COMPLETED"}
-                                          >
-                                            {s.name} {s.status === "ACTIVE" ? "(Active)" : s.status === "FUTURE" ? "(Planned)" : "(Completed - Closed)"}
-                                          </option>
-                                        ))}
-                                    </select>
-                                  </div>
                                 </div>
                               </div>
                             )}
@@ -970,31 +944,6 @@ export default function BacklogView({
                               <div className="w-6 h-6 rounded-full border border-dashed border-jira-gray-300" />
                             )}
 
-                            {/* Move to any Sprint (Active or Future/Unstarted) */}
-                            {!isKanban && (
-                              <div className="relative">
-                                <select
-                                  value=""
-                                  onClick={(e) => e.stopPropagation()}
-                                  onChange={(e) => {
-                                    e.stopPropagation();
-                                    if (e.target.value) {
-                                      handleMoveIssue(issue.id, e.target.value);
-                                    }
-                                  }}
-                                  className="text-[11px] bg-jira-blue-light/70 hover:bg-jira-blue-light border border-jira-blue/30 text-jira-blue font-semibold rounded px-2 py-0.5 outline-none cursor-pointer"
-                                >
-                                  <option value="">+ Add to Sprint</option>
-                                  {sprints
-                                    .filter((s) => s.status !== "COMPLETED")
-                                    .map((s) => (
-                                      <option key={s.id} value={s.id}>
-                                        {s.name} {s.status === "ACTIVE" ? "(Active)" : s.status === "FUTURE" ? "(Planned / Unstarted)" : ""}
-                                      </option>
-                                    ))}
-                                </select>
-                              </div>
-                            )}
                           </div>
                         </div>
                       )}
