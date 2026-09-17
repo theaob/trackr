@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Project } from "@/types";
+import { useCurrentUser } from "@/context/UserContext";
 import {
   Kanban,
   ListTodo,
@@ -22,6 +23,7 @@ interface SidebarProps {
 
 export default function Sidebar({ project }: SidebarProps) {
   const pathname = usePathname();
+  const { currentUser } = useCurrentUser();
   const [collapsed, setCollapsed] = useState(false);
 
   const navItems = [
@@ -45,12 +47,16 @@ export default function Sidebar({ project }: SidebarProps) {
       href: `/projects/${project.key}/releases`,
       icon: Rocket,
     },
-    {
+  ];
+
+  // Settings needs a session, so linking a visitor there is a dead end.
+  if (currentUser) {
+    navItems.push({
       name: "Project Settings",
       href: `/projects/${project.key}/settings`,
       icon: Settings,
-    },
-  ];
+    });
+  }
 
   return (
     <aside

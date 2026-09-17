@@ -40,40 +40,60 @@ export async function requireUser(): Promise<SessionUser> {
 
 /**
  * The caller's role on a project: ADMIN for the project lead, otherwise the
- * explicit membership role. Absence of a membership means no access — there is
- * deliberately no permissive default.
+ * explicit membership role. Absence of a membership means no access, unless
+ * the project publishes itself to anonymous viewers.
  */
 export async function getProjectRole(
-  userId: string,
+  userId: string | null,
   projectId: string
 ): Promise<ProjectRole | null> {
   const [project, member] = await Promise.all([
     prisma.project.findUnique({
       where: { id: projectId },
-      select: { leadId: true },
+      select: { leadId: true, allowAnonymousViewers: true },
     }),
-    prisma.projectMember.findUnique({
-      where: { projectId_userId: { projectId, userId } },
-      select: { role: true },
-    }),
+    userId
+      ? prisma.projectMember.findUnique({
+          where: { projectId_userId: { projectId, userId } },
+          select: { role: true },
+        })
+      : Promise.resolve(null),
   ]);
 
   if (!project) return null;
-  if (project.leadId === userId) return "ADMIN";
-  return (member?.role as ProjectRole | undefined) ?? null;
+  if (userId && project.leadId === userId) return "ADMIN";
+
+  const membershipRole = member?.role as ProjectRole | undefined;
+  if (membershipRole) return membershipRole;
+
+  // Read-only fallback for a published project. VIEWER carries VIEW_PROJECT
+  // alone, so this cannot grant a write to anyone.
+  return project.allowAnonymousViewers ? "VIEWER" : null;
 }
 
 export interface ProjectAuth {
-  user: SessionUser;
+  /** Null only for an anonymous visitor reading a published project. */
+  user: SessionUser | null;
   role: ProjectRole;
   projectId: string;
 }
 
-/** Require the signed-in caller to hold `permission` on `projectId`. */
+/** A ProjectAuth that is known to belong to a signed-in caller. */
+export interface AuthenticatedProjectAuth extends ProjectAuth {
+  user: SessionUser;
+}
+
+/**
+ * Require a signed-in caller holding `permission` on `projectId`.
+ *
+ * Every write goes through here, so publishing a project to anonymous viewers
+ * can never expose one: the session is demanded before the role is even
+ * resolved, and a visitor is told to sign in rather than that they lack a role.
+ */
 export async function requireProjectPermission(
   projectId: string,
   permission: ProjectPermission
-): Promise<ProjectAuth> {
+): Promise<AuthenticatedProjectAuth> {
   const user = await requireUser();
   const role = await getProjectRole(user.id, projectId);
 
@@ -85,9 +105,30 @@ export async function requireProjectPermission(
   return { user, role, projectId };
 }
 
-/** Require read access to a project. */
+/**
+ * As `requireProjectPermission`, but does not insist on a session when the
+ * project grants the permission to anonymous viewers. Read paths use this.
+ */
+export async function requireProjectPermissionAllowingAnonymous(
+  projectId: string,
+  permission: ProjectPermission
+): Promise<ProjectAuth> {
+  const user = await getCurrentUser();
+  const role = await getProjectRole(user?.id ?? null, projectId);
+
+  if (!role) {
+    throw new AuthError(user ? NO_ACCESS : NOT_SIGNED_IN, user ? 403 : 401);
+  }
+  if (!hasPermission(role, permission)) {
+    throw new AuthError("Your project role does not allow this action.");
+  }
+
+  return { user, role, projectId };
+}
+
+/** Require read access to a project, which an anonymous visitor may hold. */
 export function requireProjectAccess(projectId: string): Promise<ProjectAuth> {
-  return requireProjectPermission(projectId, "VIEW_PROJECT");
+  return requireProjectPermissionAllowingAnonymous(projectId, "VIEW_PROJECT");
 }
 
 /**
@@ -96,9 +137,31 @@ export function requireProjectAccess(projectId: string): Promise<ProjectAuth> {
  */
 export async function canAccessProject(projectId: string): Promise<boolean> {
   const user = await getCurrentUser();
-  if (!user) return false;
-  const role = await getProjectRole(user.id, projectId);
+  const role = await getProjectRole(user?.id ?? null, projectId);
   return !!role && hasPermission(role, "VIEW_PROJECT");
+}
+
+/**
+ * True when the caller belongs to the project in their own right, rather than
+ * holding a role only because the project is published to anonymous viewers.
+ *
+ * Team contact details are gated on this, not on read access.
+ */
+export async function isProjectTeamMember(
+  userId: string | null | undefined,
+  projectId: string
+): Promise<boolean> {
+  if (!userId) return false;
+
+  const [membership, project] = await Promise.all([
+    prisma.projectMember.findUnique({
+      where: { projectId_userId: { projectId, userId } },
+      select: { userId: true },
+    }),
+    prisma.project.findUnique({ where: { id: projectId }, select: { leadId: true } }),
+  ]);
+
+  return !!membership || project?.leadId === userId;
 }
 
 /**
@@ -120,18 +183,46 @@ export async function requireAnyProjectAdmin(): Promise<SessionUser> {
   return user;
 }
 
-/** Project ids the caller may read. */
-export async function accessibleProjectIds(userId: string): Promise<string[]> {
+/**
+ * Project ids the caller belongs to in their own right, excluding projects they
+ * can merely read because those are published. Contact details are gated on
+ * this set.
+ */
+export async function teamProjectIds(userId: string | null | undefined): Promise<Set<string>> {
+  if (!userId) return new Set();
+
   const [led, memberships] = await Promise.all([
     prisma.project.findMany({ where: { leadId: userId }, select: { id: true } }),
-    prisma.projectMember.findMany({
-      where: { userId },
-      select: { projectId: true },
+    prisma.projectMember.findMany({ where: { userId }, select: { projectId: true } }),
+  ]);
+
+  return new Set([...led.map((p) => p.id), ...memberships.map((m) => m.projectId)]);
+}
+
+/**
+ * Project ids the caller may read: those they lead or belong to, plus every
+ * project published to anonymous viewers.
+ */
+export async function accessibleProjectIds(userId: string | null): Promise<string[]> {
+  const [led, memberships, published] = await Promise.all([
+    userId
+      ? prisma.project.findMany({ where: { leadId: userId }, select: { id: true } })
+      : Promise.resolve([]),
+    userId
+      ? prisma.projectMember.findMany({ where: { userId }, select: { projectId: true } })
+      : Promise.resolve([]),
+    prisma.project.findMany({
+      where: { allowAnonymousViewers: true },
+      select: { id: true },
     }),
   ]);
 
   return Array.from(
-    new Set([...led.map((p) => p.id), ...memberships.map((m) => m.projectId)])
+    new Set([
+      ...led.map((p) => p.id),
+      ...memberships.map((m) => m.projectId),
+      ...published.map((p) => p.id),
+    ])
   );
 }
 

@@ -3,7 +3,7 @@
 import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { triggerWebhooks } from "./webhooks";
-import { PUBLIC_USER_SELECT } from "@/lib/auth/publicUser";
+import { DISPLAY_USER_SELECT } from "@/lib/auth/publicUser";
 import {
   projectIdForSprint,
   requireProjectAccess,
@@ -24,12 +24,12 @@ export async function getProjectSprints(projectId: string) {
       include: {
         issues: {
           include: {
-            assignee: { select: PUBLIC_USER_SELECT },
+            assignee: { select: DISPLAY_USER_SELECT },
             parent: {
               select: { id: true, key: true, title: true, type: true },
             },
           },
-          orderBy: { order: "asc" },
+          orderBy: [{ order: "asc" }, { createdAt: "asc" }],
           take: SPRINT_ISSUE_LIMIT,
         },
       },

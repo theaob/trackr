@@ -49,13 +49,11 @@ export default function ProjectsDirectoryView({
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const userAccessibleProjects = useMemo(() => {
-    if (!currentUser) return projects;
-    return projects.filter((p) => {
-      const role = resolveUserProjectRole(currentUser.id, p);
-      return role !== null;
-    });
-  }, [projects, currentUser]);
+  // Without a session this leaves the projects published to anonymous viewers.
+  const userAccessibleProjects = useMemo(
+    () => projects.filter((p) => resolveUserProjectRole(currentUser?.id, p) !== null),
+    [projects, currentUser]
+  );
 
   const filteredProjects = useMemo(() => {
     if (!searchQuery.trim()) return userAccessibleProjects;
@@ -80,13 +78,15 @@ export default function ProjectsDirectoryView({
             </p>
           </div>
 
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold px-4 py-2 rounded-md flex items-center gap-1.5 shadow-sm transition-colors self-start sm:self-auto"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Create Project</span>
-          </button>
+          {currentUser && (
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold px-4 py-2 rounded-md flex items-center gap-1.5 shadow-sm transition-colors self-start sm:self-auto"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create Project</span>
+            </button>
+          )}
         </div>
 
         {/* Search Input */}

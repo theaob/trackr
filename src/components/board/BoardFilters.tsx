@@ -44,17 +44,19 @@ export default function BoardFilters({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 py-3 border-b border-jira-gray-200">
       <div className="flex flex-wrap items-center gap-3">
-        {/* "Only My Issues" Button */}
-        <button
-          onClick={onToggleOnlyMyIssues}
-          className={`px-3 py-1 text-xs font-semibold rounded-md border transition-all ${
-            onlyMyIssues
-              ? "bg-jira-blue text-white border-jira-blue shadow-xs"
-              : "bg-white text-jira-gray-800 border-jira-gray-300 hover:bg-jira-gray-100"
-          }`}
-        >
-          Only my issues
-        </button>
+        {/* "Only My Issues" Button - meaningless without a signed-in user. */}
+        {currentUser && (
+          <button
+            onClick={onToggleOnlyMyIssues}
+            className={`px-3 py-1 text-xs font-semibold rounded-md border transition-all ${
+              onlyMyIssues
+                ? "bg-jira-blue text-white border-jira-blue shadow-xs"
+                : "bg-white text-jira-gray-800 border-jira-gray-300 hover:bg-jira-gray-100"
+            }`}
+          >
+            Only my issues
+          </button>
+        )}
 
         {/* Member Avatar Selectors */}
         <div className="flex items-center -space-x-1.5 overflow-hidden pl-1">

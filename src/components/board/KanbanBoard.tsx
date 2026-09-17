@@ -380,13 +380,16 @@ export default function KanbanBoard({
       })
     );
 
-    // Persist via Server Action
+    // Persist via Server Action. The whole destination column goes with it, so
+    // the neighbours' positions are stored too and the board looks the same
+    // after a reload as it did after the drop.
     const res = await updateIssueStatusAndOrder(
       draggableId,
       dest.status,
       destination.index,
       currentUser?.id,
-      extraData
+      extraData,
+      targetCellIssues.map((item) => item.id)
     );
 
     if (res.success && res.issue) {

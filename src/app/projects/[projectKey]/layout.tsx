@@ -1,10 +1,9 @@
 import React from "react";
-import { notFound } from "next/navigation";
 import { getProjects, getProjectByKey, getProjectUsers } from "@/lib/actions/projects";
 import { getProjectSprints } from "@/lib/actions/sprints";
 import { getProjectEpics } from "@/lib/actions/issues";
 import ProjectLayoutClient from "@/components/layout/ProjectLayoutClient";
-import { requirePageUser } from "@/lib/auth/page";
+import { denyPageAccess } from "@/lib/auth/page";
 
 export const dynamic = "force-dynamic";
 
@@ -15,14 +14,10 @@ export default async function ProjectLayout({
   children: React.ReactNode;
   params: { projectKey: string };
 }) {
-  await requirePageUser();
-
   // getProjectByKey returns null when the caller has no membership, so an
   // inaccessible project is indistinguishable from one that does not exist.
   const currentProject = await getProjectByKey(params.projectKey);
-  if (!currentProject) {
-    notFound();
-  }
+  if (!currentProject) return denyPageAccess(`/projects/${params.projectKey}/board`);
 
   const [projects, users, sprints, epics] = await Promise.all([
     getProjects(),

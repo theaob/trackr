@@ -755,7 +755,7 @@ export default function IssuesListView({
                   {/* Issue Key & Status Ribbon */}
                   <div className="flex items-center justify-between pb-3 border-b border-jira-gray-200">
                     <div className="flex items-center gap-2">
-                      <IssueTypeBadge type={selectedIssue.type} size="sm" />
+                      <IssueTypeBadge type={selectedIssue.type} size="sm" showLabel />
                       <span className="text-sm font-bold text-jira-gray-700">{selectedIssue.key}</span>
                       {selectedIssue.parent && (
                         <span className="text-xs font-semibold bg-purple-100 text-purple-800 px-2 py-0.5 rounded">

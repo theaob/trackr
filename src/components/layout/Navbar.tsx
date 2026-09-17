@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Project, User } from "@/types";
 import { useCurrentUser } from "@/context/UserContext";
 import { useSearch } from "@/context/SearchContext";
@@ -22,6 +22,7 @@ import {
   Trash2,
   Loader2,
   LogOut,
+  LogIn,
 } from "lucide-react";
 import PersonalAccessTokensModal from "@/components/auth/PersonalAccessTokensModal";
 import { TrackrLogo } from "@/components/common/TrackrLogo";
@@ -43,15 +44,15 @@ export default function Navbar({
   onCreateIssueClick,
   onCreateProjectClick,
 }: NavbarProps) {
-  const router = useRouter();
+  const pathname = usePathname();
   const { currentUser, users, setCurrentUser, setUsers } = useCurrentUser();
   const permissions = useProjectPermissions(currentProject);
   const { searchQuery, setSearchQuery } = useSearch();
 
-  const accessibleProjects = useMemo(() => {
-    if (!currentUser) return projects;
-    return projects.filter((proj) => resolveUserProjectRole(currentUser.id, proj) !== null);
-  }, [projects, currentUser]);
+  const accessibleProjects = useMemo(
+    () => projects.filter((proj) => resolveUserProjectRole(currentUser?.id, proj) !== null),
+    [projects, currentUser]
+  );
 
   const [showProjectMenu, setShowProjectMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -64,9 +65,10 @@ export default function Navbar({
     setSigningOut(true);
     try {
       await logout();
-      router.replace("/login");
-      router.refresh();
-    } finally {
+      // Full navigation, for the same reason as sign-in: a client-side replace
+      // racing a refresh can leave stale session state on screen.
+      window.location.assign("/login");
+    } catch {
       setSigningOut(false);
     }
   };
@@ -234,6 +236,16 @@ export default function Navbar({
 
         {/* Current User Switcher */}
         <div className="relative">
+          {!currentUser ? (
+            // Anonymous visitor on a project published for read-only access.
+            <Link
+              href={`/login?next=${encodeURIComponent(pathname || "/projects")}`}
+              className="flex items-center gap-2 px-3 py-1.5 rounded text-xs font-semibold text-white bg-jira-blue hover:bg-jira-blue-hover transition-colors"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Sign in</span>
+            </Link>
+          ) : (
           <button
             onClick={() => {
               setShowUserMenu(!showUserMenu);
@@ -252,8 +264,9 @@ export default function Navbar({
             </span>
             <ChevronDown className="w-3 h-3 text-jira-gray-600" />
           </button>
+          )}
 
-          {showUserMenu && (
+          {currentUser && showUserMenu && (
             <div className="absolute right-0 top-full mt-1 w-72 bg-white border border-jira-gray-300 rounded-md shadow-xl py-1 z-50 animate-in fade-in">
               <div className="px-3 py-2 border-b border-jira-gray-200">
                 <p className="text-xs font-bold text-jira-navy">{currentUser?.name}</p>

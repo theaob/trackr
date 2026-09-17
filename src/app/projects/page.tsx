@@ -1,20 +1,25 @@
 import React from "react";
+import { redirect } from "next/navigation";
 import { getAllProjectsWithStats, getAllUsers, getProjects } from "@/lib/actions/projects";
 import ProjectsDirectoryView from "@/components/projects/ProjectsDirectoryView";
 import Navbar from "@/components/layout/Navbar";
 import { SearchProvider } from "@/context/SearchContext";
-import { requirePageUser } from "@/lib/auth/page";
+import { getCurrentUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage() {
-  await requirePageUser();
+  const user = await getCurrentUser();
 
   const [projectsWithStats, users, allProjects] = await Promise.all([
     getAllProjectsWithStats(),
+    // Returns [] without a session: the user directory is not public.
     getAllUsers(),
     getProjects(),
   ]);
+
+  // A visitor with nothing to look at is better served by the sign-in screen.
+  if (!user && allProjects.length === 0) redirect("/login");
 
   const defaultProject = allProjects.length > 0 ? allProjects[0] : null;
 

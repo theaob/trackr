@@ -61,7 +61,7 @@ export default function ProjectAccessTab({
     return members.filter((m) => {
       const matchesSearch =
         m.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (m.user.email ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
         (m.user.role && m.user.role.toLowerCase().includes(searchQuery.toLowerCase()));
 
       const matchesRole = roleFilter === "ALL" || m.role === roleFilter;

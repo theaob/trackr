@@ -49,3 +49,57 @@ describe("resolveUserProjectRole", () => {
     expect(resolveUserProjectRole(undefined, project)).toBeNull();
   });
 });
+
+describe("resolveUserProjectRole on a project published to anonymous viewers", () => {
+  const published = {
+    leadId: "lead-1",
+    allowAnonymousViewers: true,
+    members: [
+      { userId: "member-1", role: "MEMBER" },
+      { userId: "admin-1", role: "ADMIN" },
+    ],
+  };
+
+  it("gives a visitor with no session read-only access", () => {
+    expect(resolveUserProjectRole(null, published)).toBe("VIEWER");
+    expect(resolveUserProjectRole(undefined, published)).toBe("VIEWER");
+  });
+
+  it("gives a signed-in non-member the same read-only access", () => {
+    expect(resolveUserProjectRole("stranger", published)).toBe("VIEWER");
+  });
+
+  it("does not downgrade members or the lead", () => {
+    expect(resolveUserProjectRole("lead-1", published)).toBe("ADMIN");
+    expect(resolveUserProjectRole("admin-1", published)).toBe("ADMIN");
+    expect(resolveUserProjectRole("member-1", published)).toBe("MEMBER");
+  });
+
+  // The whole safety argument rests on VIEWER holding nothing but reads, so
+  // publishing a project can never hand out a write.
+  it("grants a visitor reads and nothing else", () => {
+    const role = resolveUserProjectRole(null, published);
+    expect(hasPermission(role, "VIEW_PROJECT")).toBe(true);
+    for (const permission of [
+      "CREATE_ISSUE",
+      "EDIT_ISSUE",
+      "DELETE_ISSUE",
+      "MOVE_ISSUE",
+      "ADD_COMMENT",
+      "MANAGE_SPRINTS",
+      "MANAGE_VERSIONS",
+      "MANAGE_ACCESS",
+      "PROJECT_ADMIN",
+    ] as const) {
+      expect(hasPermission(role, permission)).toBe(false);
+    }
+  });
+
+  it("keeps an unpublished project closed to visitors", () => {
+    const priv = { leadId: "lead-1", allowAnonymousViewers: false, members: [] };
+    expect(resolveUserProjectRole(null, priv)).toBeNull();
+    expect(resolveUserProjectRole("stranger", priv)).toBeNull();
+    // An absent flag behaves like false.
+    expect(resolveUserProjectRole(null, { leadId: "lead-1", members: [] })).toBeNull();
+  });
+});

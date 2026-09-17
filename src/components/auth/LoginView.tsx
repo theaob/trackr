@@ -1,18 +1,30 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { AlertCircle } from "lucide-react";
 import AuthModal from "@/components/auth/AuthModal";
 import { TrackrLogo } from "@/components/common/TrackrLogo";
 
-export default function LoginView({ ssoError }: { ssoError?: string }) {
-  const router = useRouter();
+export default function LoginView({
+  ssoError,
+  next = "/projects",
+}: {
+  ssoError?: string;
+  next?: string;
+}) {
   const [dismissedError, setDismissedError] = useState(false);
 
   return (
     <div className="min-h-screen w-full bg-jira-gray-100 flex flex-col items-center justify-center gap-6 p-4">
       <TrackrLogo size="lg" />
+
+      <Link
+        href="/projects"
+        className="text-xs text-jira-gray-600 hover:text-jira-blue font-medium"
+      >
+        &larr; Continue without signing in
+      </Link>
 
       {ssoError && !dismissedError && (
         <div className="max-w-lg w-full p-3 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2">
@@ -32,8 +44,11 @@ export default function LoginView({ ssoError }: { ssoError?: string }) {
         dismissible={false}
         onClose={() => {}}
         onSuccess={() => {
-          router.replace("/projects");
-          router.refresh();
+          // A full navigation rather than router.replace + refresh: the two
+          // race, and the refresh can cancel the pending navigation, leaving
+          // someone signed in but still looking at the sign-in form. It also
+          // guarantees the root layout re-renders with the new session.
+          window.location.assign(next);
         }}
       />
     </div>

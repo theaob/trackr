@@ -126,7 +126,14 @@ export function resolveUserProjectRole(
   project?: any | null,
   members?: any[] | null
 ): ProjectRole | null {
-  if (!userId) return null;
+  // A project that allows anonymous viewers falls back to read-only access for
+  // anyone without a membership, signed in or not. VIEWER holds VIEW_PROJECT
+  // and nothing else, so every write is refused by the same permission table.
+  const anonymousFallback: ProjectRole | null = project?.allowAnonymousViewers
+    ? "VIEWER"
+    : null;
+
+  if (!userId) return anonymousFallback;
 
   // Project Lead is automatically Project Administrator
   if (project?.leadId && project.leadId === userId) {
@@ -140,10 +147,10 @@ export function resolveUserProjectRole(
     return member.role as ProjectRole;
   }
 
-  // Not a member: no access. There is deliberately no permissive fallback for
-  // projects with an empty membership list -- server-side checks in
-  // lib/auth/guards.ts resolve roles the same way.
-  return null;
+  // Not a member. There is deliberately no permissive fallback beyond the
+  // anonymous one above -- server-side checks in lib/auth/guards.ts resolve
+  // roles the same way.
+  return anonymousFallback;
 }
 
 export function canManageProject(role: ProjectRole | null | undefined): boolean {

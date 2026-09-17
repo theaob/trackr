@@ -1,10 +1,9 @@
 import React, { Suspense } from "react";
-import { notFound } from "next/navigation";
 import { getProjectByKey, getProjectUsers } from "@/lib/actions/projects";
 import { getBoardIssues } from "@/lib/actions/issues";
 import { getProjectSprints } from "@/lib/actions/sprints";
 import KanbanBoard from "@/components/board/KanbanBoard";
-import { requirePageUser } from "@/lib/auth/page";
+import { denyPageAccess } from "@/lib/auth/page";
 
 export const dynamic = "force-dynamic";
 
@@ -14,10 +13,8 @@ interface PageProps {
 }
 
 export default async function BoardPage({ params, searchParams }: PageProps) {
-  await requirePageUser();
-
   const project = await getProjectByKey(params.projectKey);
-  if (!project) notFound();
+  if (!project) return denyPageAccess(`/projects/${params.projectKey}/board`);
 
   const [users, sprints] = await Promise.all([
     getProjectUsers(project.id),

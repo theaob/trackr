@@ -1,9 +1,8 @@
 import React from "react";
-import { notFound } from "next/navigation";
 import { getProjectByKey } from "@/lib/actions/projects";
 import { getProjectVersions } from "@/lib/actions/versions";
 import ReleasesView from "@/components/releases/ReleasesView";
-import { requirePageUser } from "@/lib/auth/page";
+import { denyPageAccess } from "@/lib/auth/page";
 
 export const dynamic = "force-dynamic";
 
@@ -12,10 +11,8 @@ interface PageProps {
 }
 
 export default async function ReleasesPage({ params }: PageProps) {
-  await requirePageUser();
-
   const project = await getProjectByKey(params.projectKey);
-  if (!project) notFound();
+  if (!project) return denyPageAccess(`/projects/${params.projectKey}/releases`);
 
   const versions = await getProjectVersions(project.id);
 
