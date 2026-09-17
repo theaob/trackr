@@ -21,7 +21,10 @@ export default async function BoardPage({ params, searchParams }: PageProps) {
     getProjectSprints(project.id),
   ]);
 
-  const activeSprint = sprints.find((s) => s.status === "ACTIVE");
+  // Kanban ignores sprints entirely: the board is every non-backlog issue,
+  // in continuous flow, not scoped to whatever happens to be "active".
+  const activeSprint =
+    project.boardType === "KANBAN" ? undefined : sprints.find((s) => s.status === "ACTIVE");
   const issues = await getBoardIssues(project.id, activeSprint?.id);
 
   return (

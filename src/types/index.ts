@@ -196,11 +196,14 @@ export interface ProjectMember {
   updatedAt: string | Date;
 }
 
+export type BoardType = "SCRUM" | "KANBAN";
+
 export interface Project {
   id: string;
   name: string;
   key: string;
   description: string | null;
+  boardType: BoardType;
   /** When true, visitors with no session get read-only access. */
   allowAnonymousViewers?: boolean;
   leadId: string | null;

@@ -32,6 +32,9 @@ model Project {
   name        String
   key         String   @unique
   description String?
+  // "SCRUM" (sprints, a board scoped to the active one) or "KANBAN" (no
+  // sprints, the board is every non-backlog issue in continuous flow).
+  boardType   String   @default("SCRUM")
   // Grants VIEWER (read-only) access to visitors with no session. Off by
   // default: a project is private until someone deliberately publishes it.
   allowAnonymousViewers Boolean @default(false)

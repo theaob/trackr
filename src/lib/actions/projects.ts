@@ -277,16 +277,26 @@ export async function getAllProjectsWithStats() {
 
 export async function updateProject(
   id: string,
-  data: { name?: string; description?: string; allowAnonymousViewers?: boolean }
+  data: {
+    name?: string;
+    description?: string;
+    allowAnonymousViewers?: boolean;
+    boardType?: string;
+  }
 ) {
   try {
     await requireProjectPermission(id, "PROJECT_ADMIN");
+
+    if (data.boardType !== undefined && data.boardType !== "SCRUM" && data.boardType !== "KANBAN") {
+      return { success: false as const, error: "Board type must be Scrum or Kanban." };
+    }
 
     const updated = await prisma.project.update({
       where: { id },
       data: {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.description !== undefined && { description: data.description }),
+        ...(data.boardType !== undefined && { boardType: data.boardType }),
         // Publishing a project to anonymous viewers is an administrator
         // decision, and grants read-only access only.
         ...(data.allowAnonymousViewers !== undefined && {

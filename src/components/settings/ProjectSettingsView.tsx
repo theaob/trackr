@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Project, User, CustomField, Webhook, ProjectMember } from "@/types";
+import { Project, User, CustomField, Webhook, ProjectMember, BoardType } from "@/types";
 import { updateProject } from "@/lib/actions/projects";
 import { deleteCustomField } from "@/lib/actions/customFields";
 import {
@@ -65,6 +65,7 @@ export default function ProjectSettingsView({
   // General Settings State
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description || "");
+  const [boardType, setBoardType] = useState<BoardType>(project.boardType || "SCRUM");
   const [allowAnonymousViewers, setAllowAnonymousViewers] = useState(
     !!project.allowAnonymousViewers
   );
@@ -97,6 +98,7 @@ export default function ProjectSettingsView({
     const res = await updateProject(project.id, {
       name: name.trim(),
       description: description.trim(),
+      boardType,
       allowAnonymousViewers,
     });
 
@@ -342,6 +344,57 @@ export default function ProjectSettingsView({
                 <ShieldCheck className="w-3.5 h-3.5 text-jira-blue" />
                 Lead Admin
               </span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-2">
+              Board Type
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              {(
+                [
+                  {
+                    value: "SCRUM" as BoardType,
+                    title: "Scrum",
+                    description: "Plan sprints in the Backlog. The board shows only the active sprint.",
+                  },
+                  {
+                    value: "KANBAN" as BoardType,
+                    title: "Kanban",
+                    description: "No sprints. The board shows every issue pulled out of the Backlog, continuously.",
+                  },
+                ] as const
+              ).map((option) => (
+                <label
+                  key={option.value}
+                  className={`p-3 rounded-lg border cursor-pointer select-none transition-colors ${
+                    boardType === option.value
+                      ? "bg-jira-blue-light border-jira-blue"
+                      : "bg-jira-gray-50 border-jira-gray-300 hover:border-jira-gray-400"
+                  } ${!permissions.canManageProject ? "cursor-not-allowed opacity-70" : ""}`}
+                >
+                  <input
+                    type="radio"
+                    name="boardType"
+                    value={option.value}
+                    checked={boardType === option.value}
+                    disabled={!permissions.canManageProject}
+                    onChange={() => setBoardType(option.value)}
+                    className="sr-only"
+                  />
+                  <div
+                    className={`font-bold text-sm ${
+                      boardType === option.value ? "text-jira-blue" : "text-jira-navy"
+                    }`}
+                  >
+                    {option.title}
+                  </div>
+                  <p className="text-[11px] text-jira-gray-600 mt-1 leading-relaxed">
+                    {option.description}
+                  </p>
+                </label>
+              ))}
             </div>
           </div>
 

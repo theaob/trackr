@@ -287,6 +287,9 @@ export default function BacklogView({
     );
   }, [issues, searchQuery]);
 
+  // Kanban has no sprint planning: just the flat Backlog list below.
+  const isKanban = project.boardType === "KANBAN";
+
   // Sprints & Backlog groupings
   const activeSprints = useMemo(() => sprints.filter((s) => s.status === "ACTIVE"), [sprints]);
   const futureSprints = useMemo(() => sprints.filter((s) => s.status === "FUTURE"), [sprints]);
@@ -495,11 +498,13 @@ export default function BacklogView({
             </span>
           </div>
           <p className="text-xs text-jira-gray-600 mt-0.5">
-            Plan sprints, groom user stories, and estimate points.
+            {isKanban
+              ? "Groom and prioritize work before it's pulled onto the board."
+              : "Plan sprints, groom user stories, and estimate points."}
           </p>
         </div>
 
-        {permissions.canManageSprints && (
+        {!isKanban && permissions.canManageSprints && (
           <div className="flex items-center gap-2">
             <button
               onClick={handleCreateSprint}
@@ -516,7 +521,7 @@ export default function BacklogView({
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="py-5 space-y-6">
           {/* Active and Future Sprints */}
-          {[...activeSprints, ...futureSprints].map((sprint) => {
+          {!isKanban && [...activeSprints, ...futureSprints].map((sprint) => {
             const sprintIssues = getSprintIssues(sprint.id);
             const totalPoints = sprintIssues.reduce((sum, i) => sum + (i.storyPoints || 0), 0);
             const donePoints = sprintIssues
@@ -909,28 +914,30 @@ export default function BacklogView({
                             )}
 
                             {/* Move to any Sprint (Active or Future/Unstarted) */}
-                            <div className="relative">
-                              <select
-                                value=""
-                                onClick={(e) => e.stopPropagation()}
-                                onChange={(e) => {
-                                  e.stopPropagation();
-                                  if (e.target.value) {
-                                    handleMoveIssue(issue.id, e.target.value);
-                                  }
-                                }}
-                                className="text-[11px] bg-jira-blue-light/70 hover:bg-jira-blue-light border border-jira-blue/30 text-jira-blue font-semibold rounded px-2 py-0.5 outline-none cursor-pointer"
-                              >
-                                <option value="">+ Add to Sprint</option>
-                                {sprints
-                                  .filter((s) => s.status !== "COMPLETED")
-                                  .map((s) => (
-                                    <option key={s.id} value={s.id}>
-                                      {s.name} {s.status === "ACTIVE" ? "(Active)" : s.status === "FUTURE" ? "(Planned / Unstarted)" : ""}
-                                    </option>
-                                  ))}
-                              </select>
-                            </div>
+                            {!isKanban && (
+                              <div className="relative">
+                                <select
+                                  value=""
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={(e) => {
+                                    e.stopPropagation();
+                                    if (e.target.value) {
+                                      handleMoveIssue(issue.id, e.target.value);
+                                    }
+                                  }}
+                                  className="text-[11px] bg-jira-blue-light/70 hover:bg-jira-blue-light border border-jira-blue/30 text-jira-blue font-semibold rounded px-2 py-0.5 outline-none cursor-pointer"
+                                >
+                                  <option value="">+ Add to Sprint</option>
+                                  {sprints
+                                    .filter((s) => s.status !== "COMPLETED")
+                                    .map((s) => (
+                                      <option key={s.id} value={s.id}>
+                                        {s.name} {s.status === "ACTIVE" ? "(Active)" : s.status === "FUTURE" ? "(Planned / Unstarted)" : ""}
+                                      </option>
+                                    ))}
+                                </select>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}

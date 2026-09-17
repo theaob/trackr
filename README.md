@@ -10,6 +10,10 @@ A modern, full-stack agile project management and issue tracking platform built 
   - Drag-and-drop issues across columns (`To Do`, `In Progress`, `In Review`, `Done`).
   - Real-time column WIP limits & warning badges.
   - Immediate optimistic drag updates with persistent server synchronization.
+- 🔀 **Scrum or Kanban, per project**:
+  - **Scrum**: plan sprints in the Backlog; the board shows only the active sprint.
+  - **Kanban**: no sprints; the board is every issue pulled out of the Backlog, in
+    continuous flow. Switch anytime from **Project Settings → General**.
 - 🏃 **Agile Backlog & Sprint Management**:
   - Collapsible Sprints (Active, Future, and Backlog).
   - Sprint life-cycle: **Start Sprint** (with custom goal & duration) and **Complete Sprint** (with automatic rollover of open tasks).

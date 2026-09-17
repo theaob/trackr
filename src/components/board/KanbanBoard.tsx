@@ -140,8 +140,10 @@ export default function KanbanBoard({
   const [selectedPriority, setSelectedPriority] = useState<PriorityLevel | "ALL">("ALL");
   const [onlyMyIssues, setOnlyMyIssues] = useState(false);
 
-  // Active Sprint
-  const activeSprint = sprints.find((s) => s.status === "ACTIVE");
+  // Kanban ignores sprints entirely: the board is every non-backlog issue in
+  // continuous flow, never scoped to whatever happens to be "active".
+  const isKanban = project.boardType === "KANBAN";
+  const activeSprint = isKanban ? undefined : sprints.find((s) => s.status === "ACTIVE");
 
   // Toggle Assignee Filter
   const handleToggleAssignee = (userId: string) => {
@@ -444,7 +446,7 @@ export default function KanbanBoard({
           </div>
 
           <div className="flex items-center gap-2">
-            {!activeSprint && (
+            {!activeSprint && !isKanban && (
               <Link
                 href={`/projects/${project.key}/backlog`}
                 className="text-xs bg-jira-blue-light text-jira-blue font-semibold px-3 py-1.5 rounded hover:bg-jira-blue hover:text-white transition-colors"
