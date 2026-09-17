@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { hashPassword } from "@/lib/auth/password";
 import { startSession, PUBLIC_USER_SELECT } from "@/lib/auth/session";
 import { AuthError, toActionError } from "@/lib/auth/guards";
+import { seedDefaultWorkflow } from "@/lib/workflow";
 
 const MIN_PASSWORD_LENGTH = 8;
 const PROJECT_KEY_PATTERN = /^[A-Z0-9]{2,10}$/;
@@ -99,6 +100,8 @@ export async function completeSetup(data: {
         },
         select: { id: true, key: true },
       });
+
+      await seedDefaultWorkflow(tx, project.id);
 
       return { user, project };
     });

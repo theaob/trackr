@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Project, User, Issue, IssueType, PriorityLevel, Sprint, Version, CustomField } from "@/types";
+import { Project, User, Issue, IssueType, PriorityLevel, Sprint, Version, CustomField, WorkflowStatus } from "@/types";
 import { IssueTypeIcon, PriorityIcon } from "@/components/common/IssueIcons";
 import { createIssue } from "@/lib/actions/issues";
 import { getProjectCustomFields, batchSetIssueCustomFieldValues } from "@/lib/actions/customFields";
+import { getProjectWorkflow } from "@/lib/actions/workflows";
 import CustomFieldRenderer from "@/components/common/CustomFieldRenderer";
 import MentionInput from "@/components/common/MentionInput";
 import { useCurrentUser } from "@/context/UserContext";
@@ -46,6 +47,9 @@ export default function CreateIssueModal({
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
 
+  // Workflow State (for the initial/backlog status new issues start in)
+  const [workflowStatuses, setWorkflowStatuses] = useState<WorkflowStatus[]>([]);
+
   useEffect(() => {
     let isMounted = true;
     getProjectCustomFields(selectedProjectId).then((fields) => {
@@ -53,6 +57,9 @@ export default function CreateIssueModal({
         setCustomFields(fields as any);
         setCustomFieldValues({});
       }
+    });
+    getProjectWorkflow(selectedProjectId).then(({ statuses }) => {
+      if (isMounted) setWorkflowStatuses(statuses as unknown as WorkflowStatus[]);
     });
     return () => {
       isMounted = false;
@@ -96,6 +103,10 @@ export default function CreateIssueModal({
 
     const points = storyPoints.trim() === "" ? null : parseInt(storyPoints, 10);
 
+    const backlogStatusName = workflowStatuses.find((s) => s.isBacklog)?.name;
+    const initialStatusName = workflowStatuses.find((s) => !s.isBacklog)?.name;
+    const status = sprintId ? initialStatusName : backlogStatusName;
+
     const res = await createIssue({
       projectId: selectedProjectId,
       title: title.trim(),
@@ -108,7 +119,7 @@ export default function CreateIssueModal({
       sprintId: sprintId || null,
       versionId: versionId || null,
       parentId: parentId || null,
-      status: sprintId ? "TODO" : "BACKLOG",
+      status,
     });
 
     if (res.success && res.issue) {

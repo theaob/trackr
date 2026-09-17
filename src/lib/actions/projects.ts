@@ -15,6 +15,7 @@ import {
 } from "@/lib/auth/guards";
 import { getCurrentUser } from "@/lib/auth/session";
 import { ensureProjectMembersSeeded } from "@/lib/projectMembers";
+import { seedDefaultWorkflow } from "@/lib/workflow";
 
 const PROJECT_INCLUDE = {
   lead: { select: PUBLIC_USER_SELECT },
@@ -212,6 +213,12 @@ export async function createProject(data: {
       include: { lead: { select: PUBLIC_USER_SELECT } },
     });
 
+    // Best-effort: a failure here isn't fatal, since the workflow is seeded
+    // lazily on first read too (getWorkflowStatuses -> ensureProjectWorkflowSeeded).
+    await seedDefaultWorkflow(prisma, project.id).catch((error) => {
+      console.error("Failed to seed default workflow for new project:", error);
+    });
+
     try {
       revalidatePath("/projects");
     } catch {}
@@ -245,14 +252,26 @@ export async function getAllProjectsWithStats() {
       orderBy: { createdAt: "desc" },
     });
 
-    const openCounts = await prisma.issue.groupBy({
-      by: ["projectId"],
-      where: { projectId: { in: ids }, status: { not: "DONE" } },
-      _count: { _all: true },
-    });
-    const openByProject = new Map(
-      openCounts.map((row) => [row.projectId, row._count._all])
-    );
+    // Grouped by (project, status) rather than filtered by a single "DONE"
+    // literal: each project can rename or redefine its Done-category
+    // statuses, so what counts as open is resolved per project below.
+    const [statusCounts, doneStatuses] = await Promise.all([
+      prisma.issue.groupBy({
+        by: ["projectId", "status"],
+        where: { projectId: { in: ids } },
+        _count: { _all: true },
+      }),
+      prisma.workflowStatus.findMany({
+        where: { projectId: { in: ids }, category: "DONE" },
+        select: { projectId: true, name: true },
+      }),
+    ]);
+    const doneKeys = new Set(doneStatuses.map((s) => `${s.projectId}:${s.name}`));
+    const openByProject = new Map<string, number>();
+    for (const row of statusCounts) {
+      if (doneKeys.has(`${row.projectId}:${row.status}`)) continue;
+      openByProject.set(row.projectId, (openByProject.get(row.projectId) ?? 0) + row._count._all);
+    }
 
     const teamIds = await teamProjectIds(user?.id);
 

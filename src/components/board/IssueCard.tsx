@@ -12,10 +12,12 @@ interface IssueCardProps {
   issue: Issue;
   index: number;
   onClick: () => void;
+  doneStatusNames?: string[];
 }
 
-export default function IssueCard({ issue, index, onClick }: IssueCardProps) {
-  const completedSubtasks = issue.children?.filter((c) => c.status === "DONE").length || 0;
+export default function IssueCard({ issue, index, onClick, doneStatusNames = ["DONE"] }: IssueCardProps) {
+  const completedSubtasks =
+    issue.children?.filter((c) => doneStatusNames.includes(c.status)).length || 0;
   const totalSubtasks = issue.children?.length || 0;
 
   return (

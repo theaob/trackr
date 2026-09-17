@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Issue, IssueStatus, IssueType, PriorityLevel, User, Sprint, Version, CustomField, IssueLink } from "@/types";
+import { Issue, IssueStatus, IssueType, PriorityLevel, User, Sprint, Version, CustomField, IssueLink, WorkflowStatus, WorkflowTransition } from "@/types";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
 import UserAvatar from "@/components/common/UserAvatar";
 import IssueLinksSection from "@/components/issues/IssueLinksSection";
@@ -14,6 +14,8 @@ import {
   getIssueCustomFieldValues,
   setIssueCustomFieldValue,
 } from "@/lib/actions/customFields";
+import { getProjectWorkflow } from "@/lib/actions/workflows";
+import { allowedNextStatusNames, prettifyStatusName } from "@/lib/workflowDisplay";
 import CustomFieldRenderer from "@/components/common/CustomFieldRenderer";
 import MentionInput from "@/components/common/MentionInput";
 import MentionText from "@/components/common/MentionText";
@@ -78,6 +80,10 @@ export default function IssueDetailModal({
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
 
+  // Workflow State (statuses + the transition graph, for the status dropdown)
+  const [workflowStatuses, setWorkflowStatuses] = useState<WorkflowStatus[]>([]);
+  const [workflowTransitions, setWorkflowTransitions] = useState<WorkflowTransition[]>([]);
+
   useEffect(() => {
     setCurrentIssue(issue);
     setTitle(issue?.title || "");
@@ -115,6 +121,23 @@ export default function IssueDetailModal({
       isMounted = false;
     };
   }, [currentIssue?.id, currentIssue?.projectId]);
+
+  // Load the project's workflow, for the status dropdown's allowed moves
+  useEffect(() => {
+    let isMounted = true;
+    if (!currentIssue?.projectId) return;
+
+    getProjectWorkflow(currentIssue.projectId).then(({ statuses, transitions }) => {
+      if (isMounted) {
+        setWorkflowStatuses(statuses as unknown as WorkflowStatus[]);
+        setWorkflowTransitions(transitions as unknown as WorkflowTransition[]);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentIssue?.projectId]);
 
   const handleCustomFieldChange = async (fieldId: string, val: string) => {
     setCustomFieldValues((prev) => ({ ...prev, [fieldId]: val }));
@@ -236,7 +259,9 @@ export default function IssueDetailModal({
       }
     }
 
-    const newStatus = sprintId && currentIssue.status === "BACKLOG" ? "TODO" : currentIssue.status;
+    const currentIsBacklog = workflowStatuses.find((s) => s.name === currentIssue.status)?.isBacklog;
+    const initialStatus = workflowStatuses.find((s) => !s.isBacklog)?.name ?? currentIssue.status;
+    const newStatus = sprintId && currentIsBacklog ? initialStatus : currentIssue.status;
     const res = await updateIssue(currentIssue.id, {
       sprintId: sprintId || null,
       status: newStatus,
@@ -649,11 +674,13 @@ export default function IssueDetailModal({
                 onChange={(e) => handleStatusChange(e.target.value as IssueStatus)}
                 className="w-full bg-white border border-jira-gray-300 rounded px-3 py-1.5 text-xs font-semibold text-jira-navy focus:border-jira-blue outline-none shadow-xs disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <option value="BACKLOG">Backlog</option>
-                <option value="TODO">To Do</option>
-                <option value="IN_PROGRESS">In Progress</option>
-                <option value="IN_REVIEW">In Review</option>
-                <option value="DONE">Done</option>
+                {allowedNextStatusNames(currentIssue.status, workflowStatuses, workflowTransitions).map(
+                  (name) => (
+                    <option key={name} value={name}>
+                      {prettifyStatusName(name)}
+                    </option>
+                  )
+                )}
               </select>
             </div>
 

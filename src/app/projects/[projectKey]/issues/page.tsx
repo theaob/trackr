@@ -3,6 +3,7 @@ import { getProjectByKey, getProjectUsers, getProjects } from "@/lib/actions/pro
 import { getPaginatedIssues } from "@/lib/actions/issues";
 import { getProjectSprints } from "@/lib/actions/sprints";
 import { getProjectVersions } from "@/lib/actions/versions";
+import { getProjectWorkflow } from "@/lib/actions/workflows";
 import IssuesListView from "@/components/issues/IssuesListView";
 import { denyPageAccess } from "@/lib/auth/page";
 
@@ -17,12 +18,13 @@ export default async function IssuesPage({ params, searchParams }: PageProps) {
   const project = await getProjectByKey(params.projectKey);
   if (!project) return denyPageAccess(`/projects/${params.projectKey}/issues`);
 
-  const [allProjects, paginatedData, users, sprints, versions] = await Promise.all([
+  const [allProjects, paginatedData, users, sprints, versions, workflow] = await Promise.all([
     getProjects(),
     getPaginatedIssues({ projectId: project.id, page: 1, pageSize: 50, sortField: "createdAt", sortOrder: "desc" }),
     getProjectUsers(project.id),
     getProjectSprints(project.id),
     getProjectVersions(project.id),
+    getProjectWorkflow(project.id),
   ]);
 
   return (
@@ -38,6 +40,7 @@ export default async function IssuesPage({ params, searchParams }: PageProps) {
         users={users as any}
         sprints={sprints as any}
         versions={versions as any}
+        statuses={workflow.statuses as any}
         initialSelectedIssueKey={searchParams?.selectedIssue || searchParams?.issue}
       />
     </Suspense>

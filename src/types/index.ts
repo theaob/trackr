@@ -1,8 +1,32 @@
 export type IssueType = "EPIC" | "STORY" | "TASK" | "BUG" | "SUBTASK";
 export type PriorityLevel = "LOWEST" | "LOW" | "MEDIUM" | "HIGH" | "HIGHEST";
-export type IssueStatus = "BACKLOG" | "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
+// A project's own workflow status name (e.g. "TODO", or a custom "Code
+// Review"). No longer a fixed union: WorkflowStatus is the source of truth.
+export type IssueStatus = string;
 export type SprintStatus = "FUTURE" | "ACTIVE" | "COMPLETED";
 export type VersionStatus = "UNRELEASED" | "RELEASED" | "ARCHIVED";
+export type WorkflowStatusCategory = "TODO" | "IN_PROGRESS" | "DONE";
+
+export interface WorkflowStatus {
+  id: string;
+  projectId: string;
+  name: string;
+  category: WorkflowStatusCategory;
+  isBacklog: boolean;
+  color: string;
+  order: number;
+  wipLimit: number | null;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+}
+
+export interface WorkflowTransition {
+  id: string;
+  projectId: string;
+  fromId: string;
+  toId: string;
+  createdAt: string | Date;
+}
 
 export interface User {
   id: string;

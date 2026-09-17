@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Project, User, CustomField, Webhook, ProjectMember, BoardType } from "@/types";
+import { Project, User, CustomField, Webhook, ProjectMember, BoardType, WorkflowStatus, WorkflowTransition } from "@/types";
 import { updateProject } from "@/lib/actions/projects";
 import { deleteCustomField } from "@/lib/actions/customFields";
 import {
@@ -30,12 +30,14 @@ import {
   CheckCircle2,
   Users,
   ShieldAlert,
+  GitBranch,
 } from "lucide-react";
 import CreateCustomFieldModal from "./CreateCustomFieldModal";
 import CreateWebhookModal from "./CreateWebhookModal";
 import WebhookDeliveriesModal from "./WebhookDeliveriesModal";
 import ProjectAccessTab from "./ProjectAccessTab";
 import SsoSettingsTab from "./SsoSettingsTab";
+import WorkflowSettingsTab from "./WorkflowSettingsTab";
 import UserAvatar from "@/components/common/UserAvatar";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
 import {
@@ -49,6 +51,8 @@ interface ProjectSettingsViewProps {
   initialCustomFields?: CustomField[];
   initialWebhooks?: Webhook[];
   initialMembers?: ProjectMember[];
+  initialWorkflowStatuses?: WorkflowStatus[];
+  initialWorkflowTransitions?: WorkflowTransition[];
 }
 
 export default function ProjectSettingsView({
@@ -57,8 +61,12 @@ export default function ProjectSettingsView({
   initialCustomFields = [],
   initialWebhooks = [],
   initialMembers = [],
+  initialWorkflowStatuses = [],
+  initialWorkflowTransitions = [],
 }: ProjectSettingsViewProps) {
-  const [activeTab, setActiveTab] = useState<"general" | "fields" | "webhooks" | "access" | "sso">("general");
+  const [activeTab, setActiveTab] = useState<
+    "general" | "fields" | "webhooks" | "access" | "workflow" | "sso"
+  >("general");
   const [members, setMembers] = useState<ProjectMember[]>(initialMembers);
   const permissions = useProjectPermissions(project, members);
 
@@ -253,6 +261,22 @@ export default function ProjectSettingsView({
             Access & Roles
             <span className="ml-1 px-1.5 py-0.2 bg-jira-gray-100 text-jira-gray-700 rounded-full text-[10px] font-bold">
               {members.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("workflow")}
+            className={`pb-2.5 text-xs font-semibold tracking-wide border-b-2 transition-colors flex items-center gap-1.5 ${
+              activeTab === "workflow"
+                ? "border-jira-blue text-jira-blue"
+                : "border-transparent text-jira-gray-600 hover:text-jira-navy"
+            }`}
+          >
+            <GitBranch className="w-3.5 h-3.5" />
+            Workflow
+            <span className="ml-1 px-1.5 py-0.2 bg-jira-gray-100 text-jira-gray-700 rounded-full text-[10px] font-bold">
+              {initialWorkflowStatuses.length}
             </span>
           </button>
 
@@ -758,7 +782,19 @@ export default function ProjectSettingsView({
         </div>
       )}
 
-      {/* Tab 5: SSO & Certificates */}
+      {/* Tab 5: Workflow */}
+      {activeTab === "workflow" && (
+        <div className="mt-6">
+          <WorkflowSettingsTab
+            project={project}
+            initialStatuses={initialWorkflowStatuses}
+            initialTransitions={initialWorkflowTransitions}
+            canManage={permissions.canManageProject}
+          />
+        </div>
+      )}
+
+      {/* Tab 6: SSO & Certificates */}
       {activeTab === "sso" && (
         <div className="mt-6">
           <SsoSettingsTab />

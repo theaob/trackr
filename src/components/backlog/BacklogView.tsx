@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Project, Issue, User, Sprint, IssueType } from "@/types";
+import { Project, Issue, User, Sprint, IssueType, WorkflowStatus } from "@/types";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
 import UserAvatar from "@/components/common/UserAvatar";
 
@@ -39,6 +39,7 @@ interface BacklogViewProps {
   initialIssues: Issue[];
   users: User[];
   initialSprints: Sprint[];
+  statuses: WorkflowStatus[];
   searchQuery?: string;
   initialSelectedIssueKey?: string;
 }
@@ -48,6 +49,7 @@ export default function BacklogView({
   initialIssues,
   users,
   initialSprints,
+  statuses,
   searchQuery: propSearchQuery,
   initialSelectedIssueKey,
 }: BacklogViewProps) {
@@ -270,7 +272,9 @@ export default function BacklogView({
       setSprints((prev) => prev.filter((s) => s.id !== sprintId));
       // Move issues back to backlog in local state
       setIssues((prev) =>
-        prev.map((i) => (i.sprintId === sprintId ? { ...i, sprintId: null, status: "BACKLOG" as any } : i))
+        prev.map((i) =>
+          i.sprintId === sprintId ? { ...i, sprintId: null, status: primaryBacklogStatusName } : i
+        )
       );
     } else if (res.error) {
       alert(res.error);
@@ -290,12 +294,27 @@ export default function BacklogView({
   // Kanban has no sprint planning: just the flat Backlog list below.
   const isKanban = project.boardType === "KANBAN";
 
+  // The project's own backlog/initial status names, not a fixed literal.
+  const backlogStatusNames = useMemo(
+    () => statuses.filter((s) => s.isBacklog).map((s) => s.name),
+    [statuses]
+  );
+  const primaryBacklogStatusName = backlogStatusNames[0] ?? "BACKLOG";
+  const initialStatusName = useMemo(
+    () => statuses.find((s) => !s.isBacklog)?.name ?? "TODO",
+    [statuses]
+  );
+  const doneStatusNames = useMemo(
+    () => statuses.filter((s) => s.category === "DONE").map((s) => s.name),
+    [statuses]
+  );
+
   // Sprints & Backlog groupings
   const activeSprints = useMemo(() => sprints.filter((s) => s.status === "ACTIVE"), [sprints]);
   const futureSprints = useMemo(() => sprints.filter((s) => s.status === "FUTURE"), [sprints]);
   const backlogIssues = useMemo(
-    () => filteredIssues.filter((i) => !i.sprintId && i.status === "BACKLOG"),
-    [filteredIssues]
+    () => filteredIssues.filter((i) => !i.sprintId && backlogStatusNames.includes(i.status)),
+    [filteredIssues, backlogStatusNames]
   );
 
   const getSprintIssues = (sprintId: string) => {
@@ -360,11 +379,11 @@ export default function BacklogView({
       // Move issues in local state
       setIssues((prev) =>
         prev.map((i) => {
-          if (i.sprintId === completingSprint.id && i.status !== "DONE") {
+          if (i.sprintId === completingSprint.id && !doneStatusNames.includes(i.status)) {
             return {
               ...i,
               sprintId: incompleteMoveTarget || null,
-              status: incompleteMoveTarget ? i.status : "BACKLOG",
+              status: incompleteMoveTarget ? i.status : primaryBacklogStatusName,
             };
           }
           return i;
@@ -392,7 +411,11 @@ export default function BacklogView({
           ? {
               ...i,
               sprintId: targetSprintId,
-              status: targetSprintId ? (i.status === "BACKLOG" ? "TODO" : i.status) : "BACKLOG",
+              status: targetSprintId
+                ? i.status === primaryBacklogStatusName
+                  ? initialStatusName
+                  : i.status
+                : primaryBacklogStatusName,
             }
           : i
       )
@@ -436,10 +459,10 @@ export default function BacklogView({
       prev.map((i) => {
         if (i.id === draggableId) {
           const newStatus = targetSprintId
-            ? i.status === "BACKLOG"
-              ? "TODO"
+            ? i.status === primaryBacklogStatusName
+              ? initialStatusName
               : i.status
-            : "BACKLOG";
+            : primaryBacklogStatusName;
           return {
             ...i,
             sprintId: targetSprintId,
@@ -470,7 +493,7 @@ export default function BacklogView({
       title: inlineTitle.trim(),
       type: inlineType,
       sprintId: sprintId,
-      status: sprintId ? "TODO" : "BACKLOG",
+      status: sprintId ? initialStatusName : primaryBacklogStatusName,
       reporterId: currentUser?.id,
     });
 
@@ -525,7 +548,7 @@ export default function BacklogView({
             const sprintIssues = getSprintIssues(sprint.id);
             const totalPoints = sprintIssues.reduce((sum, i) => sum + (i.storyPoints || 0), 0);
             const donePoints = sprintIssues
-              .filter((i) => i.status === "DONE")
+              .filter((i) => doneStatusNames.includes(i.status))
               .reduce((sum, i) => sum + (i.storyPoints || 0), 0);
             const isCollapsed = collapsedSprints[sprint.id];
 

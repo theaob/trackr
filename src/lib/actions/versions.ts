@@ -11,6 +11,7 @@ import {
   requireProjectPermission,
   toActionError,
 } from "@/lib/auth/guards";
+import { getDoneStatusNames, getStatusCategoryMap } from "@/lib/workflow";
 
 
 export async function getProjectVersions(projectId: string) {
@@ -32,6 +33,8 @@ export async function getProjectVersions(projectId: string) {
       orderBy: [{ releaseDate: "desc" }, { createdAt: "desc" }],
     });
 
+    const categoryByStatus = await getStatusCategoryMap(projectId);
+
     return versions.map((v) => {
       const total = v.issues.length;
       let done = 0;
@@ -44,10 +47,11 @@ export async function getProjectVersions(projectId: string) {
         const pts = issue.storyPoints || 0;
         storyPoints += pts;
 
-        if (issue.status === "DONE") {
+        const category = categoryByStatus.get(issue.status);
+        if (category === "DONE") {
           done++;
           completedStoryPoints += pts;
-        } else if (issue.status === "IN_PROGRESS" || issue.status === "IN_REVIEW") {
+        } else if (category === "IN_PROGRESS") {
           inProgress++;
         } else {
           todo++;
@@ -206,10 +210,11 @@ export async function releaseVersion(
 
     // Move unresolved issues if specified
     if (data.moveUnresolvedToVersionId !== undefined) {
+      const doneNames = await getDoneStatusNames(projectId);
       await prisma.issue.updateMany({
         where: {
           versionId: id,
-          status: { not: "DONE" },
+          status: { notIn: doneNames },
         },
         data: {
           versionId: data.moveUnresolvedToVersionId || null,

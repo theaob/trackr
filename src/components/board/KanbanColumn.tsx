@@ -15,6 +15,7 @@ interface KanbanColumnProps {
   onIssueClick: (issue: Issue) => void;
   showHeader?: boolean;
   minHeightClass?: string;
+  doneStatusNames?: string[];
 }
 
 export default function KanbanColumn({
@@ -26,6 +27,7 @@ export default function KanbanColumn({
   onIssueClick,
   showHeader = true,
   minHeightClass = "min-h-[150px]",
+  doneStatusNames,
 }: KanbanColumnProps) {
   const isOverLimit = wipLimit && issues.length > wipLimit;
   const targetDroppableId = droppableId || id;
@@ -75,6 +77,7 @@ export default function KanbanColumn({
                 issue={issue}
                 index={index}
                 onClick={() => onIssueClick(issue)}
+                doneStatusNames={doneStatusNames}
               />
             ))}
             {provided.placeholder}

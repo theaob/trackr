@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import crypto from "crypto";
+import { seedDefaultWorkflow } from "@/lib/workflow";
 
 const prisma = new PrismaClient();
 
@@ -96,6 +97,7 @@ async function main() {
       leadId: alex.id,
     },
   });
+  await seedDefaultWorkflow(prisma, project.id);
 
   // 3. Create Sprints
   const now = new Date();
@@ -384,6 +386,7 @@ async function main() {
       leadId: david.id,
     },
   });
+  await seedDefaultWorkflow(prisma, voyProject.id);
 
   const voySprint1 = await prisma.sprint.create({
     data: {
@@ -476,6 +479,7 @@ async function main() {
       leadId: elena.id,
     },
   });
+  await seedDefaultWorkflow(prisma, orionProject.id);
 
   const orionSprint1 = await prisma.sprint.create({
     data: {

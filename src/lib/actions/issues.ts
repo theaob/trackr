@@ -16,6 +16,13 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { findMentionedUsers } from "@/lib/mentions";
 import { createIssueWithKey } from "@/lib/issueKeys";
 import { planColumnOrder } from "@/lib/boardOrder";
+import {
+  getBacklogStatusNames,
+  getDoneStatusNames,
+  getInitialStatusName,
+  getWorkflowStatuses,
+  isTransitionAllowed,
+} from "@/lib/workflow";
 
 const USER_SELECT = { select: DISPLAY_USER_SELECT } as const;
 
@@ -109,10 +116,11 @@ export async function getBoardIssues(projectId: string, activeSprintId?: string 
   try {
     await requireProjectAccess(projectId);
 
+    const backlogNames = activeSprintId ? [] : await getBacklogStatusNames(projectId);
     const issues = await prisma.issue.findMany({
       where: activeSprintId
         ? { projectId, sprintId: activeSprintId }
-        : { projectId, sprintId: null, status: { not: "BACKLOG" } },
+        : { projectId, sprintId: null, status: { notIn: backlogNames } },
       include: {
         project: true,
         assignee: USER_SELECT,
@@ -200,6 +208,8 @@ export async function getBacklogIssues(projectId: string) {
   try {
     await requireProjectAccess(projectId);
 
+    const backlogNames = await getBacklogStatusNames(projectId);
+
     // Return issues in sprints (up to 300) + top backlog items (up to 100)
     const [sprintIssues, backlogIssues] = await Promise.all([
       prisma.issue.findMany({
@@ -222,7 +232,7 @@ export async function getBacklogIssues(projectId: string) {
         take: 300,
       }),
       prisma.issue.findMany({
-        where: { projectId, sprintId: null, status: "BACKLOG" },
+        where: { projectId, sprintId: null, status: { in: backlogNames } },
         include: {
           project: true,
           assignee: USER_SELECT,
@@ -383,13 +393,20 @@ export async function getPaginatedIssues(params: PaginatedIssuesParams) {
       }
     }
 
+    // A single project's own "done" names are known; spanning every
+    // accessible project (params.projectId === "ALL") can't express "done in
+    // whichever workflow each issue's project uses" as one equality filter,
+    // so that case falls back to the literal default category name.
+    const singleProjectId = params.projectId && params.projectId !== "ALL" ? params.projectId : null;
+    const doneNames = singleProjectId ? await getDoneStatusNames(singleProjectId) : ["DONE"];
+
     if (params.preset === "MY_OPEN" && user) {
       where.assigneeId = user.id;
-      where.status = { not: "DONE" };
+      where.status = { notIn: doneNames };
     } else if (params.preset === "REPORTED_BY_ME" && user) {
       where.reporterId = user.id;
     } else if (params.preset === "DONE") {
-      where.status = "DONE";
+      where.status = { in: doneNames };
     } else if (params.preset === "HIGH_PRIORITY") {
       where.priority = { in: ["HIGH", "HIGHEST"] };
     }
@@ -492,6 +509,16 @@ export async function createIssue(data: {
     });
     if (related.error) return { success: false, error: related.error };
 
+    let status = data.status;
+    if (status === undefined) {
+      status = await getInitialStatusName(data.projectId);
+    } else {
+      const workflowStatuses = await getWorkflowStatuses(data.projectId);
+      if (!workflowStatuses.some((s) => s.name === status)) {
+        return { success: false, error: `"${status}" is not a status in this project's workflow.` };
+      }
+    }
+
     // The reporter is always the caller: it is an audit field, not an input.
     const reporterId = user.id;
 
@@ -503,7 +530,7 @@ export async function createIssue(data: {
           description: data.description || "",
           type: data.type,
           priority: data.priority || "MEDIUM",
-          status: data.status || "TODO",
+          status,
           storyPoints: data.storyPoints ?? null,
           projectId: data.projectId,
           sprintId: data.sprintId || null,
@@ -678,6 +705,16 @@ export async function updateIssue(
     });
 
     if (!existing) throw new Error("Issue not found");
+
+    if (data.status !== undefined && data.status !== existing.status) {
+      const allowed = await isTransitionAllowed(projectId, existing.status, data.status);
+      if (!allowed) {
+        return {
+          success: false,
+          error: `This project's workflow doesn't allow moving from "${existing.status}" to "${data.status}".`,
+        };
+      }
+    }
 
     const related = await validateIssueRelations(projectId, {
       sprintId: data.sprintId !== existing.sprintId ? data.sprintId : null,
@@ -893,6 +930,16 @@ export async function updateIssueStatusAndOrder(
     }
 
     const statusChanged = existing.status !== newStatus;
+
+    if (statusChanged) {
+      const allowed = await isTransitionAllowed(projectId, existing.status, newStatus);
+      if (!allowed) {
+        return {
+          success: false,
+          error: `This project's workflow doesn't allow moving from "${existing.status}" to "${newStatus}".`,
+        };
+      }
+    }
 
     // Reordering is confined to the project being edited, whatever ids the
     // caller supplies.

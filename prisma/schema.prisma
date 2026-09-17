@@ -46,8 +46,54 @@ model Project {
   versions     Version[]
   customFields CustomField[]
   webhooks     Webhook[]
+  workflowStatuses    WorkflowStatus[]
+  workflowTransitions WorkflowTransition[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+// A project's own set of issue statuses. Issue.status stores the status
+// NAME (a plain string, unchanged) rather than a foreign key: SQLite plus a
+// db-push-only deploy model makes adding a required relational column risky
+// once rows exist, and a name lets an unconfigured project keep using the
+// same "BACKLOG"/"TODO"/... strings it always has. Renaming a status cascades
+// across existing issues in the same transaction instead.
+model WorkflowStatus {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  category  String   // "TODO" | "IN_PROGRESS" | "DONE"
+  // Excluded from the board; lives in the Backlog view instead. Orthogonal to
+  // category -- the default "Backlog" status is category TODO *and* isBacklog.
+  isBacklog Boolean  @default(false)
+  color     String   @default("#6B7280")
+  order     Int      @default(0)
+  wipLimit  Int?
+  transitionsFrom WorkflowTransition[] @relation("TransitionFrom")
+  transitionsTo   WorkflowTransition[] @relation("TransitionTo")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, name])
+  @@index([projectId, order])
+}
+
+// A single allowed "from status -> to status" move. Absence of a row means
+// the move is refused, on every path that changes status (the detail modal,
+// board drag-and-drop, the API), not just the ones with client-side UI for it.
+model WorkflowTransition {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fromId    String
+  from      WorkflowStatus @relation("TransitionFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  toId      String
+  to        WorkflowStatus @relation("TransitionTo", fields: [toId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([fromId, toId])
+  @@index([projectId])
 }
 
 model ProjectMember {

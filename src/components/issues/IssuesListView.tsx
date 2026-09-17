@@ -2,7 +2,8 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Project, Issue, User, Sprint, Version, IssueType, PriorityLevel, IssueStatus } from "@/types";
+import { Project, Issue, User, Sprint, Version, IssueType, PriorityLevel, IssueStatus, WorkflowStatus } from "@/types";
+import { prettifyStatusName } from "@/lib/workflowDisplay";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
 import UserAvatar from "@/components/common/UserAvatar";
 
@@ -49,6 +50,7 @@ interface IssuesListViewProps {
   users: User[];
   sprints: Sprint[];
   versions?: Version[];
+  statuses: WorkflowStatus[];
   initialSelectedIssueKey?: string;
 }
 
@@ -74,6 +76,7 @@ export default function IssuesListView({
   users,
   sprints,
   versions = [],
+  statuses,
   initialSelectedIssueKey,
 }: IssuesListViewProps) {
   const router = useRouter();
@@ -549,11 +552,11 @@ export default function IssuesListView({
             className="text-xs bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-jira-navy font-medium outline-none focus:border-jira-blue"
           >
             <option value="ALL">Status: All</option>
-            <option value="BACKLOG">Backlog</option>
-            <option value="TODO">To Do</option>
-            <option value="IN_PROGRESS">In Progress</option>
-            <option value="IN_REVIEW">In Review</option>
-            <option value="DONE">Done</option>
+            {statuses.map((s) => (
+              <option key={s.id} value={s.name}>
+                {prettifyStatusName(s.name)}
+              </option>
+            ))}
           </select>
 
           {/* Priority Filter */}
@@ -772,11 +775,11 @@ export default function IssuesListView({
                         }
                         className="bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-xs font-bold text-jira-navy focus:border-jira-blue outline-none"
                       >
-                        <option value="BACKLOG">Backlog</option>
-                        <option value="TODO">To Do</option>
-                        <option value="IN_PROGRESS">In Progress</option>
-                        <option value="IN_REVIEW">In Review</option>
-                        <option value="DONE">Done</option>
+                        {statuses.map((s) => (
+                          <option key={s.id} value={s.name}>
+                            {prettifyStatusName(s.name)}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -1007,10 +1010,13 @@ export default function IssuesListView({
                                 return;
                               }
                             }
+                            const currentIsBacklog = statuses.find(
+                              (s) => s.name === selectedIssue.status
+                            )?.isBacklog;
+                            const initialStatusName =
+                              statuses.find((s) => !s.isBacklog)?.name ?? selectedIssue.status;
                             const newStatus =
-                              newSprintId && selectedIssue.status === "BACKLOG"
-                                ? "TODO"
-                                : selectedIssue.status;
+                              newSprintId && currentIsBacklog ? initialStatusName : selectedIssue.status;
                             handleUpdateCurrentIssue({
                               sprintId: newSprintId,
                               status: newStatus,

@@ -7,9 +7,18 @@ A modern, full-stack agile project management and issue tracking platform built 
 ## ✨ Features
 
 - 📋 **Active Kanban Board**:
-  - Drag-and-drop issues across columns (`To Do`, `In Progress`, `In Review`, `Done`).
+  - Drag-and-drop issues across columns (`To Do`, `In Progress`, `In Review`, `Done` by default).
   - Real-time column WIP limits & warning badges.
   - Immediate optimistic drag updates with persistent server synchronization.
+- 🔁 **Custom Workflows, per project**:
+  - Add, rename, reorder, recolor, or delete statuses; the board shows one column per
+    non-backlog status, in the order you set.
+  - Define exactly which status can move to which with a transition matrix, enforced
+    everywhere a status can change (issue view, board drag-and-drop, the REST API) --
+    not just hidden from a dropdown.
+  - Every project starts with the same five statuses as before (`Backlog`, `To Do`,
+    `In Progress`, `In Review`, `Done`), fully interconnected, so nothing changes until
+    an administrator edits it in **Project Settings → Workflow**.
 - 🔀 **Scrum or Kanban, per project**:
   - **Scrum**: plan sprints in the Backlog; the board shows only the active sprint.
   - **Kanban**: no sprints; the board is every issue pulled out of the Backlog, in

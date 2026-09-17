@@ -1,5 +1,6 @@
 import React from "react";
 import { IssueType, PriorityLevel, IssueStatus } from "@/types";
+import { prettifyStatusName } from "@/lib/workflowDisplay";
 import {
   Bookmark,
   CheckSquare,
@@ -202,7 +203,7 @@ export function PriorityIcon({
   }
 }
 
-export function StatusBadge({ status }: { status: IssueStatus }) {
+export function StatusBadge({ status, color }: { status: IssueStatus; color?: string }) {
   const getBadgeStyle = () => {
     switch (status) {
       case "BACKLOG":
@@ -216,7 +217,9 @@ export function StatusBadge({ status }: { status: IssueStatus }) {
       case "DONE":
         return "bg-emerald-50 text-emerald-700 border-emerald-200 font-semibold";
       default:
-        return "bg-gray-100 text-gray-700 border-gray-200";
+        // A custom status with no known styling: generic unless a workflow
+        // color was supplied, in which case inline styles below take over.
+        return "bg-gray-100 text-gray-700 border-gray-200 font-semibold";
     }
   };
 
@@ -233,13 +236,22 @@ export function StatusBadge({ status }: { status: IssueStatus }) {
       case "DONE":
         return "DONE";
       default:
-        return status;
+        return prettifyStatusName(status).toUpperCase();
     }
   };
 
+  // A workflow color overrides the built-in palette (used for custom
+  // statuses, and for the original five once someone recolors them).
+  const customStyle = color
+    ? { backgroundColor: `${color}1A`, color, borderColor: `${color}66` }
+    : undefined;
+
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] uppercase tracking-wider border ${getBadgeStyle()}`}
+      style={customStyle}
+      className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] uppercase tracking-wider border ${
+        customStyle ? "" : getBadgeStyle()
+      }`}
     >
       {getLabel()}
     </span>

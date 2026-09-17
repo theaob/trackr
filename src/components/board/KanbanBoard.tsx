@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
-import { Project, Issue, User, IssueStatus, IssueType, PriorityLevel, Sprint } from "@/types";
+import { Project, Issue, User, IssueStatus, IssueType, PriorityLevel, Sprint, WorkflowStatus, WorkflowTransition } from "@/types";
 import KanbanColumn from "./KanbanColumn";
 import BoardFilters, { SwimlaneGroupBy } from "./BoardFilters";
 import IssueDetailModal from "@/components/issues/IssueDetailModal";
@@ -13,6 +13,7 @@ import { updateIssueStatusAndOrder, getIssueByKeyOrId } from "@/lib/actions/issu
 import { useCurrentUser } from "@/context/UserContext";
 import { useSearch } from "@/context/SearchContext";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
+import { prettifyStatusName } from "@/lib/workflowDisplay";
 import { ChevronDown, ChevronRight, Layers, User as UserIcon, Bookmark, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
@@ -21,16 +22,12 @@ interface KanbanBoardProps {
   initialIssues: Issue[];
   users: User[];
   sprints: Sprint[];
+  /** The project's non-backlog workflow statuses, in column order. */
+  statuses: WorkflowStatus[];
+  transitions: WorkflowTransition[];
   searchQuery?: string;
   initialSelectedIssueKey?: string;
 }
-
-const COLUMNS: { id: IssueStatus; title: string; wipLimit?: number }[] = [
-  { id: "TODO", title: "To Do" },
-  { id: "IN_PROGRESS", title: "In Progress", wipLimit: 4 },
-  { id: "IN_REVIEW", title: "In Review", wipLimit: 3 },
-  { id: "DONE", title: "Done" },
-];
 
 interface Swimlane {
   id: string;
@@ -45,6 +42,8 @@ export default function KanbanBoard({
   initialIssues,
   users,
   sprints,
+  statuses,
+  transitions,
   searchQuery: propSearchQuery,
   initialSelectedIssueKey,
 }: KanbanBoardProps) {
@@ -52,6 +51,19 @@ export default function KanbanBoard({
   const searchParams = useSearchParams();
   const selectedIssueKey =
     searchParams?.get("selectedIssue") || searchParams?.get("issue") || initialSelectedIssueKey;
+
+  // Board columns: the project's own workflow statuses, in the order it
+  // configured, rather than a fixed list.
+  const COLUMNS = useMemo(
+    () =>
+      statuses.map((s) => ({
+        id: s.name,
+        title: prettifyStatusName(s.name),
+        wipLimit: s.wipLimit ?? undefined,
+        color: s.color,
+      })),
+    [statuses]
+  );
 
   const { currentUser } = useCurrentUser();
   const permissions = useProjectPermissions(project);
@@ -167,6 +179,12 @@ export default function KanbanBoard({
     onlyMyIssues ||
     searchQuery.trim().length > 0;
 
+  const boardStatusNames = useMemo(() => new Set(COLUMNS.map((c) => c.id)), [COLUMNS]);
+  const doneStatusNames = useMemo(
+    () => statuses.filter((s) => s.category === "DONE").map((s) => s.name),
+    [statuses]
+  );
+
   // Filter Issues
   const filteredIssues = useMemo(() => {
     return issues.filter((issue) => {
@@ -174,7 +192,7 @@ export default function KanbanBoard({
       if (activeSprint) {
         if (issue.sprintId !== activeSprint.id) return false;
       } else {
-        if (issue.status === "BACKLOG") return false;
+        if (!boardStatusNames.has(issue.status)) return false;
       }
 
       // Search Query
@@ -218,6 +236,7 @@ export default function KanbanBoard({
     selectedAssigneeIds,
     selectedType,
     selectedPriority,
+    boardStatusNames,
   ]);
 
   // Epics list for parent selectors and swimlanes
@@ -495,6 +514,7 @@ export default function KanbanBoard({
                   wipLimit={col.wipLimit}
                   issues={getCellIssues("ALL", col.id)}
                   onIssueClick={(issue) => setActiveIssue(issue)}
+                  doneStatusNames={doneStatusNames}
                 />
               ))}
             </div>
@@ -627,6 +647,7 @@ export default function KanbanBoard({
                             minHeightClass="min-h-[110px]"
                             issues={getCellIssues(lane.id, col.id)}
                             onIssueClick={(issue) => setActiveIssue(issue)}
+                            doneStatusNames={doneStatusNames}
                           />
                         ))}
                       </div>

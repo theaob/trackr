@@ -275,3 +275,11 @@ export async function projectIdForComment(commentId: string): Promise<string> {
   });
   return projectIdOf(comment?.issue ?? null, "Comment");
 }
+
+export async function projectIdForWorkflowStatus(statusId: string): Promise<string> {
+  const status = await prisma.workflowStatus.findUnique({
+    where: { id: statusId },
+    select: { projectId: true },
+  });
+  return projectIdOf(status, "Workflow status");
+}

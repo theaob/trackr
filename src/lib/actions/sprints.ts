@@ -10,6 +10,7 @@ import {
   requireProjectPermission,
   toActionError,
 } from "@/lib/auth/guards";
+import { getDoneStatusNames, getInitialStatusName, getPrimaryBacklogStatusName } from "@/lib/workflow";
 
 
 /** Sprint issues per sprint, bounded so a large backlog cannot be loaded whole. */
@@ -150,6 +151,11 @@ export async function completeSprint(sprintId: string, moveToSprintId?: string |
       }
     }
 
+    const [doneNames, backlogStatusName] = await Promise.all([
+      getDoneStatusNames(projectId),
+      moveToSprintId ? Promise.resolve(null) : getPrimaryBacklogStatusName(projectId),
+    ]);
+
     // Closing the sprint and rolling its issues over is one unit of work: a
     // failure partway through must not leave a closed sprint holding open
     // issues.
@@ -159,12 +165,12 @@ export async function completeSprint(sprintId: string, moveToSprintId?: string |
         data: { status: "COMPLETED" },
       }),
       prisma.issue.updateMany({
-        where: { sprintId, status: { not: "DONE" } },
+        where: { sprintId, status: { notIn: doneNames } },
         data: moveToSprintId
           ? { sprintId: moveToSprintId }
           : // Back to the backlog, which means the backlog status too --
             // otherwise the issues reappear on the board with no sprint.
-            { sprintId: null, status: "BACKLOG" },
+            { sprintId: null, status: backlogStatusName! },
       }),
     ]);
 
@@ -205,11 +211,12 @@ export async function moveIssueToSprint(issueId: string, sprintId: string | null
       }
     }
 
+    const backlogStatusName = await getPrimaryBacklogStatusName(issue.projectId);
     const newStatus = sprintId
-      ? issue.status === "BACKLOG"
-        ? "TODO"
+      ? issue.status === backlogStatusName
+        ? await getInitialStatusName(issue.projectId)
         : issue.status
-      : "BACKLOG";
+      : backlogStatusName;
 
     await prisma.issue.update({
       where: { id: issueId },
@@ -263,7 +270,8 @@ export async function renameSprint(sprintId: string, name: string) {
 
 export async function deleteSprint(sprintId: string) {
   try {
-    await requireProjectPermission(await projectIdForSprint(sprintId), "MANAGE_SPRINTS");
+    const projectId = await projectIdForSprint(sprintId);
+    await requireProjectPermission(projectId, "MANAGE_SPRINTS");
 
     const sprint = await prisma.sprint.findUnique({
       where: { id: sprintId },
@@ -275,11 +283,13 @@ export async function deleteSprint(sprintId: string) {
       return { success: false, error: "Cannot delete an active sprint. Complete it first." };
     }
 
+    const backlogStatusName = await getPrimaryBacklogStatusName(projectId);
+
     // Return the sprint's issues to the backlog, then remove it, as one unit.
     await prisma.$transaction([
       prisma.issue.updateMany({
         where: { sprintId },
-        data: { sprintId: null, status: "BACKLOG" },
+        data: { sprintId: null, status: backlogStatusName },
       }),
       prisma.sprint.delete({ where: { id: sprintId } }),
     ]);
