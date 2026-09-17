@@ -20,6 +20,12 @@ services:
       # Set to 1 to boot a fresh instance with seeded demo data instead of an
       # empty database + setup wizard. Ignored once a database already exists.
       - TRACKR_SEED_DEMO=${TRACKR_SEED_DEMO:-0}
+      # Set to 1 only if a reverse proxy in front of this container terminates
+      # HTTPS and forwards X-Forwarded-Proto: https. Leave at 0 for this
+      # compose file's default of exposing port 3000 directly over HTTP --
+      # enabling it without a proxy breaks sign-in (the session cookie would
+      # be marked Secure and get dropped over plain HTTP).
+      - TRACKR_TRUST_PROXY=${TRACKR_TRUST_PROXY:-0}
     volumes:
       - trackr_data:/app/data
 

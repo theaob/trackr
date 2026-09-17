@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { cache } from "react";
 import prisma from "@/lib/db";
 import { dataDir } from "@/lib/paths";
@@ -119,12 +119,33 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
   }
 });
 
+/**
+ * Whether this request reached us over HTTPS, so the session cookie can be
+ * marked Secure without breaking sign-in.
+ *
+ * NODE_ENV alone is the wrong signal: a self-hosted production deployment
+ * commonly serves plain HTTP directly (`docker run -p 3000:3000`, no
+ * certificate) or has TLS terminated by a reverse proxy in front of it. A
+ * cookie marked Secure is silently dropped by the browser on any non-HTTPS
+ * origin other than localhost, which looks like sign-in "not sticking" --
+ * every request after it comes back anonymous. TRACKR_TRUST_PROXY opts into
+ * trusting X-Forwarded-Proto from a reverse proxy that terminates TLS.
+ */
+function isSecureRequest(): boolean {
+  if (process.env.TRACKR_TRUST_PROXY !== "1") return false;
+  try {
+    return headers().get("x-forwarded-proto") === "https";
+  } catch {
+    return false;
+  }
+}
+
 /** Issue a session cookie. Only valid inside a server action or route handler. */
 export function startSession(userId: string) {
   cookies().set(SESSION_COOKIE, createToken(userId), {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecureRequest(),
     path: "/",
     maxAge: SESSION_MAX_AGE_SECONDS,
   });
@@ -135,7 +156,7 @@ export function endSession() {
   cookies().set(SESSION_COOKIE, "", {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecureRequest(),
     path: "/",
     maxAge: 0,
   });

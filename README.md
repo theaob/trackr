@@ -95,6 +95,7 @@ npm start
 | `AUTH_SECRET` | generated | Signs session cookies; 32+ characters. Generate with `openssl rand -hex 32`. When unset, a random secret is written to `<data dir>/.session-secret` on first use, so sessions survive restarts but not a new volume. |
 | `TRACKR_DATA_DIR` | `./data` | Where avatars and the generated session secret live. |
 | `TRACKR_ALLOW_PRIVATE_WEBHOOKS` | `0` | Set to `1` to let webhooks target loopback, link-local and private addresses. Off by default so a webhook cannot be pointed at internal services. The bundled `/api/mock-webhook-receiver` is on localhost, so trying it out needs this set. |
+| `TRACKR_TRUST_PROXY` | `0` | Set to `1` only when a reverse proxy in front of Trackr terminates HTTPS and forwards `X-Forwarded-Proto: https`. This marks the session cookie `Secure`, which browsers require for HTTPS but silently reject on plain HTTP from anywhere but `localhost`. Leave unset for a direct `http://` deployment (e.g. `docker run -p 3000:3000` with no proxy) — enabling it there breaks sign-in. |
 | `TRACKR_SEED_PASSWORD` | `trackr-demo` | Password given to the demo accounts by `db:seed`. |
 | `TRACKR_SEED_DEMO` | `0` | Docker only. Set to `1` to boot a fresh container from the seeded demo dataset instead of an empty database + setup wizard. Ignored once a database already exists. |
 
