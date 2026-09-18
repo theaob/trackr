@@ -24,7 +24,7 @@ export function UserProvider({
   sessionUser = null,
   initialUsers = [],
 }: {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   sessionUser?: User | null;
   initialUsers?: User[];
 }) {

@@ -52,7 +52,10 @@ describe("ProjectsDirectoryView Project Cards", () => {
     const html = renderToStaticMarkup(
       React.createElement(
         UserProvider,
-        { sessionUser: mockUser, initialUsers: [mockUser] },
+        {
+          sessionUser: mockUser,
+          initialUsers: [mockUser],
+        },
         React.createElement(ProjectsDirectoryView, {
           initialProjects: mockProjects,
           users: [mockUser],
