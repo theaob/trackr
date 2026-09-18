@@ -19,7 +19,6 @@ import {
   Building2,
   RefreshCw,
   Loader2,
-  ExternalLink,
 } from "lucide-react";
 
 interface AuthModalProps {
@@ -37,7 +36,7 @@ export default function AuthModal({
   dismissible = true,
 }: AuthModalProps) {
   const { setCurrentUser, setUsers, users } = useCurrentUser();
-  const [activeTab, setActiveTab] = useState<"login" | "register" | "sso">("login");
+  const [activeTab, setActiveTab] = useState<"login" | "register">("login");
 
   // Form State
   const [email, setEmail] = useState("");
@@ -174,18 +173,6 @@ export default function AuthModal({
           >
             <UserPlus className="w-3.5 h-3.5" />
             <span>Hesap Oluştur</span>
-          </button>
-
-          <button
-            onClick={() => { setActiveTab("sso"); setError(null); }}
-            className={`pb-3 text-xs font-semibold px-3 border-b-2 flex items-center gap-1.5 transition-colors ${
-              activeTab === "sso"
-                ? "border-jira-blue text-jira-blue"
-                : "border-transparent text-jira-gray-600 hover:text-jira-navy"
-            }`}
-          >
-            <Building2 className="w-3.5 h-3.5" />
-            <span>SSO Entegrasyonu</span>
           </button>
         </div>
 
@@ -341,61 +328,6 @@ export default function AuthModal({
                 <span>Bağımsız Kullanıcı Hesabı Oluştur</span>
               </button>
             </form>
-          )}
-
-          {/* TAB 3: SSO IDENTITY PROVIDER STATUS */}
-          {activeTab === "sso" && (
-            <div className="space-y-4 text-xs">
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-jira-navy">SSO Sağlayıcısı:</span>
-                  <span className="font-semibold text-jira-blue">
-                    {ssoConfig?.providerName || "Yapılandırılmadı"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-jira-navy">Durum:</span>
-                  {ssoConfig?.enabled ? (
-                    <span className="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-[10px]">
-                      <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                      ETKİN
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 text-[10px]">
-                      <AlertCircle className="w-3 h-3 text-amber-700" />
-                      DEVRE DIŞI
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="border border-jira-gray-200 rounded-lg p-3 bg-white space-y-3">
-                <p className="text-jira-gray-600 text-[11px] leading-relaxed">
-                  SSO oturumu kimlik sağlayıcınız (IdP) tarafından imzalanan bir ID
-                  token ile açılır. Trackr yalnızca imzası, issuer, audience, süre ve
-                  nonce değerleri doğrulanan tokenları kabul eder; bu ekrandan kimlik
-                  bildirilemez.
-                </p>
-
-                {ssoConfig?.enabled ? (
-                  <button
-                    type="button"
-                    onClick={handleSsoLogin}
-                    disabled={loading}
-                    className="w-full py-2 bg-jira-navy hover:bg-jira-navy/90 text-white text-xs font-semibold rounded-md flex items-center justify-center gap-2 border border-jira-navy transition-colors"
-                  >
-                    <ExternalLink className="w-4 h-4 text-emerald-400" />
-                    <span>Kimlik Sağlayıcıya Yönlendir</span>
-                  </button>
-                ) : (
-                  <p className="text-[11px] text-jira-gray-500">
-                    Yönetici, Proje Ayarları &rarr; SSO sekmesinden issuer, client id ve
-                    X.509 sertifikası (veya client secret) tanımladığında bu seçenek
-                    etkinleşir.
-                  </p>
-                )}
-              </div>
-            </div>
           )}
         </div>
       </div>
