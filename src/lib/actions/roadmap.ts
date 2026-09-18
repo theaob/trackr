@@ -37,13 +37,35 @@ export async function getEpicRoadmap(projectId: string) {
 
     const children = await prisma.issue.findMany({
       where: { parentId: { in: epics.map((e) => e.id) } },
-      select: { parentId: true, status: true, storyPoints: true },
+      select: {
+        id: true,
+        key: true,
+        title: true,
+        type: true,
+        status: true,
+        priority: true,
+        storyPoints: true,
+        startDate: true,
+        dueDate: true,
+        parentId: true,
+        assignee: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+            role: true,
+          },
+        },
+      },
+      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
     });
 
     const rollupByEpic = new Map<
       string,
       { totalCount: number; completedCount: number; totalPoints: number; completedPoints: number }
     >();
+    const childrenByEpic = new Map<string, any[]>();
+
     for (const child of children) {
       const epicId = child.parentId!;
       const rollup = rollupByEpic.get(epicId) ?? {
@@ -61,6 +83,15 @@ export async function getEpicRoadmap(projectId: string) {
         rollup.completedPoints += points;
       }
       rollupByEpic.set(epicId, rollup);
+
+      if (!childrenByEpic.has(epicId)) {
+        childrenByEpic.set(epicId, []);
+      }
+      childrenByEpic.get(epicId)!.push({
+        ...child,
+        statusColor: colorByStatus.get(child.status) ?? "#6B7280",
+        isDone,
+      });
     }
 
     return epics.map((epic) => {
@@ -79,6 +110,7 @@ export async function getEpicRoadmap(projectId: string) {
         isDone: doneNames.includes(epic.status),
         startDate: epic.startDate,
         dueDate: epic.dueDate,
+        children: childrenByEpic.get(epic.id) ?? [],
         ...rollup,
       };
     });

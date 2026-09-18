@@ -32,6 +32,8 @@ import {
   Trash2,
   X,
   CalendarClock,
+  Bookmark,
+  ExternalLink,
 } from "lucide-react";
 import { isOverdue } from "@/lib/dueDate";
 import { format } from "date-fns";
@@ -68,12 +70,28 @@ export default function BacklogView({
   const [issues, setIssues] = useState<Issue[]>(initialIssues);
   const [sprints, setSprints] = useState<Sprint[]>(initialSprints);
   const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
+  const [selectedEpicId, setSelectedEpicId] = useState<string>("ALL");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
     issue: Issue;
   } | null>(null);
+
+  const handleOpenEpic = (epicIdOrKey: string) => {
+    const found = issues.find(
+      (i) => i.id === epicIdOrKey || i.key.toUpperCase() === epicIdOrKey.toUpperCase()
+    );
+    if (found) {
+      setActiveIssue(found);
+    } else {
+      getIssueByKeyOrId(epicIdOrKey).then((fetched) => {
+        if (fetched) {
+          setActiveIssue(fetched as unknown as Issue);
+        }
+      });
+    }
+  };
 
   const handleContextMenu = (e: React.MouseEvent, issue: Issue) => {
     e.preventDefault();
@@ -286,12 +304,21 @@ export default function BacklogView({
 
   // Filtered issues
   const filteredIssues = useMemo(() => {
-    if (!searchQuery.trim()) return issues;
-    const q = searchQuery.toLowerCase();
-    return issues.filter(
-      (i) => i.key.toLowerCase().includes(q) || i.title.toLowerCase().includes(q)
-    );
-  }, [issues, searchQuery]);
+    return issues.filter((i) => {
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        if (!i.key.toLowerCase().includes(q) && !i.title.toLowerCase().includes(q)) {
+          return false;
+        }
+      }
+      if (selectedEpicId !== "ALL") {
+        if (i.parentId !== selectedEpicId && i.id !== selectedEpicId) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [issues, searchQuery, selectedEpicId]);
 
   // Kanban has no sprint planning: just the flat Backlog list below.
   const isKanban = project.boardType === "KANBAN";
@@ -514,7 +541,7 @@ export default function BacklogView({
   return (
     <div className="flex-1 flex flex-col h-full overflow-y-auto px-6 py-5 bg-white">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-jira-gray-200 shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-jira-gray-200 gap-3 shrink-0">
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-xl font-bold text-jira-navy tracking-tight">Backlog</h1>
@@ -531,8 +558,37 @@ export default function BacklogView({
           </p>
         </div>
 
-        {!isKanban && permissions.canManageSprints && (
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          {epics.length > 0 && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="text-jira-gray-500 font-medium">Epic:</span>
+              <select
+                value={selectedEpicId}
+                onChange={(e) => setSelectedEpicId(e.target.value)}
+                className="bg-jira-gray-100 hover:bg-jira-gray-200 border border-jira-gray-300 rounded px-2.5 py-1 text-xs text-jira-navy font-semibold outline-none focus:border-jira-blue transition-colors max-w-[160px] truncate"
+              >
+                <option value="ALL">All Epics</option>
+                {epics.map((epic) => (
+                  <option key={epic.id} value={epic.id}>
+                    {epic.key}: {epic.title}
+                  </option>
+                ))}
+              </select>
+              {selectedEpicId !== "ALL" && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenEpic(selectedEpicId)}
+                  className="text-xs text-purple-700 hover:text-purple-900 font-semibold hover:underline flex items-center gap-1"
+                  title="View epic details and linked issues"
+                >
+                  <span>View</span>
+                  <ExternalLink className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          )}
+
+          {!isKanban && permissions.canManageSprints && (
             <button
               onClick={handleCreateSprint}
               className="bg-jira-gray-100 hover:bg-jira-gray-200 text-jira-navy text-xs font-semibold px-3 py-1.5 rounded border border-jira-gray-300 flex items-center gap-1.5 transition-colors"
@@ -540,8 +596,8 @@ export default function BacklogView({
               <Plus className="w-3.5 h-3.5" />
               <span>Create Sprint</span>
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Sprints & Backlog Drag-and-Drop Container */}
@@ -739,9 +795,17 @@ export default function BacklogView({
                                     {issue.title}
                                   </span>
                                   {issue.parent && (
-                                    <span className="text-[10px] bg-purple-100 text-purple-800 font-semibold px-1.5 py-0.5 rounded shrink-0 max-w-[150px] truncate">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleOpenEpic(issue.parent!.id);
+                                      }}
+                                      className="text-[10px] bg-purple-100 text-purple-800 hover:bg-purple-200 font-semibold px-1.5 py-0.5 rounded shrink-0 max-w-[150px] truncate transition-colors text-left"
+                                      title={`Epic: ${issue.parent.title} (${issue.parent.key})`}
+                                    >
                                       {issue.parent.title}
-                                    </span>
+                                    </button>
                                   )}
                                   {issue.labels && issue.labels.length > 0 && (
                                     <div className="flex items-center gap-1 shrink-0">
@@ -917,9 +981,17 @@ export default function BacklogView({
                               {issue.title}
                             </span>
                             {issue.parent && (
-                              <span className="text-[10px] bg-purple-100 text-purple-800 font-semibold px-1.5 py-0.5 rounded shrink-0 max-w-[150px] truncate">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenEpic(issue.parent!.id);
+                                }}
+                                className="text-[10px] bg-purple-100 text-purple-800 hover:bg-purple-200 font-semibold px-1.5 py-0.5 rounded shrink-0 max-w-[150px] truncate transition-colors text-left"
+                                title={`Epic: ${issue.parent.title} (${issue.parent.key})`}
+                              >
                                 {issue.parent.title}
-                              </span>
+                              </button>
                             )}
                             {issue.labels && issue.labels.length > 0 && (
                               <div className="flex items-center gap-1 shrink-0">

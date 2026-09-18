@@ -463,6 +463,21 @@ export default function KanbanBoard({
     setCollapsedLanes((prev) => ({ ...prev, [laneId]: !prev[laneId] }));
   };
 
+  const handleOpenEpic = (epicIdOrKey: string) => {
+    const found = issues.find(
+      (i) => i.id === epicIdOrKey || i.key.toUpperCase() === epicIdOrKey.toUpperCase()
+    );
+    if (found) {
+      setActiveIssue(found);
+    } else {
+      getIssueByKeyOrId(epicIdOrKey).then((fetched) => {
+        if (fetched) {
+          setActiveIssue(fetched as unknown as Issue);
+        }
+      });
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden px-6 pt-5 bg-white">
       {/* Board Header & Sprint Info */}
@@ -539,12 +554,12 @@ export default function KanbanBoard({
           onSelectType={setSelectedType}
           selectedPriority={selectedPriority}
           onSelectPriority={setSelectedPriority}
+          groupBy={groupBy}
+          onSelectGroupBy={setGroupBy}
           onlyMyIssues={onlyMyIssues}
           onToggleOnlyMyIssues={() => setOnlyMyIssues(!onlyMyIssues)}
           onClearFilters={handleClearFilters}
           hasActiveFilters={hasActiveFilters}
-          groupBy={groupBy}
-          onSelectGroupBy={setGroupBy}
         />
       </div>
 
@@ -563,6 +578,7 @@ export default function KanbanBoard({
                   issues={getCellIssues("ALL", col.id)}
                   onIssueClick={(issue) => setActiveIssue(issue)}
                   doneStatusNames={doneStatusNames}
+                  onSelectEpic={handleOpenEpic}
                 />
               ))}
             </div>
@@ -650,7 +666,18 @@ export default function KanbanBoard({
                         )}
 
                         {groupBy === "EPIC" && (
-                          <div className="flex items-center gap-2">
+                          <div
+                            onClick={(e) => {
+                              if (lane.id !== "NO_EPIC") {
+                                e.stopPropagation();
+                                handleOpenEpic(lane.id);
+                              }
+                            }}
+                            className={`flex items-center gap-2 ${
+                              lane.id !== "NO_EPIC" ? "cursor-pointer hover:underline" : ""
+                            }`}
+                            title={lane.id !== "NO_EPIC" ? "Click to view Epic details" : undefined}
+                          >
                             <Bookmark className="w-4 h-4 text-purple-600 fill-purple-100" />
                             <span className="text-xs font-bold text-jira-navy">
                               {lane.title}
@@ -696,6 +723,7 @@ export default function KanbanBoard({
                             issues={getCellIssues(lane.id, col.id)}
                             onIssueClick={(issue) => setActiveIssue(issue)}
                             doneStatusNames={doneStatusNames}
+                            onSelectEpic={handleOpenEpic}
                           />
                         ))}
                       </div>

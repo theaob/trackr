@@ -129,6 +129,51 @@ export async function getProjectEpics(projectId: string) {
   }
 }
 
+/**
+ * Find candidate issues in the project that can be linked to an epic.
+ */
+export async function searchProjectIssuesForEpic(projectId: string, epicId: string, query: string) {
+  try {
+    await requireProjectAccess(projectId);
+    const trimmed = query.trim();
+    if (!trimmed) return [];
+
+    return await prisma.issue.findMany({
+      where: {
+        projectId,
+        id: { not: epicId },
+        type: { not: "EPIC" },
+        OR: [
+          { parentId: null },
+          { parentId: { not: epicId } },
+        ],
+        AND: [
+          {
+            OR: [
+              { key: { contains: trimmed } },
+              { title: { contains: trimmed } },
+            ],
+          },
+        ],
+      },
+      select: {
+        id: true,
+        key: true,
+        title: true,
+        type: true,
+        status: true,
+        priority: true,
+        storyPoints: true,
+        assignee: USER_SELECT,
+      },
+      take: 10,
+    });
+  } catch (error) {
+    console.error("Failed to search issues for epic:", error);
+    return [];
+  }
+}
+
 export async function getBoardIssues(projectId: string, activeSprintId?: string | null) {
   try {
     await requireProjectAccess(projectId);

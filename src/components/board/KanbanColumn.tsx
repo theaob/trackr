@@ -16,6 +16,7 @@ interface KanbanColumnProps {
   showHeader?: boolean;
   minHeightClass?: string;
   doneStatusNames?: string[];
+  onSelectEpic?: (epicIdOrKey: string) => void;
 }
 
 export default function KanbanColumn({
@@ -28,6 +29,7 @@ export default function KanbanColumn({
   showHeader = true,
   minHeightClass = "min-h-[150px]",
   doneStatusNames,
+  onSelectEpic,
 }: KanbanColumnProps) {
   const isOverLimit = wipLimit && issues.length > wipLimit;
   const targetDroppableId = droppableId || id;
@@ -78,6 +80,7 @@ export default function KanbanColumn({
                 index={index}
                 onClick={() => onIssueClick(issue)}
                 doneStatusNames={doneStatusNames}
+                onSelectEpic={onSelectEpic}
               />
             ))}
             {provided.placeholder}

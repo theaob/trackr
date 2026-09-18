@@ -5,10 +5,12 @@ import { Issue, IssueStatus, IssueType, PriorityLevel, User, Sprint, Version, Cu
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
 import UserAvatar from "@/components/common/UserAvatar";
 import IssueLinksSection from "@/components/issues/IssueLinksSection";
+import ChildIssuesSection from "@/components/issues/ChildIssuesSection";
 import LabelsSection from "@/components/issues/LabelsSection";
 import AttachmentsSection from "@/components/issues/AttachmentsSection";
 import ComponentsField from "@/components/issues/ComponentsField";
 import TimeTrackingField from "@/components/issues/TimeTrackingField";
+import IssueDescriptionEditor from "@/components/issues/IssueDescriptionEditor";
 
 import { useCurrentUser } from "@/context/UserContext";
 import { updateIssue, deleteIssue, getIssueByKeyOrId } from "@/lib/actions/issues";
@@ -46,6 +48,8 @@ import {
   EyeOff,
   Loader2,
   AlertCircle,
+  Bookmark,
+  ArrowLeft,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 
@@ -94,7 +98,7 @@ export default function IssueDetailModal({
   const [description, setDescription] = useState(issue?.description || "");
   const [newComment, setNewComment] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-  const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+  const [navHistory, setNavHistory] = useState<Issue[]>([]);
   const [activeTab, setActiveTab] = useState<"comments" | "history">("comments");
   const [isDeleting, setIsDeleting] = useState(false);
   const [modalPasteUploading, setModalPasteUploading] = useState(false);
@@ -116,8 +120,9 @@ export default function IssueDetailModal({
     setCurrentIssue(issue);
     setTitle(issue?.title || "");
     setDescription(issue?.description || "");
+    setNavHistory([]);
 
-    if (issue?.id && (!issue.comments || !issue.activityLogs)) {
+    if (issue?.id) {
       getIssueByKeyOrId(issue.id).then((full) => {
         if (full) {
           setCurrentIssue(full as unknown as Issue);
@@ -125,6 +130,13 @@ export default function IssueDetailModal({
       });
     }
   }, [issue]);
+
+  useEffect(() => {
+    if (currentIssue) {
+      setTitle(currentIssue.title || "");
+      setDescription(currentIssue.description || "");
+    }
+  }, [currentIssue?.id, currentIssue?.title, currentIssue?.description]);
 
   // Load custom fields & values for this issue
   useEffect(() => {
@@ -655,6 +667,59 @@ export default function IssueDetailModal({
     onIssueUpdated(updatedIssue);
   };
 
+  // Handle Child Issues
+  const handleChildAdded = (newChild: Issue) => {
+    const updatedChildren = [...(currentIssue.children || []), newChild];
+    const updated = { ...currentIssue, children: updatedChildren };
+    setCurrentIssue(updated);
+    onIssueUpdated(updated);
+  };
+
+  const handleChildRemoved = (childId: string) => {
+    const updatedChildren = (currentIssue.children || []).filter((c: any) => c.id !== childId);
+    const updated = { ...currentIssue, children: updatedChildren };
+    setCurrentIssue(updated);
+    onIssueUpdated(updated);
+  };
+
+  const handleOpenChild = async (childKeyOrId: string) => {
+    setNavHistory((prev) => [...prev, currentIssue]);
+    const fetched = await getIssueByKeyOrId(childKeyOrId);
+    if (fetched) {
+      setCurrentIssue(fetched as unknown as Issue);
+      try {
+        window.dispatchEvent(
+          new CustomEvent("jira:open-issue", { detail: { issueKey: fetched.key } })
+        );
+      } catch {}
+    }
+  };
+
+  const handleOpenParent = async (parentKeyOrId: string) => {
+    setNavHistory((prev) => [...prev, currentIssue]);
+    const fetched = await getIssueByKeyOrId(parentKeyOrId);
+    if (fetched) {
+      setCurrentIssue(fetched as unknown as Issue);
+      try {
+        window.dispatchEvent(
+          new CustomEvent("jira:open-issue", { detail: { issueKey: fetched.key } })
+        );
+      } catch {}
+    }
+  };
+
+  const handleBackToPrevious = () => {
+    if (navHistory.length === 0) return;
+    const prevIssue = navHistory[navHistory.length - 1];
+    setNavHistory((prev) => prev.slice(0, -1));
+    setCurrentIssue(prevIssue);
+    try {
+      window.dispatchEvent(
+        new CustomEvent("jira:open-issue", { detail: { issueKey: prevIssue.key } })
+      );
+    } catch {}
+  };
+
   // Handle Delete Issue
   const handleDeleteIssue = async () => {
     if (!window.confirm(`Are you sure you want to delete ${currentIssue.key}?`)) return;
@@ -672,7 +737,33 @@ export default function IssueDetailModal({
       <div className="bg-white w-full max-w-4xl rounded-lg shadow-2xl border border-jira-gray-300 flex flex-col max-h-[90vh] overflow-hidden">
         {/* Header Bar */}
         <div className="flex items-center justify-between px-6 py-3 border-b border-jira-gray-200 bg-jira-gray-50 shrink-0">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 min-w-0">
+            {navHistory.length > 0 && (
+              <button
+                type="button"
+                onClick={handleBackToPrevious}
+                className="p-1 -ml-1 text-jira-gray-500 hover:text-jira-navy hover:bg-jira-gray-200 rounded transition-colors"
+                title="Back to previous issue"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            )}
+
+            {currentIssue.parent && (
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleOpenParent(currentIssue.parent!.id)}
+                  className="flex items-center gap-1 text-xs font-semibold text-purple-700 bg-purple-100 hover:bg-purple-200 px-2 py-0.5 rounded transition-colors max-w-[200px] truncate"
+                  title={`Parent Epic: ${currentIssue.parent.title} (${currentIssue.parent.key})`}
+                >
+                  <Bookmark className="w-3 h-3 text-purple-700 fill-purple-700 shrink-0" />
+                  <span className="truncate">{currentIssue.parent.title}</span>
+                </button>
+                <span className="text-jira-gray-400 text-xs">/</span>
+              </div>
+            )}
+
             <IssueTypeBadge type={currentIssue.type} size="sm" showLabel />
             <span className="text-sm font-bold text-jira-gray-700">{currentIssue.key}</span>
           </div>
@@ -752,60 +843,31 @@ export default function IssueDetailModal({
             </div>
 
             {/* Description */}
-            <div>
-              <h3 className="text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-2">
-                Description
-              </h3>
-              {isEditingDesc ? (
-                <div className="space-y-2">
-                  <MentionInput
-                    value={description}
-                    onChange={setDescription}
-                    users={users}
-                    rows={5}
-                    placeholder="Add details, steps, or acceptance criteria... (Type @ to mention, paste images directly)"
-                    onImagePaste={handleImagePaste}
-                    className="w-full text-sm text-jira-navy p-3 border-2 border-jira-blue rounded-md outline-none leading-relaxed"
-                  />
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleSaveDescription}
-                      className="px-3 py-1.5 bg-jira-blue text-white rounded text-xs font-semibold hover:bg-jira-blue-hover"
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={() => {
-                        setDescription(currentIssue.description || "");
-                        setIsEditingDesc(false);
-                      }}
-                      className="px-3 py-1.5 text-jira-gray-700 hover:bg-jira-gray-100 rounded text-xs font-medium"
-                    >
-                      Cancel
-                    </button>
-                    <span className="text-[11px] text-jira-gray-400 ml-auto">Markdown supported</span>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  onClick={() => permissions.canEditIssue && setIsEditingDesc(true)}
-                  className={`min-h-[80px] p-3 rounded-md border border-transparent transition-all text-sm text-jira-navy leading-relaxed ${
-                    permissions.canEditIssue
-                      ? "hover:bg-jira-gray-100 cursor-pointer hover:border-jira-gray-300"
-                      : "bg-jira-gray-50/50"
-                  }`}
-                >
-                  {currentIssue.description ? (
-                    <MarkdownContent text={currentIssue.description} users={users} />
-                  ) : (
-                    <span className="text-jira-gray-500 italic">
-                      {permissions.canEditIssue
-                        ? "Add a description... (Type @ to mention)"
-                        : "No description provided."}
-                    </span>
-                  )}
-                </div>
-              )}
+            <IssueDescriptionEditor
+              value={description}
+              onChange={setDescription}
+              users={users}
+              mode="click-to-edit"
+              canEdit={permissions.canEditIssue}
+              onSave={handleSaveDescription}
+              onCancel={() => {
+                setDescription(currentIssue.description || "");
+              }}
+              onImagePaste={handleImagePaste}
+              placeholder="Add details, steps, or acceptance criteria..."
+            />
+
+            {/* Child / Epic Issues */}
+            <div className="pt-4 border-t border-jira-gray-200">
+              <ChildIssuesSection
+                parentIssue={currentIssue}
+                childIssues={currentIssue.children as any}
+                canEdit={permissions.canEditIssue}
+                workflowStatuses={workflowStatuses}
+                onChildAdded={handleChildAdded}
+                onChildRemoved={handleChildRemoved}
+                onOpenChild={handleOpenChild}
+              />
             </div>
 
             {/* Labels */}
@@ -1174,25 +1236,39 @@ export default function IssueDetailModal({
               />
             </div>
 
-            {/* Parent Epic */}
-            <div>
-              <label className="block text-xs font-bold text-jira-gray-600 uppercase tracking-wider mb-1.5">
-                Parent Epic
-              </label>
-              <select
-                value={currentIssue.parentId || ""}
-                disabled={!permissions.canEditIssue}
-                onChange={(e) => handleParentChange(e.target.value || null)}
-                className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <option value="">None (No Epic)</option>
-                {epics.map((epic) => (
-                  <option key={epic.id} value={epic.id}>
-                    {epic.key}: {epic.title}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Parent Epic (for non-epics) */}
+            {currentIssue.type !== "EPIC" && (
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-jira-gray-600 uppercase tracking-wider">
+                    Parent Epic
+                  </label>
+                  {currentIssue.parentId && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenParent(currentIssue.parentId!)}
+                      className="text-[11px] font-semibold text-purple-700 hover:text-purple-900 hover:underline flex items-center gap-1"
+                    >
+                      <span>View Epic</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+                <select
+                  value={currentIssue.parentId || ""}
+                  disabled={!permissions.canEditIssue}
+                  onChange={(e) => handleParentChange(e.target.value || null)}
+                  className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  <option value="">None (No Epic)</option>
+                  {epics.map((epic) => (
+                    <option key={epic.id} value={epic.id}>
+                      {epic.key}: {epic.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Sprint (can assign to sprint before it starts) */}
             <div>

@@ -15,9 +15,16 @@ interface IssueCardProps {
   index: number;
   onClick: () => void;
   doneStatusNames?: string[];
+  onSelectEpic?: (epicIdOrKey: string) => void;
 }
 
-export default function IssueCard({ issue, index, onClick, doneStatusNames = ["DONE"] }: IssueCardProps) {
+export default function IssueCard({
+  issue,
+  index,
+  onClick,
+  doneStatusNames = ["DONE"],
+  onSelectEpic,
+}: IssueCardProps) {
   const completedSubtasks =
     issue.children?.filter((c) => doneStatusNames.includes(c.status)).length || 0;
   const totalSubtasks = issue.children?.length || 0;
@@ -39,9 +46,17 @@ export default function IssueCard({ issue, index, onClick, doneStatusNames = ["D
           {/* Epic Tag if available */}
           {issue.parent && (
             <div className="mb-1.5 flex items-center">
-              <span className="text-[10px] font-semibold bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded tracking-wide max-w-[200px] truncate">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectEpic ? onSelectEpic(issue.parent!.id) : onClick();
+                }}
+                className="text-[10px] font-semibold bg-purple-100 text-purple-800 hover:bg-purple-200 px-1.5 py-0.5 rounded tracking-wide max-w-[200px] truncate transition-colors text-left"
+                title={`Epic: ${issue.parent.title} (${issue.parent.key})`}
+              >
                 {issue.parent.title}
-              </span>
+              </button>
             </div>
           )}
 

@@ -7,7 +7,7 @@ import { createIssue } from "@/lib/actions/issues";
 import { getProjectCustomFields, batchSetIssueCustomFieldValues } from "@/lib/actions/customFields";
 import { getProjectWorkflow } from "@/lib/actions/workflows";
 import CustomFieldRenderer from "@/components/common/CustomFieldRenderer";
-import MentionInput from "@/components/common/MentionInput";
+import IssueDescriptionEditor from "@/components/issues/IssueDescriptionEditor";
 import { useCurrentUser } from "@/context/UserContext";
 import { X, Loader2, Sliders } from "lucide-react";
 
@@ -245,13 +245,14 @@ export default function CreateIssueModal({
             <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
               Description
             </label>
-            <MentionInput
-              rows={4}
-              placeholder="Add details, steps to reproduce, or acceptance criteria... (Type @ to mention someone)"
+            <IssueDescriptionEditor
               value={description}
               onChange={setDescription}
               users={users}
-              className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue outline-none text-jira-navy leading-relaxed"
+              mode="always-edit"
+              showSaveButtons={false}
+              placeholder="Add details, steps to reproduce, or acceptance criteria..."
+              minRows={4}
             />
           </div>
 

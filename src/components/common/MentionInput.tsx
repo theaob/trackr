@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useImperativeHandle, forwardRef } from "react";
 import { User } from "@/types";
 import UserAvatar from "@/components/common/UserAvatar";
 import { AtSign, Loader2 } from "lucide-react";
@@ -22,11 +22,12 @@ interface MentionInputProps {
   multiline?: boolean;
   onSubmit?: (e?: any) => void | Promise<void>;
   onImagePaste?: (file: File) => Promise<ImagePasteResult>;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => void;
   autoFocus?: boolean;
   disabled?: boolean;
 }
 
-export default function MentionInput({
+const MentionInput = forwardRef<HTMLTextAreaElement | HTMLInputElement, MentionInputProps>(function MentionInput({
   value,
   onChange,
   users,
@@ -36,11 +37,15 @@ export default function MentionInput({
   multiline = true,
   onSubmit,
   onImagePaste,
+  onKeyDown: externalOnKeyDown,
   autoFocus = false,
   disabled = false,
-}: MentionInputProps) {
+}, ref) {
   const inputRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Expose the internal input ref to parent components
+  useImperativeHandle(ref, () => inputRef.current!, []);
 
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionStartIndex, setMentionStartIndex] = useState<number>(-1);
@@ -232,7 +237,13 @@ export default function MentionInput({
       if (!multiline || e.ctrlKey || e.metaKey) {
         e.preventDefault();
         onSubmit();
+        return;
       }
+    }
+
+    // Forward to external handler (for toolbar keyboard shortcuts, etc.)
+    if (externalOnKeyDown) {
+      externalOnKeyDown(e);
     }
   };
 
@@ -349,4 +360,6 @@ export default function MentionInput({
       )}
     </div>
   );
-}
+});
+
+export default MentionInput;

@@ -10,6 +10,8 @@ import UserAvatar from "@/components/common/UserAvatar";
 import { useCurrentUser } from "@/context/UserContext";
 import { useSearch } from "@/context/SearchContext";
 import IssueDetailModal from "./IssueDetailModal";
+import ChildIssuesSection from "@/components/issues/ChildIssuesSection";
+import IssueDescriptionEditor from "@/components/issues/IssueDescriptionEditor";
 import MentionInput from "@/components/common/MentionInput";
 import MarkdownContent from "@/components/common/MarkdownContent";
 import {
@@ -24,6 +26,7 @@ import { bulkAddLabel } from "@/lib/actions/labels";
 import { addComment, deleteComment } from "@/lib/actions/comments";
 import { uploadAttachment } from "@/lib/actions/attachments";
 import { MAX_ATTACHMENT_SIZE, formatFileSize, generatePastedImageFileName } from "@/lib/attachments";
+import { useProjectPermissions } from "@/hooks/useProjectPermissions";
 import {
   Search,
   SlidersHorizontal,
@@ -100,6 +103,7 @@ export default function IssuesListView({
     searchParams?.get("selectedIssue") || searchParams?.get("issue") || initialSelectedIssueKey;
 
   const { currentUser } = useCurrentUser();
+  const permissions = useProjectPermissions(project);
   const { searchQuery: globalSearchQuery } = useSearch();
 
   const [issues, setIssues] = useState<Issue[]>(initialIssues);
@@ -122,6 +126,7 @@ export default function IssuesListView({
     initialIssues.length > 0 ? initialIssues[0].id : null
   );
   const [modalIssue, setModalIssue] = useState<Issue | null>(null);
+  const [descriptionDraft, setDescriptionDraft] = useState("");
 
   // Handle selectedIssue query parameter
   useEffect(() => {
@@ -408,7 +413,7 @@ export default function IssuesListView({
   // for every row costs far more than the table ever shows. Fetch the full
   // record for the one issue on display instead.
   useEffect(() => {
-    if (!selectedIssue || selectedIssue.comments) return;
+    if (!selectedIssue || (selectedIssue.comments && selectedIssue.children)) return;
 
     let cancelled = false;
     const targetId = selectedIssue.id;
@@ -423,6 +428,11 @@ export default function IssuesListView({
       cancelled = true;
     };
   }, [selectedIssue]);
+
+  // Sync description draft when selected issue changes
+  useEffect(() => {
+    setDescriptionDraft(selectedIssue?.description || "");
+  }, [selectedIssue?.id, selectedIssue?.description]);
 
   // Export to CSV
   const handleExportCSV = () => {
@@ -933,9 +943,24 @@ export default function IssuesListView({
                       <IssueTypeBadge type={selectedIssue.type} size="sm" showLabel />
                       <span className="text-sm font-bold text-jira-gray-700">{selectedIssue.key}</span>
                       {selectedIssue.parent && (
-                        <span className="text-xs font-semibold bg-purple-100 text-purple-800 px-2 py-0.5 rounded">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedIssueId(selectedIssue.parent!.id);
+                            getIssueByKeyOrId(selectedIssue.parent!.id).then((fetched) => {
+                              if (fetched) {
+                                setIssues((prev) => {
+                                  const exists = prev.some((i) => i.id === fetched.id);
+                                  return exists ? prev : [fetched as unknown as Issue, ...prev];
+                                });
+                              }
+                            });
+                          }}
+                          className="text-xs font-semibold bg-purple-100 text-purple-800 hover:bg-purple-200 px-2 py-0.5 rounded transition-colors text-left"
+                          title={`Parent Epic: ${selectedIssue.parent.title} (${selectedIssue.parent.key})`}
+                        >
                           {selectedIssue.parent.title}
-                        </span>
+                        </button>
                       )}
                     </div>
 
@@ -980,17 +1005,58 @@ export default function IssuesListView({
                     {/* Main Details (2 cols) */}
                     <div className="lg:col-span-2 space-y-6">
                       {/* Description */}
-                      <div>
-                        <h4 className="text-xs font-bold text-jira-gray-600 uppercase tracking-wider mb-2">
-                          Description
-                        </h4>
-                        <div className="p-3 bg-jira-gray-50/70 border border-jira-gray-200 rounded-md text-sm text-jira-navy leading-relaxed min-h-[90px]">
-                          {selectedIssue.description ? (
-                            <MarkdownContent text={selectedIssue.description} users={users} />
-                          ) : (
-                            <span className="text-jira-gray-400 italic">No description provided</span>
-                          )}
-                        </div>
+                      <IssueDescriptionEditor
+                        value={descriptionDraft}
+                        onChange={setDescriptionDraft}
+                        users={users}
+                        mode="click-to-edit"
+                        canEdit={permissions.canEditIssue}
+                        onSave={() => handleUpdateCurrentIssue({ description: descriptionDraft })}
+                        onCancel={() => setDescriptionDraft(selectedIssue.description || "")}
+                        onImagePaste={handleSplitViewImagePaste}
+                        placeholder="Add a description..."
+                        minRows={4}
+                      />
+
+                      {/* Child / Epic Issues Section */}
+                      <div className="pt-2 border-t border-jira-gray-200">
+                        <ChildIssuesSection
+                          parentIssue={selectedIssue}
+                          childIssues={selectedIssue.children as any}
+                          canEdit={permissions.canEditIssue}
+                          workflowStatuses={statuses}
+                          onChildAdded={(newChild) => {
+                            const updatedChildren = [...(selectedIssue.children || []), newChild];
+                            const updated = { ...selectedIssue, children: updatedChildren };
+                            setIssues((prev) =>
+                              prev.map((i) => (i.id === selectedIssue.id ? updated : i))
+                            );
+                          }}
+                          onChildRemoved={(childId) => {
+                            const updatedChildren = (selectedIssue.children || []).filter(
+                              (c: any) => c.id !== childId
+                            );
+                            const updated = { ...selectedIssue, children: updatedChildren };
+                            setIssues((prev) =>
+                              prev.map((i) => (i.id === selectedIssue.id ? updated : i))
+                            );
+                          }}
+                          onOpenChild={(childKey) => {
+                            const found = issues.find(
+                              (i) => i.key.toUpperCase() === childKey.toUpperCase()
+                            );
+                            if (found) {
+                              setSelectedIssueId(found.id);
+                            } else {
+                              getIssueByKeyOrId(childKey).then((fetched) => {
+                                if (fetched) {
+                                  setIssues((prev) => [fetched as unknown as Issue, ...prev]);
+                                  setSelectedIssueId(fetched.id);
+                                }
+                              });
+                            }
+                          }}
+                        />
                       </div>
 
                       {/* Comments & Activity */}
