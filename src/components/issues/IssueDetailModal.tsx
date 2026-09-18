@@ -21,7 +21,7 @@ import { allowedNextStatusNames, prettifyStatusName } from "@/lib/workflowDispla
 import { isOverdue } from "@/lib/dueDate";
 import CustomFieldRenderer from "@/components/common/CustomFieldRenderer";
 import MentionInput from "@/components/common/MentionInput";
-import MentionText from "@/components/common/MentionText";
+import MarkdownContent from "@/components/common/MarkdownContent";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
 import {
   X,
@@ -595,6 +595,7 @@ export default function IssueDetailModal({
                     >
                       Cancel
                     </button>
+                    <span className="text-[11px] text-jira-gray-400 ml-auto">Markdown supported</span>
                   </div>
                 </div>
               ) : (
@@ -607,7 +608,7 @@ export default function IssueDetailModal({
                   }`}
                 >
                   {currentIssue.description ? (
-                    <MentionText text={currentIssue.description} users={users} />
+                    <MarkdownContent text={currentIssue.description} users={users} />
                   ) : (
                     <span className="text-jira-gray-500 italic">
                       {permissions.canEditIssue
@@ -691,6 +692,7 @@ export default function IssueDetailModal({
                           onSubmit={handleAddComment}
                           className="w-full px-3 py-2 text-sm border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
                         />
+                        <p className="mt-1 text-[11px] text-jira-gray-400">Markdown supported</p>
                         {newComment.trim().length > 0 && (
                           <div className="mt-2 flex gap-2">
                             <button
@@ -745,7 +747,7 @@ export default function IssueDetailModal({
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
-                          <MentionText
+                          <MarkdownContent
                             text={comment.content}
                             users={users}
                             className="mt-1 text-jira-gray-800 text-sm leading-normal"

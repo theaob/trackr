@@ -11,7 +11,7 @@ import { useCurrentUser } from "@/context/UserContext";
 import { useSearch } from "@/context/SearchContext";
 import IssueDetailModal from "./IssueDetailModal";
 import MentionInput from "@/components/common/MentionInput";
-import MentionText from "@/components/common/MentionText";
+import MarkdownContent from "@/components/common/MarkdownContent";
 import {
   updateIssue,
   deleteIssue,
@@ -955,7 +955,7 @@ export default function IssuesListView({
                         </h4>
                         <div className="p-3 bg-jira-gray-50/70 border border-jira-gray-200 rounded-md text-sm text-jira-navy leading-relaxed min-h-[90px]">
                           {selectedIssue.description ? (
-                            <MentionText text={selectedIssue.description} users={users} />
+                            <MarkdownContent text={selectedIssue.description} users={users} />
                           ) : (
                             <span className="text-jira-gray-400 italic">No description provided</span>
                           )}
@@ -992,15 +992,18 @@ export default function IssuesListView({
                         {activeTab === "comments" && (
                           <div className="space-y-4">
                             <form onSubmit={handleAddComment} className="flex gap-3 items-start">
-                              <MentionInput
-                                value={newComment}
-                                onChange={setNewComment}
-                                users={users}
-                                multiline={false}
-                                placeholder="Add a comment... (Type @ to mention someone)"
-                                onSubmit={handleAddComment}
-                                className="flex-1 px-3 py-1.5 text-xs border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
-                              />
+                              <div className="flex-1">
+                                <MentionInput
+                                  value={newComment}
+                                  onChange={setNewComment}
+                                  users={users}
+                                  multiline={false}
+                                  placeholder="Add a comment... (Type @ to mention someone)"
+                                  onSubmit={handleAddComment}
+                                  className="w-full px-3 py-1.5 text-xs border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+                                />
+                                <p className="mt-1 text-[11px] text-jira-gray-400">Markdown supported</p>
+                              </div>
                               <button
                                 type="submit"
                                 disabled={isSubmittingComment || !newComment.trim()}
@@ -1029,7 +1032,7 @@ export default function IssuesListView({
                                         })}
                                       </span>
                                     </div>
-                                    <MentionText
+                                    <MarkdownContent
                                       text={comment.content}
                                       users={users}
                                       className="text-jira-gray-800"

@@ -53,6 +53,9 @@ A modern, full-stack agile project management and issue tracking platform built 
     status, assignee, or priority, add a label, or delete them all at once.
 - 📝 **Issue Detail Modal**:
   - Inline editable title and rich description.
+  - **Markdown support** in descriptions and comments -- headings, bold/italic,
+    lists, links, inline code and fenced code blocks, and tables, rendered
+    safely with `react-markdown` (no raw HTML pass-through).
   - Status progression, constrained to the project's own workflow.
   - **Watch** an issue you're not assigned to, to get notified on status
     changes and new comments.
@@ -286,5 +289,6 @@ not publish an image unless they pass.
 - **Icons**: Lucide React
 - **Drag and Drop**: `@hello-pangea/dnd`
 - **Database & ORM**: SQLite (`dev.db`) with Prisma ORM
+- **Markdown**: `react-markdown` + `remark-gfm`
 - **Dates**: `date-fns`
 - **Tests**: Vitest
