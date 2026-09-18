@@ -1,5 +1,6 @@
 import React from "react";
 import { getProjects } from "@/lib/actions/projects";
+import { getSystemInfo } from "@/lib/actions/system";
 import { requirePageUser, denyPageAccess } from "@/lib/auth/page";
 import { requireAnyProjectAdmin } from "@/lib/auth/guards";
 import Navbar from "@/components/layout/Navbar";
@@ -16,7 +17,10 @@ export default async function SettingsPage() {
     return denyPageAccess("/settings");
   }
 
-  const allProjects = await getProjects();
+  const [allProjects, systemInfo] = await Promise.all([
+    getProjects(),
+    getSystemInfo().catch(() => null),
+  ]);
   const defaultProject = allProjects.length > 0 ? allProjects[0] : null;
 
   return (
@@ -28,7 +32,7 @@ export default async function SettingsPage() {
         />
         <main className="flex-1 flex flex-col overflow-y-auto bg-jira-gray-50/50 p-6 md:p-10 items-center">
           <div className="w-full max-w-4xl">
-            <GeneralSettingsView />
+            <GeneralSettingsView initialSystemInfo={systemInfo} />
           </div>
         </main>
       </div>

@@ -17,7 +17,6 @@ import {
   Settings,
   ShieldCheck,
   CheckCircle2,
-  Clock,
   Layers,
 } from "lucide-react";
 
@@ -31,7 +30,8 @@ interface ProjectStats {
   members?: any[];
   totalIssues: number;
   openIssues: number;
-  activeSprint: string | null;
+  activeSprint?: string | null;
+  boardType?: string;
 }
 
 interface ProjectsDirectoryViewProps {
@@ -151,14 +151,18 @@ export default function ProjectsDirectoryView({
 
                   {/* Stats & Lead */}
                   <div className="pt-3 border-t border-jira-gray-100 space-y-2 text-xs">
-                    {/* Active Sprint */}
+                    {/* Project Type */}
                     <div className="flex items-center justify-between text-jira-gray-600">
                       <span className="flex items-center gap-1.5 text-jira-gray-500">
-                        <Clock className="w-3.5 h-3.5" />
-                        Sprint:
+                        {project.boardType === "KANBAN" ? (
+                          <Kanban className="w-3.5 h-3.5 text-jira-gray-500" />
+                        ) : (
+                          <ListTodo className="w-3.5 h-3.5 text-jira-gray-500" />
+                        )}
+                        Type:
                       </span>
                       <span className="font-semibold text-jira-navy">
-                        {project.activeSprint || "No active sprint"}
+                        {project.boardType === "KANBAN" ? "Kanban" : "Scrum"}
                       </span>
                     </div>
 
@@ -247,6 +251,7 @@ export default function ProjectsDirectoryView({
                 totalIssues: 0,
                 openIssues: 0,
                 activeSprint: null,
+                boardType: newProj.boardType || "SCRUM",
               },
               ...projects,
             ]);

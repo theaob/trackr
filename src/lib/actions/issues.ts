@@ -130,31 +130,50 @@ export async function getProjectEpics(projectId: string) {
 }
 
 /**
- * Find candidate issues in the project that can be linked to an epic.
+ * Find candidate issues in the project that can be linked to an epic (including other epics).
  */
 export async function searchProjectIssuesForEpic(projectId: string, epicId: string, query: string) {
   try {
     await requireProjectAccess(projectId);
     const trimmed = query.trim();
-    if (!trimmed) return [];
+
+    // Prevent circular parenting: an epic cannot link itself, nor any issue/epic
+    // that is an ancestor of this epic (which would create a cycle).
+    const forbiddenIds = new Set<string>([epicId]);
+    let currentParentId: string | null | undefined = epicId;
+    while (currentParentId) {
+      const issue: { parentId: string | null } | null = await prisma.issue.findUnique({
+        where: { id: currentParentId },
+        select: { parentId: true },
+      });
+      if (issue?.parentId) {
+        forbiddenIds.add(issue.parentId);
+        currentParentId = issue.parentId;
+      } else {
+        currentParentId = null;
+      }
+    }
 
     return await prisma.issue.findMany({
       where: {
         projectId,
-        id: { not: epicId },
-        type: { not: "EPIC" },
+        id: { notIn: Array.from(forbiddenIds) },
         OR: [
           { parentId: null },
           { parentId: { not: epicId } },
         ],
-        AND: [
-          {
-            OR: [
-              { key: { contains: trimmed } },
-              { title: { contains: trimmed } },
-            ],
-          },
-        ],
+        ...(trimmed
+          ? {
+              AND: [
+                {
+                  OR: [
+                    { key: { contains: trimmed } },
+                    { title: { contains: trimmed } },
+                  ],
+                },
+              ],
+            }
+          : {}),
       },
       select: {
         id: true,
@@ -166,6 +185,7 @@ export async function searchProjectIssuesForEpic(projectId: string, epicId: stri
         storyPoints: true,
         assignee: USER_SELECT,
       },
+      orderBy: { createdAt: "desc" },
       take: 10,
     });
   } catch (error) {
@@ -815,8 +835,21 @@ export async function updateIssue(
     });
     if (related.error) return { success: false, error: related.error };
 
-    if (data.parentId && data.parentId === id) {
-      return { success: false, error: "An issue cannot be its own parent" };
+    if (data.parentId) {
+      if (data.parentId === id) {
+        return { success: false, error: "An issue cannot be its own parent" };
+      }
+      let checkParentId: string | null = data.parentId;
+      while (checkParentId) {
+        if (checkParentId === id) {
+          return { success: false, error: "Cannot set a child or descendant as parent (circular hierarchy)" };
+        }
+        const p: { parentId: string | null } | null = await prisma.issue.findUnique({
+          where: { id: checkParentId },
+          select: { parentId: true },
+        });
+        checkParentId = p?.parentId ?? null;
+      }
     }
 
     const actorId = user.id;
@@ -1015,6 +1048,7 @@ export async function updateIssueStatusAndOrder(
     assigneeId?: string | null;
     parentId?: string | null;
     priority?: PriorityLevel;
+    sprintId?: string | null;
   },
   /**
    * Every issue in the destination column, in the order the board now shows
@@ -1041,6 +1075,10 @@ export async function updateIssueStatusAndOrder(
         parentId: extraData.parentId !== existing.parentId ? extraData.parentId : null,
         assigneeId:
           extraData.assigneeId !== existing.assigneeId ? extraData.assigneeId : null,
+        sprintId:
+          extraData.sprintId !== undefined && extraData.sprintId !== existing.sprintId
+            ? extraData.sprintId
+            : null,
       });
       if (related.error) return { success: false, error: related.error };
     }
@@ -1093,6 +1131,9 @@ export async function updateIssueStatusAndOrder(
       }
       if (extraData.priority !== undefined) {
         updatePayload.priority = extraData.priority;
+      }
+      if (extraData.sprintId !== undefined) {
+        updatePayload.sprintId = extraData.sprintId;
       }
     }
 

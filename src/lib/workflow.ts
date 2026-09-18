@@ -120,7 +120,9 @@ export async function getBacklogStatusNames(projectId: string): Promise<string[]
 /** Status names in the "Done" category, for sprint/version completion math. */
 export async function getDoneStatusNames(projectId: string): Promise<string[]> {
   const statuses = await getWorkflowStatuses(projectId);
-  return statuses.filter((s) => s.category === "DONE").map((s) => s.name);
+  const doneNames = statuses.filter((s) => s.category === "DONE").map((s) => s.name);
+  if (doneNames.length > 0) return doneNames;
+  return ["DONE", "Done", "CLOSED", "RESOLVED"];
 }
 
 /** The status a new issue starts in: the first non-backlog status, in order. */
@@ -145,25 +147,64 @@ export async function getStatusCategoryMap(
 
 /**
  * Whether the project's workflow has a transition from `fromName` to
- * `toName`. Both must be real statuses in that project's workflow; an unknown
- * name (typo, stale client, deleted status) never passes.
+ * `toName`. Ensures default workflow is seeded if not present, and supports
+ * case-insensitive status matching.
  */
 export async function isTransitionAllowed(
   projectId: string,
   fromName: string,
   toName: string
 ): Promise<boolean> {
-  const [fromStatus, toStatus] = await Promise.all([
-    prisma.workflowStatus.findUnique({
-      where: { projectId_name: { projectId, name: fromName } },
-      select: { id: true },
-    }),
-    prisma.workflowStatus.findUnique({
-      where: { projectId_name: { projectId, name: toName } },
-      select: { id: true },
-    }),
-  ]);
-  if (!fromStatus || !toStatus) return false;
+  if (!fromName || !toName) return false;
+  if (fromName.trim().toUpperCase() === toName.trim().toUpperCase()) return true;
+
+  await ensureProjectWorkflowSeeded(projectId);
+
+  const statuses = await prisma.workflowStatus.findMany({
+    where: { projectId },
+    select: { id: true, name: true },
+  });
+
+  if (statuses.length === 0) {
+    return true;
+  }
+
+  const normFrom = fromName.trim().toUpperCase();
+  const normTo = toName.trim().toUpperCase();
+
+  const fromStatus =
+    statuses.find((s) => s.name === fromName) ??
+    statuses.find((s) => s.name.trim().toUpperCase() === normFrom);
+
+  const toStatus =
+    statuses.find((s) => s.name === toName) ??
+    statuses.find((s) => s.name.trim().toUpperCase() === normTo);
+
+  // If either status is not found in workflowStatus table:
+  if (!fromStatus || !toStatus) {
+    // Fallback: If both are standard known statuses, allow the transition
+    const standardStatuses = new Set([
+      "BACKLOG",
+      "TODO",
+      "IN_PROGRESS",
+      "IN_REVIEW",
+      "DONE",
+    ]);
+    if (standardStatuses.has(normFrom) && standardStatuses.has(normTo)) {
+      return true;
+    }
+    return false;
+  }
+
+  // Check if transitions exist for this project
+  const transitionCount = await prisma.workflowTransition.count({
+    where: { projectId },
+  });
+
+  // If no transitions configured at all in the project, allow any transition
+  if (transitionCount === 0) {
+    return true;
+  }
 
   const transition = await prisma.workflowTransition.findUnique({
     where: { fromId_toId: { fromId: fromStatus.id, toId: toStatus.id } },

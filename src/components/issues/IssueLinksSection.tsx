@@ -43,7 +43,7 @@ export default function IssueLinksSection({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!adding || !query.trim()) {
+    if (!adding) {
       setResults([]);
       return;
     }
@@ -144,7 +144,7 @@ export default function IssueLinksSection({
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by issue key or title..."
+                placeholder="Search by issue or epic key or title..."
                 className="w-full pl-8 pr-2 py-1.5 text-xs border border-jira-gray-300 rounded focus:border-jira-blue outline-none text-jira-navy"
               />
             </div>
@@ -163,8 +163,8 @@ export default function IssueLinksSection({
             </div>
           )}
 
-          {!searching && query.trim() && results.length === 0 && (
-            <div className="text-[11px] text-jira-gray-500 py-1">No matching issues found.</div>
+          {!searching && results.length === 0 && (
+            <div className="text-[11px] text-jira-gray-500 py-1">No matching issues or epics found.</div>
           )}
 
           {results.length > 0 && (

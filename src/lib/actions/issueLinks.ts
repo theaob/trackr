@@ -36,7 +36,6 @@ const LINKED_ISSUE_SELECT = {
 export async function searchLinkableIssues(issueId: string, query: string) {
   try {
     const trimmed = query.trim();
-    if (!trimmed) return [];
 
     const user = await getCurrentUser();
     const projectIds = await accessibleProjectIds(user?.id ?? null);
@@ -56,7 +55,11 @@ export async function searchLinkableIssues(issueId: string, query: string) {
       where: {
         projectId: { in: projectIds },
         id: { notIn: excludeIds },
-        OR: [{ key: { contains: trimmed } }, { title: { contains: trimmed } }],
+        ...(trimmed
+          ? {
+              OR: [{ key: { contains: trimmed } }, { title: { contains: trimmed } }],
+            }
+          : {}),
       },
       select: LINKED_ISSUE_SELECT,
       orderBy: { createdAt: "desc" },

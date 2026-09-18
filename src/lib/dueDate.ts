@@ -9,6 +9,13 @@ export function isOverdue(
   doneStatusNames: string[]
 ): boolean {
   if (!dueDate) return false;
-  if (doneStatusNames.includes(status)) return false;
+  const statusUpper = status.toUpperCase();
+  if (
+    doneStatusNames.some(
+      (d) => d === status || d.toUpperCase() === statusUpper
+    )
+  ) {
+    return false;
+  }
   return new Date(dueDate).getTime() < Date.now();
 }

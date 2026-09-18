@@ -13,7 +13,7 @@ import { updateIssueStatusAndOrder, getIssueByKeyOrId } from "@/lib/actions/issu
 import { useCurrentUser } from "@/context/UserContext";
 import { useSearch } from "@/context/SearchContext";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
-import { prettifyStatusName } from "@/lib/workflowDisplay";
+import { prettifyStatusName, isDoneStatus, getDoneStatusNames } from "@/lib/workflowDisplay";
 import { ChevronDown, ChevronRight, Layers, User as UserIcon, Bookmark, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
@@ -52,17 +52,22 @@ export default function KanbanBoard({
   const selectedIssueKey =
     searchParams?.get("selectedIssue") || searchParams?.get("issue") || initialSelectedIssueKey;
 
+  // Kanban ignores sprints entirely: the board is every non-backlog issue in
+  // continuous flow, never scoped to whatever happens to be "active".
+  const isKanban = project.boardType === "KANBAN";
+  const activeSprint = isKanban ? undefined : sprints.find((s) => s.status === "ACTIVE");
+
   // Board columns: the project's own workflow statuses, in the order it
-  // configured, rather than a fixed list.
+  // configured, rather than a fixed list. WIP limits are Kanban-only.
   const COLUMNS = useMemo(
     () =>
       statuses.map((s) => ({
         id: s.name,
         title: prettifyStatusName(s.name),
-        wipLimit: s.wipLimit ?? undefined,
+        wipLimit: isKanban ? (s.wipLimit ?? undefined) : undefined,
         color: s.color,
       })),
-    [statuses]
+    [statuses, isKanban]
   );
 
   const { currentUser } = useCurrentUser();
@@ -152,11 +157,6 @@ export default function KanbanBoard({
   const [selectedPriority, setSelectedPriority] = useState<PriorityLevel | "ALL">("ALL");
   const [onlyMyIssues, setOnlyMyIssues] = useState(false);
 
-  // Kanban ignores sprints entirely: the board is every non-backlog issue in
-  // continuous flow, never scoped to whatever happens to be "active".
-  const isKanban = project.boardType === "KANBAN";
-  const activeSprint = isKanban ? undefined : sprints.find((s) => s.status === "ACTIVE");
-
   // Toggle Assignee Filter
   const handleToggleAssignee = (userId: string) => {
     setSelectedAssigneeIds((prev) =>
@@ -181,29 +181,28 @@ export default function KanbanBoard({
 
   const boardStatusNames = useMemo(() => new Set(COLUMNS.map((c) => c.id)), [COLUMNS]);
   const doneStatusNames = useMemo(() => {
-    const fromWorkflow = statuses.filter((s) => s.category === "DONE").map((s) => s.name);
-    return fromWorkflow.length > 0
-      ? fromWorkflow
-      : ["DONE", "Done", "done", "CLOSED", "Closed", "RESOLVED", "Resolved"];
+    return getDoneStatusNames(statuses);
   }, [statuses]);
 
   // Active sprint story points calculations
   const sprintIssues = useMemo(() => {
     if (!activeSprint) return [];
-    return issues.filter((i) => i.sprintId === activeSprint.id);
-  }, [issues, activeSprint]);
+    return issues.filter(
+      (i) => i.sprintId === activeSprint.id || (!i.sprintId && !isKanban)
+    );
+  }, [issues, activeSprint, isKanban]);
 
   const sprintTotalPoints = useMemo(
-    () => sprintIssues.reduce((sum, i) => sum + (i.storyPoints || 0), 0),
+    () => sprintIssues.reduce((sum, i) => sum + (Number(i.storyPoints) || 0), 0),
     [sprintIssues]
   );
 
   const sprintDonePoints = useMemo(
     () =>
       sprintIssues
-        .filter((i) => doneStatusNames.includes(i.status))
-        .reduce((sum, i) => sum + (i.storyPoints || 0), 0),
-    [sprintIssues, doneStatusNames]
+        .filter((i) => isDoneStatus(i.status, statuses))
+        .reduce((sum, i) => sum + (Number(i.storyPoints) || 0), 0),
+    [sprintIssues, statuses]
   );
 
   // Filter Issues
@@ -367,11 +366,25 @@ export default function KanbanBoard({
     const targetIssue = issues.find((i) => i.id === draggableId);
     if (!targetIssue) return;
 
+    // Snapshot current issues for rollback on failure
+    const previousIssues = issues;
+
     // Prepare extra swimlane field updates
-    const extraData: { assigneeId?: string | null; parentId?: string | null; priority?: PriorityLevel } = {};
+    const extraData: {
+      assigneeId?: string | null;
+      parentId?: string | null;
+      priority?: PriorityLevel;
+      sprintId?: string | null;
+    } = {};
     let updatedAssignee = targetIssue.assignee;
     let updatedParent = targetIssue.parent;
     let updatedPriority = targetIssue.priority;
+    let updatedSprintId = targetIssue.sprintId;
+
+    if (activeSprint && !targetIssue.sprintId && !isKanban) {
+      extraData.sprintId = activeSprint.id;
+      updatedSprintId = activeSprint.id;
+    }
 
     if (groupBy === "ASSIGNEE" && dest.laneId !== src.laneId) {
       const newAssigneeId = dest.laneId === "UNASSIGNED" ? null : dest.laneId;
@@ -394,6 +407,7 @@ export default function KanbanBoard({
       ...targetIssue,
       status: dest.status,
       priority: updatedPriority,
+      sprintId: updatedSprintId,
       assigneeId: extraData.assigneeId !== undefined ? extraData.assigneeId : targetIssue.assigneeId,
       assignee: updatedAssignee,
       parentId: extraData.parentId !== undefined ? extraData.parentId : targetIssue.parentId,
@@ -437,6 +451,11 @@ export default function KanbanBoard({
     if (res.success && res.issue) {
       const serverIssue = res.issue as unknown as Issue;
       setIssues((prev) => prev.map((i) => (i.id === serverIssue.id ? { ...i, ...serverIssue } : i)));
+    } else if (!res.success) {
+      setIssues(previousIssues);
+      if (res.error) {
+        alert(res.error);
+      }
     }
   };
 
@@ -592,7 +611,12 @@ export default function KanbanBoard({
                     (acc, lane) => acc + getCellIssues(lane.id, col.id).length,
                     0
                   );
-                  const isOverLimit = col.wipLimit && totalInCol > col.wipLimit;
+                  const isOverLimit = !!(col.wipLimit && totalInCol > col.wipLimit);
+                  const tooltipText = col.wipLimit
+                    ? isOverLimit
+                      ? `Work in progress (WIP) limit exceeded: ${totalInCol} of ${col.wipLimit} max issues`
+                      : `Work in progress (WIP) limit: ${totalInCol} of ${col.wipLimit} issues`
+                    : `${totalInCol} ${totalInCol === 1 ? "issue" : "issues"}`;
 
                   return (
                     <div
@@ -602,16 +626,48 @@ export default function KanbanBoard({
                       <h3 className="text-xs font-bold text-jira-navy uppercase tracking-wider">
                         {col.title}
                       </h3>
-                      <span
-                        className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                          isOverLimit
-                            ? "bg-rose-100 text-rose-700 font-bold animate-pulse"
-                            : "bg-jira-gray-200 text-jira-gray-700"
-                        }`}
-                      >
-                        {totalInCol}
-                        {col.wipLimit ? ` / ${col.wipLimit}` : ""}
-                      </span>
+                      <div className="relative group/wip inline-flex items-center">
+                        <span
+                          title={tooltipText}
+                          className={`text-xs font-semibold px-2 py-0.5 rounded-full cursor-help transition-colors ${
+                            isOverLimit
+                              ? "bg-rose-100 text-rose-700 font-bold animate-pulse hover:bg-rose-200"
+                              : "bg-jira-gray-200 text-jira-gray-700 hover:bg-jira-gray-300"
+                          }`}
+                        >
+                          {totalInCol}
+                          {col.wipLimit ? ` / ${col.wipLimit}` : ""}
+                        </span>
+
+                        {/* Styled Floating Tooltip */}
+                        <div className="pointer-events-none absolute bottom-full right-0 mb-1.5 hidden group-hover/wip:flex flex-col items-center z-30 whitespace-nowrap">
+                          <div
+                            className={`text-[11px] font-medium px-2.5 py-1 rounded shadow-lg ${
+                              isOverLimit
+                                ? "bg-rose-900 text-rose-100 border border-rose-700"
+                                : "bg-jira-navy text-white"
+                            }`}
+                          >
+                            {col.wipLimit ? (
+                              <span>
+                                {isOverLimit ? "WIP limit exceeded: " : "WIP limit: "}
+                                <strong>{totalInCol}</strong> / {col.wipLimit} max issues
+                              </span>
+                            ) : (
+                              <span>
+                                {totalInCol} {totalInCol === 1 ? "issue" : "issues"}
+                              </span>
+                            )}
+                          </div>
+                          <div
+                            className={`w-2 h-2 -mt-1 rotate-45 ${
+                              isOverLimit
+                                ? "bg-rose-900 border-r border-b border-rose-700"
+                                : "bg-jira-navy"
+                            }`}
+                          />
+                        </div>
+                      </div>
                     </div>
                   );
                 })}

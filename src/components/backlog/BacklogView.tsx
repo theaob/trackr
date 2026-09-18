@@ -36,6 +36,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { isOverdue } from "@/lib/dueDate";
+import { isDoneStatus, getDoneStatusNames } from "@/lib/workflowDisplay";
 import { format } from "date-fns";
 
 interface BacklogViewProps {
@@ -334,10 +335,7 @@ export default function BacklogView({
     [statuses]
   );
   const doneStatusNames = useMemo(() => {
-    const fromWorkflow = statuses.filter((s) => s.category === "DONE").map((s) => s.name);
-    return fromWorkflow.length > 0
-      ? fromWorkflow
-      : ["DONE", "Done", "done", "CLOSED", "Closed", "RESOLVED", "Resolved"];
+    return getDoneStatusNames(statuses);
   }, [statuses]);
 
   // Sprints & Backlog groupings
@@ -410,7 +408,7 @@ export default function BacklogView({
       // Move issues in local state
       setIssues((prev) =>
         prev.map((i) => {
-          if (i.sprintId === completingSprint.id && !doneStatusNames.includes(i.status)) {
+          if (i.sprintId === completingSprint.id && !isDoneStatus(i.status, statuses)) {
             return {
               ...i,
               sprintId: incompleteMoveTarget || null,
@@ -606,10 +604,10 @@ export default function BacklogView({
           {/* Active and Future Sprints */}
           {!isKanban && [...activeSprints, ...futureSprints].map((sprint) => {
             const sprintIssues = getSprintIssues(sprint.id);
-            const totalPoints = sprintIssues.reduce((sum, i) => sum + (i.storyPoints || 0), 0);
+            const totalPoints = sprintIssues.reduce((sum, i) => sum + (Number(i.storyPoints) || 0), 0);
             const donePoints = sprintIssues
-              .filter((i) => doneStatusNames.includes(i.status))
-              .reduce((sum, i) => sum + (i.storyPoints || 0), 0);
+              .filter((i) => isDoneStatus(i.status, statuses))
+              .reduce((sum, i) => sum + (Number(i.storyPoints) || 0), 0);
             const isCollapsed = collapsedSprints[sprint.id];
 
             return (

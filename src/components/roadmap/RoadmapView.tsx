@@ -71,7 +71,7 @@ export default function RoadmapView({
         <IssueDetailModal
           issue={activeIssue}
           users={users}
-          allIssues={[]}
+          allIssues={epics.map((e) => ({ ...e, type: "EPIC" as const, projectId: project.id })) as any}
           sprints={sprints}
           project={project}
           onClose={() => setActiveIssue(null)}

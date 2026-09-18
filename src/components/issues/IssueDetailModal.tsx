@@ -351,7 +351,8 @@ export default function IssueDetailModal({
   if (!currentIssue) return null;
 
 
-  const epics = allIssues.filter((i) => i.type === "EPIC" && i.id !== currentIssue.id);
+  const childIds = new Set((currentIssue.children || []).map((c: any) => c.id));
+  const epics = allIssues.filter((i) => i.type === "EPIC" && i.id !== currentIssue.id && !childIds.has(i.id));
 
   // Handle Save Title
   const handleSaveTitle = async () => {
@@ -418,6 +419,8 @@ export default function IssueDetailModal({
       const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
       setCurrentIssue(typed);
       onIssueUpdated(typed);
+    } else if (!res.success && res.error) {
+      alert(res.error);
     }
   };
 
@@ -1236,39 +1239,37 @@ export default function IssueDetailModal({
               />
             </div>
 
-            {/* Parent Epic (for non-epics) */}
-            {currentIssue.type !== "EPIC" && (
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-jira-gray-600 uppercase tracking-wider">
-                    Parent Epic
-                  </label>
-                  {currentIssue.parentId && (
-                    <button
-                      type="button"
-                      onClick={() => handleOpenParent(currentIssue.parentId!)}
-                      className="text-[11px] font-semibold text-purple-700 hover:text-purple-900 hover:underline flex items-center gap-1"
-                    >
-                      <span>View Epic</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-                <select
-                  value={currentIssue.parentId || ""}
-                  disabled={!permissions.canEditIssue}
-                  onChange={(e) => handleParentChange(e.target.value || null)}
-                  className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  <option value="">None (No Epic)</option>
-                  {epics.map((epic) => (
-                    <option key={epic.id} value={epic.id}>
-                      {epic.key}: {epic.title}
-                    </option>
-                  ))}
-                </select>
+            {/* Parent Epic */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-bold text-jira-gray-600 uppercase tracking-wider">
+                  Parent Epic
+                </label>
+                {currentIssue.parentId && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenParent(currentIssue.parentId!)}
+                    className="text-[11px] font-semibold text-purple-700 hover:text-purple-900 hover:underline flex items-center gap-1"
+                  >
+                    <span>View Epic</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </button>
+                )}
               </div>
-            )}
+              <select
+                value={currentIssue.parentId || ""}
+                disabled={!permissions.canEditIssue}
+                onChange={(e) => handleParentChange(e.target.value || null)}
+                className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <option value="">None (No Epic)</option>
+                {epics.map((epic) => (
+                  <option key={epic.id} value={epic.id}>
+                    {epic.key}: {epic.title}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             {/* Sprint (can assign to sprint before it starts) */}
             <div>

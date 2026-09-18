@@ -37,6 +37,92 @@ interface WorkflowTransitionLike {
   toId: string;
 }
 
+export const STANDARD_DONE_STATUS_NAMES = [
+  "DONE",
+  "Done",
+  "done",
+  "CLOSED",
+  "Closed",
+  "closed",
+  "RESOLVED",
+  "Resolved",
+  "resolved",
+  "COMPLETED",
+  "Completed",
+  "completed",
+  "FINISHED",
+  "Finished",
+  "finished",
+];
+
+const STANDARD_DONE_SET = new Set([
+  "DONE",
+  "CLOSED",
+  "RESOLVED",
+  "COMPLETED",
+  "FINISHED",
+]);
+
+export interface WorkflowStatusInfoLike {
+  name: string;
+  category?: string | null;
+}
+
+/**
+ * Determines whether a given status name corresponds to a completed/done state.
+ * Evaluates both the configured workflow statuses (matching category "DONE")
+ * and standard completion status aliases (Done, Closed, Resolved, Completed, Finished).
+ */
+export function isDoneStatus(
+  statusName?: string | null,
+  workflowStatuses?: WorkflowStatusInfoLike[]
+): boolean {
+  if (!statusName) return false;
+  const trimmed = statusName.trim();
+  const upper = trimmed.toUpperCase();
+
+  if (workflowStatuses && workflowStatuses.length > 0) {
+    const match = workflowStatuses.find(
+      (s) => s.name === trimmed || s.name.trim().toUpperCase() === upper
+    );
+    if (match && match.category) {
+      return match.category.toUpperCase() === "DONE";
+    }
+  }
+
+  return STANDARD_DONE_SET.has(upper);
+}
+
+/**
+ * Returns the list of status names classified as "DONE".
+ * Includes all statuses configured under the DONE category,
+ * as well as common fallback aliases.
+ */
+export function getDoneStatusNames(
+  workflowStatuses?: WorkflowStatusInfoLike[]
+): string[] {
+  const result: string[] = [];
+  const seenUpper = new Set<string>();
+
+  if (workflowStatuses) {
+    for (const s of workflowStatuses) {
+      if (s.category?.toUpperCase() === "DONE") {
+        result.push(s.name);
+        seenUpper.add(s.name.toUpperCase());
+      }
+    }
+  }
+
+  for (const fallback of STANDARD_DONE_STATUS_NAMES) {
+    if (!seenUpper.has(fallback.toUpperCase())) {
+      result.push(fallback);
+      seenUpper.add(fallback.toUpperCase());
+    }
+  }
+
+  return result;
+}
+
 /**
  * Status names an issue can move to from its current one, per the project's
  * transition graph, always including the current status itself (so the
@@ -47,7 +133,11 @@ export function allowedNextStatusNames(
   statuses: WorkflowStatusLike[],
   transitions: WorkflowTransitionLike[]
 ): string[] {
-  const current = statuses.find((s) => s.name === currentStatusName);
+  const current = statuses.find(
+    (s) =>
+      s.name === currentStatusName ||
+      s.name.trim().toUpperCase() === currentStatusName.trim().toUpperCase()
+  );
   if (!current) return [currentStatusName];
 
   const nextIds = new Set(

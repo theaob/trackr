@@ -17,6 +17,7 @@ import {
   X,
   ExternalLink,
 } from "lucide-react";
+import { isDoneStatus } from "@/lib/workflowDisplay";
 
 interface ChildIssuesSectionProps {
   parentIssue: Issue;
@@ -66,14 +67,16 @@ export default function ChildIssuesSection({
 
   // Calculations
   const totalCount = children.length;
-  const doneCount = children.filter((c) => doneStatusNames.includes(c.status)).length;
-  const inProgressCount = children.filter((c) => inProgressStatusNames.includes(c.status)).length;
+  const doneCount = children.filter((c) => isDoneStatus(c.status, workflowStatuses)).length;
+  const inProgressCount = children.filter(
+    (c) => !isDoneStatus(c.status, workflowStatuses) && inProgressStatusNames.includes(c.status)
+  ).length;
   const todoCount = Math.max(0, totalCount - doneCount - inProgressCount);
 
-  const totalPoints = children.reduce((sum, c) => sum + (c.storyPoints || 0), 0);
+  const totalPoints = children.reduce((sum, c) => sum + (Number(c.storyPoints) || 0), 0);
   const donePoints = children
-    .filter((c) => doneStatusNames.includes(c.status))
-    .reduce((sum, c) => sum + (c.storyPoints || 0), 0);
+    .filter((c) => isDoneStatus(c.status, workflowStatuses))
+    .reduce((sum, c) => sum + (Number(c.storyPoints) || 0), 0);
 
   const donePct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
   const inProgressPct = totalCount > 0 ? Math.round((inProgressCount / totalCount) * 100) : 0;
@@ -81,7 +84,7 @@ export default function ChildIssuesSection({
 
   // Search existing issues
   useEffect(() => {
-    if (!isLinking || !searchQuery.trim()) {
+    if (!isLinking) {
       setSearchResults([]);
       return;
     }
@@ -304,7 +307,7 @@ export default function ChildIssuesSection({
               autoFocus
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by issue key or title..."
+              placeholder="Search by issue or epic key or title..."
               className="w-full text-xs px-2.5 py-1.5 border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
             />
             {isSearching && (
@@ -312,7 +315,7 @@ export default function ChildIssuesSection({
             )}
           </div>
 
-          {searchQuery.trim() && (
+          {(searchQuery.trim() || searchResults.length > 0) && (
             <div className="max-h-48 overflow-y-auto border border-jira-gray-200 rounded divide-y divide-jira-gray-100">
               {searchResults.length > 0 ? (
                 searchResults.map((issue) => (
@@ -379,6 +382,7 @@ export default function ChildIssuesSection({
                 <option value="STORY">Story</option>
                 <option value="TASK">Task</option>
                 <option value="BUG">Bug</option>
+                <option value="EPIC">Epic</option>
               </select>
             ) : (
               <span className="inline-flex items-center gap-1 bg-jira-gray-100 text-jira-gray-700 px-2 py-1 rounded text-xs font-medium shrink-0">

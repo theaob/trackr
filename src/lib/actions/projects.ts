@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { BoardType } from "@/types";
 import { PUBLIC_USER_SELECT } from "@/lib/auth/publicUser";
 import {
   accessibleProjectIds,
@@ -287,6 +288,7 @@ export async function getAllProjectsWithStats() {
       totalIssues: p._count.issues,
       openIssues: openByProject.get(p.id) ?? 0,
       activeSprint: p.sprints.length > 0 ? p.sprints[0].name : null,
+      boardType: (p.boardType as BoardType) || "SCRUM",
     }));
   } catch (error) {
     console.error("Failed to fetch projects with stats:", error);

@@ -95,13 +95,17 @@ export default function Sidebar({ project, collapsed: propCollapsed, onToggleCol
       }`}
     >
       {/* Project Banner */}
-      <div className="p-4 border-b border-jira-gray-200 flex items-center gap-3">
-        <div className="w-9 h-9 rounded bg-jira-blue/10 border border-jira-blue/30 text-jira-blue font-bold flex items-center justify-center shrink-0">
-          <FolderDot className="w-5 h-5 text-jira-blue" />
+      <div className="p-4 border-b border-jira-gray-200 flex items-center gap-3 group/banner">
+        <div className="relative w-9 h-9 rounded-lg bg-jira-blue/10 border border-jira-blue/30 text-jira-blue font-bold flex items-center justify-center shrink-0 group-hover/banner:border-jira-blue/60 group-hover/banner:bg-jira-blue/15 transition-all duration-300">
+          <FolderDot className="w-5 h-5 text-jira-blue transition-transform duration-300 group-hover/banner:scale-110" />
+          <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-jira-blue opacity-75 motion-reduce:hidden" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-jira-blue" />
+          </span>
         </div>
         {!collapsed && (
           <div className="truncate">
-            <h2 className="text-sm font-bold text-jira-navy truncate">{project.name}</h2>
+            <h2 className="text-sm font-bold text-jira-navy truncate group-hover/banner:text-jira-blue transition-colors duration-200">{project.name}</h2>
             <p className="text-[11px] text-jira-gray-600 font-medium">Software project</p>
           </div>
         )}
