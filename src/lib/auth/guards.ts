@@ -299,3 +299,11 @@ export async function projectIdForComponent(componentId: string): Promise<string
   });
   return projectIdOf(component, "Component");
 }
+
+export async function projectIdForWorklog(worklogId: string): Promise<string> {
+  const worklog = await prisma.worklog.findUnique({
+    where: { id: worklogId },
+    select: { issue: { select: { projectId: true } } },
+  });
+  return projectIdOf(worklog?.issue ?? null, "Worklog");
+}

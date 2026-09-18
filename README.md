@@ -64,6 +64,10 @@ A modern, full-stack agile project management and issue tracking platform built 
     thumbnail previews for images. Only a vetted image allow-list is ever
     rendered inline; everything else downloads as an opaque file, regardless
     of what the uploader's browser claimed its type was.
+  - **Time tracking**: Original and Remaining estimate fields (Jira's compact
+    format, e.g. `2d 4h` -- 1d = 8h, 1w = 5d), a logged/remaining/original
+    progress bar, and a work log of individual entries. Logging work
+    auto-decrements the remaining estimate; deleting an entry restores it.
   - Status progression, constrained to the project's own workflow.
   - **Watch** an issue you're not assigned to, to get notified on status
     changes and new comments.

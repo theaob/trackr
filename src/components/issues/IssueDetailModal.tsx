@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Issue, IssueStatus, IssueType, PriorityLevel, User, Sprint, Version, CustomField, IssueLink, IssueLabel, WorkflowStatus, WorkflowTransition, Project, Attachment, IssueComponent } from "@/types";
+import { Issue, IssueStatus, IssueType, PriorityLevel, User, Sprint, Version, CustomField, IssueLink, IssueLabel, WorkflowStatus, WorkflowTransition, Project, Attachment, IssueComponent, Worklog } from "@/types";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
 import UserAvatar from "@/components/common/UserAvatar";
 import IssueLinksSection from "@/components/issues/IssueLinksSection";
 import LabelsSection from "@/components/issues/LabelsSection";
 import AttachmentsSection from "@/components/issues/AttachmentsSection";
 import ComponentsField from "@/components/issues/ComponentsField";
+import TimeTrackingField from "@/components/issues/TimeTrackingField";
 
 import { useCurrentUser } from "@/context/UserContext";
 import { updateIssue, deleteIssue, getIssueByKeyOrId } from "@/lib/actions/issues";
@@ -511,6 +512,33 @@ export default function IssueDetailModal({
     onIssueUpdated(updatedIssue);
   };
 
+  // Handle Time Tracking changes
+  const handleEstimatesChanged = (originalEstimateSeconds: number | null, remainingEstimateSeconds: number | null) => {
+    const updatedIssue = { ...currentIssue, originalEstimateSeconds, remainingEstimateSeconds };
+    setCurrentIssue(updatedIssue);
+    onIssueUpdated(updatedIssue);
+  };
+
+  const handleWorklogAdded = (worklog: Worklog, remainingEstimateSeconds: number | null) => {
+    const updatedIssue = {
+      ...currentIssue,
+      worklogs: [worklog, ...(currentIssue.worklogs || [])],
+      remainingEstimateSeconds,
+    };
+    setCurrentIssue(updatedIssue);
+    onIssueUpdated(updatedIssue);
+  };
+
+  const handleWorklogRemoved = (worklogId: string, remainingEstimateSeconds: number | null) => {
+    const updatedIssue = {
+      ...currentIssue,
+      worklogs: (currentIssue.worklogs || []).filter((w) => w.id !== worklogId),
+      remainingEstimateSeconds,
+    };
+    setCurrentIssue(updatedIssue);
+    onIssueUpdated(updatedIssue);
+  };
+
   // Handle Delete Issue
   const handleDeleteIssue = async () => {
     if (!window.confirm(`Are you sure you want to delete ${currentIssue.key}?`)) return;
@@ -973,6 +1001,21 @@ export default function IssueDetailModal({
                 className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
+
+            {/* Time Tracking */}
+            <TimeTrackingField
+              issueId={currentIssue.id}
+              originalEstimateSeconds={currentIssue.originalEstimateSeconds}
+              remainingEstimateSeconds={currentIssue.remainingEstimateSeconds}
+              worklogs={currentIssue.worklogs}
+              canEdit={permissions.canEditIssue}
+              canLogWork={permissions.canAddComment}
+              isAdmin={permissions.isAdmin}
+              currentUserId={currentUser?.id}
+              onEstimatesChanged={handleEstimatesChanged}
+              onWorklogAdded={handleWorklogAdded}
+              onWorklogRemoved={handleWorklogRemoved}
+            />
 
             {/* Start Date (Epics only -- the field the Roadmap plots) */}
             {currentIssue.type === "EPIC" && (

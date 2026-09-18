@@ -23,6 +23,7 @@ model User {
   watchedIssues  Watcher[]
   uploadedAttachments Attachment[]
   ledComponents  Component[]   @relation("ComponentLead")
+  worklogs       Worklog[]
   notifications       Notification[]
   ledProjects         Project[]
   projectMembers      ProjectMember[]
@@ -281,6 +282,8 @@ model Issue {
   status      String        @default("TODO") // "BACKLOG", "TODO", "IN_PROGRESS", "IN_REVIEW", "DONE"
   order       Int           @default(0)
   storyPoints Int?
+  originalEstimateSeconds  Int?
+  remainingEstimateSeconds Int?
   startDate   DateTime?
   dueDate     DateTime?
   projectId   String
@@ -305,6 +308,7 @@ model Issue {
   watchers    Watcher[]
   attachments Attachment[]
   components  IssueComponent[]
+  worklogs    Worklog[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -347,6 +351,25 @@ model Comment {
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([issueId])
+}
+
+// A single entry of time spent on an issue. Logging work decrements the
+// issue's remainingEstimateSeconds (auto-initialized from originalEstimate
+// on the first log, mirroring Jira's default "reduce remaining estimate by
+// the amount logged" behavior); deleting an entry restores it.
+model Worklog {
+  id               String   @id @default(cuid())
+  issueId          String
+  issue            Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  authorId         String
+  author           User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  timeSpentSeconds Int
+  description      String?
+  workDate         DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@index([issueId])
 }

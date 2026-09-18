@@ -104,6 +104,8 @@ export interface Issue {
   status: IssueStatus;
   order: number;
   storyPoints: number | null;
+  originalEstimateSeconds: number | null;
+  remainingEstimateSeconds: number | null;
   startDate: string | Date | null;
   dueDate: string | Date | null;
   projectId: string;
@@ -133,6 +135,7 @@ export interface Issue {
   watchers?: Watcher[];
   attachments?: Attachment[];
   components?: IssueComponent[];
+  worklogs?: Worklog[];
   createdAt: string | Date;
   updatedAt: string | Date;
 }
@@ -190,6 +193,17 @@ export interface IssueComponent {
   issueId: string;
   componentId: string;
   component: Component;
+}
+
+export interface Worklog {
+  id: string;
+  issueId: string;
+  authorId: string;
+  author: User;
+  timeSpentSeconds: number;
+  description: string | null;
+  workDate: string | Date;
+  createdAt: string | Date;
 }
 
 export interface Attachment {

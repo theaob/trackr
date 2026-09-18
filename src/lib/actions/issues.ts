@@ -207,6 +207,10 @@ export async function getIssueByKeyOrId(keyOrId: string) {
           include: { component: { include: { lead: USER_SELECT } } },
           orderBy: { component: { name: "asc" } },
         },
+        worklogs: {
+          include: { author: USER_SELECT },
+          orderBy: { workDate: "desc" },
+        },
         ...LABELS_INCLUDE,
       },
     });
@@ -717,6 +721,8 @@ export async function updateIssue(
     priority?: PriorityLevel;
     type?: IssueType;
     storyPoints?: number | null;
+    originalEstimateSeconds?: number | null;
+    remainingEstimateSeconds?: number | null;
     startDate?: string | Date | null;
     dueDate?: string | Date | null;
     assigneeId?: string | null;
@@ -762,6 +768,16 @@ export async function updateIssue(
 
     const actorId = user.id;
 
+    // Setting an original estimate for the first time also seeds the
+    // remaining estimate, so the time-tracking bar has something to show
+    // before any work is logged. A later edit to either field is otherwise
+    // independent -- Jira doesn't resync one from the other either.
+    const shouldInitRemaining =
+      data.originalEstimateSeconds !== undefined &&
+      data.originalEstimateSeconds !== null &&
+      existing.remainingEstimateSeconds === null &&
+      data.remainingEstimateSeconds === undefined;
+
     const updated = await prisma.issue.update({
       where: { id },
       data: {
@@ -771,6 +787,13 @@ export async function updateIssue(
         ...(data.priority !== undefined && { priority: data.priority }),
         ...(data.type !== undefined && { type: data.type }),
         ...(data.storyPoints !== undefined && { storyPoints: data.storyPoints }),
+        ...(data.originalEstimateSeconds !== undefined && {
+          originalEstimateSeconds: data.originalEstimateSeconds,
+        }),
+        ...(data.remainingEstimateSeconds !== undefined && {
+          remainingEstimateSeconds: data.remainingEstimateSeconds,
+        }),
+        ...(shouldInitRemaining && { remainingEstimateSeconds: data.originalEstimateSeconds }),
         ...(data.startDate !== undefined && { startDate: data.startDate ? new Date(data.startDate) : null }),
         ...(data.dueDate !== undefined && { dueDate: data.dueDate ? new Date(data.dueDate) : null }),
         ...(data.assigneeId !== undefined && { assigneeId: data.assigneeId }),
