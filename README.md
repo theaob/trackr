@@ -28,22 +28,56 @@ A modern, full-stack agile project management and issue tracking platform built 
   - Sprint life-cycle: **Start Sprint** (with custom goal & duration) and **Complete Sprint** (with automatic rollover of open tasks).
   - Story point estimation tracking (total vs. completed points).
   - Inline quick-create directly in sprints or backlog.
+- 📊 **Reports** (Scrum projects):
+  - **Sprint Burndown**: story points remaining per day against an ideal guideline,
+    reconstructed from each issue's actual status-change history.
+  - **Velocity**: completed story points across recent finished sprints, with an
+    average reference line.
+  - **Status Breakdown**: where a sprint's issues currently stand, by workflow status.
+- 🗺️ **Roadmap**: a timeline of your epics (Scrum or Kanban -- epics aren't
+  sprint-bound), each bar spanning its start and due date with a progress fill
+  drawn from its issues' completion. Epics missing either date are listed
+  separately rather than silently dropped.
 - 🎯 **Issue Management**:
   - Issue types: **Epic**, **Story**, **Task**, **Bug**, **Sub-task**.
   - Priority levels: **Highest**, **High**, **Medium**, **Low**, **Lowest**.
-  - Story points estimate badges.
+  - Story points estimate badges and optional due dates, with an overdue
+    indicator on cards, list rows, and the issue detail view.
   - Assignee & reporter assignment.
   - Parent Epic linking.
+  - Issue linking (**Blocks**, **Relates to**, **Duplicates**), including
+    across projects.
+  - Free-text labels, created inline on an issue and filterable from the
+    Issues list.
+  - **Components**: admin-defined sub-teams or subsystems (e.g. "Backend API",
+    "Mobile App") with an optional lead, managed in Project Settings. Unlike
+    labels, an issue can only pick from the project's existing set -- not
+    create a new one on the fly.
+  - Bulk actions from the Issues list: select several issues and change their
+    status, assignee, or priority, add a label, or delete them all at once.
 - 📝 **Issue Detail Modal**:
   - Inline editable title and rich description.
-  - Status progression workflow dropdown.
+  - **Markdown support** in descriptions and comments -- headings, bold/italic,
+    lists, links, inline code and fenced code blocks, and tables, rendered
+    safely with `react-markdown` (no raw HTML pass-through).
+  - **File attachments**: drag-and-drop or browse to attach files, with
+    thumbnail previews for images. Only a vetted image allow-list is ever
+    rendered inline; everything else downloads as an opaque file, regardless
+    of what the uploader's browser claimed its type was.
+  - **Time tracking**: Original and Remaining estimate fields (Jira's compact
+    format, e.g. `2d 4h` -- 1d = 8h, 1w = 5d), a logged/remaining/original
+    progress bar, and a work log of individual entries. Logging work
+    auto-decrements the remaining estimate; deleting an entry restores it.
+  - Status progression, constrained to the project's own workflow.
+  - **Watch** an issue you're not assigned to, to get notified on status
+    changes and new comments.
   - Comments timeline with instant commenting and deletion.
   - Immutable activity history (logs who changed status, priority, or created issues).
 - 🔍 **Interactive Filtering**:
   - Quick keyword search across issue keys and summaries.
   - One-click teammate avatar filter buttons.
   - "Only my issues" toggle.
-  - Issue type & priority selectors.
+  - Issue type, priority & label selectors.
 - 🔐 **Authentication & Access Control**:
   - Email/password sign-in backed by a signed, http-only session cookie.
   - PBKDF2-SHA512 password hashing (210k iterations) with transparent upgrades.
@@ -53,8 +87,8 @@ A modern, full-stack agile project management and issue tracking platform built 
     visitors with no account.
   - Optional OIDC single sign-on with real ID token signature verification.
   - Personal access tokens for the REST API, scoped to the owner's projects.
-- ⚙️ **Project Settings**:
-  - Configure project name, description, and review project lead details.
+- ⚙️ **Project Settings**: General details, Custom Fields, Components, Webhooks,
+  Access & Roles, Workflow, and SSO & Certificates, each its own tab.
 
 ---
 
@@ -106,7 +140,7 @@ npm start
 | --- | --- | --- |
 | `DATABASE_URL` | `file:./dev.db` | Prisma SQLite connection string. |
 | `AUTH_SECRET` | generated | Signs session cookies; 32+ characters. Generate with `openssl rand -hex 32`. When unset, a random secret is written to `<data dir>/.session-secret` on first use, so sessions survive restarts but not a new volume. |
-| `TRACKR_DATA_DIR` | `./data` | Where avatars and the generated session secret live. |
+| `TRACKR_DATA_DIR` | `./data` | Where avatars, issue attachments, and the generated session secret live. |
 | `TRACKR_ALLOW_PRIVATE_WEBHOOKS` | `0` | Set to `1` to let webhooks target loopback, link-local and private addresses. Off by default so a webhook cannot be pointed at internal services. The bundled `/api/mock-webhook-receiver` is on localhost, so trying it out needs this set. |
 | `TRACKR_TRUST_PROXY` | `0` | Set to `1` only when a reverse proxy in front of Trackr terminates HTTPS and forwards `X-Forwarded-Proto: https`. This marks the session cookie `Secure`, which browsers require for HTTPS but silently reject on plain HTTP from anywhere but `localhost`. Leave unset for a direct `http://` deployment (e.g. `docker run -p 3000:3000` with no proxy) — enabling it there breaks sign-in. |
 | `TRACKR_SEED_PASSWORD` | `trackr-demo` | Password given to the demo accounts by `db:seed`. |
@@ -267,5 +301,6 @@ not publish an image unless they pass.
 - **Icons**: Lucide React
 - **Drag and Drop**: `@hello-pangea/dnd`
 - **Database & ORM**: SQLite (`dev.db`) with Prisma ORM
+- **Markdown**: `react-markdown` + `remark-gfm`
 - **Dates**: `date-fns`
 - **Tests**: Vitest

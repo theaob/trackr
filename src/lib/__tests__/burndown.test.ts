@@ -1,0 +1,75 @@
+import { describe, expect, it } from "vitest";
+import { computeBurndown, statusAsOf, type StatusChangeEvent } from "@/lib/burndown";
+
+const DONE = ["DONE"];
+
+describe("statusAsOf", () => {
+  it("returns the current status when there is no history", () => {
+    const issue = { id: "1", storyPoints: 3, status: "IN_PROGRESS" };
+    expect(statusAsOf(issue, [], new Date("2026-01-05"))).toBe("IN_PROGRESS");
+  });
+
+  it("returns the pre-change status for a moment before the first change", () => {
+    const issue = { id: "1", storyPoints: 3, status: "DONE" };
+    const changes: StatusChangeEvent[] = [
+      { issueId: "1", oldValue: "TODO", newValue: "IN_PROGRESS", createdAt: new Date("2026-01-03") },
+    ];
+    expect(statusAsOf(issue, changes, new Date("2026-01-01"))).toBe("TODO");
+  });
+
+  it("walks forward through multiple changes to find the status at a later moment", () => {
+    const issue = { id: "1", storyPoints: 3, status: "DONE" };
+    const changes: StatusChangeEvent[] = [
+      { issueId: "1", oldValue: "TODO", newValue: "IN_PROGRESS", createdAt: new Date("2026-01-02") },
+      { issueId: "1", oldValue: "IN_PROGRESS", newValue: "DONE", createdAt: new Date("2026-01-05") },
+    ];
+    expect(statusAsOf(issue, changes, new Date("2026-01-03"))).toBe("IN_PROGRESS");
+    expect(statusAsOf(issue, changes, new Date("2026-01-06"))).toBe("DONE");
+    expect(statusAsOf(issue, changes, new Date("2026-01-05"))).toBe("DONE");
+  });
+});
+
+describe("computeBurndown", () => {
+  const start = new Date("2026-01-01");
+  const end = new Date("2026-01-05");
+
+  it("starts the ideal line at the full point total and ends at zero", () => {
+    const issues = [
+      { id: "1", storyPoints: 5, status: "TODO" },
+      { id: "2", storyPoints: 3, status: "TODO" },
+    ];
+    const series = computeBurndown(issues, [], DONE, start, end, end);
+    expect(series[0].ideal).toBe(8);
+    expect(series[series.length - 1].ideal).toBe(0);
+  });
+
+  it("counts an issue as remaining until its status crosses into a done category", () => {
+    const issues = [{ id: "1", storyPoints: 5, status: "DONE" }];
+    const changes: StatusChangeEvent[] = [
+      { issueId: "1", oldValue: "TODO", newValue: "DONE", createdAt: new Date("2026-01-03") },
+    ];
+    const series = computeBurndown(issues, changes, DONE, start, end, end);
+    const byDate = (d: string) => series.find((p) => p.date.toISOString().slice(0, 10) === d)!;
+
+    expect(byDate("2026-01-02").remaining).toBe(5);
+    expect(byDate("2026-01-03").remaining).toBe(0);
+    expect(byDate("2026-01-04").remaining).toBe(0);
+  });
+
+  it("leaves remaining null for days after today", () => {
+    const issues = [{ id: "1", storyPoints: 5, status: "TODO" }];
+    const today = new Date("2026-01-03");
+    const series = computeBurndown(issues, [], DONE, start, end, today);
+    const byDate = (d: string) => series.find((p) => p.date.toISOString().slice(0, 10) === d)!;
+
+    expect(byDate("2026-01-03").remaining).toBe(5);
+    expect(byDate("2026-01-04").remaining).toBeNull();
+    expect(byDate("2026-01-05").remaining).toBeNull();
+  });
+
+  it("ignores story-points-less issues without throwing", () => {
+    const issues = [{ id: "1", storyPoints: null, status: "TODO" }];
+    const series = computeBurndown(issues, [], DONE, start, end, end);
+    expect(series.every((p) => p.remaining === 0 || p.remaining === null)).toBe(true);
+  });
+});

@@ -4,6 +4,8 @@ import prisma from "@/lib/db";
 import { IssueStatus, IssueType, PriorityLevel } from "@/types";
 import { revalidatePath } from "next/cache";
 import { triggerWebhooks } from "./webhooks";
+import { notifyWatchers } from "@/lib/watcherNotify";
+import { deleteIssueAttachmentDir } from "@/lib/attachmentStorage";
 import { DISPLAY_USER_SELECT } from "@/lib/auth/publicUser";
 import {
   accessibleProjectIds,
@@ -34,6 +36,10 @@ const LINKED_ISSUE_SELECT = {
   status: true,
   projectId: true,
   project: { select: { key: true, name: true } },
+} as const;
+
+const LABELS_INCLUDE = {
+  labels: { include: { label: true }, orderBy: { label: { name: "asc" } } },
 } as const;
 
 
@@ -73,6 +79,7 @@ export async function getProjectIssues(projectId: string) {
           },
           orderBy: { createdAt: "desc" },
         },
+        ...LABELS_INCLUDE,
       },
       orderBy: [{ order: "asc" }, { createdAt: "asc" }],
       take: 200,
@@ -134,6 +141,7 @@ export async function getBoardIssues(projectId: string, activeSprintId?: string 
             type: true,
           },
         },
+        ...LABELS_INCLUDE,
       },
       orderBy: [{ order: "asc" }, { createdAt: "asc" }],
       take: 150,
@@ -191,6 +199,19 @@ export async function getIssueByKeyOrId(keyOrId: string) {
           include: { source: { select: LINKED_ISSUE_SELECT } },
           orderBy: { createdAt: "asc" },
         },
+        attachments: {
+          include: { uploadedBy: USER_SELECT },
+          orderBy: { createdAt: "desc" },
+        },
+        components: {
+          include: { component: { include: { lead: USER_SELECT } } },
+          orderBy: { component: { name: "asc" } },
+        },
+        worklogs: {
+          include: { author: USER_SELECT },
+          orderBy: { workDate: "desc" },
+        },
+        ...LABELS_INCLUDE,
       },
     });
 
@@ -227,6 +248,7 @@ export async function getBacklogIssues(projectId: string) {
               type: true,
             },
           },
+          ...LABELS_INCLUDE,
         },
         orderBy: [{ order: "asc" }, { createdAt: "asc" }],
         take: 300,
@@ -246,6 +268,7 @@ export async function getBacklogIssues(projectId: string) {
               type: true,
             },
           },
+          ...LABELS_INCLUDE,
         },
         orderBy: [{ order: "asc" }, { createdAt: "asc" }],
         take: 100,
@@ -308,6 +331,7 @@ export async function getAllCrossProjectIssues(projectId?: string) {
           },
           orderBy: { createdAt: "desc" },
         },
+        ...LABELS_INCLUDE,
       },
       orderBy: [{ order: "asc" }, { createdAt: "asc" }],
       take: 100,
@@ -333,6 +357,7 @@ export interface PaginatedIssuesParams {
   reporterId?: string;
   sprintId?: string;
   versionId?: string;
+  label?: string;
   sortField?: string;
   sortOrder?: "asc" | "desc";
 }
@@ -393,6 +418,10 @@ export async function getPaginatedIssues(params: PaginatedIssuesParams) {
       }
     }
 
+    if (params.label && params.label !== "ALL") {
+      where.labels = { some: { label: { name: params.label } } };
+    }
+
     // A single project's own "done" names are known; spanning every
     // accessible project (params.projectId === "ALL") can't express "done in
     // whichever workflow each issue's project uses" as one equality filter,
@@ -421,7 +450,7 @@ export async function getPaginatedIssues(params: PaginatedIssuesParams) {
 
     const sortField = params.sortField || "createdAt";
     const sortOrder = params.sortOrder || "desc";
-    const allowedSortFields = ["key", "title", "status", "priority", "storyPoints", "createdAt", "updatedAt"];
+    const allowedSortFields = ["key", "title", "status", "priority", "storyPoints", "dueDate", "createdAt", "updatedAt"];
     const orderBy: any = {};
     if (allowedSortFields.includes(sortField)) {
       orderBy[sortField] = sortOrder;
@@ -452,6 +481,7 @@ export async function getPaginatedIssues(params: PaginatedIssuesParams) {
           // Comment and activity threads are loaded by the detail modal, not
           // eagerly for every row of the table.
           _count: { select: { comments: true } },
+          ...LABELS_INCLUDE,
         },
         orderBy,
         skip,
@@ -488,6 +518,8 @@ export async function createIssue(data: {
   reporterId?: string | null;
   parentId?: string | null;
   storyPoints?: number | null;
+  startDate?: string | null;
+  dueDate?: string | null;
 }) {
   try {
     const { user } = await requireProjectPermission(data.projectId, "CREATE_ISSUE");
@@ -532,6 +564,8 @@ export async function createIssue(data: {
           priority: data.priority || "MEDIUM",
           status,
           storyPoints: data.storyPoints ?? null,
+          startDate: data.startDate ? new Date(data.startDate) : null,
+          dueDate: data.dueDate ? new Date(data.dueDate) : null,
           projectId: data.projectId,
           sprintId: data.sprintId || null,
           versionId: data.versionId || null,
@@ -687,6 +721,10 @@ export async function updateIssue(
     priority?: PriorityLevel;
     type?: IssueType;
     storyPoints?: number | null;
+    originalEstimateSeconds?: number | null;
+    remainingEstimateSeconds?: number | null;
+    startDate?: string | Date | null;
+    dueDate?: string | Date | null;
     assigneeId?: string | null;
     sprintId?: string | null;
     versionId?: string | null;
@@ -730,6 +768,16 @@ export async function updateIssue(
 
     const actorId = user.id;
 
+    // Setting an original estimate for the first time also seeds the
+    // remaining estimate, so the time-tracking bar has something to show
+    // before any work is logged. A later edit to either field is otherwise
+    // independent -- Jira doesn't resync one from the other either.
+    const shouldInitRemaining =
+      data.originalEstimateSeconds !== undefined &&
+      data.originalEstimateSeconds !== null &&
+      existing.remainingEstimateSeconds === null &&
+      data.remainingEstimateSeconds === undefined;
+
     const updated = await prisma.issue.update({
       where: { id },
       data: {
@@ -739,6 +787,15 @@ export async function updateIssue(
         ...(data.priority !== undefined && { priority: data.priority }),
         ...(data.type !== undefined && { type: data.type }),
         ...(data.storyPoints !== undefined && { storyPoints: data.storyPoints }),
+        ...(data.originalEstimateSeconds !== undefined && {
+          originalEstimateSeconds: data.originalEstimateSeconds,
+        }),
+        ...(data.remainingEstimateSeconds !== undefined && {
+          remainingEstimateSeconds: data.remainingEstimateSeconds,
+        }),
+        ...(shouldInitRemaining && { remainingEstimateSeconds: data.originalEstimateSeconds }),
+        ...(data.startDate !== undefined && { startDate: data.startDate ? new Date(data.startDate) : null }),
+        ...(data.dueDate !== undefined && { dueDate: data.dueDate ? new Date(data.dueDate) : null }),
         ...(data.assigneeId !== undefined && { assigneeId: data.assigneeId }),
         ...(data.sprintId !== undefined && { sprintId: data.sprintId }),
         ...(data.versionId !== undefined && { versionId: data.versionId }),
@@ -800,6 +857,14 @@ export async function updateIssue(
             },
           });
         }
+
+        await notifyWatchers(
+          id,
+          [actorId, existing.assigneeId],
+          `${existing.key} moved to ${data.status}`,
+          `Status was updated from ${existing.status} to ${data.status}`,
+          `/projects/${existing.project.key}/board?selectedIssue=${existing.key}`
+        );
       }
 
       if (data.priority && data.priority !== existing.priority) {
@@ -1057,6 +1122,8 @@ export async function deleteIssue(id: string) {
     if (!issue) throw new Error("Issue not found");
 
     await prisma.issue.delete({ where: { id } });
+    // Attachment rows cascade with the issue; their files on disk don't.
+    await deleteIssueAttachmentDir(id);
 
     try {
       revalidatePath(`/projects/${issue.project.key}`);
@@ -1071,5 +1138,67 @@ export async function deleteIssue(id: string) {
   } catch (error) {
     return toActionError(error, "Failed to delete issue");
   }
+}
+
+const MAX_BULK_BATCH = 200;
+
+export interface BulkActionResult {
+  success: true;
+  succeeded: number;
+  /** Per-issue failures (e.g. a disallowed status transition, or no permission on that issue's project). */
+  failed: { id: string; error: string }[];
+}
+
+/**
+ * Applies the same field changes to many issues at once, reusing updateIssue's
+ * per-issue permission and workflow-transition checks rather than a bulk
+ * write -- a selection can span multiple projects (or, for status, several
+ * different workflows), so each issue is validated on its own terms.
+ */
+export async function bulkUpdateIssues(
+  issueIds: string[],
+  changes: { status?: IssueStatus; assigneeId?: string | null; priority?: PriorityLevel }
+): Promise<BulkActionResult | { success: false; error: string }> {
+  const ids = Array.from(new Set(issueIds));
+  if (ids.length === 0) return { success: true, succeeded: 0, failed: [] };
+  if (ids.length > MAX_BULK_BATCH) {
+    return { success: false, error: `Select at most ${MAX_BULK_BATCH} issues at a time.` };
+  }
+
+  const failed: { id: string; error: string }[] = [];
+  let succeeded = 0;
+
+  for (const id of ids) {
+    const res = await updateIssue(id, changes);
+    if (res.success) {
+      succeeded++;
+    } else {
+      failed.push({ id, error: res.error || "Failed to update" });
+    }
+  }
+
+  return { success: true, succeeded, failed };
+}
+
+export async function bulkDeleteIssues(issueIds: string[]): Promise<BulkActionResult | { success: false; error: string }> {
+  const ids = Array.from(new Set(issueIds));
+  if (ids.length === 0) return { success: true, succeeded: 0, failed: [] };
+  if (ids.length > MAX_BULK_BATCH) {
+    return { success: false, error: `Select at most ${MAX_BULK_BATCH} issues at a time.` };
+  }
+
+  const failed: { id: string; error: string }[] = [];
+  let succeeded = 0;
+
+  for (const id of ids) {
+    const res = await deleteIssue(id);
+    if (res.success) {
+      succeeded++;
+    } else {
+      failed.push({ id, error: res.error || "Failed to delete" });
+    }
+  }
+
+  return { success: true, succeeded, failed };
 }
 

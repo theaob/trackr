@@ -1,10 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Issue, IssueStatus, IssueType, PriorityLevel, User, Sprint, Version, CustomField, IssueLink, WorkflowStatus, WorkflowTransition } from "@/types";
+import { Issue, IssueStatus, IssueType, PriorityLevel, User, Sprint, Version, CustomField, IssueLink, IssueLabel, WorkflowStatus, WorkflowTransition, Project, Attachment, IssueComponent, Worklog } from "@/types";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
 import UserAvatar from "@/components/common/UserAvatar";
 import IssueLinksSection from "@/components/issues/IssueLinksSection";
+import LabelsSection from "@/components/issues/LabelsSection";
+import AttachmentsSection from "@/components/issues/AttachmentsSection";
+import ComponentsField from "@/components/issues/ComponentsField";
+import TimeTrackingField from "@/components/issues/TimeTrackingField";
 
 import { useCurrentUser } from "@/context/UserContext";
 import { updateIssue, deleteIssue, getIssueByKeyOrId } from "@/lib/actions/issues";
@@ -15,10 +19,12 @@ import {
   setIssueCustomFieldValue,
 } from "@/lib/actions/customFields";
 import { getProjectWorkflow } from "@/lib/actions/workflows";
+import { getWatchState, toggleWatch } from "@/lib/actions/watchers";
 import { allowedNextStatusNames, prettifyStatusName } from "@/lib/workflowDisplay";
+import { isOverdue } from "@/lib/dueDate";
 import CustomFieldRenderer from "@/components/common/CustomFieldRenderer";
 import MentionInput from "@/components/common/MentionInput";
-import MentionText from "@/components/common/MentionText";
+import MarkdownContent from "@/components/common/MarkdownContent";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
 import {
   X,
@@ -34,6 +40,8 @@ import {
   ChevronDown,
   Tag,
   Sliders,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 
@@ -43,6 +51,14 @@ interface IssueDetailModalProps {
   allIssues: Issue[];
   sprints?: Sprint[];
   versions?: Version[];
+  /**
+   * The caller's already-loaded project, members included -- role resolution
+   * needs the member list, which the issue's own `project` relation never
+   * carries (see below). Falls back to that relation for callers that don't
+   * have a full project object handy, which only resolves correctly for the
+   * project's lead.
+   */
+  project?: Project | null;
   onClose: () => void;
   onIssueUpdated: (updated: Issue) => void;
   onIssueDeleted: (issueId: string) => void;
@@ -54,6 +70,7 @@ export default function IssueDetailModal({
   allIssues,
   sprints = [],
   versions = [],
+  project,
   onClose,
   onIssueUpdated,
   onIssueDeleted,
@@ -61,7 +78,8 @@ export default function IssueDetailModal({
   const { currentUser } = useCurrentUser();
   const [currentIssue, setCurrentIssue] = useState<Issue | null>(issue);
   const permissions = useProjectPermissions(
-    currentIssue?.project ||
+    project ||
+      currentIssue?.project ||
       (currentIssue?.projectId
         ? ({ id: currentIssue.projectId, key: currentIssue.key.split("-")[0] } as any)
         : null)
@@ -75,6 +93,10 @@ export default function IssueDetailModal({
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [activeTab, setActiveTab] = useState<"comments" | "history">("comments");
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Watch state
+  const [watching, setWatching] = useState(false);
+  const [watcherCount, setWatcherCount] = useState(0);
 
   // Custom Fields State
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
@@ -139,6 +161,42 @@ export default function IssueDetailModal({
     };
   }, [currentIssue?.projectId]);
 
+  // Load watch state for the signed-in caller
+  useEffect(() => {
+    let isMounted = true;
+    if (!currentIssue?.id || !currentUser) return;
+
+    getWatchState(currentIssue.id).then(({ watching, count }) => {
+      if (isMounted) {
+        setWatching(watching);
+        setWatcherCount(count);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentIssue?.id, currentUser]);
+
+  // Escape closes the modal, matching the X button -- unless a nested field
+  // (title edit, add-label input) already handled it and stopped it there.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  const handleToggleWatch = async () => {
+    if (!currentIssue) return;
+    const res = await toggleWatch(currentIssue.id);
+    if (res.success) {
+      setWatching(res.watching);
+      setWatcherCount(res.count);
+    }
+  };
+
   const handleCustomFieldChange = async (fieldId: string, val: string) => {
     setCustomFieldValues((prev) => ({ ...prev, [fieldId]: val }));
     if (!currentIssue) return;
@@ -162,7 +220,9 @@ export default function IssueDetailModal({
       updatedByUserId: currentUser?.id,
     });
     if (res.success && res.issue) {
-      const typed = res.issue as unknown as Issue;
+      // updateIssue's response doesn't refetch labels/links (loaded separately by
+      // their own sections), so merge onto the current issue instead of replacing it.
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
       setCurrentIssue(typed);
       onIssueUpdated(typed);
     }
@@ -176,7 +236,9 @@ export default function IssueDetailModal({
       updatedByUserId: currentUser?.id,
     });
     if (res.success && res.issue) {
-      const typed = res.issue as unknown as Issue;
+      // updateIssue's response doesn't refetch labels/links (loaded separately by
+      // their own sections), so merge onto the current issue instead of replacing it.
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
       setCurrentIssue(typed);
       onIssueUpdated(typed);
     }
@@ -190,7 +252,9 @@ export default function IssueDetailModal({
       updatedByUserId: currentUser?.id,
     });
     if (res.success && res.issue) {
-      const typed = res.issue as unknown as Issue;
+      // updateIssue's response doesn't refetch labels/links (loaded separately by
+      // their own sections), so merge onto the current issue instead of replacing it.
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
       setCurrentIssue(typed);
       onIssueUpdated(typed);
     }
@@ -204,7 +268,9 @@ export default function IssueDetailModal({
       updatedByUserId: currentUser?.id,
     });
     if (res.success && res.issue) {
-      const typed = res.issue as unknown as Issue;
+      // updateIssue's response doesn't refetch labels/links (loaded separately by
+      // their own sections), so merge onto the current issue instead of replacing it.
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
       setCurrentIssue(typed);
       onIssueUpdated(typed);
     }
@@ -217,7 +283,9 @@ export default function IssueDetailModal({
       updatedByUserId: currentUser?.id,
     });
     if (res.success && res.issue) {
-      const typed = res.issue as unknown as Issue;
+      // updateIssue's response doesn't refetch labels/links (loaded separately by
+      // their own sections), so merge onto the current issue instead of replacing it.
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
       setCurrentIssue(typed);
       onIssueUpdated(typed);
     }
@@ -230,7 +298,9 @@ export default function IssueDetailModal({
       updatedByUserId: currentUser?.id,
     });
     if (res.success && res.issue) {
-      const typed = res.issue as unknown as Issue;
+      // updateIssue's response doesn't refetch labels/links (loaded separately by
+      // their own sections), so merge onto the current issue instead of replacing it.
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
       setCurrentIssue(typed);
       onIssueUpdated(typed);
     }
@@ -243,7 +313,9 @@ export default function IssueDetailModal({
       updatedByUserId: currentUser?.id,
     });
     if (res.success && res.issue) {
-      const typed = res.issue as unknown as Issue;
+      // updateIssue's response doesn't refetch labels/links (loaded separately by
+      // their own sections), so merge onto the current issue instead of replacing it.
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
       setCurrentIssue(typed);
       onIssueUpdated(typed);
     }
@@ -268,7 +340,9 @@ export default function IssueDetailModal({
       updatedByUserId: currentUser?.id,
     });
     if (res.success && res.issue) {
-      const typed = res.issue as unknown as Issue;
+      // updateIssue's response doesn't refetch labels/links (loaded separately by
+      // their own sections), so merge onto the current issue instead of replacing it.
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
       setCurrentIssue(typed);
       onIssueUpdated(typed);
     }
@@ -281,7 +355,9 @@ export default function IssueDetailModal({
       updatedByUserId: currentUser?.id,
     });
     if (res.success && res.issue) {
-      const typed = res.issue as unknown as Issue;
+      // updateIssue's response doesn't refetch labels/links (loaded separately by
+      // their own sections), so merge onto the current issue instead of replacing it.
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
       setCurrentIssue(typed);
       onIssueUpdated(typed);
     }
@@ -295,7 +371,35 @@ export default function IssueDetailModal({
       updatedByUserId: currentUser?.id,
     });
     if (res.success && res.issue) {
-      const typed = res.issue as unknown as Issue;
+      // updateIssue's response doesn't refetch labels/links (loaded separately by
+      // their own sections), so merge onto the current issue instead of replacing it.
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
+      setCurrentIssue(typed);
+      onIssueUpdated(typed);
+    }
+  };
+
+  // Handle Due Date Change
+  const handleDueDateChange = async (dateStr: string) => {
+    const res = await updateIssue(currentIssue.id, {
+      dueDate: dateStr === "" ? null : dateStr,
+      updatedByUserId: currentUser?.id,
+    });
+    if (res.success && res.issue) {
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
+      setCurrentIssue(typed);
+      onIssueUpdated(typed);
+    }
+  };
+
+  // Handle Start Date Change (Epics only -- the field the roadmap plots)
+  const handleStartDateChange = async (dateStr: string) => {
+    const res = await updateIssue(currentIssue.id, {
+      startDate: dateStr === "" ? null : dateStr,
+      updatedByUserId: currentUser?.id,
+    });
+    if (res.success && res.issue) {
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
       setCurrentIssue(typed);
       onIssueUpdated(typed);
     }
@@ -348,6 +452,93 @@ export default function IssueDetailModal({
     onIssueUpdated(updatedIssue);
   };
 
+  // Handle Label added/removed
+  const handleLabelAdded = (issueLabel: IssueLabel) => {
+    const updatedIssue = {
+      ...currentIssue,
+      labels: [...(currentIssue.labels || []).filter((l) => l.labelId !== issueLabel.labelId), issueLabel],
+    };
+    setCurrentIssue(updatedIssue);
+    onIssueUpdated(updatedIssue);
+  };
+
+  const handleLabelRemoved = (labelId: string) => {
+    const updatedIssue = {
+      ...currentIssue,
+      labels: (currentIssue.labels || []).filter((l) => l.labelId !== labelId),
+    };
+    setCurrentIssue(updatedIssue);
+    onIssueUpdated(updatedIssue);
+  };
+
+  // Handle Attachment added/removed
+  const handleAttachmentAdded = (attachment: Attachment) => {
+    const updatedIssue = {
+      ...currentIssue,
+      attachments: [attachment, ...(currentIssue.attachments || [])],
+    };
+    setCurrentIssue(updatedIssue);
+    onIssueUpdated(updatedIssue);
+  };
+
+  const handleAttachmentRemoved = (attachmentId: string) => {
+    const updatedIssue = {
+      ...currentIssue,
+      attachments: (currentIssue.attachments || []).filter((a) => a.id !== attachmentId),
+    };
+    setCurrentIssue(updatedIssue);
+    onIssueUpdated(updatedIssue);
+  };
+
+  // Handle Component added/removed
+  const handleComponentAdded = (issueComponent: IssueComponent) => {
+    const updatedIssue = {
+      ...currentIssue,
+      components: [
+        ...(currentIssue.components || []).filter((c) => c.componentId !== issueComponent.componentId),
+        issueComponent,
+      ],
+    };
+    setCurrentIssue(updatedIssue);
+    onIssueUpdated(updatedIssue);
+  };
+
+  const handleComponentRemoved = (componentId: string) => {
+    const updatedIssue = {
+      ...currentIssue,
+      components: (currentIssue.components || []).filter((c) => c.componentId !== componentId),
+    };
+    setCurrentIssue(updatedIssue);
+    onIssueUpdated(updatedIssue);
+  };
+
+  // Handle Time Tracking changes
+  const handleEstimatesChanged = (originalEstimateSeconds: number | null, remainingEstimateSeconds: number | null) => {
+    const updatedIssue = { ...currentIssue, originalEstimateSeconds, remainingEstimateSeconds };
+    setCurrentIssue(updatedIssue);
+    onIssueUpdated(updatedIssue);
+  };
+
+  const handleWorklogAdded = (worklog: Worklog, remainingEstimateSeconds: number | null) => {
+    const updatedIssue = {
+      ...currentIssue,
+      worklogs: [worklog, ...(currentIssue.worklogs || [])],
+      remainingEstimateSeconds,
+    };
+    setCurrentIssue(updatedIssue);
+    onIssueUpdated(updatedIssue);
+  };
+
+  const handleWorklogRemoved = (worklogId: string, remainingEstimateSeconds: number | null) => {
+    const updatedIssue = {
+      ...currentIssue,
+      worklogs: (currentIssue.worklogs || []).filter((w) => w.id !== worklogId),
+      remainingEstimateSeconds,
+    };
+    setCurrentIssue(updatedIssue);
+    onIssueUpdated(updatedIssue);
+  };
+
   // Handle Delete Issue
   const handleDeleteIssue = async () => {
     if (!window.confirm(`Are you sure you want to delete ${currentIssue.key}?`)) return;
@@ -371,6 +562,20 @@ export default function IssueDetailModal({
           </div>
 
           <div className="flex items-center gap-3">
+            {currentUser && (
+              <button
+                onClick={handleToggleWatch}
+                className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-xs font-semibold transition-colors ${
+                  watching
+                    ? "text-jira-blue bg-jira-blue-light/60 hover:bg-jira-blue-light"
+                    : "text-jira-gray-500 hover:text-jira-navy hover:bg-jira-gray-200"
+                }`}
+                title={watching ? "Stop watching this issue" : "Watch this issue for updates"}
+              >
+                {watching ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                {watcherCount > 0 && <span>{watcherCount}</span>}
+              </button>
+            )}
             {permissions.canDeleteIssue && (
               <button
                 onClick={handleDeleteIssue}
@@ -407,6 +612,7 @@ export default function IssueDetailModal({
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleSaveTitle();
                       if (e.key === "Escape") {
+                        e.stopPropagation();
                         setTitle(currentIssue.title);
                         setIsEditingTitle(false);
                       }
@@ -460,6 +666,7 @@ export default function IssueDetailModal({
                     >
                       Cancel
                     </button>
+                    <span className="text-[11px] text-jira-gray-400 ml-auto">Markdown supported</span>
                   </div>
                 </div>
               ) : (
@@ -472,7 +679,7 @@ export default function IssueDetailModal({
                   }`}
                 >
                   {currentIssue.description ? (
-                    <MentionText text={currentIssue.description} users={users} />
+                    <MarkdownContent text={currentIssue.description} users={users} />
                   ) : (
                     <span className="text-jira-gray-500 italic">
                       {permissions.canEditIssue
@@ -482,6 +689,30 @@ export default function IssueDetailModal({
                   )}
                 </div>
               )}
+            </div>
+
+            {/* Labels */}
+            <div className="pt-4 border-t border-jira-gray-200">
+              <LabelsSection
+                issueId={currentIssue.id}
+                projectId={currentIssue.projectId}
+                labels={currentIssue.labels}
+                canEdit={permissions.canEditIssue}
+                onLabelAdded={handleLabelAdded}
+                onLabelRemoved={handleLabelRemoved}
+              />
+            </div>
+
+            {/* Attachments */}
+            <div className="pt-4 border-t border-jira-gray-200">
+              <AttachmentsSection
+                issueId={currentIssue.id}
+                attachments={currentIssue.attachments}
+                canUpload={permissions.canAddComment}
+                canDelete={(attachment) => permissions.isAdmin || attachment.uploadedById === currentUser?.id}
+                onAttachmentAdded={handleAttachmentAdded}
+                onAttachmentRemoved={handleAttachmentRemoved}
+              />
             </div>
 
             {/* Linked Issues */}
@@ -544,6 +775,7 @@ export default function IssueDetailModal({
                           onSubmit={handleAddComment}
                           className="w-full px-3 py-2 text-sm border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
                         />
+                        <p className="mt-1 text-[11px] text-jira-gray-400">Markdown supported</p>
                         {newComment.trim().length > 0 && (
                           <div className="mt-2 flex gap-2">
                             <button
@@ -598,7 +830,7 @@ export default function IssueDetailModal({
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
-                          <MentionText
+                          <MarkdownContent
                             text={comment.content}
                             users={users}
                             className="mt-1 text-jira-gray-800 text-sm leading-normal"
@@ -770,6 +1002,59 @@ export default function IssueDetailModal({
               />
             </div>
 
+            {/* Time Tracking */}
+            <TimeTrackingField
+              issueId={currentIssue.id}
+              originalEstimateSeconds={currentIssue.originalEstimateSeconds}
+              remainingEstimateSeconds={currentIssue.remainingEstimateSeconds}
+              worklogs={currentIssue.worklogs}
+              canEdit={permissions.canEditIssue}
+              canLogWork={permissions.canAddComment}
+              isAdmin={permissions.isAdmin}
+              currentUserId={currentUser?.id}
+              onEstimatesChanged={handleEstimatesChanged}
+              onWorklogAdded={handleWorklogAdded}
+              onWorklogRemoved={handleWorklogRemoved}
+            />
+
+            {/* Start Date (Epics only -- the field the Roadmap plots) */}
+            {currentIssue.type === "EPIC" && (
+              <div>
+                <label className="block text-xs font-bold text-jira-gray-600 uppercase tracking-wider mb-1.5">
+                  Start Date
+                </label>
+                <input
+                  type="date"
+                  disabled={!permissions.canEditIssue}
+                  value={currentIssue.startDate ? format(new Date(currentIssue.startDate), "yyyy-MM-dd") : ""}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
+                  className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                />
+              </div>
+            )}
+
+            {/* Due Date */}
+            <div>
+              <label className="block text-xs font-bold text-jira-gray-600 uppercase tracking-wider mb-1.5">
+                Due Date
+              </label>
+              <input
+                type="date"
+                disabled={!permissions.canEditIssue}
+                value={currentIssue.dueDate ? format(new Date(currentIssue.dueDate), "yyyy-MM-dd") : ""}
+                onChange={(e) => handleDueDateChange(e.target.value)}
+                className={`w-full bg-white border rounded px-2.5 py-1.5 text-xs focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed ${
+                  isOverdue(
+                    currentIssue.dueDate,
+                    currentIssue.status,
+                    workflowStatuses.filter((s) => s.category === "DONE").map((s) => s.name)
+                  )
+                    ? "border-rose-300 text-rose-700 font-semibold"
+                    : "border-jira-gray-300 text-jira-navy"
+                }`}
+              />
+            </div>
+
             {/* Parent Epic */}
             <div>
               <label className="block text-xs font-bold text-jira-gray-600 uppercase tracking-wider mb-1.5">
@@ -836,6 +1121,16 @@ export default function IssueDetailModal({
                 ))}
               </select>
             </div>
+
+            {/* Components */}
+            <ComponentsField
+              issueId={currentIssue.id}
+              projectId={currentIssue.projectId}
+              components={currentIssue.components}
+              canEdit={permissions.canEditIssue}
+              onComponentAdded={handleComponentAdded}
+              onComponentRemoved={handleComponentRemoved}
+            />
 
             {/* Custom Fields */}
             {customFields.length > 0 && (

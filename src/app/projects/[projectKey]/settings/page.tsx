@@ -2,6 +2,7 @@ import React from "react";
 import { notFound } from "next/navigation";
 import { getProjectByKey, getAllUsers } from "@/lib/actions/projects";
 import { getProjectCustomFields } from "@/lib/actions/customFields";
+import { getProjectComponents } from "@/lib/actions/components";
 import { getProjectWebhooks } from "@/lib/actions/webhooks";
 import { getProjectMembers } from "@/lib/actions/access";
 import { getProjectWorkflow } from "@/lib/actions/workflows";
@@ -20,10 +21,11 @@ export default async function SettingsPage({ params }: PageProps) {
   const project = await getProjectByKey(params.projectKey);
   if (!project) notFound();
 
-  const [users, customFields, webhooks, members, workflow] = await Promise.all([
+  const [users, customFields, components, webhooks, members, workflow] = await Promise.all([
     // The full directory here, because this is where members are invited.
     getAllUsers(),
     getProjectCustomFields(project.id),
+    getProjectComponents(project.id),
     // Returns [] for non-administrators; the tab is hidden for them anyway.
     getProjectWebhooks(project.id),
     getProjectMembers(project.id),
@@ -35,6 +37,7 @@ export default async function SettingsPage({ params }: PageProps) {
       project={project as any}
       users={users as any}
       initialCustomFields={customFields as any}
+      initialComponents={components as any}
       initialWebhooks={webhooks as any}
       initialMembers={members as any}
       initialWorkflowStatuses={workflow.statuses as any}

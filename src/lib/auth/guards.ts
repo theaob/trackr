@@ -283,3 +283,27 @@ export async function projectIdForWorkflowStatus(statusId: string): Promise<stri
   });
   return projectIdOf(status, "Workflow status");
 }
+
+export async function projectIdForAttachment(attachmentId: string): Promise<string> {
+  const attachment = await prisma.attachment.findUnique({
+    where: { id: attachmentId },
+    select: { issue: { select: { projectId: true } } },
+  });
+  return projectIdOf(attachment?.issue ?? null, "Attachment");
+}
+
+export async function projectIdForComponent(componentId: string): Promise<string> {
+  const component = await prisma.component.findUnique({
+    where: { id: componentId },
+    select: { projectId: true },
+  });
+  return projectIdOf(component, "Component");
+}
+
+export async function projectIdForWorklog(worklogId: string): Promise<string> {
+  const worklog = await prisma.worklog.findUnique({
+    where: { id: worklogId },
+    select: { issue: { select: { projectId: true } } },
+  });
+  return projectIdOf(worklog?.issue ?? null, "Worklog");
+}

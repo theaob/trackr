@@ -31,7 +31,9 @@ import {
   Pencil,
   Trash2,
   X,
+  CalendarClock,
 } from "lucide-react";
+import { isOverdue } from "@/lib/dueDate";
 import { format } from "date-fns";
 
 interface BacklogViewProps {
@@ -739,11 +741,41 @@ export default function BacklogView({
                                       {issue.parent.title}
                                     </span>
                                   )}
+                                  {issue.labels && issue.labels.length > 0 && (
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      {issue.labels.slice(0, 2).map((il) => (
+                                        <span
+                                          key={il.id}
+                                          className="text-[10px] bg-jira-gray-100 border border-jira-gray-300 text-jira-gray-700 font-medium px-1.5 py-0.5 rounded-full"
+                                        >
+                                          {il.label.name}
+                                        </span>
+                                      ))}
+                                      {issue.labels.length > 2 && (
+                                        <span className="text-[10px] text-jira-gray-400">
+                                          +{issue.labels.length - 2}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
 
                                 <div className="flex items-center gap-4 shrink-0">
                                   <StatusBadge status={issue.status} />
                                   <PriorityIcon priority={issue.priority} className="w-4 h-4" />
+                                  {issue.dueDate && (
+                                    <span
+                                      className={`inline-flex items-center gap-0.5 text-[11px] font-semibold ${
+                                        isOverdue(issue.dueDate, issue.status, doneStatusNames)
+                                          ? "text-rose-600"
+                                          : "text-jira-gray-500"
+                                      }`}
+                                      title={`Due ${format(new Date(issue.dueDate), "MMM d, yyyy")}`}
+                                    >
+                                      <CalendarClock className="w-3.5 h-3.5" />
+                                      {format(new Date(issue.dueDate), "MMM d")}
+                                    </span>
+                                  )}
 
                                   {issue.storyPoints !== null && (
                                     <span className="w-6 h-5 rounded-full bg-jira-gray-200 text-jira-gray-800 text-[11px] font-bold flex items-center justify-center">
@@ -762,32 +794,6 @@ export default function BacklogView({
                                     <div className="w-6 h-6 rounded-full border border-dashed border-jira-gray-300" />
                                   )}
 
-                                  {/* Move to another sprint or backlog */}
-                                  <div className="relative">
-                                    <select
-                                      value={issue.sprintId || ""}
-                                      onClick={(e) => e.stopPropagation()}
-                                      onChange={(e) => {
-                                        e.stopPropagation();
-                                        handleMoveIssue(issue.id, e.target.value || null);
-                                      }}
-                                      className="text-[11px] bg-jira-gray-100 hover:bg-jira-gray-200 border border-jira-gray-300 rounded px-2 py-0.5 text-jira-navy font-medium outline-none cursor-pointer"
-                                    >
-                                      <option value={issue.sprintId || ""}>Move to...</option>
-                                      <option value="">Backlog</option>
-                                      {sprints
-                                        .filter((s) => s.status !== "COMPLETED" || s.id === issue.sprintId)
-                                        .map((s) => (
-                                          <option
-                                            key={s.id}
-                                            value={s.id}
-                                            disabled={s.id === issue.sprintId || s.status === "COMPLETED"}
-                                          >
-                                            {s.name} {s.status === "ACTIVE" ? "(Active)" : s.status === "FUTURE" ? "(Planned)" : "(Completed - Closed)"}
-                                          </option>
-                                        ))}
-                                    </select>
-                                  </div>
                                 </div>
                               </div>
                             )}
@@ -913,11 +919,41 @@ export default function BacklogView({
                                 {issue.parent.title}
                               </span>
                             )}
+                            {issue.labels && issue.labels.length > 0 && (
+                              <div className="flex items-center gap-1 shrink-0">
+                                {issue.labels.slice(0, 2).map((il) => (
+                                  <span
+                                    key={il.id}
+                                    className="text-[10px] bg-jira-gray-100 border border-jira-gray-300 text-jira-gray-700 font-medium px-1.5 py-0.5 rounded-full"
+                                  >
+                                    {il.label.name}
+                                  </span>
+                                ))}
+                                {issue.labels.length > 2 && (
+                                  <span className="text-[10px] text-jira-gray-400">
+                                    +{issue.labels.length - 2}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
 
                           <div className="flex items-center gap-4 shrink-0">
                             <StatusBadge status={issue.status} />
                             <PriorityIcon priority={issue.priority} className="w-4 h-4" />
+                            {issue.dueDate && (
+                              <span
+                                className={`inline-flex items-center gap-0.5 text-[11px] font-semibold ${
+                                  isOverdue(issue.dueDate, issue.status, doneStatusNames)
+                                    ? "text-rose-600"
+                                    : "text-jira-gray-500"
+                                }`}
+                                title={`Due ${format(new Date(issue.dueDate), "MMM d, yyyy")}`}
+                              >
+                                <CalendarClock className="w-3.5 h-3.5" />
+                                {format(new Date(issue.dueDate), "MMM d")}
+                              </span>
+                            )}
 
                             {issue.storyPoints !== null && (
                               <span className="w-6 h-5 rounded-full bg-jira-gray-200 text-jira-gray-800 text-[11px] font-bold flex items-center justify-center">
@@ -936,31 +972,6 @@ export default function BacklogView({
                               <div className="w-6 h-6 rounded-full border border-dashed border-jira-gray-300" />
                             )}
 
-                            {/* Move to any Sprint (Active or Future/Unstarted) */}
-                            {!isKanban && (
-                              <div className="relative">
-                                <select
-                                  value=""
-                                  onClick={(e) => e.stopPropagation()}
-                                  onChange={(e) => {
-                                    e.stopPropagation();
-                                    if (e.target.value) {
-                                      handleMoveIssue(issue.id, e.target.value);
-                                    }
-                                  }}
-                                  className="text-[11px] bg-jira-blue-light/70 hover:bg-jira-blue-light border border-jira-blue/30 text-jira-blue font-semibold rounded px-2 py-0.5 outline-none cursor-pointer"
-                                >
-                                  <option value="">+ Add to Sprint</option>
-                                  {sprints
-                                    .filter((s) => s.status !== "COMPLETED")
-                                    .map((s) => (
-                                      <option key={s.id} value={s.id}>
-                                        {s.name} {s.status === "ACTIVE" ? "(Active)" : s.status === "FUTURE" ? "(Planned / Unstarted)" : ""}
-                                      </option>
-                                    ))}
-                                </select>
-                              </div>
-                            )}
                           </div>
                         </div>
                       )}
@@ -1329,6 +1340,7 @@ export default function BacklogView({
           users={users}
           allIssues={issues}
           sprints={sprints}
+          project={project}
           onClose={handleCloseDetailModal}
           onIssueUpdated={(up) => {
             setIssues((prev) => prev.map((i) => (i.id === up.id ? up : i)));

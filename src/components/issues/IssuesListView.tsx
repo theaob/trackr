@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Project, Issue, User, Sprint, Version, IssueType, PriorityLevel, IssueStatus, WorkflowStatus } from "@/types";
+import { Project, Issue, User, Sprint, Version, IssueType, PriorityLevel, IssueStatus, WorkflowStatus, Label } from "@/types";
 import { prettifyStatusName } from "@/lib/workflowDisplay";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
 import UserAvatar from "@/components/common/UserAvatar";
@@ -11,8 +11,16 @@ import { useCurrentUser } from "@/context/UserContext";
 import { useSearch } from "@/context/SearchContext";
 import IssueDetailModal from "./IssueDetailModal";
 import MentionInput from "@/components/common/MentionInput";
-import MentionText from "@/components/common/MentionText";
-import { updateIssue, deleteIssue, getPaginatedIssues, getIssueByKeyOrId } from "@/lib/actions/issues";
+import MarkdownContent from "@/components/common/MarkdownContent";
+import {
+  updateIssue,
+  deleteIssue,
+  getPaginatedIssues,
+  getIssueByKeyOrId,
+  bulkUpdateIssues,
+  bulkDeleteIssues,
+} from "@/lib/actions/issues";
+import { bulkAddLabel } from "@/lib/actions/labels";
 import { addComment, deleteComment } from "@/lib/actions/comments";
 import {
   Search,
@@ -36,8 +44,10 @@ import {
   ChevronsRight,
   Loader2,
   RefreshCw,
+  CalendarClock,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
+import { isOverdue } from "@/lib/dueDate";
 
 interface IssuesListViewProps {
   project: Project;
@@ -51,6 +61,7 @@ interface IssuesListViewProps {
   sprints: Sprint[];
   versions?: Version[];
   statuses: WorkflowStatus[];
+  labels?: Label[];
   initialSelectedIssueKey?: string;
 }
 
@@ -62,7 +73,7 @@ type FilterPreset =
   | "DONE"
   | "HIGH_PRIORITY";
 
-type SortField = "key" | "title" | "status" | "priority" | "storyPoints" | "createdAt" | "updatedAt";
+type SortField = "key" | "title" | "status" | "priority" | "storyPoints" | "dueDate" | "createdAt" | "updatedAt";
 type SortOrder = "asc" | "desc";
 
 export default function IssuesListView({
@@ -77,6 +88,7 @@ export default function IssuesListView({
   sprints,
   versions = [],
   statuses,
+  labels = [],
   initialSelectedIssueKey,
 }: IssuesListViewProps) {
   const router = useRouter();
@@ -96,6 +108,13 @@ export default function IssuesListView({
     initialTotalPages ?? Math.max(1, Math.ceil((initialTotalCount ?? initialIssues.length) / (initialPageSize ?? 50)))
   );
   const [isLoading, setIsLoading] = useState(false);
+
+  // Bulk selection, table view only
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkActing, setIsBulkActing] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+  const [bulkLabelInput, setBulkLabelInput] = useState("");
+  const [showBulkLabelInput, setShowBulkLabelInput] = useState(false);
 
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(
     initialIssues.length > 0 ? initialIssues[0].id : null
@@ -183,6 +202,7 @@ export default function IssuesListView({
   const [reporterFilter, setReporterFilter] = useState<string>("ALL");
   const [sprintFilter, setSprintFilter] = useState<string>("ALL");
   const [versionFilter, setVersionFilter] = useState<string>("ALL");
+  const [labelFilter, setLabelFilter] = useState<string>("ALL");
 
   // Sorting
   const [sortField, setSortField] = useState<SortField>("createdAt");
@@ -219,12 +239,14 @@ export default function IssuesListView({
         reporterId: reporterFilter,
         sprintId: sprintFilter,
         versionId: versionFilter,
+        label: labelFilter,
         sortField,
         sortOrder,
       });
       setIssues(res.issues as any);
       setTotalCount(res.totalCount);
       setTotalPages(res.totalPages);
+      setSelectedIds(new Set());
       setSelectedIssueId((prevId) => {
         if (res.issues.length === 0) return null;
         if (!prevId || !res.issues.some((i: any) => i.id === prevId)) {
@@ -250,6 +272,7 @@ export default function IssuesListView({
     reporterFilter,
     sprintFilter,
     versionFilter,
+    labelFilter,
     sortField,
     sortOrder,
     currentUser?.id,
@@ -280,7 +303,73 @@ export default function IssuesListView({
     setReporterFilter("ALL");
     setSprintFilter("ALL");
     setVersionFilter("ALL");
+    setLabelFilter("ALL");
     setPage(1);
+  };
+
+  // Bulk selection helpers (table view)
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAllOnPage = () => {
+    setSelectedIds((prev) => {
+      const allSelected = filteredAndSortedIssues.every((i) => prev.has(i.id));
+      if (allSelected) return new Set();
+      return new Set(filteredAndSortedIssues.map((i) => i.id));
+    });
+  };
+
+  const runBulkAction = async (
+    action: () => Promise<
+      | { success: true; succeeded: number; failed: { id: string; error: string }[] }
+      | { success: false; error: string }
+    >
+  ) => {
+    setIsBulkActing(true);
+    setBulkError(null);
+    const res = await action();
+    setIsBulkActing(false);
+    if (!res.success) {
+      setBulkError(res.error);
+      return;
+    }
+    if (res.failed.length > 0) {
+      setBulkError(
+        `${res.succeeded} of ${res.succeeded + res.failed.length} issues updated. ${res.failed.length} failed: ${res.failed[0].error}`
+      );
+    }
+    await fetchIssues();
+  };
+
+  const handleBulkStatusChange = (status: string) =>
+    runBulkAction(() => bulkUpdateIssues(Array.from(selectedIds), { status: status as IssueStatus }));
+
+  const handleBulkAssigneeChange = (assigneeId: string) =>
+    runBulkAction(() => bulkUpdateIssues(Array.from(selectedIds), { assigneeId: assigneeId || null }));
+
+  const handleBulkPriorityChange = (priority: string) =>
+    runBulkAction(() => bulkUpdateIssues(Array.from(selectedIds), { priority: priority as PriorityLevel }));
+
+  const handleBulkAddLabel = (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = bulkLabelInput.trim();
+    if (!name) return;
+    runBulkAction(() => bulkAddLabel(Array.from(selectedIds), name));
+    setBulkLabelInput("");
+    setShowBulkLabelInput(false);
+  };
+
+  const handleBulkDelete = () => {
+    if (!window.confirm(`Delete ${selectedIds.size} issue${selectedIds.size === 1 ? "" : "s"}? This cannot be undone.`)) {
+      return;
+    }
+    runBulkAction(() => bulkDeleteIssues(Array.from(selectedIds)));
   };
 
   const hasActiveFilters =
@@ -292,10 +381,16 @@ export default function IssuesListView({
     assigneeFilter !== "ALL" ||
     reporterFilter !== "ALL" ||
     sprintFilter !== "ALL" ||
-    versionFilter !== "ALL";
+    versionFilter !== "ALL" ||
+    labelFilter !== "ALL";
 
   // Issues displayed on current page
   const filteredAndSortedIssues = issues;
+
+  const doneStatusNames = useMemo(
+    () => statuses.filter((s) => s.category === "DONE").map((s) => s.name),
+    [statuses]
+  );
 
   // Selected Issue for Split View
   const selectedIssue = useMemo(() => {
@@ -632,6 +727,25 @@ export default function IssuesListView({
             </select>
           )}
 
+          {/* Label Filter */}
+          {labels.length > 0 && (
+            <select
+              value={labelFilter}
+              onChange={(e) => {
+                setLabelFilter(e.target.value);
+                setPage(1);
+              }}
+              className="text-xs bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-jira-navy font-medium outline-none focus:border-jira-blue"
+            >
+              <option value="ALL">Label: All</option>
+              {labels.map((l) => (
+                <option key={l.id} value={l.name}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+          )}
+
           {/* Sort Field & Order */}
           <div className="flex items-center gap-1 border-l border-jira-gray-300 pl-2 ml-1">
             <span className="text-[11px] text-jira-gray-500">Sort:</span>
@@ -649,6 +763,7 @@ export default function IssuesListView({
               <option value="key">Key</option>
               <option value="status">Status</option>
               <option value="storyPoints">Story Points</option>
+              <option value="dueDate">Due Date</option>
             </select>
             <button
               onClick={() => {
@@ -723,11 +838,37 @@ export default function IssuesListView({
                         {issue.title}
                       </h4>
 
+                      {issue.labels && issue.labels.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                          {issue.labels.map((il) => (
+                            <span
+                              key={il.id}
+                              className="inline-flex px-1.5 py-0.5 rounded-full bg-jira-gray-100 border border-jira-gray-300 text-[10px] font-medium text-jira-gray-700"
+                            >
+                              {il.label.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
                       <div className="flex items-center justify-between mt-2 pt-1 text-[11px] text-jira-gray-500">
                         <span>
                           {formatDistanceToNow(new Date(issue.updatedAt), { addSuffix: true })}
                         </span>
                         <div className="flex items-center gap-2">
+                          {issue.dueDate && (
+                            <span
+                              className={`inline-flex items-center gap-0.5 font-semibold ${
+                                isOverdue(issue.dueDate, issue.status, doneStatusNames)
+                                  ? "text-rose-600"
+                                  : "text-jira-gray-500"
+                              }`}
+                              title={`Due ${format(new Date(issue.dueDate), "MMM d, yyyy")}`}
+                            >
+                              <CalendarClock className="w-3 h-3" />
+                              {format(new Date(issue.dueDate), "MMM d")}
+                            </span>
+                          )}
                           {issue.storyPoints !== null && (
                             <span className="px-1.5 py-0.2 rounded-full bg-jira-gray-200 text-jira-gray-700 font-bold text-[10px]">
                               {issue.storyPoints} pts
@@ -789,6 +930,18 @@ export default function IssuesListView({
                     <h2 className="text-xl font-bold text-jira-navy leading-snug">
                       {selectedIssue.title}
                     </h2>
+                    {selectedIssue.labels && selectedIssue.labels.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                        {selectedIssue.labels.map((il) => (
+                          <span
+                            key={il.id}
+                            className="inline-flex px-2 py-0.5 rounded-full bg-jira-gray-100 border border-jira-gray-300 text-[11px] font-medium text-jira-gray-700"
+                          >
+                            {il.label.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Two Column Layout for Issue Details */}
@@ -802,7 +955,7 @@ export default function IssuesListView({
                         </h4>
                         <div className="p-3 bg-jira-gray-50/70 border border-jira-gray-200 rounded-md text-sm text-jira-navy leading-relaxed min-h-[90px]">
                           {selectedIssue.description ? (
-                            <MentionText text={selectedIssue.description} users={users} />
+                            <MarkdownContent text={selectedIssue.description} users={users} />
                           ) : (
                             <span className="text-jira-gray-400 italic">No description provided</span>
                           )}
@@ -839,15 +992,18 @@ export default function IssuesListView({
                         {activeTab === "comments" && (
                           <div className="space-y-4">
                             <form onSubmit={handleAddComment} className="flex gap-3 items-start">
-                              <MentionInput
-                                value={newComment}
-                                onChange={setNewComment}
-                                users={users}
-                                multiline={false}
-                                placeholder="Add a comment... (Type @ to mention someone)"
-                                onSubmit={handleAddComment}
-                                className="flex-1 px-3 py-1.5 text-xs border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
-                              />
+                              <div className="flex-1">
+                                <MentionInput
+                                  value={newComment}
+                                  onChange={setNewComment}
+                                  users={users}
+                                  multiline={false}
+                                  placeholder="Add a comment... (Type @ to mention someone)"
+                                  onSubmit={handleAddComment}
+                                  className="w-full px-3 py-1.5 text-xs border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+                                />
+                                <p className="mt-1 text-[11px] text-jira-gray-400">Markdown supported</p>
+                              </div>
                               <button
                                 type="submit"
                                 disabled={isSubmittingComment || !newComment.trim()}
@@ -876,7 +1032,7 @@ export default function IssuesListView({
                                         })}
                                       </span>
                                     </div>
-                                    <MentionText
+                                    <MarkdownContent
                                       text={comment.content}
                                       users={users}
                                       className="text-jira-gray-800"
@@ -1062,10 +1218,146 @@ export default function IssuesListView({
         ) : (
           /* TABLE VIEW */
           <div className="flex-1 overflow-auto p-6">
+            {selectedIds.size > 0 && (
+              <div className="mb-3 p-2.5 bg-jira-blue-light/40 border border-jira-blue/30 rounded-lg flex flex-wrap items-center gap-2 text-xs">
+                <span className="font-bold text-jira-navy pr-1">
+                  {selectedIds.size} selected
+                </span>
+
+                <select
+                  disabled={isBulkActing}
+                  defaultValue=""
+                  onChange={(e) => {
+                    if (e.target.value) handleBulkStatusChange(e.target.value);
+                    e.target.value = "";
+                  }}
+                  className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none disabled:opacity-60"
+                >
+                  <option value="" disabled>
+                    Set status...
+                  </option>
+                  {statuses.map((s) => (
+                    <option key={s.id} value={s.name}>
+                      {prettifyStatusName(s.name)}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  disabled={isBulkActing}
+                  defaultValue=""
+                  onChange={(e) => {
+                    handleBulkAssigneeChange(e.target.value);
+                    e.target.value = "";
+                  }}
+                  className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none disabled:opacity-60"
+                >
+                  <option value="" disabled>
+                    Set assignee...
+                  </option>
+                  <option value="">Unassigned</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  disabled={isBulkActing}
+                  defaultValue=""
+                  onChange={(e) => {
+                    if (e.target.value) handleBulkPriorityChange(e.target.value);
+                    e.target.value = "";
+                  }}
+                  className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none disabled:opacity-60"
+                >
+                  <option value="" disabled>
+                    Set priority...
+                  </option>
+                  <option value="HIGHEST">Highest</option>
+                  <option value="HIGH">High</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="LOW">Low</option>
+                  <option value="LOWEST">Lowest</option>
+                </select>
+
+                {showBulkLabelInput ? (
+                  <form onSubmit={handleBulkAddLabel} className="flex items-center gap-1">
+                    <input
+                      autoFocus
+                      type="text"
+                      value={bulkLabelInput}
+                      disabled={isBulkActing}
+                      onChange={(e) => setBulkLabelInput(e.target.value)}
+                      onBlur={() => {
+                        if (!bulkLabelInput.trim()) setShowBulkLabelInput(false);
+                      }}
+                      placeholder="Label name..."
+                      className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none w-32"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isBulkActing || !bulkLabelInput.trim()}
+                      className="px-2 py-1 bg-jira-blue text-white rounded font-semibold disabled:opacity-50"
+                    >
+                      Add
+                    </button>
+                  </form>
+                ) : (
+                  <button
+                    disabled={isBulkActing}
+                    onClick={() => setShowBulkLabelInput(true)}
+                    className="px-2 py-1 bg-white border border-jira-gray-300 rounded text-jira-navy font-medium hover:bg-jira-gray-50 disabled:opacity-60"
+                  >
+                    Add label
+                  </button>
+                )}
+
+                <button
+                  disabled={isBulkActing}
+                  onClick={handleBulkDelete}
+                  className="px-2 py-1 bg-white border border-rose-300 text-rose-600 rounded font-semibold hover:bg-rose-50 disabled:opacity-60"
+                >
+                  Delete
+                </button>
+
+                {isBulkActing && <Loader2 className="w-3.5 h-3.5 animate-spin text-jira-blue" />}
+
+                <button
+                  disabled={isBulkActing}
+                  onClick={() => setSelectedIds(new Set())}
+                  className="ml-auto text-jira-gray-600 hover:text-jira-navy font-medium disabled:opacity-60"
+                >
+                  Clear selection
+                </button>
+              </div>
+            )}
+
+            {bulkError && (
+              <div className="mb-3 p-2 bg-rose-50 border border-rose-200 rounded text-xs text-rose-700 flex items-center justify-between gap-2">
+                <span>{bulkError}</span>
+                <button onClick={() => setBulkError(null)} className="shrink-0 hover:text-rose-900">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
             <div className="border border-jira-gray-300 rounded-lg overflow-hidden shadow-xs bg-white">
               <table className="w-full text-left text-xs text-jira-navy">
                 <thead className="bg-jira-gray-100 text-jira-gray-700 font-bold uppercase tracking-wider border-b border-jira-gray-300">
                   <tr>
+                    <th className="py-2.5 px-3 w-8">
+                      <input
+                        type="checkbox"
+                        checked={
+                          filteredAndSortedIssues.length > 0 &&
+                          filteredAndSortedIssues.every((i) => selectedIds.has(i.id))
+                        }
+                        onChange={toggleSelectAllOnPage}
+                        className="cursor-pointer"
+                      />
+                    </th>
                     <th className="py-2.5 px-3">Type</th>
                     <th className="py-2.5 px-3">Key</th>
                     <th className="py-2.5 px-3">Summary</th>
@@ -1073,13 +1365,14 @@ export default function IssuesListView({
                     <th className="py-2.5 px-3">Priority</th>
                     <th className="py-2.5 px-3">Points</th>
                     <th className="py-2.5 px-3">Assignee</th>
+                    <th className="py-2.5 px-3">Due</th>
                     <th className="py-2.5 px-3">Updated</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-jira-gray-200">
                   {filteredAndSortedIssues.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-8 text-center text-jira-gray-500">
+                      <td colSpan={10} className="py-8 text-center text-jira-gray-500">
                         No issues found matching criteria
                       </td>
                     </tr>
@@ -1088,13 +1381,37 @@ export default function IssuesListView({
                       <tr
                         key={issue.id}
                         onClick={() => setModalIssue(issue)}
-                        className="hover:bg-jira-gray-50 cursor-pointer transition-colors"
+                        className={`hover:bg-jira-gray-50 cursor-pointer transition-colors ${
+                          selectedIds.has(issue.id) ? "bg-jira-blue-subtle/30" : ""
+                        }`}
                       >
+                        <td className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(issue.id)}
+                            onChange={() => toggleSelectOne(issue.id)}
+                            className="cursor-pointer"
+                          />
+                        </td>
                         <td className="py-2 px-3">
                           <IssueTypeBadge type={issue.type} size="xs" />
                         </td>
                         <td className="py-2 px-3 font-bold text-jira-blue">{issue.key}</td>
-                        <td className="py-2 px-3 font-medium max-w-md truncate">{issue.title}</td>
+                        <td className="py-2 px-3 font-medium max-w-md">
+                          <div className="truncate">{issue.title}</div>
+                          {issue.labels && issue.labels.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1 mt-1">
+                              {issue.labels.map((il) => (
+                                <span
+                                  key={il.id}
+                                  className="inline-flex px-1.5 py-0.5 rounded-full bg-jira-gray-100 border border-jira-gray-300 text-[10px] font-medium text-jira-gray-700"
+                                >
+                                  {il.label.name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </td>
                         <td className="py-2 px-3">
                           <StatusBadge status={issue.status} />
                         </td>
@@ -1115,6 +1432,22 @@ export default function IssuesListView({
                             </div>
                           ) : (
                             <span className="text-jira-gray-400 italic">Unassigned</span>
+                          )}
+                        </td>
+                        <td className="py-2 px-3">
+                          {issue.dueDate ? (
+                            <span
+                              className={`inline-flex items-center gap-1 ${
+                                isOverdue(issue.dueDate, issue.status, doneStatusNames)
+                                  ? "text-rose-600 font-semibold"
+                                  : "text-jira-gray-600"
+                              }`}
+                            >
+                              <CalendarClock className="w-3.5 h-3.5" />
+                              {format(new Date(issue.dueDate), "MMM d, yyyy")}
+                            </span>
+                          ) : (
+                            <span className="text-jira-gray-400">-</span>
                           )}
                         </td>
                         <td className="py-2 px-3 text-jira-gray-500">
@@ -1236,6 +1569,10 @@ export default function IssuesListView({
           allIssues={issues}
           sprints={sprints}
           versions={versions}
+          // Only the row's own project resolves membership correctly; a row
+          // from a different project (the "All Projects" filter) falls back
+          // to the issue's own project relation, same as before this prop existed.
+          project={modalIssue.projectId === project?.id ? project : undefined}
           onClose={handleCloseDetailModal}
           onIssueUpdated={(up) => {
             setIssues((prev) => prev.map((i) => (i.id === up.id ? up : i)));

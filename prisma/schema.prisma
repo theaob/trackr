@@ -20,6 +20,10 @@ model User {
   reportedIssues Issue[]       @relation("Reporter")
   comments       Comment[]
   activityLogs   ActivityLog[]
+  watchedIssues  Watcher[]
+  uploadedAttachments Attachment[]
+  ledComponents  Component[]   @relation("ComponentLead")
+  worklogs       Worklog[]
   notifications       Notification[]
   ledProjects         Project[]
   projectMembers      ProjectMember[]
@@ -48,8 +52,104 @@ model Project {
   webhooks     Webhook[]
   workflowStatuses    WorkflowStatus[]
   workflowTransitions WorkflowTransition[]
+  labels       Label[]
+  components   Component[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+// A sub-team or subsystem within a project (e.g. "Backend API", "Mobile
+// App"), admin-defined in Project Settings -- unlike Label, an issue can only
+// pick from the project's existing set, never create one inline.
+model Component {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  leadId      String?
+  lead        User?    @relation("ComponentLead", fields: [leadId], references: [id], onDelete: SetNull)
+  issues      IssueComponent[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([projectId, name])
+  @@index([projectId])
+}
+
+model IssueComponent {
+  id          String    @id @default(cuid())
+  issueId     String
+  issue       Issue     @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  componentId String
+  component   Component @relation(fields: [componentId], references: [id], onDelete: Cascade)
+
+  @@unique([issueId, componentId])
+  @@index([issueId])
+  @@index([componentId])
+}
+
+// Free-text tags, scoped per project like Jira's. No color or description --
+// just a name, created the first time anyone types it on an issue.
+model Label {
+  id        String       @id @default(cuid())
+  projectId String
+  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  issues    IssueLabel[]
+  createdAt DateTime     @default(now())
+
+  @@unique([projectId, name])
+  @@index([projectId])
+}
+
+model IssueLabel {
+  id      String @id @default(cuid())
+  issueId String
+  issue   Issue  @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  labelId String
+  label   Label  @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@unique([issueId, labelId])
+  @@index([issueId])
+  @@index([labelId])
+}
+
+// An opt-in subscription: a user who wants notifications for an issue they
+// aren't the assignee of. The assignee and @mentioned users are notified
+// regardless of this table.
+model Watcher {
+  id        String   @id @default(cuid())
+  issueId   String
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([issueId, userId])
+  @@index([issueId])
+  @@index([userId])
+}
+
+// A file uploaded to an issue. The bytes live on disk under the data
+// directory (see lib/attachmentStorage.ts), keyed by storedName -- a random
+// name independent of the user-supplied fileName, which is never trusted as
+// a path segment. mimeType is what the uploader's browser reported; the
+// download route does not trust it for deciding whether to render content
+// inline, only for image previews from a fixed allow-list.
+model Attachment {
+  id           String   @id @default(cuid())
+  issueId      String
+  issue        Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  fileName     String
+  storedName   String
+  mimeType     String
+  size         Int
+  uploadedById String
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+
+  @@index([issueId])
 }
 
 // A project's own set of issue statuses. Issue.status stores the status
@@ -182,6 +282,10 @@ model Issue {
   status      String        @default("TODO") // "BACKLOG", "TODO", "IN_PROGRESS", "IN_REVIEW", "DONE"
   order       Int           @default(0)
   storyPoints Int?
+  originalEstimateSeconds  Int?
+  remainingEstimateSeconds Int?
+  startDate   DateTime?
+  dueDate     DateTime?
   projectId   String
   project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   sprintId    String?
@@ -200,6 +304,11 @@ model Issue {
   customFieldValues CustomFieldValue[]
   linksAsSource IssueLink[] @relation("IssueLinkSource")
   linksAsTarget IssueLink[] @relation("IssueLinkTarget")
+  labels      IssueLabel[]
+  watchers    Watcher[]
+  attachments Attachment[]
+  components  IssueComponent[]
+  worklogs    Worklog[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -211,6 +320,7 @@ model Issue {
   @@index([assigneeId])
   @@index([status])
   @@index([priority])
+  @@index([dueDate])
   @@index([type])
 }
 
@@ -241,6 +351,25 @@ model Comment {
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([issueId])
+}
+
+// A single entry of time spent on an issue. Logging work decrements the
+// issue's remainingEstimateSeconds (auto-initialized from originalEstimate
+// on the first log, mirroring Jira's default "reduce remaining estimate by
+// the amount logged" behavior); deleting an entry restores it.
+model Worklog {
+  id               String   @id @default(cuid())
+  issueId          String
+  issue            Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  authorId         String
+  author           User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  timeSpentSeconds Int
+  description      String?
+  workDate         DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@index([issueId])
 }

@@ -104,6 +104,10 @@ export interface Issue {
   status: IssueStatus;
   order: number;
   storyPoints: number | null;
+  originalEstimateSeconds: number | null;
+  remainingEstimateSeconds: number | null;
+  startDate: string | Date | null;
+  dueDate: string | Date | null;
   projectId: string;
   project?: Project | null;
   sprintId: string | null;
@@ -127,6 +131,11 @@ export interface Issue {
   customFieldValues?: CustomFieldValue[];
   linksAsSource?: IssueLink[];
   linksAsTarget?: IssueLink[];
+  labels?: IssueLabel[];
+  watchers?: Watcher[];
+  attachments?: Attachment[];
+  components?: IssueComponent[];
+  worklogs?: Worklog[];
   createdAt: string | Date;
   updatedAt: string | Date;
 }
@@ -148,6 +157,72 @@ export interface IssueLink {
   type: string;
   source?: LinkedIssueSummary;
   target?: LinkedIssueSummary;
+  createdAt: string | Date;
+}
+
+export interface Label {
+  id: string;
+  projectId: string;
+  name: string;
+  createdAt: string | Date;
+}
+
+/** The join row an issue's `labels` array holds; `label` is the tag itself. */
+export interface IssueLabel {
+  id: string;
+  issueId: string;
+  labelId: string;
+  label: Label;
+}
+
+export interface Component {
+  id: string;
+  projectId: string;
+  name: string;
+  description: string | null;
+  leadId: string | null;
+  lead?: User | null;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  _count?: { issues: number };
+}
+
+/** The join row an issue's `components` array holds; `component` is the tag itself. */
+export interface IssueComponent {
+  id: string;
+  issueId: string;
+  componentId: string;
+  component: Component;
+}
+
+export interface Worklog {
+  id: string;
+  issueId: string;
+  authorId: string;
+  author: User;
+  timeSpentSeconds: number;
+  description: string | null;
+  workDate: string | Date;
+  createdAt: string | Date;
+}
+
+export interface Attachment {
+  id: string;
+  issueId: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  uploadedById: string;
+  uploadedBy: User;
+  createdAt: string | Date;
+}
+
+/** An opt-in subscription to notifications for an issue. */
+export interface Watcher {
+  id: string;
+  issueId: string;
+  userId: string;
+  user: User;
   createdAt: string | Date;
 }
 
