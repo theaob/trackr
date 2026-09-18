@@ -28,6 +28,12 @@ A modern, full-stack agile project management and issue tracking platform built 
   - Sprint life-cycle: **Start Sprint** (with custom goal & duration) and **Complete Sprint** (with automatic rollover of open tasks).
   - Story point estimation tracking (total vs. completed points).
   - Inline quick-create directly in sprints or backlog.
+- 📊 **Reports** (Scrum projects):
+  - **Sprint Burndown**: story points remaining per day against an ideal guideline,
+    reconstructed from each issue's actual status-change history.
+  - **Velocity**: completed story points across recent finished sprints, with an
+    average reference line.
+  - **Status Breakdown**: where a sprint's issues currently stand, by workflow status.
 - 🎯 **Issue Management**:
   - Issue types: **Epic**, **Story**, **Task**, **Bug**, **Sub-task**.
   - Priority levels: **Highest**, **High**, **Medium**, **Low**, **Lowest**.

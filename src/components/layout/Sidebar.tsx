@@ -15,6 +15,7 @@ import {
   Compass,
   ListFilter,
   Rocket,
+  BarChart3,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -42,6 +43,17 @@ export default function Sidebar({ project }: SidebarProps) {
       href: `/projects/${project.key}/issues`,
       icon: ListFilter,
     },
+    // Reports are sprint-based (burndown, velocity); Kanban projects have no
+    // sprints to report on.
+    ...(project.boardType !== "KANBAN"
+      ? [
+          {
+            name: "Reports",
+            href: `/projects/${project.key}/reports`,
+            icon: BarChart3,
+          },
+        ]
+      : []),
     {
       name: "Releases",
       href: `/projects/${project.key}/releases`,
