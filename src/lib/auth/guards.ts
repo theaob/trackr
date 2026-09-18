@@ -283,3 +283,11 @@ export async function projectIdForWorkflowStatus(statusId: string): Promise<stri
   });
   return projectIdOf(status, "Workflow status");
 }
+
+export async function projectIdForAttachment(attachmentId: string): Promise<string> {
+  const attachment = await prisma.attachment.findUnique({
+    where: { id: attachmentId },
+    select: { issue: { select: { projectId: true } } },
+  });
+  return projectIdOf(attachment?.issue ?? null, "Attachment");
+}

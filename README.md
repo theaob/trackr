@@ -56,6 +56,10 @@ A modern, full-stack agile project management and issue tracking platform built 
   - **Markdown support** in descriptions and comments -- headings, bold/italic,
     lists, links, inline code and fenced code blocks, and tables, rendered
     safely with `react-markdown` (no raw HTML pass-through).
+  - **File attachments**: drag-and-drop or browse to attach files, with
+    thumbnail previews for images. Only a vetted image allow-list is ever
+    rendered inline; everything else downloads as an opaque file, regardless
+    of what the uploader's browser claimed its type was.
   - Status progression, constrained to the project's own workflow.
   - **Watch** an issue you're not assigned to, to get notified on status
     changes and new comments.
@@ -128,7 +132,7 @@ npm start
 | --- | --- | --- |
 | `DATABASE_URL` | `file:./dev.db` | Prisma SQLite connection string. |
 | `AUTH_SECRET` | generated | Signs session cookies; 32+ characters. Generate with `openssl rand -hex 32`. When unset, a random secret is written to `<data dir>/.session-secret` on first use, so sessions survive restarts but not a new volume. |
-| `TRACKR_DATA_DIR` | `./data` | Where avatars and the generated session secret live. |
+| `TRACKR_DATA_DIR` | `./data` | Where avatars, issue attachments, and the generated session secret live. |
 | `TRACKR_ALLOW_PRIVATE_WEBHOOKS` | `0` | Set to `1` to let webhooks target loopback, link-local and private addresses. Off by default so a webhook cannot be pointed at internal services. The bundled `/api/mock-webhook-receiver` is on localhost, so trying it out needs this set. |
 | `TRACKR_TRUST_PROXY` | `0` | Set to `1` only when a reverse proxy in front of Trackr terminates HTTPS and forwards `X-Forwarded-Proto: https`. This marks the session cookie `Secure`, which browsers require for HTTPS but silently reject on plain HTTP from anywhere but `localhost`. Leave unset for a direct `http://` deployment (e.g. `docker run -p 3000:3000` with no proxy) — enabling it there breaks sign-in. |
 | `TRACKR_SEED_PASSWORD` | `trackr-demo` | Password given to the demo accounts by `db:seed`. |

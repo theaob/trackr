@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Issue, IssueStatus, IssueType, PriorityLevel, User, Sprint, Version, CustomField, IssueLink, IssueLabel, WorkflowStatus, WorkflowTransition, Project } from "@/types";
+import { Issue, IssueStatus, IssueType, PriorityLevel, User, Sprint, Version, CustomField, IssueLink, IssueLabel, WorkflowStatus, WorkflowTransition, Project, Attachment } from "@/types";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
 import UserAvatar from "@/components/common/UserAvatar";
 import IssueLinksSection from "@/components/issues/IssueLinksSection";
 import LabelsSection from "@/components/issues/LabelsSection";
+import AttachmentsSection from "@/components/issues/AttachmentsSection";
 
 import { useCurrentUser } from "@/context/UserContext";
 import { updateIssue, deleteIssue, getIssueByKeyOrId } from "@/lib/actions/issues";
@@ -468,6 +469,25 @@ export default function IssueDetailModal({
     onIssueUpdated(updatedIssue);
   };
 
+  // Handle Attachment added/removed
+  const handleAttachmentAdded = (attachment: Attachment) => {
+    const updatedIssue = {
+      ...currentIssue,
+      attachments: [attachment, ...(currentIssue.attachments || [])],
+    };
+    setCurrentIssue(updatedIssue);
+    onIssueUpdated(updatedIssue);
+  };
+
+  const handleAttachmentRemoved = (attachmentId: string) => {
+    const updatedIssue = {
+      ...currentIssue,
+      attachments: (currentIssue.attachments || []).filter((a) => a.id !== attachmentId),
+    };
+    setCurrentIssue(updatedIssue);
+    onIssueUpdated(updatedIssue);
+  };
+
   // Handle Delete Issue
   const handleDeleteIssue = async () => {
     if (!window.confirm(`Are you sure you want to delete ${currentIssue.key}?`)) return;
@@ -629,6 +649,18 @@ export default function IssueDetailModal({
                 canEdit={permissions.canEditIssue}
                 onLabelAdded={handleLabelAdded}
                 onLabelRemoved={handleLabelRemoved}
+              />
+            </div>
+
+            {/* Attachments */}
+            <div className="pt-4 border-t border-jira-gray-200">
+              <AttachmentsSection
+                issueId={currentIssue.id}
+                attachments={currentIssue.attachments}
+                canUpload={permissions.canAddComment}
+                canDelete={(attachment) => permissions.isAdmin || attachment.uploadedById === currentUser?.id}
+                onAttachmentAdded={handleAttachmentAdded}
+                onAttachmentRemoved={handleAttachmentRemoved}
               />
             </div>
 

@@ -131,6 +131,7 @@ export interface Issue {
   linksAsTarget?: IssueLink[];
   labels?: IssueLabel[];
   watchers?: Watcher[];
+  attachments?: Attachment[];
   createdAt: string | Date;
   updatedAt: string | Date;
 }
@@ -168,6 +169,17 @@ export interface IssueLabel {
   issueId: string;
   labelId: string;
   label: Label;
+}
+
+export interface Attachment {
+  id: string;
+  issueId: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  uploadedById: string;
+  uploadedBy: User;
+  createdAt: string | Date;
 }
 
 /** An opt-in subscription to notifications for an issue. */

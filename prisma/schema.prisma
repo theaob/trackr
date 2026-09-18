@@ -21,6 +21,7 @@ model User {
   comments       Comment[]
   activityLogs   ActivityLog[]
   watchedIssues  Watcher[]
+  uploadedAttachments Attachment[]
   notifications       Notification[]
   ledProjects         Project[]
   projectMembers      ProjectMember[]
@@ -94,6 +95,27 @@ model Watcher {
   @@unique([issueId, userId])
   @@index([issueId])
   @@index([userId])
+}
+
+// A file uploaded to an issue. The bytes live on disk under the data
+// directory (see lib/attachmentStorage.ts), keyed by storedName -- a random
+// name independent of the user-supplied fileName, which is never trusted as
+// a path segment. mimeType is what the uploader's browser reported; the
+// download route does not trust it for deciding whether to render content
+// inline, only for image previews from a fixed allow-list.
+model Attachment {
+  id           String   @id @default(cuid())
+  issueId      String
+  issue        Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  fileName     String
+  storedName   String
+  mimeType     String
+  size         Int
+  uploadedById String
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+
+  @@index([issueId])
 }
 
 // A project's own set of issue statuses. Issue.status stores the status
@@ -248,6 +270,7 @@ model Issue {
   linksAsTarget IssueLink[] @relation("IssueLinkTarget")
   labels      IssueLabel[]
   watchers    Watcher[]
+  attachments Attachment[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 

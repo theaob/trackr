@@ -5,6 +5,7 @@ import { IssueStatus, IssueType, PriorityLevel } from "@/types";
 import { revalidatePath } from "next/cache";
 import { triggerWebhooks } from "./webhooks";
 import { notifyWatchers } from "@/lib/watcherNotify";
+import { deleteIssueAttachmentDir } from "@/lib/attachmentStorage";
 import { DISPLAY_USER_SELECT } from "@/lib/auth/publicUser";
 import {
   accessibleProjectIds,
@@ -197,6 +198,10 @@ export async function getIssueByKeyOrId(keyOrId: string) {
         linksAsTarget: {
           include: { source: { select: LINKED_ISSUE_SELECT } },
           orderBy: { createdAt: "asc" },
+        },
+        attachments: {
+          include: { uploadedBy: USER_SELECT },
+          orderBy: { createdAt: "desc" },
         },
         ...LABELS_INCLUDE,
       },
@@ -1090,6 +1095,8 @@ export async function deleteIssue(id: string) {
     if (!issue) throw new Error("Issue not found");
 
     await prisma.issue.delete({ where: { id } });
+    // Attachment rows cascade with the issue; their files on disk don't.
+    await deleteIssueAttachmentDir(id);
 
     try {
       revalidatePath(`/projects/${issue.project.key}`);
