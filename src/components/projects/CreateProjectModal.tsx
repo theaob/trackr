@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { User } from "@/types";
 import { createProject } from "@/lib/actions/projects";
 import { useRouter } from "next/navigation";
@@ -72,6 +72,21 @@ export default function CreateProjectModal({
     }
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  const handleFormKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      e.preventDefault();
+      handleSubmit(e);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 overflow-y-auto animate-in fade-in">
       <div className="bg-white w-full max-w-lg rounded-lg shadow-2xl border border-jira-gray-300 flex flex-col max-h-[90vh] overflow-hidden">
@@ -92,7 +107,7 @@ export default function CreateProjectModal({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-sm overflow-y-auto">
+        <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="p-6 space-y-4 text-sm overflow-y-auto">
           {error && (
             <div className="p-3 text-xs bg-rose-50 border border-rose-200 text-rose-700 rounded-md font-medium">
               {error}
@@ -166,6 +181,9 @@ export default function CreateProjectModal({
           </div>
 
           <div className="pt-4 border-t border-jira-gray-200 flex items-center justify-end gap-3">
+            <span className="text-[11px] text-jira-gray-400 hidden sm:inline mr-1">
+              Press <kbd className="px-1.5 py-0.5 font-mono text-[10px] bg-jira-gray-100 border border-jira-gray-300 rounded text-jira-gray-600">⌘↵</kbd> to submit
+            </span>
             <button
               type="button"
               onClick={onClose}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { TrendingDown } from "lucide-react";
 import type { BurndownPoint } from "@/lib/burndown";
@@ -9,32 +9,64 @@ import { niceAxis } from "./chartScale";
 interface BurndownChartProps {
   points: BurndownPoint[];
   totalPoints: number;
+  unit?: string;
 }
 
 const WIDTH = 640;
 const HEIGHT = 260;
-const MARGIN = { top: 16, right: 16, bottom: 28, left: 40 };
+const MARGIN = { top: 24, right: 24, bottom: 28, left: 44 };
 const PLOT_WIDTH = WIDTH - MARGIN.left - MARGIN.right;
 const PLOT_HEIGHT = HEIGHT - MARGIN.top - MARGIN.bottom;
 
-export default function BurndownChart({ points, totalPoints }: BurndownChartProps) {
+export default function BurndownChart({ points, totalPoints, unit }: BurndownChartProps) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
   const { ticks, axisMax: yMax } = useMemo(() => niceAxis(Math.max(totalPoints, 1)), [totalPoints]);
 
-  const xAt = (index: number) =>
-    points.length > 1 ? MARGIN.left + (index / (points.length - 1)) * PLOT_WIDTH : MARGIN.left + PLOT_WIDTH / 2;
-  const yAt = (value: number) => MARGIN.top + PLOT_HEIGHT - (value / yMax) * PLOT_HEIGHT;
+  const xAt = useCallback(
+    (index: number) =>
+      points.length > 1 ? MARGIN.left + (index / (points.length - 1)) * PLOT_WIDTH : MARGIN.left + PLOT_WIDTH / 2,
+    [points.length]
+  );
+  const yAt = useCallback(
+    (value: number) => MARGIN.top + PLOT_HEIGHT - (value / yMax) * PLOT_HEIGHT,
+    [yMax]
+  );
 
   const idealPath = points.map((p, i) => `${i === 0 ? "M" : "L"} ${xAt(i)} ${yAt(p.ideal)}`).join(" ");
 
   const knownRemaining = points
     .map((p, i) => (p.remaining !== null ? { i, v: p.remaining } : null))
     .filter((p): p is { i: number; v: number } => p !== null);
-  const remainingPath = knownRemaining
-    .map((p, idx) => `${idx === 0 ? "M" : "L"} ${xAt(p.i)} ${yAt(p.v)}`)
+
+  // Burndown starts at Sprint Start (xAt(0)) with total committed points.
+  // Each day's remaining work is plotted at the end of that day.
+  const remainingPoints = useMemo(() => {
+    if (knownRemaining.length === 0) return [];
+
+    const startVal = totalPoints > 0 ? totalPoints : knownRemaining[0].v;
+    const pts: { x: number; y: number; v: number; i: number }[] = [
+      { x: xAt(0), y: yAt(startVal), v: startVal, i: 0 },
+    ];
+
+    knownRemaining.forEach((k) => {
+      const targetIndex = Math.min(k.i + 1, points.length - 1);
+      pts.push({
+        x: xAt(targetIndex),
+        y: yAt(k.v),
+        v: k.v,
+        i: targetIndex,
+      });
+    });
+
+    return pts;
+  }, [knownRemaining, totalPoints, points.length, xAt, yAt]);
+
+  const remainingPath = remainingPoints
+    .map((p, idx) => `${idx === 0 ? "M" : "L"} ${p.x} ${p.y}`)
     .join(" ");
-  const lastKnown = knownRemaining[knownRemaining.length - 1];
+
+  const lastKnown = remainingPoints.length > 0 ? remainingPoints[remainingPoints.length - 1] : null;
 
   if (points.length < 2 || totalPoints === 0) {
     return (
@@ -63,6 +95,35 @@ export default function BurndownChart({ points, totalPoints }: BurndownChartProp
   const hovered = hoverIndex !== null ? points[hoverIndex] : null;
   const tooltipLeft = hoverIndex !== null ? (xAt(hoverIndex) / WIDTH) * 100 : 0;
   const tooltipAlignRight = tooltipLeft > 65;
+
+  let hoveredRemaining: number | null = null;
+  if (hoverIndex !== null) {
+    if (hoverIndex === 0) {
+      hoveredRemaining = totalPoints > 0 ? totalPoints : (knownRemaining[0]?.v ?? null);
+    } else {
+      const prev = points[hoverIndex - 1];
+      hoveredRemaining = prev ? prev.remaining : null;
+    }
+  }
+
+  const labelX = lastKnown
+    ? lastKnown.x <= MARGIN.left + 25
+      ? lastKnown.x + 8
+      : lastKnown.x >= WIDTH - MARGIN.right - 25
+      ? lastKnown.x - 8
+      : lastKnown.x
+    : 0;
+
+  const labelAnchor = lastKnown
+    ? lastKnown.x <= MARGIN.left + 25
+      ? "start"
+      : lastKnown.x >= WIDTH - MARGIN.right - 25
+      ? "end"
+      : "middle"
+    : "middle";
+
+  const labelY = lastKnown ? Math.max(16, lastKnown.y - 8) : 0;
+  const unitSuffix = unit ? ` ${unit}` : "";
 
   return (
     <div>
@@ -115,15 +176,17 @@ export default function BurndownChart({ points, totalPoints }: BurndownChartProp
           <path d={idealPath} fill="none" stroke="#8993A4" strokeWidth="2" strokeDasharray="5 4" strokeLinecap="round" />
 
           {/* Actual remaining */}
-          <path d={remainingPath} fill="none" stroke="#0052CC" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          {remainingPath && (
+            <path d={remainingPath} fill="none" stroke="#0052CC" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          )}
 
           {lastKnown && (
             <>
-              <circle cx={xAt(lastKnown.i)} cy={yAt(lastKnown.v)} r="5" fill="#0052CC" stroke="#FFFFFF" strokeWidth="2" />
+              <circle cx={lastKnown.x} cy={lastKnown.y} r="5" fill="#0052CC" stroke="#FFFFFF" strokeWidth="2" />
               <text
-                x={xAt(lastKnown.i)}
-                y={yAt(lastKnown.v) - 10}
-                textAnchor={lastKnown.i > points.length * 0.75 ? "end" : "middle"}
+                x={labelX}
+                y={labelY}
+                textAnchor={labelAnchor}
                 className="fill-jira-navy font-semibold"
                 fontSize="11"
               >
@@ -164,15 +227,18 @@ export default function BurndownChart({ points, totalPoints }: BurndownChartProp
               transform: tooltipAlignRight ? "translateX(-100%)" : "translateX(0)",
             }}
           >
-            <div className="font-semibold mb-0.5">{format(hovered.date, "MMM d, yyyy")}</div>
+            <div className="font-semibold mb-0.5">
+              {format(hovered.date, "MMM d, yyyy")}
+              {hoverIndex === 0 ? " (Start)" : ""}
+            </div>
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-[#8993A4] shrink-0" />
-              <span>Guideline: {Math.round(hovered.ideal)}</span>
+              <span>Guideline: {Math.round(hovered.ideal)}{unitSuffix}</span>
             </div>
-            {hovered.remaining !== null && (
+            {hoveredRemaining !== null && (
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-[#0052CC] shrink-0" />
-                <span>Remaining: {hovered.remaining}</span>
+                <span>Remaining: {hoveredRemaining}{unitSuffix}</span>
               </div>
             )}
           </div>

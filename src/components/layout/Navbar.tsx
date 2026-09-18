@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Project, User } from "@/types";
 import { useCurrentUser } from "@/context/UserContext";
 import { useSearch } from "@/context/SearchContext";
+import { useKeyboardShortcutsContext } from "@/context/KeyboardShortcutsContext";
 import NotificationsMenu from "./NotificationsMenu";
 import {
   Search,
@@ -49,6 +50,7 @@ export default function Navbar({
   const { currentUser, users, setCurrentUser, setUsers } = useCurrentUser();
   const permissions = useProjectPermissions(currentProject);
   const { searchQuery, setSearchQuery } = useSearch();
+  const { openShortcutsModal } = useKeyboardShortcutsContext();
 
   const accessibleProjects = useMemo(
     () => projects.filter((proj) => resolveUserProjectRole(currentUser?.id, proj) !== null),
@@ -224,18 +226,29 @@ export default function Navbar({
       <div className="flex items-center gap-3">
         {/* Quick Search */}
         <div className="relative w-64">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500 pointer-events-none" />
           <input
+            id="global-search-input"
             type="text"
             placeholder="Search issues, keys..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-sm bg-jira-gray-100 hover:bg-jira-gray-200 focus:bg-white border border-transparent focus:border-jira-blue rounded transition-all outline-none text-jira-navy"
+            className="w-full pl-9 pr-8 py-1.5 text-sm bg-jira-gray-100 hover:bg-jira-gray-200 focus:bg-white border border-transparent focus:border-jira-blue rounded transition-all outline-none text-jira-navy"
           />
+          {!searchQuery && (
+            <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono font-semibold text-jira-gray-400 bg-jira-gray-200/60 border border-jira-gray-300 rounded px-1.5 py-0.5 pointer-events-none">
+              /
+            </kbd>
+          )}
         </div>
 
         {/* Help & Notification icons */}
-        <button className="p-2 text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-100 rounded-full transition-colors">
+        <button
+          onClick={openShortcutsModal}
+          title="Keyboard shortcuts (?)"
+          aria-label="Keyboard shortcuts"
+          className="p-2 text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-100 rounded-full transition-colors"
+        >
           <HelpCircle className="w-4 h-4" />
         </button>
         <NotificationsMenu />

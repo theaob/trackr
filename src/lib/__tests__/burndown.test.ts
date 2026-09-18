@@ -73,4 +73,31 @@ describe("computeBurndown", () => {
     const series = computeBurndown(issues, [], DONE, start, end, end);
     expect(series.every((p) => p.remaining === 0 || p.remaining === null)).toBe(true);
   });
+
+  it("ensures at least 2 points even if startDate and endDate are the same day", () => {
+    const issues = [{ id: "1", storyPoints: 5, status: "TODO" }];
+    const sameDay = new Date("2026-01-01");
+    const series = computeBurndown(issues, [], DONE, sameDay, sameDay, sameDay);
+    expect(series.length).toBeGreaterThanOrEqual(2);
+    expect(series[0].ideal).toBe(5);
+    expect(series[1].ideal).toBe(0);
+  });
+
+  it("correctly plots Day 1 remaining work on the first day of an active sprint", () => {
+    const issues = [
+      { id: "1", storyPoints: 5, status: "IN_PROGRESS" },
+      { id: "2", storyPoints: 3, status: "DONE" },
+    ];
+    const sprintStart = new Date("2026-01-01");
+    const sprintEnd = new Date("2026-01-14");
+    const day1 = new Date("2026-01-01");
+
+    const series = computeBurndown(issues, [], DONE, sprintStart, sprintEnd, day1);
+    expect(series.length).toBe(14);
+    // On Day 1, point 0 has remaining work (issue 1 is 5 points, issue 2 is DONE)
+    expect(series[0].remaining).toBe(5);
+    // Future days have null remaining
+    expect(series[1].remaining).toBeNull();
+    expect(series[series.length - 1].remaining).toBeNull();
+  });
 });

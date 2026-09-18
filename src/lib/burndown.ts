@@ -77,7 +77,10 @@ export function computeBurndown(
 
   const start = startOfDay(startDate);
   const end = startOfDay(endDate);
-  const days = start.getTime() <= end.getTime() ? eachDayOfInterval({ start, end }) : [start];
+  const effectiveEnd = end.getTime() <= start.getTime()
+    ? new Date(start.getTime() + 24 * 60 * 60 * 1000)
+    : end;
+  const days = eachDayOfInterval({ start, end: effectiveEnd });
   const lastIndex = Math.max(1, days.length - 1);
   const todayEnd = endOfDay(today);
   const doneSet = new Set(doneStatusNames);

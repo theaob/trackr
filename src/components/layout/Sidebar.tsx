@@ -21,12 +21,24 @@ import {
 
 interface SidebarProps {
   project: Project;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-export default function Sidebar({ project }: SidebarProps) {
+export default function Sidebar({ project, collapsed: propCollapsed, onToggleCollapse }: SidebarProps) {
   const pathname = usePathname();
   const { currentUser } = useCurrentUser();
-  const [collapsed, setCollapsed] = useState(false);
+  const [internalCollapsed, setInternalCollapsed] = useState(false);
+  const isControlled = propCollapsed !== undefined;
+  const collapsed = isControlled ? propCollapsed : internalCollapsed;
+
+  const toggleCollapse = () => {
+    if (onToggleCollapse) {
+      onToggleCollapse();
+    } else {
+      setInternalCollapsed(!internalCollapsed);
+    }
+  };
 
   const navItems = [
     {
@@ -126,9 +138,9 @@ export default function Sidebar({ project }: SidebarProps) {
 
       {/* Collapse Toggle Handle */}
       <button
-        onClick={() => setCollapsed(!collapsed)}
+        onClick={toggleCollapse}
         className="absolute -right-3.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-white border border-jira-gray-300 rounded-full flex items-center justify-center text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-100 shadow-sm transition-all z-20"
-        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        title={collapsed ? "Expand sidebar ([)" : "Collapse sidebar ([)"}
       >
         {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
       </button>

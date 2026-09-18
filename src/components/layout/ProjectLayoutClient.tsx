@@ -7,6 +7,7 @@ import Sidebar from "./Sidebar";
 import CreateIssueModal from "@/components/issues/CreateIssueModal";
 import CreateProjectModal from "@/components/projects/CreateProjectModal";
 import { SearchProvider } from "@/context/SearchContext";
+import { useKeyboardShortcutsContext } from "@/context/KeyboardShortcutsContext";
 import { useRouter } from "next/navigation";
 
 interface ProjectLayoutClientProps {
@@ -29,6 +30,21 @@ export default function ProjectLayoutClient({
   const router = useRouter();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  const { registerCreateIssue, registerToggleSidebar } = useKeyboardShortcutsContext();
+
+  React.useEffect(() => {
+    return registerCreateIssue(() => {
+      setIsCreateModalOpen(true);
+    });
+  }, [registerCreateIssue]);
+
+  React.useEffect(() => {
+    return registerToggleSidebar(() => {
+      setIsSidebarCollapsed((prev) => !prev);
+    });
+  }, [registerToggleSidebar]);
 
   return (
     <SearchProvider>
@@ -43,7 +59,11 @@ export default function ProjectLayoutClient({
 
         {/* Main Workspace Body: Sidebar + Content */}
         <div className="flex-1 flex overflow-hidden">
-          <Sidebar project={currentProject} />
+          <Sidebar
+            project={currentProject}
+            collapsed={isSidebarCollapsed}
+            onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+          />
           <main className="flex-1 flex flex-col overflow-hidden bg-white">{children}</main>
         </div>
 

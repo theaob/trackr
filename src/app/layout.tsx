@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { UserProvider } from "@/context/UserContext";
+import { KeyboardShortcutsProvider } from "@/context/KeyboardShortcutsContext";
 import { getCurrentUser } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
@@ -23,7 +24,9 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans antialiased text-jira-navy bg-white">
-        <UserProvider sessionUser={sessionUser}>{children}</UserProvider>
+        <UserProvider sessionUser={sessionUser}>
+          <KeyboardShortcutsProvider>{children}</KeyboardShortcutsProvider>
+        </UserProvider>
       </body>
     </html>
   );

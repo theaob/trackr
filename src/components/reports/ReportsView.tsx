@@ -140,8 +140,18 @@ export default function ReportsView({
         <>
           {/* Stat tiles */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <StatTile icon={Target} label="Story Points" value={`${report.totalPoints}`} sublabel={`${report.completedPoints} completed`} />
-            <StatTile icon={CheckCircle2} label="Completion" value={`${completionPct}%`} sublabel="of committed points" />
+            <StatTile
+              icon={Target}
+              label={report.isIssueCount ? "Issues Count" : "Story Points"}
+              value={`${report.totalPoints}`}
+              sublabel={`${report.completedPoints} completed`}
+            />
+            <StatTile
+              icon={CheckCircle2}
+              label="Completion"
+              value={`${completionPct}%`}
+              sublabel={report.isIssueCount ? "of total issues" : "of committed points"}
+            />
             <StatTile icon={ListChecks} label="Issues" value={`${report.completedIssues}/${report.totalIssues}`} sublabel="completed" />
             <StatTile
               icon={CalendarRange}
@@ -155,9 +165,15 @@ export default function ReportsView({
           <div className="bg-white border border-jira-gray-200 rounded-lg p-5 shadow-xs">
             <h2 className="text-sm font-bold text-jira-navy mb-1">Sprint Burndown</h2>
             <p className="text-[11px] text-jira-gray-500 mb-4">
-              Story points remaining vs. an ideal, straight-line guideline to zero.
+              {report.isIssueCount
+                ? "Issues remaining vs. an ideal, straight-line guideline to zero."
+                : "Story points remaining vs. an ideal, straight-line guideline to zero."}
             </p>
-            <BurndownChart points={report.burndown} totalPoints={report.totalPoints} />
+            <BurndownChart
+              points={report.burndown}
+              totalPoints={report.totalPoints}
+              unit={report.isIssueCount ? "issues" : "pts"}
+            />
           </div>
 
           {/* Status breakdown */}

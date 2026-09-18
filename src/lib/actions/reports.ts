@@ -46,13 +46,25 @@ export async function getSprintReport(sprintId: string) {
       getWorkflowStatuses(projectId),
     ]);
 
-    const totalPoints = issues.reduce((sum, i) => sum + (i.storyPoints ?? 0), 0);
-    const doneIssues = issues.filter((i) => doneNames.includes(i.status));
-    const completedPoints = doneIssues.reduce((sum, i) => sum + (i.storyPoints ?? 0), 0);
+    const hasStoryPoints = issues.some((i) => (i.storyPoints ?? 0) > 0);
+    const isIssueCount = !hasStoryPoints && issues.length > 0;
+
+    const effectiveIssues = isIssueCount
+      ? issues.map((i) => ({ ...i, storyPoints: 1 }))
+      : issues;
+
+    const totalPoints = effectiveIssues.reduce((sum, i) => sum + (i.storyPoints ?? 0), 0);
+    const doneIssues = effectiveIssues.filter((i) => doneNames.includes(i.status));
+    const completedPoints = isIssueCount
+      ? doneIssues.length
+      : doneIssues.reduce((sum, i) => sum + (i.storyPoints ?? 0), 0);
 
     const start = sprint.startDate ?? sprint.createdAt;
-    const end = sprint.endDate ?? new Date();
-    const burndown = computeBurndown(issues, statusChanges, doneNames, start, end);
+    const end =
+      sprint.endDate && sprint.endDate.getTime() > start.getTime()
+        ? sprint.endDate
+        : new Date(start.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const burndown = computeBurndown(effectiveIssues, statusChanges, doneNames, start, end);
 
     const statusBreakdown = statuses
       .map((s) => {
@@ -79,6 +91,7 @@ export async function getSprintReport(sprintId: string) {
       completedPoints,
       totalIssues: issues.length,
       completedIssues: doneIssues.length,
+      isIssueCount,
       burndown,
       statusBreakdown,
     };
