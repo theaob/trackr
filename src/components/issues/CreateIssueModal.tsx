@@ -41,6 +41,7 @@ export default function CreateIssueModal({
   const [priority, setPriority] = useState<PriorityLevel>("MEDIUM");
   const [storyPoints, setStoryPoints] = useState<string>("");
   const [dueDate, setDueDate] = useState<string>("");
+  const [startDate, setStartDate] = useState<string>("");
   const [assigneeId, setAssigneeId] = useState<string>("");
   const [versionId, setVersionId] = useState<string>("");
 
@@ -116,6 +117,7 @@ export default function CreateIssueModal({
       priority,
       storyPoints: isNaN(points as any) ? null : points,
       dueDate: dueDate || null,
+      startDate: type === "EPIC" ? startDate || null : null,
       assigneeId: assigneeId || null,
       reporterId: currentUser?.id || null,
       sprintId: sprintId || null,
@@ -288,6 +290,20 @@ export default function CreateIssueModal({
                 className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue outline-none text-jira-navy"
               />
             </div>
+
+            {type === "EPIC" && (
+              <div>
+                <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
+                  Start Date
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue outline-none text-jira-navy"
+                />
+              </div>
+            )}
           </div>
 
           {/* Assignee & Sprint */}

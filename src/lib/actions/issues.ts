@@ -505,6 +505,7 @@ export async function createIssue(data: {
   reporterId?: string | null;
   parentId?: string | null;
   storyPoints?: number | null;
+  startDate?: string | null;
   dueDate?: string | null;
 }) {
   try {
@@ -550,6 +551,7 @@ export async function createIssue(data: {
           priority: data.priority || "MEDIUM",
           status,
           storyPoints: data.storyPoints ?? null,
+          startDate: data.startDate ? new Date(data.startDate) : null,
           dueDate: data.dueDate ? new Date(data.dueDate) : null,
           projectId: data.projectId,
           sprintId: data.sprintId || null,
@@ -706,6 +708,7 @@ export async function updateIssue(
     priority?: PriorityLevel;
     type?: IssueType;
     storyPoints?: number | null;
+    startDate?: string | Date | null;
     dueDate?: string | Date | null;
     assigneeId?: string | null;
     sprintId?: string | null;
@@ -759,6 +762,7 @@ export async function updateIssue(
         ...(data.priority !== undefined && { priority: data.priority }),
         ...(data.type !== undefined && { type: data.type }),
         ...(data.storyPoints !== undefined && { storyPoints: data.storyPoints }),
+        ...(data.startDate !== undefined && { startDate: data.startDate ? new Date(data.startDate) : null }),
         ...(data.dueDate !== undefined && { dueDate: data.dueDate ? new Date(data.dueDate) : null }),
         ...(data.assigneeId !== undefined && { assigneeId: data.assigneeId }),
         ...(data.sprintId !== undefined && { sprintId: data.sprintId }),

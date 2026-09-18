@@ -389,6 +389,19 @@ export default function IssueDetailModal({
     }
   };
 
+  // Handle Start Date Change (Epics only -- the field the roadmap plots)
+  const handleStartDateChange = async (dateStr: string) => {
+    const res = await updateIssue(currentIssue.id, {
+      startDate: dateStr === "" ? null : dateStr,
+      updatedByUserId: currentUser?.id,
+    });
+    if (res.success && res.issue) {
+      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
+      setCurrentIssue(typed);
+      onIssueUpdated(typed);
+    }
+  };
+
   // Handle Add Comment
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -903,6 +916,22 @@ export default function IssueDetailModal({
                 className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
+
+            {/* Start Date (Epics only -- the field the Roadmap plots) */}
+            {currentIssue.type === "EPIC" && (
+              <div>
+                <label className="block text-xs font-bold text-jira-gray-600 uppercase tracking-wider mb-1.5">
+                  Start Date
+                </label>
+                <input
+                  type="date"
+                  disabled={!permissions.canEditIssue}
+                  value={currentIssue.startDate ? format(new Date(currentIssue.startDate), "yyyy-MM-dd") : ""}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
+                  className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                />
+              </div>
+            )}
 
             {/* Due Date */}
             <div>

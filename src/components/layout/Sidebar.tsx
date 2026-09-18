@@ -16,6 +16,7 @@ import {
   ListFilter,
   Rocket,
   BarChart3,
+  Map,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -37,6 +38,11 @@ export default function Sidebar({ project }: SidebarProps) {
       name: "Backlog",
       href: `/projects/${project.key}/backlog`,
       icon: ListTodo,
+    },
+    {
+      name: "Roadmap",
+      href: `/projects/${project.key}/roadmap`,
+      icon: Map,
     },
     {
       name: "Issues",

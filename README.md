@@ -34,6 +34,10 @@ A modern, full-stack agile project management and issue tracking platform built 
   - **Velocity**: completed story points across recent finished sprints, with an
     average reference line.
   - **Status Breakdown**: where a sprint's issues currently stand, by workflow status.
+- 🗺️ **Roadmap**: a timeline of your epics (Scrum or Kanban -- epics aren't
+  sprint-bound), each bar spanning its start and due date with a progress fill
+  drawn from its issues' completion. Epics missing either date are listed
+  separately rather than silently dropped.
 - 🎯 **Issue Management**:
   - Issue types: **Epic**, **Story**, **Task**, **Bug**, **Sub-task**.
   - Priority levels: **Highest**, **High**, **Medium**, **Low**, **Lowest**.

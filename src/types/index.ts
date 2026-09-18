@@ -104,6 +104,7 @@ export interface Issue {
   status: IssueStatus;
   order: number;
   storyPoints: number | null;
+  startDate: string | Date | null;
   dueDate: string | Date | null;
   projectId: string;
   project?: Project | null;
