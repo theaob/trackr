@@ -291,3 +291,11 @@ export async function projectIdForAttachment(attachmentId: string): Promise<stri
   });
   return projectIdOf(attachment?.issue ?? null, "Attachment");
 }
+
+export async function projectIdForComponent(componentId: string): Promise<string> {
+  const component = await prisma.component.findUnique({
+    where: { id: componentId },
+    select: { projectId: true },
+  });
+  return projectIdOf(component, "Component");
+}

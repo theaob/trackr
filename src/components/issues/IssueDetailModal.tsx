@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Issue, IssueStatus, IssueType, PriorityLevel, User, Sprint, Version, CustomField, IssueLink, IssueLabel, WorkflowStatus, WorkflowTransition, Project, Attachment } from "@/types";
+import { Issue, IssueStatus, IssueType, PriorityLevel, User, Sprint, Version, CustomField, IssueLink, IssueLabel, WorkflowStatus, WorkflowTransition, Project, Attachment, IssueComponent } from "@/types";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
 import UserAvatar from "@/components/common/UserAvatar";
 import IssueLinksSection from "@/components/issues/IssueLinksSection";
 import LabelsSection from "@/components/issues/LabelsSection";
 import AttachmentsSection from "@/components/issues/AttachmentsSection";
+import ComponentsField from "@/components/issues/ComponentsField";
 
 import { useCurrentUser } from "@/context/UserContext";
 import { updateIssue, deleteIssue, getIssueByKeyOrId } from "@/lib/actions/issues";
@@ -483,6 +484,28 @@ export default function IssueDetailModal({
     const updatedIssue = {
       ...currentIssue,
       attachments: (currentIssue.attachments || []).filter((a) => a.id !== attachmentId),
+    };
+    setCurrentIssue(updatedIssue);
+    onIssueUpdated(updatedIssue);
+  };
+
+  // Handle Component added/removed
+  const handleComponentAdded = (issueComponent: IssueComponent) => {
+    const updatedIssue = {
+      ...currentIssue,
+      components: [
+        ...(currentIssue.components || []).filter((c) => c.componentId !== issueComponent.componentId),
+        issueComponent,
+      ],
+    };
+    setCurrentIssue(updatedIssue);
+    onIssueUpdated(updatedIssue);
+  };
+
+  const handleComponentRemoved = (componentId: string) => {
+    const updatedIssue = {
+      ...currentIssue,
+      components: (currentIssue.components || []).filter((c) => c.componentId !== componentId),
     };
     setCurrentIssue(updatedIssue);
     onIssueUpdated(updatedIssue);
@@ -1055,6 +1078,16 @@ export default function IssueDetailModal({
                 ))}
               </select>
             </div>
+
+            {/* Components */}
+            <ComponentsField
+              issueId={currentIssue.id}
+              projectId={currentIssue.projectId}
+              components={currentIssue.components}
+              canEdit={permissions.canEditIssue}
+              onComponentAdded={handleComponentAdded}
+              onComponentRemoved={handleComponentRemoved}
+            />
 
             {/* Custom Fields */}
             {customFields.length > 0 && (

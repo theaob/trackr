@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { Project, User, CustomField, Webhook, ProjectMember, BoardType, WorkflowStatus, WorkflowTransition } from "@/types";
+import { Project, User, CustomField, Webhook, ProjectMember, BoardType, WorkflowStatus, WorkflowTransition, Component } from "@/types";
 import { updateProject } from "@/lib/actions/projects";
 import { deleteCustomField } from "@/lib/actions/customFields";
+import { deleteComponent } from "@/lib/actions/components";
 import {
   deleteWebhook,
   updateWebhook,
@@ -31,8 +32,10 @@ import {
   Users,
   ShieldAlert,
   GitBranch,
+  Boxes,
 } from "lucide-react";
 import CreateCustomFieldModal from "./CreateCustomFieldModal";
+import CreateComponentModal from "./CreateComponentModal";
 import CreateWebhookModal from "./CreateWebhookModal";
 import WebhookDeliveriesModal from "./WebhookDeliveriesModal";
 import ProjectAccessTab from "./ProjectAccessTab";
@@ -53,6 +56,7 @@ interface ProjectSettingsViewProps {
   initialMembers?: ProjectMember[];
   initialWorkflowStatuses?: WorkflowStatus[];
   initialWorkflowTransitions?: WorkflowTransition[];
+  initialComponents?: Component[];
 }
 
 export default function ProjectSettingsView({
@@ -63,9 +67,10 @@ export default function ProjectSettingsView({
   initialMembers = [],
   initialWorkflowStatuses = [],
   initialWorkflowTransitions = [],
+  initialComponents = [],
 }: ProjectSettingsViewProps) {
   const [activeTab, setActiveTab] = useState<
-    "general" | "fields" | "webhooks" | "access" | "workflow" | "sso"
+    "general" | "fields" | "components" | "webhooks" | "access" | "workflow" | "sso"
   >("general");
   const [members, setMembers] = useState<ProjectMember[]>(initialMembers);
   const permissions = useProjectPermissions(project, members);
@@ -84,6 +89,11 @@ export default function ProjectSettingsView({
   const [customFields, setCustomFields] = useState<CustomField[]>(initialCustomFields);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [deletingFieldId, setDeletingFieldId] = useState<string | null>(null);
+
+  // Components State
+  const [components, setComponents] = useState<Component[]>(initialComponents);
+  const [isCreateComponentOpen, setIsCreateComponentOpen] = useState(false);
+  const [deletingComponentId, setDeletingComponentId] = useState<string | null>(null);
 
   // Webhooks State
   const [webhooks, setWebhooks] = useState<Webhook[]>(initialWebhooks);
@@ -144,6 +154,31 @@ export default function ProjectSettingsView({
 
   const handleFieldCreated = (newField: CustomField) => {
     setCustomFields((prev) => [...prev, newField]);
+  };
+
+  const handleDeleteComponent = async (componentId: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete "${name}"? It will be removed from every issue that has it.`)) {
+      return;
+    }
+
+    setDeletingComponentId(componentId);
+    try {
+      const res = await deleteComponent(componentId);
+      if (res.success) {
+        setComponents((prev) => prev.filter((c) => c.id !== componentId));
+      } else {
+        alert(res.error || "Failed to delete component.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("An error occurred while deleting the component.");
+    } finally {
+      setDeletingComponentId(null);
+    }
+  };
+
+  const handleComponentCreated = (newComponent: Component) => {
+    setComponents((prev) => [...prev, newComponent].sort((a, b) => a.name.localeCompare(b.name)));
   };
 
   const handleToggleWebhook = async (webhookId: string, currentEnabled: boolean) => {
@@ -231,6 +266,21 @@ export default function ProjectSettingsView({
             Custom Fields
             <span className="ml-1 px-1.5 py-0.2 bg-jira-gray-100 text-jira-gray-700 rounded-full text-[10px] font-bold">
               {customFields.length}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("components")}
+            className={`pb-2.5 text-xs font-semibold tracking-wide border-b-2 transition-colors flex items-center gap-1.5 ${
+              activeTab === "components"
+                ? "border-jira-blue text-jira-blue"
+                : "border-transparent text-jira-gray-600 hover:text-jira-navy"
+            }`}
+          >
+            <Boxes className="w-3.5 h-3.5" />
+            Components
+            <span className="ml-1 px-1.5 py-0.2 bg-jira-gray-100 text-jira-gray-700 rounded-full text-[10px] font-bold">
+              {components.length}
             </span>
           </button>
           <button
@@ -604,6 +654,105 @@ export default function ProjectSettingsView({
         </div>
       )}
 
+      {/* Tab: Components */}
+      {activeTab === "components" && (
+        <div className="mt-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-bold text-jira-navy">Project Components</h2>
+              <p className="text-xs text-jira-gray-500 mt-0.5">
+                Sub-teams or subsystems within {project.name} (e.g. Backend API, Mobile App). Issues pick
+                from this list &mdash; members can&apos;t create a new one from the issue view.
+              </p>
+            </div>
+            {permissions.canManageProject && (
+              <button
+                type="button"
+                onClick={() => setIsCreateComponentOpen(true)}
+                className="bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5 shadow-2xs transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Create Component
+              </button>
+            )}
+          </div>
+
+          {components.length === 0 ? (
+            <div className="text-center py-12 px-4 border border-dashed border-jira-gray-300 rounded-lg bg-jira-gray-50">
+              <Boxes className="w-8 h-8 text-jira-gray-400 mx-auto mb-2" />
+              <h3 className="text-sm font-bold text-jira-navy">No components yet</h3>
+              <p className="text-xs text-jira-gray-500 max-w-sm mx-auto mt-1 mb-4">
+                Group issues by the part of the system they belong to, with an optional owner for each.
+              </p>
+              {permissions.canManageProject && (
+                <button
+                  type="button"
+                  onClick={() => setIsCreateComponentOpen(true)}
+                  className="bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold px-4 py-2 rounded inline-flex items-center gap-1.5 shadow-2xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add Your First Component
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="border border-jira-gray-200 rounded-lg overflow-hidden bg-white shadow-2xs">
+              <table className="min-w-full divide-y divide-jira-gray-200 text-left text-xs">
+                <thead className="bg-jira-gray-50 font-semibold text-jira-gray-600">
+                  <tr>
+                    <th className="px-4 py-3">Component</th>
+                    <th className="px-4 py-3">Lead</th>
+                    <th className="px-4 py-3">Issues</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-jira-gray-200 text-jira-navy">
+                  {components.map((c) => (
+                    <tr key={c.id} className="hover:bg-jira-gray-50/70 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-jira-navy flex items-center gap-1.5">
+                          <Boxes className="w-3.5 h-3.5 text-jira-blue" />
+                          {c.name}
+                        </div>
+                        {c.description && (
+                          <div className="text-[11px] text-jira-gray-500 mt-0.5 max-w-xs truncate">
+                            {c.description}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {c.lead ? (
+                          <div className="flex items-center gap-1.5">
+                            <UserAvatar user={c.lead} size="xs" />
+                            <span>{c.lead.name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-jira-gray-400 italic text-[11px]">Unassigned</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">{c._count?.issues ?? 0}</td>
+                      <td className="px-4 py-3 text-right">
+                        {permissions.canManageProject && (
+                          <button
+                            type="button"
+                            disabled={deletingComponentId === c.id}
+                            onClick={() => handleDeleteComponent(c.id, c.name)}
+                            className="text-jira-gray-400 hover:text-jira-red p-1 rounded hover:bg-jira-red/10 transition-colors disabled:opacity-50"
+                            title="Delete component"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Tab 3: Webhooks */}
       {activeTab === "webhooks" && (
         <div className="mt-6 space-y-4">
@@ -807,6 +956,15 @@ export default function ProjectSettingsView({
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onCreated={handleFieldCreated}
+      />
+
+      {/* Component Creation Modal */}
+      <CreateComponentModal
+        projectId={project.id}
+        members={members.map((m) => m.user)}
+        isOpen={isCreateComponentOpen}
+        onClose={() => setIsCreateComponentOpen(false)}
+        onCreated={handleComponentCreated}
       />
 
       {/* Webhook Creation Modal */}

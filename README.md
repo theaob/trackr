@@ -49,6 +49,10 @@ A modern, full-stack agile project management and issue tracking platform built 
     across projects.
   - Free-text labels, created inline on an issue and filterable from the
     Issues list.
+  - **Components**: admin-defined sub-teams or subsystems (e.g. "Backend API",
+    "Mobile App") with an optional lead, managed in Project Settings. Unlike
+    labels, an issue can only pick from the project's existing set -- not
+    create a new one on the fly.
   - Bulk actions from the Issues list: select several issues and change their
     status, assignee, or priority, add a label, or delete them all at once.
 - 📝 **Issue Detail Modal**:
@@ -79,8 +83,8 @@ A modern, full-stack agile project management and issue tracking platform built 
     visitors with no account.
   - Optional OIDC single sign-on with real ID token signature verification.
   - Personal access tokens for the REST API, scoped to the owner's projects.
-- ⚙️ **Project Settings**:
-  - Configure project name, description, and review project lead details.
+- ⚙️ **Project Settings**: General details, Custom Fields, Components, Webhooks,
+  Access & Roles, Workflow, and SSO & Certificates, each its own tab.
 
 ---
 

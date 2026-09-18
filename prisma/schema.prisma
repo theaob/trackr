@@ -22,6 +22,7 @@ model User {
   activityLogs   ActivityLog[]
   watchedIssues  Watcher[]
   uploadedAttachments Attachment[]
+  ledComponents  Component[]   @relation("ComponentLead")
   notifications       Notification[]
   ledProjects         Project[]
   projectMembers      ProjectMember[]
@@ -51,8 +52,40 @@ model Project {
   workflowStatuses    WorkflowStatus[]
   workflowTransitions WorkflowTransition[]
   labels       Label[]
+  components   Component[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+// A sub-team or subsystem within a project (e.g. "Backend API", "Mobile
+// App"), admin-defined in Project Settings -- unlike Label, an issue can only
+// pick from the project's existing set, never create one inline.
+model Component {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  leadId      String?
+  lead        User?    @relation("ComponentLead", fields: [leadId], references: [id], onDelete: SetNull)
+  issues      IssueComponent[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([projectId, name])
+  @@index([projectId])
+}
+
+model IssueComponent {
+  id          String    @id @default(cuid())
+  issueId     String
+  issue       Issue     @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  componentId String
+  component   Component @relation(fields: [componentId], references: [id], onDelete: Cascade)
+
+  @@unique([issueId, componentId])
+  @@index([issueId])
+  @@index([componentId])
 }
 
 // Free-text tags, scoped per project like Jira's. No color or description --
@@ -271,6 +304,7 @@ model Issue {
   labels      IssueLabel[]
   watchers    Watcher[]
   attachments Attachment[]
+  components  IssueComponent[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 

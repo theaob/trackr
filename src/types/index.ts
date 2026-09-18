@@ -132,6 +132,7 @@ export interface Issue {
   labels?: IssueLabel[];
   watchers?: Watcher[];
   attachments?: Attachment[];
+  components?: IssueComponent[];
   createdAt: string | Date;
   updatedAt: string | Date;
 }
@@ -169,6 +170,26 @@ export interface IssueLabel {
   issueId: string;
   labelId: string;
   label: Label;
+}
+
+export interface Component {
+  id: string;
+  projectId: string;
+  name: string;
+  description: string | null;
+  leadId: string | null;
+  lead?: User | null;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  _count?: { issues: number };
+}
+
+/** The join row an issue's `components` array holds; `component` is the tag itself. */
+export interface IssueComponent {
+  id: string;
+  issueId: string;
+  componentId: string;
+  component: Component;
 }
 
 export interface Attachment {

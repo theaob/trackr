@@ -203,6 +203,10 @@ export async function getIssueByKeyOrId(keyOrId: string) {
           include: { uploadedBy: USER_SELECT },
           orderBy: { createdAt: "desc" },
         },
+        components: {
+          include: { component: { include: { lead: USER_SELECT } } },
+          orderBy: { component: { name: "asc" } },
+        },
         ...LABELS_INCLUDE,
       },
     });
