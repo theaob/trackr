@@ -136,7 +136,7 @@ export default function WorkflowSettingsTab({
   };
 
   return (
-    <div className="space-y-8 max-w-4xl">
+    <div className="space-y-8 w-full">
       {error && (
         <div className="p-3 text-xs bg-rose-50 border border-rose-200 text-rose-700 rounded-md font-medium">
           {error}

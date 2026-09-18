@@ -306,10 +306,12 @@ export default function BacklogView({
     () => statuses.find((s) => !s.isBacklog)?.name ?? "TODO",
     [statuses]
   );
-  const doneStatusNames = useMemo(
-    () => statuses.filter((s) => s.category === "DONE").map((s) => s.name),
-    [statuses]
-  );
+  const doneStatusNames = useMemo(() => {
+    const fromWorkflow = statuses.filter((s) => s.category === "DONE").map((s) => s.name);
+    return fromWorkflow.length > 0
+      ? fromWorkflow
+      : ["DONE", "Done", "done", "CLOSED", "Closed", "RESOLVED", "Resolved"];
+  }, [statuses]);
 
   // Sprints & Backlog groupings
   const activeSprints = useMemo(() => sprints.filter((s) => s.status === "ACTIVE"), [sprints]);
@@ -619,7 +621,7 @@ export default function BacklogView({
                       >
                         {totalPoints} pts
                       </span>
-                      {sprint.status === "ACTIVE" && (
+                      {(sprint.status === "ACTIVE" || donePoints > 0) && (
                         <span
                           title="Completed points"
                           className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px]"

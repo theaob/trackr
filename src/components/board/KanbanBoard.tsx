@@ -180,9 +180,30 @@ export default function KanbanBoard({
     searchQuery.trim().length > 0;
 
   const boardStatusNames = useMemo(() => new Set(COLUMNS.map((c) => c.id)), [COLUMNS]);
-  const doneStatusNames = useMemo(
-    () => statuses.filter((s) => s.category === "DONE").map((s) => s.name),
-    [statuses]
+  const doneStatusNames = useMemo(() => {
+    const fromWorkflow = statuses.filter((s) => s.category === "DONE").map((s) => s.name);
+    return fromWorkflow.length > 0
+      ? fromWorkflow
+      : ["DONE", "Done", "done", "CLOSED", "Closed", "RESOLVED", "Resolved"];
+  }, [statuses]);
+
+  // Active sprint story points calculations
+  const sprintIssues = useMemo(() => {
+    if (!activeSprint) return [];
+    return issues.filter((i) => i.sprintId === activeSprint.id);
+  }, [issues, activeSprint]);
+
+  const sprintTotalPoints = useMemo(
+    () => sprintIssues.reduce((sum, i) => sum + (i.storyPoints || 0), 0),
+    [sprintIssues]
+  );
+
+  const sprintDonePoints = useMemo(
+    () =>
+      sprintIssues
+        .filter((i) => doneStatusNames.includes(i.status))
+        .reduce((sum, i) => sum + (i.storyPoints || 0), 0),
+    [sprintIssues, doneStatusNames]
   );
 
   // Filter Issues
@@ -462,10 +483,26 @@ export default function KanbanBoard({
               {permissions.roleConfig.name}
             </span>
             {activeSprint && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                Active Sprint
-              </span>
+              <>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                  Active Sprint
+                </span>
+                <div className="flex items-center gap-1 text-xs ml-1">
+                  <span
+                    title="Total estimated story points"
+                    className="px-2 py-0.5 rounded-full bg-jira-gray-200 text-jira-gray-800 font-bold text-[11px]"
+                  >
+                    {sprintTotalPoints} pts
+                  </span>
+                  <span
+                    title="Completed story points"
+                    className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px]"
+                  >
+                    {sprintDonePoints} done
+                  </span>
+                </div>
+              </>
             )}
           </div>
 

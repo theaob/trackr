@@ -28,6 +28,16 @@ import {
 
 const USER_SELECT = { select: DISPLAY_USER_SELECT } as const;
 
+function revalidateProjectRoutes(projectKey: string) {
+  try {
+    revalidatePath(`/projects/${projectKey}`);
+    revalidatePath(`/projects/${projectKey}/board`);
+    revalidatePath(`/projects/${projectKey}/backlog`);
+    revalidatePath(`/projects/${projectKey}/reports`);
+    revalidatePath(`/projects/${projectKey}/issues`);
+  } catch {}
+}
+
 const LINKED_ISSUE_SELECT = {
   id: true,
   key: true,
@@ -638,9 +648,7 @@ export async function createIssue(data: {
       });
     }
 
-    try {
-      revalidatePath(`/projects/${project.key}`);
-    } catch {}
+    revalidateProjectRoutes(project.key);
 
     triggerWebhooks("issue:created", newIssue, data.projectId);
     return { success: true as const, issue: newIssue };
@@ -941,9 +949,7 @@ export async function updateIssue(
       }
     }
 
-    try {
-      revalidatePath(`/projects/${existing.project.key}`);
-    } catch {}
+    revalidateProjectRoutes(existing.project.key);
     triggerWebhooks("issue:updated", { issue: updated, changes: data }, existing.projectId);
     return { success: true as const, issue: updated };
   } catch (error) {
@@ -1095,9 +1101,7 @@ export async function updateIssueStatusAndOrder(
       }
     }
 
-    try {
-      revalidatePath(`/projects/${existing.project.key}`);
-    } catch {}
+    revalidateProjectRoutes(existing.project.key);
 
     triggerWebhooks(
       "issue:updated",
@@ -1125,9 +1129,7 @@ export async function deleteIssue(id: string) {
     // Attachment rows cascade with the issue; their files on disk don't.
     await deleteIssueAttachmentDir(id);
 
-    try {
-      revalidatePath(`/projects/${issue.project.key}`);
-    } catch {}
+    revalidateProjectRoutes(issue.project.key);
 
     triggerWebhooks(
       "issue:deleted",

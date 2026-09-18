@@ -16,6 +16,16 @@ import { getDoneStatusNames, getInitialStatusName, getPrimaryBacklogStatusName }
 /** Sprint issues per sprint, bounded so a large backlog cannot be loaded whole. */
 const SPRINT_ISSUE_LIMIT = 200;
 
+function revalidateProjectRoutes(projectKey: string) {
+  try {
+    revalidatePath(`/projects/${projectKey}`);
+    revalidatePath(`/projects/${projectKey}/board`);
+    revalidatePath(`/projects/${projectKey}/backlog`);
+    revalidatePath(`/projects/${projectKey}/reports`);
+    revalidatePath(`/projects/${projectKey}/issues`);
+  } catch {}
+}
+
 export async function getProjectSprints(projectId: string) {
   try {
     await requireProjectAccess(projectId);
@@ -62,7 +72,7 @@ export async function createSprint(projectId: string, name: string, goal?: strin
       },
     });
 
-    revalidatePath(`/projects/${project.key}`);
+    revalidateProjectRoutes(project.key);
     return { success: true as const, sprint };
   } catch (error) {
     return toActionError(error, "Failed to create sprint");
@@ -115,7 +125,7 @@ export async function startSprint(
       },
     });
 
-    revalidatePath(`/projects/${sprint.project.key}`);
+    revalidateProjectRoutes(sprint.project.key);
     triggerWebhooks("sprint:started", updated, sprint.projectId);
     return { success: true as const, sprint: updated };
   } catch (error) {
@@ -174,7 +184,7 @@ export async function completeSprint(sprintId: string, moveToSprintId?: string |
       }),
     ]);
 
-    revalidatePath(`/projects/${sprint.project.key}`);
+    revalidateProjectRoutes(sprint.project.key);
     triggerWebhooks(
       "sprint:completed",
       { id: sprint.id, name: sprint.name, projectId: sprint.projectId },
@@ -226,9 +236,7 @@ export async function moveIssueToSprint(issueId: string, sprintId: string | null
       },
     });
 
-    try {
-      revalidatePath(`/projects/${issue.project.key}`);
-    } catch {}
+    revalidateProjectRoutes(issue.project.key);
 
     triggerWebhooks(
       "issue:updated",
@@ -261,7 +269,7 @@ export async function renameSprint(sprintId: string, name: string) {
       data: { name: trimmed },
     });
 
-    revalidatePath(`/projects/${sprint.project.key}`);
+    revalidateProjectRoutes(sprint.project.key);
     return { success: true as const, sprint: updated };
   } catch (error) {
     return toActionError(error, "Failed to rename sprint");
@@ -294,7 +302,7 @@ export async function deleteSprint(sprintId: string) {
       prisma.sprint.delete({ where: { id: sprintId } }),
     ]);
 
-    revalidatePath(`/projects/${sprint.project.key}`);
+    revalidateProjectRoutes(sprint.project.key);
     return { success: true as const };
   } catch (error) {
     return toActionError(error, "Failed to delete sprint");

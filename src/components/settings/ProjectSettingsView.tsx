@@ -237,7 +237,7 @@ export default function ProjectSettingsView({
 
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto px-8 py-6 bg-white max-w-4xl">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto px-8 py-6 bg-white">
       {/* Header */}
       <div className="pb-4 border-b border-jira-gray-200">
         <h1 className="text-xl font-bold text-jira-navy tracking-tight">Project Settings</h1>
