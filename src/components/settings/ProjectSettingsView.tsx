@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Project, User, CustomField, Webhook, ProjectMember, BoardType, WorkflowStatus, WorkflowTransition, Component } from "@/types";
 import { updateProject } from "@/lib/actions/projects";
 import { deleteCustomField } from "@/lib/actions/customFields";
@@ -39,7 +40,6 @@ import CreateComponentModal from "./CreateComponentModal";
 import CreateWebhookModal from "./CreateWebhookModal";
 import WebhookDeliveriesModal from "./WebhookDeliveriesModal";
 import ProjectAccessTab from "./ProjectAccessTab";
-import SsoSettingsTab from "./SsoSettingsTab";
 import WorkflowSettingsTab from "./WorkflowSettingsTab";
 import UserAvatar from "@/components/common/UserAvatar";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
@@ -70,8 +70,9 @@ export default function ProjectSettingsView({
   initialComponents = [],
 }: ProjectSettingsViewProps) {
   const [activeTab, setActiveTab] = useState<
-    "general" | "fields" | "components" | "webhooks" | "access" | "workflow" | "sso"
+    "general" | "fields" | "components" | "webhooks" | "access" | "workflow"
   >("general");
+  const router = useRouter();
   const [members, setMembers] = useState<ProjectMember[]>(initialMembers);
   const permissions = useProjectPermissions(project, members);
 
@@ -84,6 +85,7 @@ export default function ProjectSettingsView({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Custom Fields State
   const [customFields, setCustomFields] = useState<CustomField[]>(initialCustomFields);
@@ -112,6 +114,7 @@ export default function ProjectSettingsView({
     e.preventDefault();
     setIsSaving(true);
     setSavedSuccess(false);
+    setSaveError(null);
 
     const res = await updateProject(project.id, {
       name: name.trim(),
@@ -123,7 +126,10 @@ export default function ProjectSettingsView({
     setIsSaving(false);
     if (res.success) {
       setSavedSuccess(true);
+      router.refresh();
       setTimeout(() => setSavedSuccess(false), 3000);
+    } else {
+      setSaveError(res.error || "Failed to update project details.");
     }
   };
 
@@ -329,18 +335,6 @@ export default function ProjectSettingsView({
               {initialWorkflowStatuses.length}
             </span>
           </button>
-
-          <button
-            onClick={() => setActiveTab("sso")}
-            className={`pb-3 text-xs font-semibold border-b-2 flex items-center gap-1.5 transition-colors ${
-              activeTab === "sso"
-                ? "border-jira-blue text-jira-blue"
-                : "border-transparent text-jira-gray-600 hover:text-jira-navy"
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
-            SSO & Sertifikalar
-          </button>
         </div>
       </div>
 
@@ -362,6 +356,13 @@ export default function ProjectSettingsView({
             <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded text-xs font-semibold">
               <Check className="w-4 h-4 text-emerald-600" />
               <span>Project details updated successfully!</span>
+            </div>
+          )}
+
+          {saveError && (
+            <div className="flex items-center gap-2 p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded text-xs font-semibold">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{saveError}</span>
             </div>
           )}
 
@@ -940,13 +941,6 @@ export default function ProjectSettingsView({
             initialTransitions={initialWorkflowTransitions}
             canManage={permissions.canManageProject}
           />
-        </div>
-      )}
-
-      {/* Tab 6: SSO & Certificates */}
-      {activeTab === "sso" && (
-        <div className="mt-6">
-          <SsoSettingsTab />
         </div>
       )}
 

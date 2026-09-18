@@ -23,6 +23,7 @@ import {
   Loader2,
   LogOut,
   LogIn,
+  Settings,
 } from "lucide-react";
 import PersonalAccessTokensModal from "@/components/auth/PersonalAccessTokensModal";
 import { TrackrLogo } from "@/components/common/TrackrLogo";
@@ -33,7 +34,7 @@ import { logout } from "@/lib/actions/auth";
 
 interface NavbarProps {
   projects: Project[];
-  currentProject: Project;
+  currentProject?: Project | null;
   onCreateIssueClick?: () => void;
   onCreateProjectClick?: () => void;
 }
@@ -53,6 +54,11 @@ export default function Navbar({
     () => projects.filter((proj) => resolveUserProjectRole(currentUser?.id, proj) !== null),
     [projects, currentUser]
   );
+
+  const isInstanceAdmin = useMemo(() => {
+    if (!currentUser) return false;
+    return projects.some((proj) => resolveUserProjectRole(currentUser.id, proj) === "ADMIN");
+  }, [projects, currentUser]);
 
   const [showProjectMenu, setShowProjectMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -126,7 +132,7 @@ export default function Navbar({
       {/* Left side: Logo & Navigation */}
       <div className="flex items-center gap-6">
         <Link
-          href={`/projects/${currentProject.key}/board`}
+          href={currentProject ? `/projects/${currentProject.key}/board` : "/projects"}
           className="flex items-center gap-2 group hover:opacity-95 transition-opacity"
         >
           <TrackrLogo size="md" />
@@ -142,7 +148,7 @@ export default function Navbar({
             className="flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium text-jira-navy hover:bg-jira-gray-100 transition-colors"
           >
             <FolderGit2 className="w-4 h-4 text-jira-blue" />
-            <span>{currentProject.name}</span>
+            <span>{currentProject ? currentProject.name : "Select Project"}</span>
             <ChevronDown className="w-3.5 h-3.5 text-jira-gray-600" />
           </button>
 
@@ -157,7 +163,7 @@ export default function Navbar({
                   href={`/projects/${proj.key}/board`}
                   onClick={() => setShowProjectMenu(false)}
                   className={`flex items-center justify-between px-3 py-2 text-sm hover:bg-jira-gray-100 ${
-                    proj.id === currentProject.id ? "bg-jira-blue-light/50 font-semibold text-jira-blue" : "text-jira-navy"
+                    proj.id === currentProject?.id ? "bg-jira-blue-light/50 font-semibold text-jira-blue" : "text-jira-navy"
                   }`}
                 >
                   <div className="flex items-center gap-2 truncate">
@@ -166,7 +172,7 @@ export default function Navbar({
                     </span>
                     <span className="truncate">{proj.name}</span>
                   </div>
-                  {proj.id === currentProject.id && <Check className="w-4 h-4 text-jira-blue shrink-0" />}
+                  {proj.id === currentProject?.id && <Check className="w-4 h-4 text-jira-blue shrink-0" />}
                 </Link>
               ))}
 
@@ -275,11 +281,13 @@ export default function Navbar({
                   <span className="text-[10px] bg-jira-gray-100 text-jira-gray-700 font-semibold px-2 py-0.5 rounded">
                     {currentUser?.role}
                   </span>
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded border ${permissions.roleConfig.badgeBg} ${permissions.roleConfig.badgeText} ${permissions.roleConfig.border}`}
-                  >
-                    {currentProject.key}: {permissions.roleConfig.name}
-                  </span>
+                  {currentProject && (
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded border ${permissions.roleConfig.badgeBg} ${permissions.roleConfig.badgeText} ${permissions.roleConfig.border}`}
+                    >
+                      {currentProject.key}: {permissions.roleConfig.name}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -331,6 +339,20 @@ export default function Navbar({
                   <span>Personal Access Tokens</span>
                 </button>
               </div>
+
+              {/* System Settings */}
+              {isInstanceAdmin && (
+                <div className="py-1 border-b border-jira-gray-200">
+                  <Link
+                    href="/settings"
+                    onClick={() => setShowUserMenu(false)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-jira-navy hover:bg-jira-gray-100 transition-colors"
+                  >
+                    <Settings className="w-3.5 h-3.5 text-jira-blue" />
+                    <span>System Settings</span>
+                  </Link>
+                </div>
+              )}
 
               <div className="py-1">
                 <button

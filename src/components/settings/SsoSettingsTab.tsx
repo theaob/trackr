@@ -8,35 +8,66 @@ import {
   CheckCircle2,
   AlertCircle,
   KeyRound,
-  FileCode,
   Building2,
-  Lock,
   Loader2,
-  Info,
-  BadgeCheck,
+  Lock,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
+interface SsoConfigState {
+  enabled: boolean;
+  providerName: string;
+  issuerUrl: string;
+  clientId: string;
+  clientSecret: string;
+  hasClientSecret?: boolean;
+  certificate: string;
+  autoProvisionUsers: boolean;
+  defaultRole: string;
+  configured?: boolean;
+}
+
 export default function SsoSettingsTab() {
-  const [config, setConfig] = useState<any>({
-    enabled: true,
-    providerName: "Enterprise SAML/OIDC SSO",
-    issuerUrl: "https://sso.internal.company.com/auth/realms/master",
-    clientId: "trackr-client-id",
+  const [config, setConfig] = useState<SsoConfigState>({
+    enabled: false,
+    providerName: "Enterprise SAML / OIDC SSO",
+    issuerUrl: "",
+    clientId: "",
     clientSecret: "",
+    hasClientSecret: false,
     certificate: "",
     autoProvisionUsers: true,
     defaultRole: "Developer",
+    configured: false,
   });
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showSecret, setShowSecret] = useState(false);
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     getSsoConfig().then((cfg) => {
-      // null means the caller is not a project administrator.
-      if (cfg) setConfig(cfg);
-      else setMsg({ type: "error", text: "SSO ayarlarını görüntüleme yetkiniz yok." });
+      if (cfg) {
+        setConfig({
+          enabled: !!cfg.enabled,
+          providerName: cfg.providerName || "Enterprise SAML / OIDC SSO",
+          issuerUrl: cfg.issuerUrl || "",
+          clientId: cfg.clientId || "",
+          clientSecret: "",
+          hasClientSecret: !!cfg.hasClientSecret,
+          certificate: cfg.certificate || "",
+          autoProvisionUsers: cfg.autoProvisionUsers ?? true,
+          defaultRole: cfg.defaultRole || "Developer",
+          configured: !!cfg.configured,
+        });
+      } else {
+        setMsg({
+          type: "error",
+          text: "You do not have permission to view or manage instance SSO configuration.",
+        });
+      }
       setLoading(false);
     });
   }, []);
@@ -47,15 +78,39 @@ export default function SsoSettingsTab() {
     setMsg(null);
 
     try {
-      const res = await updateSsoConfig(config);
+      const res = await updateSsoConfig({
+        enabled: config.enabled,
+        providerName: config.providerName,
+        issuerUrl: config.issuerUrl,
+        clientId: config.clientId,
+        clientSecret: config.clientSecret || undefined,
+        certificate: config.certificate,
+        autoProvisionUsers: config.autoProvisionUsers,
+        defaultRole: config.defaultRole,
+      });
+
       if (res.success && res.config) {
-        setConfig(res.config);
-        setMsg({ type: "success", text: "SSO ve Self-Signed Sertifika ayarları başarıyla kaydedildi!" });
+        setConfig({
+          enabled: !!res.config.enabled,
+          providerName: res.config.providerName || "",
+          issuerUrl: res.config.issuerUrl || "",
+          clientId: res.config.clientId || "",
+          clientSecret: "",
+          hasClientSecret: !!res.config.hasClientSecret,
+          certificate: res.config.certificate || "",
+          autoProvisionUsers: res.config.autoProvisionUsers ?? true,
+          defaultRole: res.config.defaultRole || "Developer",
+          configured: !!res.config.configured,
+        });
+        setMsg({
+          type: "success",
+          text: "Single Sign-On (SSO) configuration saved successfully.",
+        });
       } else {
-        setMsg({ type: "error", text: res.error || "Ayarlar kaydedilemedi." });
+        setMsg({ type: "error", text: res.error || "Failed to save SSO configuration." });
       }
     } catch (err: any) {
-      setMsg({ type: "error", text: err.message || "Kaydetme hatası." });
+      setMsg({ type: "error", text: err.message || "An unexpected error occurred while saving." });
     } finally {
       setSaving(false);
     }
@@ -63,39 +118,66 @@ export default function SsoSettingsTab() {
 
   if (loading) {
     return (
-      <div className="p-8 text-center text-jira-gray-500 text-xs flex items-center justify-center gap-2">
+      <div className="p-12 text-center text-jira-gray-500 text-xs flex items-center justify-center gap-2">
         <Loader2 className="w-4 h-4 animate-spin text-jira-blue" />
-        <span>SSO Yapılandırması Yükleniyor...</span>
+        <span>Loading SSO configuration...</span>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg border border-jira-gray-300 p-6 space-y-6 max-w-4xl">
+    <div className="bg-white rounded-lg border border-jira-gray-300 p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-jira-gray-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-jira-gray-200 gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-lg bg-purple-100 text-purple-800 border border-purple-200">
             <Building2 className="w-6 h-6 text-purple-700" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-jira-navy">SSO (Single Sign-On) ve Sertifika Yapılandırması</h2>
+            <h2 className="text-base font-bold text-jira-navy">
+              Single Sign-On (SSO) & Certificates
+            </h2>
             <p className="text-xs text-jira-gray-600 mt-0.5">
-              Kurumsal IdP (Keycloak, Okta, SAML 2.0, OIDC) entegrasyonu ve Öz-İmzalı (Self-Signed) sertifika ayarlarını yönetin.
+              Configure corporate IdP (Keycloak, Okta, SAML 2.0, OIDC) authentication and token verification keys.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${config.enabled ? "bg-emerald-100 text-emerald-800 border-emerald-300" : "bg-gray-100 text-gray-700 border-gray-300"}`}>
-            {config.enabled ? "SSO Aktif" : "SSO Devre Dışı"}
+          <span
+            className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
+              config.enabled
+                ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                : "bg-gray-100 text-gray-700 border-gray-300"
+            }`}
+          >
+            {config.enabled ? "SSO Active" : "SSO Disabled"}
           </span>
+          {config.configured ? (
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-blue-50 text-blue-800 border-blue-200">
+              Keys Configured
+            </span>
+          ) : (
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-amber-50 text-amber-800 border-amber-200">
+              Key Required
+            </span>
+          )}
         </div>
       </div>
 
       {msg && (
-        <div className={`p-3 rounded-md text-xs flex items-center gap-2 border ${msg.type === "success" ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-rose-50 text-rose-800 border-rose-200"}`}>
-          {msg.type === "success" ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <AlertCircle className="w-4 h-4 text-rose-600" />}
+        <div
+          className={`p-3 rounded-md text-xs flex items-center gap-2 border ${
+            msg.type === "success"
+              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+              : "bg-rose-50 text-rose-800 border-rose-200"
+          }`}
+        >
+          {msg.type === "success" ? (
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          ) : (
+            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+          )}
           <span>{msg.text}</span>
         </div>
       )}
@@ -104,9 +186,9 @@ export default function SsoSettingsTab() {
         {/* Toggle SSO */}
         <div className="flex items-center justify-between p-4 bg-jira-gray-50 rounded-lg border border-jira-gray-200">
           <div>
-            <div className="font-bold text-jira-navy">SSO Kimlik Doğrulamasını Etkinleştir</div>
+            <div className="font-bold text-jira-navy">Enable Single Sign-On</div>
             <div className="text-[11px] text-jira-gray-600 mt-0.5">
-              Kullanıcıların tek tıkla kurumsal kimlik sağlayıcınız üzerinden giriş yapmasına izin verin.
+              Allow users to sign in seamlessly using your corporate identity provider.
             </div>
           </div>
           <input
@@ -120,18 +202,22 @@ export default function SsoSettingsTab() {
         {/* Basic SSO Parameters */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block font-semibold text-jira-navy mb-1">SSO Sağlayıcı Adı</label>
+            <label className="block font-semibold text-jira-navy mb-1">
+              Identity Provider Name
+            </label>
             <input
               type="text"
               value={config.providerName || ""}
               onChange={(e) => setConfig({ ...config, providerName: e.target.value })}
-              placeholder="Örn: Keycloak SSO / Corporate Okta"
+              placeholder="e.g. Corporate Okta / Keycloak SSO"
               className="w-full px-3 py-2 border border-jira-gray-300 rounded-md focus:border-jira-blue outline-none text-jira-navy"
             />
           </div>
 
           <div>
-            <label className="block font-semibold text-jira-navy mb-1">Client ID / Entity ID</label>
+            <label className="block font-semibold text-jira-navy mb-1">
+              Client ID / Audience
+            </label>
             <input
               type="text"
               value={config.clientId || ""}
@@ -143,7 +229,9 @@ export default function SsoSettingsTab() {
         </div>
 
         <div>
-          <label className="block font-semibold text-jira-navy mb-1">Issuer / Metadata URL</label>
+          <label className="block font-semibold text-jira-navy mb-1">
+            Issuer / Metadata URL
+          </label>
           <input
             type="text"
             value={config.issuerUrl || ""}
@@ -153,27 +241,26 @@ export default function SsoSettingsTab() {
           />
         </div>
 
-        {/* Self-Signed Certificate Settings */}
+        {/* Token Verification Keys */}
         <div className="p-4 bg-purple-50/50 border border-purple-200 rounded-lg space-y-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-purple-700" />
+              <ShieldCheck className="w-5 h-5 text-purple-700 shrink-0" />
               <div>
-                <h4 className="font-bold text-purple-900">Token İmza Doğrulama Anahtarı</h4>
+                <h4 className="font-bold text-purple-900">Token Signature Verification Key</h4>
                 <p className="text-[11px] text-purple-700 mt-0.5">
-                  ID token imzalarının doğrulandığı anahtar. RS256 için IdP&apos;nin X.509
-                  sertifikası, HS256 için client secret kullanılır. Anahtar tanımlanmadan
-                  SSO etkinleştirilemez.
+                  The key used to verify incoming ID token signatures. Provide an X.509 PEM certificate for RS256, or a client secret for HS256. At least one key must be provided to enable SSO.
                 </p>
               </div>
             </div>
-
           </div>
 
           <div>
             <label className="block font-semibold text-purple-900 mb-1 flex items-center justify-between">
-              <span>X.509 PEM Sertifikası</span>
-              <span className="text-[10px] text-purple-700 font-normal">-----BEGIN CERTIFICATE----- ... -----END CERTIFICATE-----</span>
+              <span>X.509 PEM Certificate (RS256)</span>
+              <span className="text-[10px] text-purple-700 font-normal">
+                -----BEGIN CERTIFICATE----- ... -----END CERTIFICATE-----
+              </span>
             </label>
             <textarea
               rows={4}
@@ -183,14 +270,49 @@ export default function SsoSettingsTab() {
               className="w-full px-3 py-2 border border-purple-300 rounded-md focus:border-purple-600 outline-none text-purple-950 font-mono text-[10px] bg-white"
             />
           </div>
+
+          <div>
+            <label className="block font-semibold text-purple-900 mb-1 flex items-center justify-between">
+              <span>Client Secret (HS256)</span>
+              {config.hasClientSecret && (
+                <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Stored (leave blank to keep)
+                </span>
+              )}
+            </label>
+            <div className="relative">
+              <input
+                type={showSecret ? "text" : "password"}
+                value={config.clientSecret || ""}
+                onChange={(e) => setConfig({ ...config, clientSecret: e.target.value })}
+                placeholder={
+                  config.hasClientSecret
+                    ? "Leave empty to keep current client secret"
+                    : "Enter client secret for HS256 token verification"
+                }
+                className="w-full px-3 py-2 pr-9 border border-purple-300 rounded-md focus:border-purple-600 outline-none text-purple-950 font-mono text-[11px] bg-white"
+              />
+              <button
+                type="button"
+                onClick={() => setShowSecret(!showSecret)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-purple-700 hover:text-purple-900"
+                title={showSecret ? "Hide secret" : "Show secret"}
+              >
+                {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Provisioning Settings */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-jira-gray-50 rounded-lg border border-jira-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <div className="font-bold text-jira-navy">Otomatik Kullanıcı Kaydı (Auto-Provisioning)</div>
-              <div className="text-[10px] text-jira-gray-600">İlk defa SSO ile bağlanan kullanıcı için otomatik hesap açılır.</div>
+              <div className="font-bold text-jira-navy">Automatic User Provisioning (JIT)</div>
+              <div className="text-[10px] text-jira-gray-600">
+                Automatically create a local account on first successful SSO sign-in.
+              </div>
             </div>
             <input
               type="checkbox"
@@ -201,7 +323,7 @@ export default function SsoSettingsTab() {
           </div>
 
           <div>
-            <label className="block font-semibold text-jira-navy mb-1">Varsayılan Rol</label>
+            <label className="block font-semibold text-jira-navy mb-1">Default User Role</label>
             <select
               value={config.defaultRole || "Developer"}
               onChange={(e) => setConfig({ ...config, defaultRole: e.target.value })}
@@ -215,14 +337,14 @@ export default function SsoSettingsTab() {
         </div>
 
         {/* Save Button */}
-        <div className="flex justify-end">
+        <div className="flex justify-end pt-2">
           <button
             type="submit"
             disabled={saving}
             className="px-5 py-2.5 bg-jira-blue hover:bg-jira-blue-hover text-white font-bold text-xs rounded-md flex items-center gap-2 shadow-xs transition-colors disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            <span>SSO Ayarlarını Kaydet</span>
+            <span>Save SSO Configuration</span>
           </button>
         </div>
       </form>

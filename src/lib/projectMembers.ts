@@ -27,10 +27,11 @@ export async function ensureProjectMembersSeeded(projectId: string) {
 
     if (!project || allUsers.length === 0) return;
 
-    // Project Lead -> ADMIN, QA roles -> VIEWER, everyone else -> MEMBER.
+    // Project Lead (or first user fallback) -> ADMIN, QA roles -> VIEWER, everyone else -> MEMBER.
+    const effectiveLeadId = project.leadId || allUsers[0]?.id;
     const rows = allUsers.map((user) => {
       let role: ProjectRole = "MEMBER";
-      if (user.id === project.leadId) {
+      if (user.id === effectiveLeadId) {
         role = "ADMIN";
       } else if (user.role.toLowerCase().includes("qa")) {
         role = "VIEWER";

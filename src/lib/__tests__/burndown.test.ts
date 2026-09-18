@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { format } from "date-fns";
 import { computeBurndown, statusAsOf, type StatusChangeEvent } from "@/lib/burndown";
 
 const DONE = ["DONE"];
@@ -49,7 +50,7 @@ describe("computeBurndown", () => {
       { issueId: "1", oldValue: "TODO", newValue: "DONE", createdAt: new Date("2026-01-03") },
     ];
     const series = computeBurndown(issues, changes, DONE, start, end, end);
-    const byDate = (d: string) => series.find((p) => p.date.toISOString().slice(0, 10) === d)!;
+    const byDate = (d: string) => series.find((p) => format(p.date, "yyyy-MM-dd") === d)!;
 
     expect(byDate("2026-01-02").remaining).toBe(5);
     expect(byDate("2026-01-03").remaining).toBe(0);
@@ -60,7 +61,7 @@ describe("computeBurndown", () => {
     const issues = [{ id: "1", storyPoints: 5, status: "TODO" }];
     const today = new Date("2026-01-03");
     const series = computeBurndown(issues, [], DONE, start, end, today);
-    const byDate = (d: string) => series.find((p) => p.date.toISOString().slice(0, 10) === d)!;
+    const byDate = (d: string) => series.find((p) => format(p.date, "yyyy-MM-dd") === d)!;
 
     expect(byDate("2026-01-03").remaining).toBe(5);
     expect(byDate("2026-01-04").remaining).toBeNull();

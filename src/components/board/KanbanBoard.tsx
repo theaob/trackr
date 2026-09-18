@@ -449,8 +449,13 @@ export default function KanbanBoard({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold text-jira-navy tracking-tight">
-              {activeSprint ? activeSprint.name : "Kanban Board"}
+              {activeSprint ? activeSprint.name : isKanban ? "Kanban Board" : "Scrum Board"}
             </h1>
+            <span
+              className="text-[10px] font-bold px-2 py-0.5 rounded border bg-jira-gray-100 text-jira-gray-700 border-jira-gray-200"
+            >
+              {isKanban ? "Kanban" : "Scrum"}
+            </span>
             <span
               className={`text-[10px] font-bold px-2 py-0.5 rounded border ${permissions.roleConfig.badgeBg} ${permissions.roleConfig.badgeText} ${permissions.roleConfig.border}`}
             >
@@ -475,6 +480,12 @@ export default function KanbanBoard({
             )}
           </div>
         </div>
+
+        {!activeSprint && !isKanban && (
+          <p className="text-xs text-jira-gray-500 mt-0.5">
+            No active sprint. Issues assigned to the active sprint in the backlog will appear here.
+          </p>
+        )}
 
         {activeSprint?.goal && (
           <p className="text-xs text-jira-gray-600 italic">

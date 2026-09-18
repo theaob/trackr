@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   MAX_ATTACHMENT_SIZE,
   formatFileSize,
+  generatePastedImageFileName,
   isPreviewableImageMime,
   sanitizeFileName,
 } from "@/lib/attachments";
@@ -82,3 +83,26 @@ describe("formatFileSize", () => {
     expect(formatFileSize(NaN)).toBe("0 B");
   });
 });
+
+describe("generatePastedImageFileName", () => {
+  it("generates a formatted filename based on date and mime type", () => {
+    const fixedDate = new Date(2026, 8, 18, 16, 20, 5); // Month is 0-indexed (8 = September)
+    expect(generatePastedImageFileName("image/png", fixedDate)).toBe(
+      "pasted-image-20260918-162005.png"
+    );
+    expect(generatePastedImageFileName("image/jpeg", fixedDate)).toBe(
+      "pasted-image-20260918-162005.jpg"
+    );
+    expect(generatePastedImageFileName("image/webp", fixedDate)).toBe(
+      "pasted-image-20260918-162005.webp"
+    );
+  });
+
+  it("defaults to png for unknown image types", () => {
+    const fixedDate = new Date(2026, 0, 1, 9, 5, 0);
+    expect(generatePastedImageFileName("image/unknown", fixedDate)).toBe(
+      "pasted-image-20260101-090500.png"
+    );
+  });
+});
+

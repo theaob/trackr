@@ -22,6 +22,8 @@ import {
 } from "@/lib/actions/issues";
 import { bulkAddLabel } from "@/lib/actions/labels";
 import { addComment, deleteComment } from "@/lib/actions/comments";
+import { uploadAttachment } from "@/lib/actions/attachments";
+import { MAX_ATTACHMENT_SIZE, formatFileSize, generatePastedImageFileName } from "@/lib/attachments";
 import {
   Search,
   SlidersHorizontal,
@@ -484,6 +486,35 @@ export default function IssuesListView({
       const updated = { ...selectedIssue, comments: updatedComments };
       setIssues((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
     }
+  };
+
+  const handleSplitViewImagePaste = async (file: File) => {
+    if (!selectedIssue) return { success: false, error: "No issue selected" };
+    if (file.size > MAX_ATTACHMENT_SIZE) {
+      return {
+        success: false,
+        error: `Image too large. Maximum size is ${formatFileSize(MAX_ATTACHMENT_SIZE)}.`,
+      };
+    }
+    const fileName =
+      !file.name || file.name === "image.png" || file.name === "blob"
+        ? generatePastedImageFileName(file.type || "image/png")
+        : file.name;
+    const renamedFile = new File([file], fileName, { type: file.type || "image/png" });
+    const formData = new FormData();
+    formData.append("file", renamedFile);
+    const res = await uploadAttachment(selectedIssue.id, formData);
+    if (res.success && res.attachment) {
+      return {
+        success: true,
+        url: `/api/v1/attachments/${res.attachment.id}`,
+        fileName: res.attachment.fileName,
+      };
+    }
+    return {
+      success: false,
+      error: (res as { error?: string }).error || "Failed to upload image",
+    };
   };
 
   return (
@@ -997,9 +1028,11 @@ export default function IssuesListView({
                                   value={newComment}
                                   onChange={setNewComment}
                                   users={users}
-                                  multiline={false}
-                                  placeholder="Add a comment... (Type @ to mention someone)"
+                                  multiline={true}
+                                  rows={2}
+                                  placeholder="Add a comment... (Type @ to mention, paste images directly)"
                                   onSubmit={handleAddComment}
+                                  onImagePaste={handleSplitViewImagePaste}
                                   className="w-full px-3 py-1.5 text-xs border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
                                 />
                                 <p className="mt-1 text-[11px] text-jira-gray-400">Markdown supported</p>

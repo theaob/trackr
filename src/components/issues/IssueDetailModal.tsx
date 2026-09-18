@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Issue, IssueStatus, IssueType, PriorityLevel, User, Sprint, Version, CustomField, IssueLink, IssueLabel, WorkflowStatus, WorkflowTransition, Project, Attachment, IssueComponent, Worklog } from "@/types";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
 import UserAvatar from "@/components/common/UserAvatar";
@@ -23,9 +23,11 @@ import { getWatchState, toggleWatch } from "@/lib/actions/watchers";
 import { allowedNextStatusNames, prettifyStatusName } from "@/lib/workflowDisplay";
 import { isOverdue } from "@/lib/dueDate";
 import CustomFieldRenderer from "@/components/common/CustomFieldRenderer";
-import MentionInput from "@/components/common/MentionInput";
+import MentionInput, { ImagePasteResult } from "@/components/common/MentionInput";
 import MarkdownContent from "@/components/common/MarkdownContent";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
+import { uploadAttachment } from "@/lib/actions/attachments";
+import { MAX_ATTACHMENT_SIZE, formatFileSize, generatePastedImageFileName } from "@/lib/attachments";
 import {
   X,
   Trash2,
@@ -42,6 +44,8 @@ import {
   Sliders,
   Eye,
   EyeOff,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 
@@ -93,6 +97,8 @@ export default function IssueDetailModal({
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [activeTab, setActiveTab] = useState<"comments" | "history">("comments");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [modalPasteUploading, setModalPasteUploading] = useState(false);
+  const [modalPasteError, setModalPasteError] = useState<string | null>(null);
 
   // Watch state
   const [watching, setWatching] = useState(false);
@@ -202,6 +208,133 @@ export default function IssueDetailModal({
     if (!currentIssue) return;
     await setIssueCustomFieldValue(currentIssue.id, fieldId, val);
   };
+
+  // Handle Attachment added/removed
+  const handleAttachmentAdded = useCallback(
+    (attachment: Attachment) => {
+      if (!currentIssue) return;
+      const updatedIssue = {
+        ...currentIssue,
+        attachments: [attachment, ...(currentIssue.attachments || [])],
+      };
+      setCurrentIssue(updatedIssue);
+      onIssueUpdated(updatedIssue);
+    },
+    [currentIssue, onIssueUpdated]
+  );
+
+  const handleAttachmentRemoved = useCallback(
+    (attachmentId: string) => {
+      if (!currentIssue) return;
+      const updatedIssue = {
+        ...currentIssue,
+        attachments: (currentIssue.attachments || []).filter((a) => a.id !== attachmentId),
+      };
+      setCurrentIssue(updatedIssue);
+      onIssueUpdated(updatedIssue);
+    },
+    [currentIssue, onIssueUpdated]
+  );
+
+  const handleImagePaste = useCallback(
+    async (file: File): Promise<ImagePasteResult> => {
+      if (!currentIssue) return { success: false, error: "No issue selected" };
+      if (!permissions.canAddComment) {
+        return { success: false, error: "You don't have permission to attach files." };
+      }
+      if (file.size > MAX_ATTACHMENT_SIZE) {
+        return {
+          success: false,
+          error: `Image too large. Maximum size is ${formatFileSize(MAX_ATTACHMENT_SIZE)}.`,
+        };
+      }
+
+      const fileName =
+        !file.name || file.name === "image.png" || file.name === "blob"
+          ? generatePastedImageFileName(file.type || "image/png")
+          : file.name;
+
+      const renamedFile = new File([file], fileName, { type: file.type || "image/png" });
+      const formData = new FormData();
+      formData.append("file", renamedFile);
+
+      const res = await uploadAttachment(currentIssue.id, formData);
+      if (res.success && res.attachment) {
+        const att = res.attachment as unknown as Attachment;
+        handleAttachmentAdded(att);
+        return {
+          success: true,
+          url: `/api/v1/attachments/${att.id}`,
+          fileName: att.fileName,
+        };
+      }
+      return {
+        success: false,
+        error: (res as { error?: string }).error || "Failed to upload image",
+      };
+    },
+    [currentIssue, permissions.canAddComment, handleAttachmentAdded]
+  );
+
+  // Window-level paste listener for the modal (when not focused on a text input)
+  useEffect(() => {
+    const handleGlobalPaste = async (e: ClipboardEvent) => {
+      const activeEl = document.activeElement;
+      const isInput =
+        activeEl instanceof HTMLInputElement ||
+        activeEl instanceof HTMLTextAreaElement ||
+        (activeEl as HTMLElement)?.isContentEditable;
+
+      if (isInput) return;
+      if (!currentIssue || !permissions.canAddComment) return;
+
+      const clipboardData = e.clipboardData;
+      if (!clipboardData) return;
+
+      let imageFile: File | null = null;
+      if (clipboardData.files && clipboardData.files.length > 0) {
+        for (let i = 0; i < clipboardData.files.length; i++) {
+          const file = clipboardData.files[i];
+          if (file.type.startsWith("image/")) {
+            imageFile = file;
+            break;
+          }
+        }
+      }
+
+      if (!imageFile && clipboardData.items) {
+        for (let i = 0; i < clipboardData.items.length; i++) {
+          const item = clipboardData.items[i];
+          if (item.type.startsWith("image/")) {
+            imageFile = item.getAsFile();
+            break;
+          }
+        }
+      }
+
+      if (!imageFile) return;
+
+      e.preventDefault();
+      setModalPasteUploading(true);
+      setModalPasteError(null);
+
+      try {
+        const res = await handleImagePaste(imageFile);
+        if (!res.success && res.error) {
+          setModalPasteError(res.error);
+          setTimeout(() => setModalPasteError(null), 4000);
+        }
+      } catch (err: any) {
+        setModalPasteError(err?.message || "Failed to paste image");
+        setTimeout(() => setModalPasteError(null), 4000);
+      } finally {
+        setModalPasteUploading(false);
+      }
+    };
+
+    window.addEventListener("paste", handleGlobalPaste);
+    return () => window.removeEventListener("paste", handleGlobalPaste);
+  }, [currentIssue, permissions.canAddComment, handleImagePaste]);
 
   if (!currentIssue) return null;
 
@@ -471,24 +604,7 @@ export default function IssueDetailModal({
     onIssueUpdated(updatedIssue);
   };
 
-  // Handle Attachment added/removed
-  const handleAttachmentAdded = (attachment: Attachment) => {
-    const updatedIssue = {
-      ...currentIssue,
-      attachments: [attachment, ...(currentIssue.attachments || [])],
-    };
-    setCurrentIssue(updatedIssue);
-    onIssueUpdated(updatedIssue);
-  };
 
-  const handleAttachmentRemoved = (attachmentId: string) => {
-    const updatedIssue = {
-      ...currentIssue,
-      attachments: (currentIssue.attachments || []).filter((a) => a.id !== attachmentId),
-    };
-    setCurrentIssue(updatedIssue);
-    onIssueUpdated(updatedIssue);
-  };
 
   // Handle Component added/removed
   const handleComponentAdded = (issueComponent: IssueComponent) => {
@@ -647,7 +763,8 @@ export default function IssueDetailModal({
                     onChange={setDescription}
                     users={users}
                     rows={5}
-                    placeholder="Add details, steps, or acceptance criteria... (Type @ to mention someone)"
+                    placeholder="Add details, steps, or acceptance criteria... (Type @ to mention, paste images directly)"
+                    onImagePaste={handleImagePaste}
                     className="w-full text-sm text-jira-navy p-3 border-2 border-jira-blue rounded-md outline-none leading-relaxed"
                   />
                   <div className="flex items-center gap-2">
@@ -770,9 +887,11 @@ export default function IssueDetailModal({
                           value={newComment}
                           onChange={setNewComment}
                           users={users}
-                          multiline={false}
-                          placeholder="Add a comment... (Type @ to mention someone)"
+                          multiline={true}
+                          rows={2}
+                          placeholder="Add a comment... (Type @ to mention, paste images directly)"
                           onSubmit={handleAddComment}
+                          onImagePaste={handleImagePaste}
                           className="w-full px-3 py-2 text-sm border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
                         />
                         <p className="mt-1 text-[11px] text-jira-gray-400">Markdown supported</p>
@@ -1177,6 +1296,20 @@ export default function IssueDetailModal({
           </div>
         </div>
       </div>
+
+      {/* Modal-wide image paste feedback toasts */}
+      {modalPasteUploading && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-jira-navy text-white text-xs px-3.5 py-2.5 rounded-lg shadow-xl border border-jira-gray-700 animate-in fade-in slide-in-from-bottom-2">
+          <Loader2 className="w-4 h-4 animate-spin text-jira-blue-light" />
+          <span>Uploading pasted image to attachments...</span>
+        </div>
+      )}
+      {modalPasteError && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-rose-600 text-white text-xs px-3.5 py-2.5 rounded-lg shadow-xl animate-in fade-in slide-in-from-bottom-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{modalPasteError}</span>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,7 +3,14 @@
 import React, { useState, useRef, useEffect } from "react";
 import { User } from "@/types";
 import UserAvatar from "@/components/common/UserAvatar";
-import { AtSign } from "lucide-react";
+import { AtSign, Loader2 } from "lucide-react";
+
+export interface ImagePasteResult {
+  success: boolean;
+  url?: string;
+  fileName?: string;
+  error?: string;
+}
 
 interface MentionInputProps {
   value: string;
@@ -14,6 +21,7 @@ interface MentionInputProps {
   rows?: number;
   multiline?: boolean;
   onSubmit?: (e?: any) => void | Promise<void>;
+  onImagePaste?: (file: File) => Promise<ImagePasteResult>;
   autoFocus?: boolean;
   disabled?: boolean;
 }
@@ -27,6 +35,7 @@ export default function MentionInput({
   rows = 3,
   multiline = true,
   onSubmit,
+  onImagePaste,
   autoFocus = false,
   disabled = false,
 }: MentionInputProps) {
@@ -37,6 +46,7 @@ export default function MentionInput({
   const [mentionStartIndex, setMentionStartIndex] = useState<number>(-1);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [isOpen, setIsOpen] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   // Filter candidates matching the query
   const filteredUsers = React.useMemo(() => {
@@ -54,6 +64,78 @@ export default function MentionInput({
   useEffect(() => {
     setSelectedIndex(0);
   }, [filteredUsers]);
+
+  // Handle image clipboard pasting
+  const handlePaste = async (
+    e: React.ClipboardEvent<HTMLTextAreaElement | HTMLInputElement>
+  ) => {
+    if (!onImagePaste) return;
+    const clipboardData = e.clipboardData;
+    if (!clipboardData) return;
+
+    let imageFile: File | null = null;
+    if (clipboardData.files && clipboardData.files.length > 0) {
+      for (let i = 0; i < clipboardData.files.length; i++) {
+        const file = clipboardData.files[i];
+        if (file.type.startsWith("image/")) {
+          imageFile = file;
+          break;
+        }
+      }
+    }
+
+    if (!imageFile && clipboardData.items) {
+      for (let i = 0; i < clipboardData.items.length; i++) {
+        const item = clipboardData.items[i];
+        if (item.type.startsWith("image/")) {
+          imageFile = item.getAsFile();
+          break;
+        }
+      }
+    }
+
+    if (!imageFile) return;
+
+    e.preventDefault();
+
+    const target = inputRef.current;
+    const cursorPos = target ? (target.selectionStart ?? value.length) : value.length;
+    const selectionEnd = target ? (target.selectionEnd ?? cursorPos) : cursorPos;
+
+    const before = value.slice(0, cursorPos);
+    const after = value.slice(selectionEnd);
+
+    const placeholderName =
+      imageFile.name && imageFile.name !== "image.png" && imageFile.name !== "blob"
+        ? imageFile.name
+        : "image.png";
+    const placeholderText = `![Uploading ${placeholderName}...]()`;
+
+    const needsPrefixNewline = multiline && before.length > 0 && !before.endsWith("\n");
+    const needsSuffixNewline = multiline && after.length > 0 && !after.startsWith("\n");
+    const insertPlaceholder = `${needsPrefixNewline ? "\n" : ""}${placeholderText}${
+      needsSuffixNewline ? "\n" : ""
+    }`;
+
+    const textWithPlaceholder = `${before}${insertPlaceholder}${after}`;
+    onChange(textWithPlaceholder);
+    setIsUploadingImage(true);
+
+    try {
+      const res = await onImagePaste(imageFile);
+      if (res.success && res.url) {
+        const displayFileName = res.fileName || placeholderName;
+        const markdownImage = `![${displayFileName}](${res.url})`;
+        onChange(textWithPlaceholder.replace(placeholderText, markdownImage));
+      } else {
+        onChange(textWithPlaceholder.replace(insertPlaceholder, ""));
+      }
+    } catch {
+      onChange(textWithPlaceholder.replace(insertPlaceholder, ""));
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
 
   // Check text around cursor to detect @mention
   const checkMentionTrigger = (text: string, cursorPos: number) => {
@@ -197,6 +279,7 @@ export default function MentionInput({
           value={value}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           placeholder={placeholder}
           rows={rows}
           autoFocus={autoFocus}
@@ -210,11 +293,19 @@ export default function MentionInput({
           value={value}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           placeholder={placeholder}
           autoFocus={autoFocus}
           disabled={disabled}
           className={className}
         />
+      )}
+
+      {isUploadingImage && (
+        <div className="absolute right-2 bottom-2 pointer-events-none flex items-center gap-1.5 text-[11px] text-jira-blue bg-white/95 px-2 py-1 rounded shadow-xs border border-jira-blue/30 font-medium">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          <span>Uploading image...</span>
+        </div>
       )}
 
       {/* Floating Mention Suggestions Dropdown */}
