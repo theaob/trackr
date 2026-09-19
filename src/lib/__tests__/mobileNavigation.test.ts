@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import { describe, expect, it, vi } from "vitest";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -5,6 +7,9 @@ import Navbar from "@/components/layout/Navbar";
 import Sidebar from "@/components/layout/Sidebar";
 import KanbanBoard from "@/components/board/KanbanBoard";
 import IssuesListView from "@/components/issues/IssuesListView";
+import ProjectsDirectoryView from "@/components/projects/ProjectsDirectoryView";
+import ProjectSettingsView from "@/components/settings/ProjectSettingsView";
+import GeneralSettingsView from "@/components/settings/GeneralSettingsView";
 import { viewport } from "@/app/layout";
 import { Project, WorkflowStatus, Issue } from "@/types";
 
@@ -61,6 +66,29 @@ vi.mock("@/lib/actions/notifications", () => ({
   markAllNotificationsRead: vi.fn(),
 }));
 
+vi.mock("@/lib/actions/projects", () => ({
+  getProjects: vi.fn().mockResolvedValue([]),
+  updateProject: vi.fn(),
+}));
+
+vi.mock("@/lib/actions/customFields", () => ({
+  deleteCustomField: vi.fn(),
+}));
+
+vi.mock("@/lib/actions/components", () => ({
+  deleteComponent: vi.fn(),
+}));
+
+vi.mock("@/lib/actions/webhooks", () => ({
+  deleteWebhook: vi.fn(),
+  updateWebhook: vi.fn(),
+  testWebhook: vi.fn(),
+}));
+
+vi.mock("@/lib/actions/system", () => ({
+  getSystemInfo: vi.fn().mockResolvedValue(null),
+}));
+
 vi.mock("@/context/UserContext", () => ({
   useCurrentUser: () => ({
     currentUser: {
@@ -68,6 +96,7 @@ vi.mock("@/context/UserContext", () => ({
       name: "Mobile User",
       email: "mobile@example.com",
       role: "ADMIN",
+      canCreateProjects: true,
     },
     users: [],
     setCurrentUser: vi.fn(),
@@ -315,5 +344,85 @@ describe("Mobile Viewport & Navigation", () => {
     expect(html).toContain("flex-1 overflow-y-auto bg-white p-3.5 sm:p-6 block");
     // Back to issues list button is present
     expect(html).toContain("Back to issues list");
+  });
+
+  it("hides administrative Project Settings from mobile navigation drawer while keeping it on desktop", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(Sidebar, {
+        project: mockProject,
+        isMobileOpen: true,
+        onCloseMobile: vi.fn(),
+      })
+    );
+
+    // Mobile slide-over drawer section (<aside comes after drawer in DOM) should NOT contain Project Settings
+    const asideIndex = html.indexOf("<aside");
+    const mobileDrawerHtml = html.slice(0, asideIndex);
+    expect(mobileDrawerHtml).not.toContain("Project Settings");
+    expect(mobileDrawerHtml).toContain("Active Board");
+    expect(mobileDrawerHtml).toContain("Backlog");
+
+    // Desktop sidebar section DOES contain Project Settings
+    const desktopSidebarHtml = html.slice(asideIndex);
+    expect(desktopSidebarHtml).toContain("Project Settings");
+  });
+
+  it("hides System Settings on mobile in Navbar user dropdown", () => {
+    const navbarSource = fs.readFileSync(
+      path.resolve(__dirname, "../../components/layout/Navbar.tsx"),
+      "utf-8"
+    );
+
+    // System Settings link container has hidden md:block
+    expect(navbarSource).toContain("hidden md:block py-1 border-b border-jira-gray-200");
+    expect(navbarSource).toContain("System Settings");
+  });
+
+  it("hides administrative Create Project and Project Settings on mobile in ProjectsDirectoryView", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(ProjectsDirectoryView, {
+        initialProjects: [mockProject],
+        users: [],
+      })
+    );
+
+    // Create Project button is hidden on mobile: hidden md:inline-flex
+    expect(html).toContain("hidden md:inline-flex bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold");
+    // Project Settings icon link is hidden on mobile: hidden md:flex
+    expect(html).toContain("hidden md:flex items-center gap-1 hover:text-jira-blue transition-colors");
+  });
+
+  it("renders mobile desktop-only notice and wraps settings layout in hidden md:block in ProjectSettingsView", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(ProjectSettingsView, {
+        project: mockProject,
+        users: [],
+      })
+    );
+
+    // Mobile notice visible on md:hidden
+    expect(html).toContain("md:hidden flex-1 flex flex-col items-center justify-center");
+    expect(html).toContain("Desktop Only Feature");
+    expect(html).toContain("Back to Active Board");
+    expect(html).toContain("Back to Issues");
+
+    // Desktop settings layout wrapped in hidden md:block
+    expect(html).toContain("hidden md:block space-y-6");
+  });
+
+  it("renders mobile desktop-only notice and wraps settings layout in hidden md:block in GeneralSettingsView", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(GeneralSettingsView, {
+        initialSystemInfo: null,
+      })
+    );
+
+    // Mobile notice visible on md:hidden
+    expect(html).toContain("md:hidden flex flex-col items-center justify-center");
+    expect(html).toContain("Desktop Only Feature");
+    expect(html).toContain("Back to Projects");
+
+    // Desktop settings layout wrapped in hidden md:block
+    expect(html).toContain("hidden md:block space-y-6");
   });
 });

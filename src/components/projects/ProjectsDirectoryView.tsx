@@ -79,7 +79,7 @@ export default function ProjectsDirectoryView({
           {currentUser?.canCreateProjects && (
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold px-4 py-2 rounded-md flex items-center gap-1.5 shadow-sm transition-colors self-start sm:self-auto"
+              className="hidden md:inline-flex bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold px-4 py-2 rounded-md items-center gap-1.5 shadow-sm transition-colors self-start sm:self-auto"
             >
               <Plus className="w-4 h-4" />
               <span>Create Project</span>
@@ -225,7 +225,7 @@ export default function ProjectsDirectoryView({
 
                   <Link
                     href={`/projects/${project.key}/settings`}
-                    className="flex items-center gap-1 hover:text-jira-blue transition-colors"
+                    className="hidden md:flex items-center gap-1 hover:text-jira-blue transition-colors"
                     title="Project Settings"
                   >
                     <Settings className="w-3.5 h-3.5 text-jira-gray-600" />

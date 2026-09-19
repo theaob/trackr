@@ -492,9 +492,9 @@ export default function Navbar({
                 </button>
               </div>
 
-              {/* System Settings */}
+              {/* System Settings (Desktop only) */}
               {isInstanceAdmin && (
-                <div className="py-1 border-b border-jira-gray-200">
+                <div className="hidden md:block py-1 border-b border-jira-gray-200">
                   <Link
                     href="/settings"
                     onClick={() => setShowUserMenu(false)}

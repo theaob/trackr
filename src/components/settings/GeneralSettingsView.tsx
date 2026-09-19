@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import SsoSettingsTab from "./SsoSettingsTab";
 import SystemInfoTab from "./SystemInfoTab";
 import UsersSettingsTab from "./UsersSettingsTab";
-import { ShieldCheck, Info, Package, GitCommit, Users } from "lucide-react";
+import { ShieldCheck, Info, Package, GitCommit, Users, FolderGit2 } from "lucide-react";
 import { SystemInfo } from "@/lib/systemUtils";
 import { getSystemInfo } from "@/lib/actions/system";
 
@@ -29,9 +30,33 @@ export default function GeneralSettingsView({
   }, [systemInfo]);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="pb-4 border-b border-jira-gray-200">
+    <>
+      {/* Mobile Notice: System Administration is desktop-only */}
+      <div className="md:hidden flex flex-col items-center justify-center py-12 px-4 text-center bg-white rounded-lg border border-jira-gray-200">
+        <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shadow-2xs mb-4">
+          <ShieldCheck className="w-7 h-7" />
+        </div>
+        <h2 className="text-base font-bold text-jira-navy mb-1.5">
+          Desktop Only Feature
+        </h2>
+        <p className="text-xs text-jira-gray-600 max-w-sm mb-6 leading-relaxed">
+          System administration, SSO/OIDC configuration, and user permissions are optimized for desktop displays.
+        </p>
+        <div className="flex flex-col gap-2.5 w-full max-w-xs">
+          <Link
+            href="/projects"
+            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-jira-blue hover:bg-jira-blue-hover text-white rounded-md text-xs font-semibold shadow-xs transition-colors"
+          >
+            <FolderGit2 className="w-4 h-4" />
+            <span>Back to Projects</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* Desktop Settings Layout */}
+      <div className="hidden md:block space-y-6">
+        {/* Header */}
+        <div className="pb-4 border-b border-jira-gray-200">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-xl font-bold text-jira-navy tracking-tight">
@@ -114,6 +139,7 @@ export default function GeneralSettingsView({
           <SystemInfoTab systemInfo={systemInfo} />
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

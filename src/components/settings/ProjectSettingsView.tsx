@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Project, User, CustomField, Webhook, ProjectMember, BoardType, WorkflowStatus, WorkflowTransition, Component } from "@/types";
 import { updateProject } from "@/lib/actions/projects";
@@ -34,6 +35,9 @@ import {
   ShieldAlert,
   GitBranch,
   Boxes,
+  Monitor,
+  Kanban,
+  ListFilter,
 } from "lucide-react";
 import CreateCustomFieldModal from "./CreateCustomFieldModal";
 import CreateComponentModal from "./CreateComponentModal";
@@ -238,12 +242,43 @@ export default function ProjectSettingsView({
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-y-auto px-4 sm:px-8 py-4 sm:py-6 bg-white">
-      {/* Header */}
-      <div className="pb-4 border-b border-jira-gray-200">
-        <h1 className="text-xl font-bold text-jira-navy tracking-tight">Project Settings</h1>
-        <p className="text-xs text-jira-gray-600 mt-1">
-          Configure project details, workflow metadata, and custom fields for {project.name}.
+      {/* Mobile Notice: Administrative features are desktop-only */}
+      <div className="md:hidden flex-1 flex flex-col items-center justify-center py-12 px-4 text-center">
+        <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shadow-2xs mb-4">
+          <Monitor className="w-7 h-7" />
+        </div>
+        <h2 className="text-base font-bold text-jira-navy mb-1.5">
+          Desktop Only Feature
+        </h2>
+        <p className="text-xs text-jira-gray-600 max-w-sm mb-6 leading-relaxed">
+          Administrative features (project configuration, workflows, state transition graphs, access control, custom fields, and webhooks) are designed for desktop screens.
         </p>
+        <div className="flex flex-col gap-2.5 w-full max-w-xs">
+          <Link
+            href={`/projects/${project.key}/board`}
+            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-jira-blue hover:bg-jira-blue-hover text-white rounded-md text-xs font-semibold shadow-xs transition-colors"
+          >
+            <Kanban className="w-4 h-4" />
+            <span>Back to Active Board</span>
+          </Link>
+          <Link
+            href={`/projects/${project.key}/issues`}
+            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-jira-gray-100 hover:bg-jira-gray-200 text-jira-navy border border-jira-gray-200 rounded-md text-xs font-semibold transition-colors"
+          >
+            <ListFilter className="w-4 h-4" />
+            <span>Back to Issues</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* Desktop Settings Layout */}
+      <div className="hidden md:block space-y-6">
+        {/* Header */}
+        <div className="pb-4 border-b border-jira-gray-200">
+          <h1 className="text-xl font-bold text-jira-navy tracking-tight">Project Settings</h1>
+          <p className="text-xs text-jira-gray-600 mt-1">
+            Configure project details, workflow metadata, and custom fields for {project.name}.
+          </p>
 
         {/* Tab Navigation */}
         <div className="flex items-center gap-4 sm:gap-6 mt-4 border-b border-jira-gray-200 overflow-x-auto no-scrollbar">
@@ -983,6 +1018,7 @@ export default function ProjectSettingsView({
         isOpen={!!selectedWebhookForDeliveries}
         onClose={() => setSelectedWebhookForDeliveries(null)}
       />
+      </div>
     </div>
   );
 }

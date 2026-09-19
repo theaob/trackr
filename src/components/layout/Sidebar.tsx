@@ -49,7 +49,12 @@ export default function Sidebar({
     }
   };
 
-  const navItems = [
+  const navItems: Array<{
+    name: string;
+    href: string;
+    icon: React.ComponentType<{ className?: string }>;
+    isAdministrative?: boolean;
+  }> = [
     {
       name: "Active Board",
       href: `/projects/${project.key}/board`,
@@ -83,11 +88,13 @@ export default function Sidebar({
   ];
 
   // Settings needs a session, so linking a visitor there is a dead end.
+  // Marked as administrative so it is hidden from mobile navigation drawers.
   if (currentUser) {
     navItems.push({
       name: "Project Settings",
       href: `/projects/${project.key}/settings`,
       icon: Settings,
+      isAdministrative: true,
     });
   }
 
@@ -127,7 +134,9 @@ export default function Sidebar({
               <div className="px-3 pb-2 text-[10px] font-bold text-jira-gray-600 uppercase tracking-wider">
                 Planning
               </div>
-              {navItems.map((item) => {
+              {navItems
+                .filter((item) => !item.isAdministrative)
+                .map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
                 const Icon = item.icon;
 
