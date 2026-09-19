@@ -54,7 +54,7 @@ export async function getProjectSprints(projectId: string) {
 
 export async function createSprint(projectId: string, name: string, goal?: string) {
   try {
-    await requireProjectPermission(projectId, "MANAGE_SPRINTS");
+    const { user } = await requireProjectPermission(projectId, "MANAGE_SPRINTS");
 
     const project = await prisma.project.findUnique({
       where: { id: projectId },
@@ -73,6 +73,9 @@ export async function createSprint(projectId: string, name: string, goal?: strin
     });
 
     revalidateProjectRoutes(project.key);
+    triggerWebhooks("sprint:created", sprint, projectId, {
+      actor: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
+    });
     return { success: true as const, sprint };
   } catch (error) {
     return toActionError(error, "Failed to create sprint");
@@ -85,7 +88,7 @@ export async function startSprint(
 ) {
   try {
     const projectId = await projectIdForSprint(sprintId);
-    await requireProjectPermission(projectId, "MANAGE_SPRINTS");
+    const { user } = await requireProjectPermission(projectId, "MANAGE_SPRINTS");
 
     const sprint = await prisma.sprint.findUnique({
       where: { id: sprintId },
@@ -126,7 +129,9 @@ export async function startSprint(
     });
 
     revalidateProjectRoutes(sprint.project.key);
-    triggerWebhooks("sprint:started", updated, sprint.projectId);
+    triggerWebhooks("sprint:started", updated, sprint.projectId, {
+      actor: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
+    });
     return { success: true as const, sprint: updated };
   } catch (error) {
     return toActionError(error, "Failed to start sprint");
@@ -136,7 +141,7 @@ export async function startSprint(
 export async function completeSprint(sprintId: string, moveToSprintId?: string | null) {
   try {
     const projectId = await projectIdForSprint(sprintId);
-    await requireProjectPermission(projectId, "MANAGE_SPRINTS");
+    const { user } = await requireProjectPermission(projectId, "MANAGE_SPRINTS");
 
     const sprint = await prisma.sprint.findUnique({
       where: { id: sprintId },
@@ -188,7 +193,10 @@ export async function completeSprint(sprintId: string, moveToSprintId?: string |
     triggerWebhooks(
       "sprint:completed",
       { id: sprint.id, name: sprint.name, projectId: sprint.projectId },
-      sprint.projectId
+      sprint.projectId,
+      {
+        actor: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
+      }
     );
     return { success: true as const };
   } catch (error) {
@@ -264,7 +272,7 @@ export async function updateSprint(
 ) {
   try {
     const projectId = await projectIdForSprint(sprintId);
-    await requireProjectPermission(projectId, "MANAGE_SPRINTS");
+    const { user } = await requireProjectPermission(projectId, "MANAGE_SPRINTS");
 
     const sprint = await prisma.sprint.findUnique({
       where: { id: sprintId },
@@ -297,6 +305,9 @@ export async function updateSprint(
     });
 
     revalidateProjectRoutes(sprint.project.key);
+    triggerWebhooks("sprint:updated", updated, sprint.projectId, {
+      actor: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
+    });
     return { success: true as const, sprint: updated };
   } catch (error) {
     return toActionError(error, "Failed to update sprint");
@@ -310,11 +321,11 @@ export async function renameSprint(sprintId: string, name: string) {
 export async function deleteSprint(sprintId: string) {
   try {
     const projectId = await projectIdForSprint(sprintId);
-    await requireProjectPermission(projectId, "MANAGE_SPRINTS");
+    const { user } = await requireProjectPermission(projectId, "MANAGE_SPRINTS");
 
     const sprint = await prisma.sprint.findUnique({
       where: { id: sprintId },
-      select: { id: true, status: true, project: true },
+      select: { id: true, name: true, status: true, project: true },
     });
 
     if (!sprint) throw new Error("Sprint not found");
@@ -334,9 +345,16 @@ export async function deleteSprint(sprintId: string) {
     ]);
 
     revalidateProjectRoutes(sprint.project.key);
+    triggerWebhooks(
+      "sprint:deleted",
+      { id: sprint.id, name: sprint.name, projectId },
+      projectId,
+      {
+        actor: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
+      }
+    );
     return { success: true as const };
   } catch (error) {
     return toActionError(error, "Failed to delete sprint");
   }
 }
-

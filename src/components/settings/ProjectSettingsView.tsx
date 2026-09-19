@@ -816,12 +816,20 @@ export default function ProjectSettingsView({
                     return (
                       <tr key={wh.id} className="hover:bg-jira-gray-50/70 transition-colors">
                         <td className="px-4 py-3">
-                          <div className="font-semibold text-jira-navy flex items-center gap-1.5">
-                            <WebhookIcon className="w-3.5 h-3.5 text-jira-blue" />
-                            {wh.name}
+                          <div className="font-semibold text-jira-navy flex items-center gap-1.5 flex-wrap">
+                            <WebhookIcon className="w-3.5 h-3.5 text-jira-blue shrink-0" />
+                            <span>{wh.name}</span>
                             {wh.secret && (
                               <span className="text-[10px] text-jira-gray-500 font-normal px-1.5 py-0.2 bg-jira-gray-100 rounded border border-jira-gray-300">
                                 HMAC Signed
+                              </span>
+                            )}
+                            {wh.jqlFilter && (
+                              <span
+                                className="text-[10px] text-jira-blue font-mono px-1.5 py-0.2 bg-jira-blue-light/60 rounded border border-jira-blue/30 max-w-[220px] truncate"
+                                title={`JQL Filter: ${wh.jqlFilter}`}
+                              >
+                                JQL: {wh.jqlFilter}
                               </span>
                             )}
                           </div>
@@ -831,7 +839,7 @@ export default function ProjectSettingsView({
                         </td>
                         <td className="px-4 py-3 max-w-xs">
                           <div className="flex flex-wrap gap-1">
-                            {eventsList.slice(0, 3).map((evt, idx) => (
+                            {eventsList.slice(0, 4).map((evt, idx) => (
                               <span
                                 key={idx}
                                 className="text-[10px] px-1.5 py-0.5 bg-jira-gray-100 text-jira-gray-700 rounded border border-jira-gray-200 font-mono"
@@ -839,9 +847,9 @@ export default function ProjectSettingsView({
                                 {evt}
                               </span>
                             ))}
-                            {eventsList.length > 3 && (
+                            {eventsList.length > 4 && (
                               <span className="text-[10px] text-jira-gray-400 self-center">
-                                +{eventsList.length - 3} more
+                                +{eventsList.length - 4} more
                               </span>
                             )}
                           </div>

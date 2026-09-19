@@ -145,7 +145,10 @@ export async function createIssueLink(data: {
       revalidatePath(`/projects/${source.project?.key}`);
       if (target.projectId !== source.projectId) revalidatePath(`/projects/${target.project?.key}`);
     } catch {}
-    triggerWebhooks("issue:linked", { link, source, target }, source.projectId);
+    triggerWebhooks("issue:linked", { link, source, target }, source.projectId, {
+      actor: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
+      issueId: source.id,
+    });
 
     return { success: true as const, link: { ...link, source, target } };
   } catch (error) {
@@ -162,13 +165,14 @@ export async function deleteIssueLink(linkId: string) {
     if (!link) return { success: false as const, error: "Link not found." };
 
     // Either side's editor may remove the relationship.
-    let actorId: string;
+    let actorUser: { id: string; name: string; email?: string | null; avatarUrl?: string | null };
     try {
-      actorId = (await requireProjectPermission(link.source.projectId, "EDIT_ISSUE")).user.id;
+      actorUser = (await requireProjectPermission(link.source.projectId, "EDIT_ISSUE")).user;
     } catch (firstError) {
       if (link.source.projectId === link.target.projectId) throw firstError;
-      actorId = (await requireProjectPermission(link.target.projectId, "EDIT_ISSUE")).user.id;
+      actorUser = (await requireProjectPermission(link.target.projectId, "EDIT_ISSUE")).user;
     }
+    const actorId = actorUser.id;
 
     await prisma.issueLink.delete({ where: { id: linkId } });
 
@@ -199,7 +203,10 @@ export async function deleteIssueLink(linkId: string) {
         revalidatePath(`/projects/${link.target.project?.key}`);
       }
     } catch {}
-    triggerWebhooks("issue:unlinked", { link }, link.source.projectId);
+    triggerWebhooks("issue:unlinked", { link }, link.source.projectId, {
+      actor: { id: actorUser.id, name: actorUser.name, email: actorUser.email, avatarUrl: actorUser.avatarUrl },
+      issueId: link.source.id,
+    });
 
     return { success: true as const };
   } catch (error) {

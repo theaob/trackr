@@ -108,7 +108,7 @@ export async function createVersion(data: {
   releaseDate?: string | Date | null;
 }) {
   try {
-    await requireProjectPermission(data.projectId, "MANAGE_VERSIONS");
+    const { user } = await requireProjectPermission(data.projectId, "MANAGE_VERSIONS");
 
     const project = await prisma.project.findUnique({
       where: { id: data.projectId },
@@ -130,6 +130,11 @@ export async function createVersion(data: {
     try {
       revalidatePath(`/projects/${project.key}/releases`);
     } catch {}
+
+    triggerWebhooks("version:created", version, data.projectId, {
+      actor: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
+    });
+
     return { success: true as const, version };
   } catch (error) {
     return toActionError(error, "Failed to create version");
@@ -147,7 +152,7 @@ export async function updateVersion(
   }
 ) {
   try {
-    await requireProjectPermission(await projectIdForVersion(id), "MANAGE_VERSIONS");
+    const { user } = await requireProjectPermission(await projectIdForVersion(id), "MANAGE_VERSIONS");
 
     const existing = await prisma.version.findUnique({
       where: { id },
@@ -173,6 +178,11 @@ export async function updateVersion(
     try {
       revalidatePath(`/projects/${existing.project.key}/releases`);
     } catch {}
+
+    triggerWebhooks("version:updated", updated, existing.projectId, {
+      actor: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
+    });
+
     return { success: true as const, version: updated };
   } catch (error) {
     return toActionError(error, "Failed to update version");
@@ -188,7 +198,7 @@ export async function releaseVersion(
 ) {
   try {
     const projectId = await projectIdForVersion(id);
-    await requireProjectPermission(projectId, "MANAGE_VERSIONS");
+    const { user } = await requireProjectPermission(projectId, "MANAGE_VERSIONS");
 
     const existing = await prisma.version.findUnique({
       where: { id },
@@ -234,7 +244,9 @@ export async function releaseVersion(
       revalidatePath(`/projects/${existing.project.key}/releases`);
     } catch {}
 
-    triggerWebhooks("version:released", updated, existing.projectId);
+    triggerWebhooks("version:released", updated, existing.projectId, {
+      actor: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
+    });
     return { success: true as const, version: updated };
   } catch (error) {
     return toActionError(error, "Failed to release version");
@@ -244,7 +256,7 @@ export async function releaseVersion(
 
 export async function archiveVersion(id: string, archive: boolean) {
   try {
-    await requireProjectPermission(await projectIdForVersion(id), "MANAGE_VERSIONS");
+    const { user } = await requireProjectPermission(await projectIdForVersion(id), "MANAGE_VERSIONS");
 
     const existing = await prisma.version.findUnique({
       where: { id },
@@ -262,6 +274,16 @@ export async function archiveVersion(id: string, archive: boolean) {
     try {
       revalidatePath(`/projects/${existing.project.key}/releases`);
     } catch {}
+
+    triggerWebhooks(
+      archive ? "version:archived" : "version:updated",
+      updated,
+      existing.projectId,
+      {
+        actor: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
+      }
+    );
+
     return { success: true as const, version: updated };
   } catch (error) {
     return toActionError(error, "Failed to archive version");
@@ -270,7 +292,7 @@ export async function archiveVersion(id: string, archive: boolean) {
 
 export async function deleteVersion(id: string) {
   try {
-    await requireProjectPermission(await projectIdForVersion(id), "MANAGE_VERSIONS");
+    const { user } = await requireProjectPermission(await projectIdForVersion(id), "MANAGE_VERSIONS");
 
     const existing = await prisma.version.findUnique({
       where: { id },
@@ -283,6 +305,16 @@ export async function deleteVersion(id: string) {
     try {
       revalidatePath(`/projects/${existing.project.key}/releases`);
     } catch {}
+
+    triggerWebhooks(
+      "version:deleted",
+      { id: existing.id, name: existing.name, projectId: existing.projectId },
+      existing.projectId,
+      {
+        actor: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
+      }
+    );
+
     return { success: true as const };
   } catch (error) {
     return toActionError(error, "Failed to delete version");

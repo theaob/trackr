@@ -2,7 +2,7 @@
 
 import crypto from "crypto";
 import prisma from "@/lib/db";
-import { Webhook, WebhookDelivery, WebhookEvent } from "@/types";
+import { Webhook, WebhookActor, WebhookChangelogItem, WebhookDelivery, WebhookEvent, WebhookPayload } from "@/types";
 import { revalidatePath } from "next/cache";
 import {
   AuthError,
@@ -10,7 +10,10 @@ import {
   requireProjectPermission,
   toActionError,
 } from "@/lib/auth/guards";
+import { getCurrentUser } from "@/lib/auth/session";
 import { checkWebhookUrl } from "@/lib/webhookUrl";
+import { TQLParser } from "@/lib/tql/parser";
+import { TQLCompiler } from "@/lib/tql/compiler";
 
 /**
  * A webhook is administered by the project it belongs to. Instance-wide
@@ -81,9 +84,10 @@ export async function createWebhook(data: {
   secret?: string;
   events: WebhookEvent[];
   projectId?: string;
+  jqlFilter?: string | null;
 }) {
   try {
-    const { name, url, secret, events, projectId } = data;
+    const { name, url, secret, events, projectId, jqlFilter } = data;
     await requireWebhookAdmin(projectId);
 
     if (!name || name.trim() === "") {
@@ -99,6 +103,13 @@ export async function createWebhook(data: {
       return { success: false, error: "Please select at least one event trigger" };
     }
 
+    if (jqlFilter && jqlFilter.trim()) {
+      const parsed = TQLParser.parse(jqlFilter.trim());
+      if (!parsed.success) {
+        return { success: false, error: `Invalid JQL filter: ${parsed.error.message}` };
+      }
+    }
+
     const webhook = await prisma.webhook.create({
       data: {
         name: name.trim(),
@@ -107,6 +118,7 @@ export async function createWebhook(data: {
         events: JSON.stringify(events),
         enabled: true,
         projectId: projectId || null,
+        jqlFilter: jqlFilter?.trim() || null,
       },
     });
 
@@ -127,6 +139,7 @@ export async function updateWebhook(
     secret?: string | null;
     events?: WebhookEvent[];
     enabled?: boolean;
+    jqlFilter?: string | null;
   }
 ) {
   try {
@@ -144,6 +157,17 @@ export async function updateWebhook(
     if (data.secret !== undefined) updateData.secret = data.secret ? data.secret.trim() : null;
     if (data.events !== undefined) updateData.events = JSON.stringify(data.events);
     if (data.enabled !== undefined) updateData.enabled = data.enabled;
+    if (data.jqlFilter !== undefined) {
+      if (data.jqlFilter && data.jqlFilter.trim()) {
+        const parsed = TQLParser.parse(data.jqlFilter.trim());
+        if (!parsed.success) {
+          return { success: false, error: `Invalid JQL filter: ${parsed.error.message}` };
+        }
+        updateData.jqlFilter = data.jqlFilter.trim();
+      } else {
+        updateData.jqlFilter = null;
+      }
+    }
 
     const updated = await prisma.webhook.update({
       where: { id },
@@ -286,13 +310,76 @@ async function deliverWebhook(
 }
 
 /**
+ * Helper to test if an issue event matches a webhook's JQL filter.
+ */
+async function matchesJqlFilter(
+  jqlFilter: string | null | undefined,
+  event: WebhookEvent,
+  issueId: string | null | undefined,
+  projectId?: string | null
+): Promise<boolean> {
+  if (!jqlFilter || !jqlFilter.trim()) return true;
+
+  // JQL filters in Jira specifically filter issue-related entities
+  const isIssueRelated =
+    event.startsWith("issue:") ||
+    event.startsWith("comment:") ||
+    event.startsWith("attachment:") ||
+    event.startsWith("worklog:");
+
+  if (!isIssueRelated) {
+    return true;
+  }
+
+  // Issue was deleted, cannot evaluate post-delete in DB
+  if (event === "issue:deleted") {
+    return true;
+  }
+
+  if (!issueId) {
+    return true;
+  }
+
+  try {
+    const parsed = TQLParser.parse(jqlFilter.trim());
+    if (!parsed.success) {
+      console.warn("Invalid JQL filter in webhook:", parsed.error.message);
+      return false;
+    }
+    const compiler = new TQLCompiler({
+      accessibleProjectIds: projectId ? [projectId] : undefined,
+    });
+    const compiled = compiler.compile(parsed.query);
+
+    const match = await prisma.issue.findFirst({
+      where: {
+        AND: [{ id: issueId }, compiled.where],
+      },
+      select: { id: true },
+    });
+
+    return !!match;
+  } catch (err) {
+    console.warn("Failed to evaluate JQL filter on webhook:", err);
+    return false;
+  }
+}
+
+export interface TriggerWebhookOptions {
+  actor?: WebhookActor | null;
+  changelog?: WebhookChangelogItem[] | null;
+  issueId?: string | null;
+}
+
+/**
  * Trigger webhooks for a specific event across matching enabled webhooks.
  * Executes asynchronously without blocking the caller.
  */
 export async function triggerWebhooks(
   event: WebhookEvent,
   data: any,
-  projectId?: string
+  projectId?: string | null,
+  options?: TriggerWebhookOptions
 ) {
   try {
     const where: any = {
@@ -302,15 +389,39 @@ export async function triggerWebhooks(
 
     const webhooks = await prisma.webhook.findMany({ where });
 
-    const payload = {
+    const targetIssueId =
+      options?.issueId ||
+      (data?.id && event.startsWith("issue:") ? data.id : undefined) ||
+      (data?.issue?.id ? data.issue.id : undefined) ||
+      data?.issueId ||
+      undefined;
+
+    let actor = options?.actor;
+    if (!actor) {
+      try {
+        const user = await getCurrentUser();
+        if (user) {
+          actor = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            avatarUrl: user.avatarUrl,
+          };
+        }
+      } catch {}
+    }
+
+    const payload: WebhookPayload = {
       event,
       timestamp: new Date().toISOString(),
       projectId: projectId || null,
+      actor: actor || null,
+      changelog: options?.changelog || null,
       data,
     };
 
     // Filter webhooks that subscribe to this event
-    const matchingWebhooks = webhooks.filter((wh) => {
+    const subscribedWebhooks = webhooks.filter((wh) => {
       try {
         const events: string[] = JSON.parse(wh.events);
         return events.includes(event);
@@ -318,6 +429,15 @@ export async function triggerWebhooks(
         return false;
       }
     });
+
+    // Check JQL filters for subscribed webhooks
+    const filterResults = await Promise.all(
+      subscribedWebhooks.map(async (wh) => ({
+        wh,
+        matches: await matchesJqlFilter(wh.jqlFilter, event, targetIssueId, wh.projectId || projectId),
+      }))
+    );
+    const matchingWebhooks = filterResults.filter((r) => r.matches).map((r) => r.wh);
 
     // Fire deliveries in parallel (unawaited to avoid blocking response)
     Promise.allSettled(
@@ -329,6 +449,18 @@ export async function triggerWebhooks(
     console.error("Failed to trigger webhooks:", error);
     return { dispatched: 0 };
   }
+}
+
+/**
+ * Validate JQL query string for webhook filters
+ */
+export async function validateWebhookJql(query: string): Promise<{ valid: boolean; error?: string }> {
+  if (!query || !query.trim()) return { valid: true };
+  const parsed = TQLParser.parse(query.trim());
+  if (!parsed.success) {
+    return { valid: false, error: parsed.error.message };
+  }
+  return { valid: true };
 }
 
 /**
@@ -350,14 +482,30 @@ export async function testWebhook(webhookId: string): Promise<{
       return { success: false, status: 0, durationMs: 0, error: "Webhook not found" };
     }
 
-    const testPayload = {
-      event: "webhook:test" as WebhookEvent,
+    let actor: WebhookActor | null = null;
+    try {
+      const user = await getCurrentUser();
+      if (user) {
+        actor = {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          avatarUrl: user.avatarUrl,
+        };
+      }
+    } catch {}
+
+    const testPayload: WebhookPayload = {
+      event: "webhook:test",
       timestamp: new Date().toISOString(),
       projectId: webhook.projectId,
+      actor,
+      changelog: null,
       data: {
         message: "This is a test webhook trigger from Trackr",
         webhookId: webhook.id,
         webhookName: webhook.name,
+        jqlFilter: webhook.jqlFilter,
       },
     };
 

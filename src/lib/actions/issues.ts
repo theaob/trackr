@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/lib/db";
-import { IssueStatus, IssueType, PriorityLevel } from "@/types";
+import { IssueStatus, IssueType, PriorityLevel, WebhookActor, WebhookChangelogItem } from "@/types";
 import { revalidatePath } from "next/cache";
 import { triggerWebhooks } from "./webhooks";
 import { notifyWatchers } from "@/lib/watcherNotify";
@@ -756,7 +756,10 @@ export async function createIssue(data: {
 
     revalidateProjectRoutes(project.key);
 
-    triggerWebhooks("issue:created", newIssue, data.projectId);
+    triggerWebhooks("issue:created", newIssue, data.projectId, {
+      actor: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
+      issueId: newIssue.id,
+    });
     return { success: true as const, issue: newIssue };
   } catch (error) {
     return toActionError(error, "Failed to create issue");
@@ -853,7 +856,7 @@ export async function updateIssue(
 
     const existing = await prisma.issue.findUnique({
       where: { id },
-      include: { project: true },
+      include: { project: true, assignee: USER_SELECT },
     });
 
     if (!existing) throw new Error("Issue not found");
@@ -1076,7 +1079,115 @@ export async function updateIssue(
     }
 
     revalidateProjectRoutes(existing.project.key);
-    triggerWebhooks("issue:updated", { issue: updated, changes: data }, existing.projectId);
+
+    const actor: WebhookActor = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      avatarUrl: user.avatarUrl,
+    };
+
+    const changelog: WebhookChangelogItem[] = [];
+
+    if (data.status !== undefined && data.status !== existing.status) {
+      changelog.push({
+        field: "status",
+        fieldId: "status",
+        from: existing.status,
+        fromString: existing.status,
+        to: updated.status,
+        toString: updated.status,
+      });
+    }
+
+    if (data.priority !== undefined && data.priority !== existing.priority) {
+      changelog.push({
+        field: "priority",
+        fieldId: "priority",
+        from: existing.priority,
+        fromString: existing.priority,
+        to: updated.priority,
+        toString: updated.priority,
+      });
+    }
+
+    if (data.assigneeId !== undefined && data.assigneeId !== existing.assigneeId) {
+      changelog.push({
+        field: "assignee",
+        fieldId: "assignee",
+        from: existing.assignee?.id || null,
+        fromString: existing.assignee?.name || "Unassigned",
+        to: updated.assignee?.id || null,
+        toString: updated.assignee?.name || "Unassigned",
+      });
+    }
+
+    if (data.title !== undefined && data.title !== existing.title) {
+      changelog.push({
+        field: "title",
+        fieldId: "title",
+        from: existing.title,
+        fromString: existing.title,
+        to: updated.title,
+        toString: updated.title,
+      });
+    }
+
+    if (data.type !== undefined && data.type !== existing.type) {
+      changelog.push({
+        field: "type",
+        fieldId: "type",
+        from: existing.type,
+        fromString: existing.type,
+        to: updated.type,
+        toString: updated.type,
+      });
+    }
+
+    if (data.storyPoints !== undefined && data.storyPoints !== existing.storyPoints) {
+      changelog.push({
+        field: "storyPoints",
+        fieldId: "storyPoints",
+        from: existing.storyPoints !== null ? String(existing.storyPoints) : null,
+        fromString: existing.storyPoints !== null ? String(existing.storyPoints) : null,
+        to: updated.storyPoints !== null ? String(updated.storyPoints) : null,
+        toString: updated.storyPoints !== null ? String(updated.storyPoints) : null,
+      });
+    }
+
+    if (data.status !== undefined && data.status !== existing.status) {
+      triggerWebhooks(
+        "issue:transitioned",
+        { issue: updated, fromStatus: existing.status, toStatus: updated.status },
+        existing.projectId,
+        { actor, changelog, issueId: updated.id }
+      );
+    }
+
+    if (data.assigneeId !== undefined && data.assigneeId !== existing.assigneeId) {
+      triggerWebhooks(
+        "issue:assigned",
+        { issue: updated, previousAssignee: existing.assignee, newAssignee: updated.assignee },
+        existing.projectId,
+        { actor, changelog, issueId: updated.id }
+      );
+    }
+
+    if (data.priority !== undefined && data.priority !== existing.priority) {
+      triggerWebhooks(
+        "issue:priority_changed",
+        { issue: updated, fromPriority: existing.priority, toPriority: updated.priority },
+        existing.projectId,
+        { actor, changelog, issueId: updated.id }
+      );
+    }
+
+    triggerWebhooks(
+      "issue:updated",
+      { issue: updated, changes: data },
+      existing.projectId,
+      { actor, changelog, issueId: updated.id }
+    );
     return { success: true as const, issue: updated };
   } catch (error) {
     return toActionError(error, "Failed to update issue");
@@ -1239,10 +1350,37 @@ export async function updateIssueStatusAndOrder(
 
     revalidateProjectRoutes(existing.project.key);
 
+    const actor: WebhookActor = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      avatarUrl: user.avatarUrl,
+    };
+    const changelog: WebhookChangelogItem[] = [];
+
+    if (existing.status !== newStatus) {
+      changelog.push({
+        field: "status",
+        fieldId: "status",
+        from: existing.status,
+        fromString: existing.status,
+        to: newStatus,
+        toString: newStatus,
+      });
+
+      triggerWebhooks(
+        "issue:transitioned",
+        { issue: updated, fromStatus: existing.status, toStatus: newStatus },
+        existing.projectId,
+        { actor, changelog, issueId: updated.id }
+      );
+    }
+
     triggerWebhooks(
       "issue:updated",
       { issueId, key: existing.key, status: newStatus, order: newOrder },
-      existing.projectId
+      existing.projectId,
+      { actor, changelog, issueId: updated.id }
     );
     return { success: true as const, issue: updated };
   } catch (error) {
@@ -1253,7 +1391,7 @@ export async function updateIssueStatusAndOrder(
 export async function deleteIssue(id: string) {
   try {
     const projectId = await projectIdForIssue(id);
-    await requireProjectPermission(projectId, "DELETE_ISSUE");
+    const { user } = await requireProjectPermission(projectId, "DELETE_ISSUE");
 
     const issue = await prisma.issue.findUnique({
       where: { id },
@@ -1270,7 +1408,11 @@ export async function deleteIssue(id: string) {
     triggerWebhooks(
       "issue:deleted",
       { id: issue.id, key: issue.key, title: issue.title },
-      issue.projectId
+      issue.projectId,
+      {
+        actor: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
+        issueId: issue.id,
+      }
     );
     return { success: true as const };
   } catch (error) {

@@ -337,16 +337,64 @@ export interface CreateTokenResult {
 }
 
 export type WebhookEvent =
+  // Issue Events
   | "issue:created"
   | "issue:updated"
   | "issue:deleted"
+  | "issue:transitioned"
+  | "issue:assigned"
+  | "issue:priority_changed"
   | "issue:linked"
   | "issue:unlinked"
+  // Comment Events
   | "comment:created"
+  | "comment:updated"
+  | "comment:deleted"
+  // Attachment Events
+  | "attachment:created"
+  | "attachment:deleted"
+  // Worklog Events
+  | "worklog:created"
+  | "worklog:deleted"
+  // Sprint Events
+  | "sprint:created"
   | "sprint:started"
+  | "sprint:updated"
   | "sprint:completed"
+  | "sprint:deleted"
+  // Version / Release Events
+  | "version:created"
+  | "version:updated"
   | "version:released"
+  | "version:archived"
+  | "version:deleted"
+  // System Events
   | "webhook:test";
+
+export interface WebhookActor {
+  id: string;
+  name: string;
+  email?: string | null;
+  avatarUrl?: string | null;
+}
+
+export interface WebhookChangelogItem {
+  field: string;
+  fieldId?: string;
+  from?: string | null;
+  fromString?: string | null;
+  to?: string | null;
+  toString?: string | null;
+}
+
+export interface WebhookPayload<T = any> {
+  event: WebhookEvent;
+  timestamp: string;
+  projectId: string | null;
+  actor?: WebhookActor | null;
+  changelog?: WebhookChangelogItem[] | null;
+  data: T;
+}
 
 export interface Webhook {
   id: string;
@@ -356,6 +404,7 @@ export interface Webhook {
   events: string; // JSON array of WebhookEvent
   enabled: boolean;
   projectId: string | null;
+  jqlFilter?: string | null;
   project?: Project | null;
   deliveries?: WebhookDelivery[];
   createdAt: string | Date;

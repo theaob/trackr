@@ -429,6 +429,7 @@ model Webhook {
   events      String            // JSON string array of events: ["issue:created", "issue:updated", ...]
   enabled     Boolean           @default(true)
   projectId   String?
+  jqlFilter   String?           // Optional JQL filter expression for issue events
   project     Project?          @relation(fields: [projectId], references: [id], onDelete: Cascade)
   deliveries  WebhookDelivery[]
   createdAt   DateTime          @default(now())

@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { triggerWebhooks } from "./webhooks";
 import {
   projectIdForIssue,
   projectIdForWorklog,
@@ -67,6 +68,20 @@ export async function logWork(
       revalidatePath(`/projects/${issue.project.key}`);
     } catch {}
 
+    triggerWebhooks(
+      "worklog:created",
+      {
+        worklog,
+        issue: { id: issue.id, key: issue.key, title: issue.title },
+        remainingEstimateSeconds,
+      },
+      issue.projectId,
+      {
+        actor: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
+        issueId: issue.id,
+      }
+    );
+
     return { success: true as const, worklog, remainingEstimateSeconds };
   } catch (error) {
     return toActionError(error, "Failed to log work");
@@ -103,6 +118,25 @@ export async function deleteWorklog(worklogId: string) {
     try {
       revalidatePath(`/projects/${worklog.issue.project.key}`);
     } catch {}
+
+    triggerWebhooks(
+      "worklog:deleted",
+      {
+        worklogId,
+        timeSpentSeconds: worklog.timeSpentSeconds,
+        issue: {
+          id: worklog.issue.id,
+          key: worklog.issue.key,
+          title: worklog.issue.title,
+        },
+        remainingEstimateSeconds,
+      },
+      worklog.issue.projectId,
+      {
+        actor: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
+        issueId: worklog.issue.id,
+      }
+    );
 
     return { success: true as const, remainingEstimateSeconds };
   } catch (error) {

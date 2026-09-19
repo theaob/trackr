@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { triggerWebhooks } from "./webhooks";
 import {
   projectIdForAttachment,
   projectIdForIssue,
@@ -67,6 +68,19 @@ export async function uploadAttachment(issueId: string, formData: FormData) {
       revalidatePath(`/projects/${issue.project.key}`);
     } catch {}
 
+    triggerWebhooks(
+      "attachment:created",
+      {
+        attachment,
+        issue: { id: issue.id, key: issue.key, title: issue.title },
+      },
+      issue.projectId,
+      {
+        actor: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
+        issueId: issue.id,
+      }
+    );
+
     return { success: true as const, attachment };
   } catch (error) {
     return toActionError(error, "Failed to upload attachment");
@@ -95,6 +109,24 @@ export async function deleteAttachment(attachmentId: string) {
     try {
       revalidatePath(`/projects/${attachment.issue.project.key}`);
     } catch {}
+
+    triggerWebhooks(
+      "attachment:deleted",
+      {
+        attachmentId,
+        fileName: attachment.fileName,
+        issue: {
+          id: attachment.issue.id,
+          key: attachment.issue.key,
+          title: attachment.issue.title,
+        },
+      },
+      attachment.issue.projectId,
+      {
+        actor: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
+        issueId: attachment.issue.id,
+      }
+    );
 
     return { success: true as const };
   } catch (error) {

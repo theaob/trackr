@@ -2,8 +2,8 @@
 
 import React, { useState } from "react";
 import { Webhook, WebhookEvent } from "@/types";
-import { createWebhook } from "@/lib/actions/webhooks";
-import { X, Webhook as WebhookIcon, Check, Loader2, Shield, Radio } from "lucide-react";
+import { createWebhook, validateWebhookJql } from "@/lib/actions/webhooks";
+import { X, Webhook as WebhookIcon, Check, Loader2, Shield, Filter } from "lucide-react";
 
 interface CreateWebhookModalProps {
   projectId: string;
@@ -27,7 +27,22 @@ const AVAILABLE_EVENTS: {
       {
         event: "issue:updated",
         label: "Issue Updated",
-        description: "Triggered on title, description, status, priority, or assignee change",
+        description: "Triggered on title, description, story points, or general field edits",
+      },
+      {
+        event: "issue:transitioned",
+        label: "Status Transitioned",
+        description: "Triggered when an issue moves between workflow columns",
+      },
+      {
+        event: "issue:assigned",
+        label: "Assignee Changed",
+        description: "Triggered when an issue is assigned or reassigned to a member",
+      },
+      {
+        event: "issue:priority_changed",
+        label: "Priority Changed",
+        description: "Triggered when issue priority is adjusted or escalated",
       },
       {
         event: "issue:deleted",
@@ -37,12 +52,12 @@ const AVAILABLE_EVENTS: {
       {
         event: "issue:linked",
         label: "Issue Linked",
-        description: "Triggered when a link (blocks, relates to, duplicates) is added between issues",
+        description: "Triggered when a relationship link (blocks, relates to) is added",
       },
       {
         event: "issue:unlinked",
         label: "Issue Unlinked",
-        description: "Triggered when a link between issues is removed",
+        description: "Triggered when an issue link relationship is removed",
       },
     ],
   },
@@ -54,30 +69,105 @@ const AVAILABLE_EVENTS: {
         label: "Comment Added",
         description: "Triggered whenever someone posts a comment on an issue",
       },
+      {
+        event: "comment:updated",
+        label: "Comment Edited",
+        description: "Triggered when an existing comment is modified",
+      },
+      {
+        event: "comment:deleted",
+        label: "Comment Deleted",
+        description: "Triggered when a comment is removed",
+      },
+    ],
+  },
+  {
+    category: "Attachments",
+    items: [
+      {
+        event: "attachment:created",
+        label: "File Attached",
+        description: "Triggered when a file or screenshot is uploaded to an issue",
+      },
+      {
+        event: "attachment:deleted",
+        label: "Attachment Removed",
+        description: "Triggered when an attached file is deleted",
+      },
+    ],
+  },
+  {
+    category: "Worklogs",
+    items: [
+      {
+        event: "worklog:created",
+        label: "Work Logged",
+        description: "Triggered when spent time is recorded against an issue",
+      },
+      {
+        event: "worklog:deleted",
+        label: "Worklog Removed",
+        description: "Triggered when a logged work entry is deleted",
+      },
     ],
   },
   {
     category: "Sprints",
     items: [
       {
+        event: "sprint:created",
+        label: "Sprint Created",
+        description: "Triggered when a new agile sprint is planned",
+      },
+      {
         event: "sprint:started",
         label: "Sprint Started",
         description: "Triggered when an agile sprint is activated",
+      },
+      {
+        event: "sprint:updated",
+        label: "Sprint Updated",
+        description: "Triggered when sprint name, goal, or dates are modified",
       },
       {
         event: "sprint:completed",
         label: "Sprint Completed",
         description: "Triggered when a sprint is finished and closed",
       },
+      {
+        event: "sprint:deleted",
+        label: "Sprint Deleted",
+        description: "Triggered when a sprint is permanently deleted",
+      },
     ],
   },
   {
-    category: "Releases",
+    category: "Releases & Versions",
     items: [
       {
+        event: "version:created",
+        label: "Release Created",
+        description: "Triggered when a software version is planned",
+      },
+      {
+        event: "version:updated",
+        label: "Release Updated",
+        description: "Triggered when version details or dates are modified",
+      },
+      {
         event: "version:released",
-        label: "Version Released",
+        label: "Release Published",
         description: "Triggered when a software version is marked as Released",
+      },
+      {
+        event: "version:archived",
+        label: "Release Archived",
+        description: "Triggered when a version is archived or unarchived",
+      },
+      {
+        event: "version:deleted",
+        label: "Release Deleted",
+        description: "Triggered when a software version is deleted",
       },
     ],
   },
@@ -86,6 +176,36 @@ const AVAILABLE_EVENTS: {
 const ALL_EVENT_KEYS: WebhookEvent[] = AVAILABLE_EVENTS.flatMap((c) =>
   c.items.map((i) => i.event)
 );
+
+const ISSUE_EVENTS: WebhookEvent[] = [
+  "issue:created",
+  "issue:updated",
+  "issue:transitioned",
+  "issue:assigned",
+  "issue:priority_changed",
+  "issue:deleted",
+  "issue:linked",
+  "issue:unlinked",
+];
+
+const TRANSITION_EVENTS: WebhookEvent[] = [
+  "issue:transitioned",
+  "issue:assigned",
+  "issue:priority_changed",
+];
+
+const AGILE_EVENTS: WebhookEvent[] = [
+  "sprint:created",
+  "sprint:started",
+  "sprint:updated",
+  "sprint:completed",
+  "sprint:deleted",
+  "version:created",
+  "version:updated",
+  "version:released",
+  "version:archived",
+  "version:deleted",
+];
 
 export default function CreateWebhookModal({
   projectId,
@@ -96,9 +216,11 @@ export default function CreateWebhookModal({
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [secret, setSecret] = useState("");
+  const [jqlFilter, setJqlFilter] = useState("");
+  const [jqlError, setJqlError] = useState<string | null>(null);
   const [selectedEvents, setSelectedEvents] = useState<WebhookEvent[]>([
     "issue:created",
-    "issue:updated",
+    "issue:transitioned",
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,12 +233,18 @@ export default function CreateWebhookModal({
     );
   };
 
-  const handleSelectAll = () => {
-    setSelectedEvents(ALL_EVENT_KEYS);
-  };
-
-  const handleDeselectAll = () => {
-    setSelectedEvents([]);
+  const handleValidateJql = async () => {
+    if (!jqlFilter.trim()) {
+      setJqlError(null);
+      return true;
+    }
+    const res = await validateWebhookJql(jqlFilter.trim());
+    if (!res.valid) {
+      setJqlError(res.error || "Invalid JQL syntax");
+      return false;
+    }
+    setJqlError(null);
+    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -136,6 +264,14 @@ export default function CreateWebhookModal({
       return;
     }
 
+    if (jqlFilter.trim()) {
+      const isValidJql = await handleValidateJql();
+      if (!isValidJql) {
+        setError("Please resolve the JQL filter syntax error");
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     setError(null);
 
@@ -146,6 +282,7 @@ export default function CreateWebhookModal({
         secret: secret.trim() || undefined,
         events: selectedEvents,
         projectId,
+        jqlFilter: jqlFilter.trim() || undefined,
       });
 
       if (res.success && res.webhook) {
@@ -154,7 +291,8 @@ export default function CreateWebhookModal({
         setName("");
         setUrl("");
         setSecret("");
-        setSelectedEvents(["issue:created", "issue:updated"]);
+        setJqlFilter("");
+        setSelectedEvents(["issue:created", "issue:transitioned"]);
       } else {
         setError(res.error || "Failed to create webhook");
       }
@@ -180,7 +318,7 @@ export default function CreateWebhookModal({
             <div>
               <h2 className="text-base font-bold text-jira-navy">Create Webhook Trigger</h2>
               <p className="text-xs text-jira-gray-500">
-                Send real-time HTTP POST notifications when events happen in this project.
+                Send real-time HTTP POST notifications with actor and changelog data.
               </p>
             </div>
           </div>
@@ -238,7 +376,7 @@ export default function CreateWebhookModal({
           <div>
             <label className="block text-xs font-semibold text-jira-gray-700 mb-1 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
-                <Shield className="w-3 h-3 text-jira-blue" />
+                <Shield className="w-3.5 h-3.5 text-jira-blue" />
                 Secret Key (Optional HMAC Signature)
               </span>
               <span className="text-[10px] text-jira-gray-400 font-normal">Optional</span>
@@ -255,32 +393,89 @@ export default function CreateWebhookModal({
             </p>
           </div>
 
+          {/* JQL Issue Filter (Optional) */}
+          <div>
+            <label className="block text-xs font-semibold text-jira-gray-700 mb-1 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Filter className="w-3.5 h-3.5 text-jira-blue" />
+                JQL Issue Filter (Optional)
+              </span>
+              <span className="text-[10px] text-jira-gray-400 font-normal">Optional</span>
+            </label>
+            <input
+              type="text"
+              placeholder='e.g. priority in (HIGH, HIGHEST) AND type = BUG'
+              value={jqlFilter}
+              onChange={(e) => {
+                setJqlFilter(e.target.value);
+                if (jqlError) setJqlError(null);
+              }}
+              onBlur={handleValidateJql}
+              className={`w-full text-xs px-3 py-2 bg-white border rounded outline-none font-mono text-[11px] ${
+                jqlError ? "border-jira-red focus:border-jira-red" : "border-jira-gray-300 focus:border-jira-blue"
+              }`}
+            />
+            {jqlError ? (
+              <p className="text-[11px] text-jira-red mt-1 flex items-center gap-1">
+                <span>⚠</span> {jqlError}
+              </p>
+            ) : (
+              <p className="text-[11px] text-jira-gray-500 mt-1">
+                Only deliver issue-related events if the affected issue matches this JQL query expression.
+              </p>
+            )}
+          </div>
+
           {/* Event Triggers */}
           <div className="pt-2">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
               <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider">
                 Event Triggers ({selectedEvents.length} selected)
               </label>
-              <div className="flex items-center gap-3 text-xs">
+              <div className="flex flex-wrap items-center gap-2 text-xs">
                 <button
                   type="button"
-                  onClick={handleSelectAll}
+                  onClick={() => setSelectedEvents(ALL_EVENT_KEYS)}
                   className="text-jira-blue hover:underline font-semibold"
                 >
-                  Select All
+                  All Events
                 </button>
                 <span className="text-jira-gray-300">|</span>
                 <button
                   type="button"
-                  onClick={handleDeselectAll}
+                  onClick={() => setSelectedEvents(ISSUE_EVENTS)}
+                  className="text-jira-blue hover:underline"
+                >
+                  Issues
+                </button>
+                <span className="text-jira-gray-300">|</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedEvents(TRANSITION_EVENTS)}
+                  className="text-jira-blue hover:underline"
+                >
+                  Transitions
+                </button>
+                <span className="text-jira-gray-300">|</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedEvents(AGILE_EVENTS)}
+                  className="text-jira-blue hover:underline"
+                >
+                  Sprints/Releases
+                </button>
+                <span className="text-jira-gray-300">|</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedEvents([])}
                   className="text-jira-gray-500 hover:underline"
                 >
-                  Deselect All
+                  Clear
                 </button>
               </div>
             </div>
 
-            <div className="space-y-3 bg-jira-gray-50/70 border border-jira-gray-300 rounded-md p-3">
+            <div className="space-y-3 bg-jira-gray-50/70 border border-jira-gray-300 rounded-md p-3 max-h-72 overflow-y-auto">
               {AVAILABLE_EVENTS.map((category) => (
                 <div key={category.category} className="space-y-1.5">
                   <div className="text-[11px] font-bold text-jira-gray-600 uppercase tracking-wider pb-1 border-b border-jira-gray-200">

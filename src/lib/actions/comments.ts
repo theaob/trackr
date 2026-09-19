@@ -125,7 +125,11 @@ export async function addComment(
         comment,
         issue: { id: issue.id, key: issue.key, title: issue.title },
       },
-      issue.projectId
+      issue.projectId,
+      {
+        actor: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
+        issueId: issue.id,
+      }
     );
     return { success: true as const, comment };
   } catch (error) {
@@ -133,6 +137,67 @@ export async function addComment(
   }
 }
 
+export async function updateComment(commentId: string, content: string) {
+  try {
+    const projectId = await projectIdForComment(commentId);
+    const { user, role } = await requireProjectPermission(projectId, "VIEW_PROJECT");
+
+    if (!content.trim()) return { success: false, error: "Comment cannot be empty" };
+
+    const comment = await prisma.comment.findUnique({
+      where: { id: commentId },
+      include: {
+        issue: {
+          include: { project: true },
+        },
+      },
+    });
+
+    if (!comment) throw new Error("Comment not found");
+
+    // A comment belongs to its author; project administrators can moderate.
+    if (comment.authorId !== user.id && role !== "ADMIN") {
+      return { success: false, error: "You can only edit your own comments." };
+    }
+
+    const updated = await prisma.comment.update({
+      where: { id: commentId },
+      data: { content: content.trim() },
+      include: { author: { select: DISPLAY_USER_SELECT } },
+    });
+
+    await prisma.activityLog.create({
+      data: {
+        issueId: comment.issueId,
+        userId: user.id,
+        action: "COMMENTED",
+        field: "comment",
+        newValue: `Edited: ${content.trim().slice(0, 40)}${content.trim().length > 40 ? "..." : ""}`,
+      },
+    });
+
+    try {
+      revalidatePath(`/projects/${comment.issue.project.key}`);
+    } catch {}
+
+    triggerWebhooks(
+      "comment:updated",
+      {
+        comment: updated,
+        issue: { id: comment.issue.id, key: comment.issue.key, title: comment.issue.title },
+      },
+      comment.issue.projectId,
+      {
+        actor: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
+        issueId: comment.issue.id,
+      }
+    );
+
+    return { success: true as const, comment: updated };
+  } catch (error) {
+    return toActionError(error, "Failed to update comment");
+  }
+}
 
 export async function deleteComment(commentId: string) {
   try {
@@ -158,6 +223,20 @@ export async function deleteComment(commentId: string) {
     await prisma.comment.delete({ where: { id: commentId } });
 
     revalidatePath(`/projects/${comment.issue.project.key}`);
+
+    triggerWebhooks(
+      "comment:deleted",
+      {
+        commentId,
+        issue: { id: comment.issue.id, key: comment.issue.key, title: comment.issue.title },
+      },
+      comment.issue.projectId,
+      {
+        actor: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
+        issueId: comment.issue.id,
+      }
+    );
+
     return { success: true as const };
   } catch (error) {
     return toActionError(error, "Failed to delete comment");
