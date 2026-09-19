@@ -43,11 +43,7 @@ export function TrackrLogoIcon({
       viewBox="0 0 32 32"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={`shrink-0 ${
-        interactive
-          ? "transition-all duration-200 group-hover:scale-105 group-hover:-translate-y-0.5"
-          : ""
-      } ${className}`}
+      className={`shrink-0 ${className}`}
     >
       <defs>
         {/* Main Brand Gradient */}
@@ -140,11 +136,7 @@ export function TrackrLogo({
       <TrackrLogoIcon
         size={pixelSize}
         interactive={interactive}
-        className={`shadow-sm rounded-lg ${
-          interactive
-            ? "transition-all duration-200 group-hover/logo:scale-105 group-hover/logo:-translate-y-0.5 group-hover/logo:shadow-md group-hover/logo:shadow-jira-blue/20"
-            : ""
-        }`}
+        className="shadow-sm rounded-lg"
       />
 
       {showText && (
@@ -159,7 +151,6 @@ export function TrackrLogo({
             >
               Trackr
             </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-jira-blue ml-1" />
           </div>
           <span
             className={`text-[10px] text-jira-gray-600 font-semibold tracking-wider uppercase ${

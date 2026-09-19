@@ -27,8 +27,8 @@ describe("Sidebar", () => {
     name: "DENEME",
     key: "DENEME",
     boardType: "SCRUM",
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    description: null,
+    leadId: null,
   };
 
   it("does not render project information or software project banner in the sidebar", () => {
