@@ -1391,13 +1391,21 @@ export async function updateIssueStatusAndOrder(
 export async function deleteIssue(id: string) {
   try {
     const projectId = await projectIdForIssue(id);
-    const { user } = await requireProjectPermission(projectId, "DELETE_ISSUE");
+    const { user, role } = await requireProjectPermission(projectId, "DELETE_ISSUE");
 
     const issue = await prisma.issue.findUnique({
       where: { id },
       include: { project: true },
     });
     if (!issue) throw new Error("Issue not found");
+
+    // An issue belongs to its reporter; project administrators can delete any issue.
+    if (role !== "ADMIN" && issue.reporterId !== user.id) {
+      return {
+        success: false as const,
+        error: "Only project administrators or the issue's reporter can delete this issue.",
+      };
+    }
 
     await prisma.issue.delete({ where: { id } });
     // Attachment rows cascade with the issue; their files on disk don't.

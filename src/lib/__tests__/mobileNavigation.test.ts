@@ -4,8 +4,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import Navbar from "@/components/layout/Navbar";
 import Sidebar from "@/components/layout/Sidebar";
 import KanbanBoard from "@/components/board/KanbanBoard";
+import IssuesListView from "@/components/issues/IssuesListView";
 import { viewport } from "@/app/layout";
-import { Project, WorkflowStatus } from "@/types";
+import { Project, WorkflowStatus, Issue } from "@/types";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/projects/TEST/board",
@@ -16,6 +17,28 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/actions/issues", () => ({
   updateIssueStatusAndOrder: vi.fn(),
   getIssueByKeyOrId: vi.fn().mockResolvedValue(null),
+  getPaginatedIssues: vi.fn().mockResolvedValue({ issues: [], totalCount: 0, page: 1, pageSize: 50, totalPages: 1 }),
+  updateIssue: vi.fn(),
+  deleteIssue: vi.fn(),
+  bulkUpdateIssues: vi.fn(),
+  bulkDeleteIssues: vi.fn(),
+}));
+
+vi.mock("@/lib/actions/labels", () => ({
+  bulkAddLabel: vi.fn(),
+}));
+
+vi.mock("@/lib/actions/comments", () => ({
+  addComment: vi.fn(),
+  deleteComment: vi.fn(),
+}));
+
+vi.mock("@/lib/actions/attachments", () => ({
+  uploadAttachment: vi.fn(),
+  deleteAttachment: vi.fn(),
+  MAX_ATTACHMENT_SIZE: 10485760,
+  formatFileSize: vi.fn(),
+  generatePastedImageFileName: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/session", () => ({
@@ -135,6 +158,20 @@ describe("Mobile Viewport & Navigation", () => {
     expect(html).not.toContain("md:hidden fixed inset-0 z-50 flex");
   });
 
+  it("does not render project change button on top bar on mobile", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(Navbar, {
+        projects: [mockProject],
+        currentProject: mockProject,
+      })
+    );
+
+    // Desktop project selector is hidden on mobile screens
+    expect(html).toContain("hidden md:block relative min-w-0");
+    // No mobile project change button rendered on the top bar
+    expect(html).not.toContain('aria-label="Select Project"');
+  });
+
   it("renders mobile slide-over drawer and backdrop when isMobileOpen is true", () => {
     const html = renderToStaticMarkup(
       React.createElement(Sidebar, {
@@ -150,6 +187,7 @@ describe("Mobile Viewport & Navigation", () => {
     expect(html).toContain("Close navigation");
     expect(html).toContain("Active Board");
     expect(html).toContain("Backlog");
+    expect(html).toContain("Switch Project");
   });
 
   it("renders mobile column switcher tab pills and scroll-snapping board container in KanbanBoard", () => {
@@ -182,5 +220,100 @@ describe("Mobile Viewport & Navigation", () => {
     expect(html).toContain("snap-x snap-mandatory scroll-smooth relative");
     // Column snap-center styling
     expect(html).toContain("snap-center");
+  });
+
+  it("renders issues list on mobile by default when no issue is selected", () => {
+    const mockIssue: Issue = {
+      id: "i1",
+      key: "MOB-1",
+      title: "Fix mobile issues list view",
+      description: "Ensure issues list is visible on mobile",
+      type: "BUG",
+      status: "TODO",
+      priority: "HIGH",
+      projectId: "p1",
+      reporterId: "u1",
+      assigneeId: null,
+      sprintId: null,
+      versionId: null,
+      parentId: null,
+      storyPoints: 3,
+      order: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      dueDate: null,
+      startDate: null,
+      originalEstimateSeconds: null,
+      remainingEstimateSeconds: null,
+      components: [],
+      labels: [],
+    };
+
+    const html = renderToStaticMarkup(
+      React.createElement(IssuesListView, {
+        project: mockProject,
+        initialIssues: [mockIssue],
+        users: [],
+        sprints: [],
+        statuses: [
+          { id: "s1", name: "TODO", category: "TODO", order: 0, projectId: "p1", color: "#42526e", wipLimit: null, isBacklog: false, createdAt: new Date(), updatedAt: new Date() },
+        ],
+      })
+    );
+
+    // List is visible on mobile (class contains "block" and does NOT have "hidden md:block")
+    expect(html).toContain("MOB-1");
+    expect(html).toContain("Fix mobile issues list view");
+    expect(html).toContain("border-r border-jira-gray-300 overflow-y-auto divide-y divide-jira-gray-200 shrink-0 bg-white block");
+    // Detail panel has "hidden md:block" on mobile
+    expect(html).toContain("flex-1 overflow-y-auto bg-white p-3.5 sm:p-6 hidden md:block");
+  });
+
+  it("renders detail panel on mobile when an issue is explicitly selected", () => {
+    const mockIssue: Issue = {
+      id: "i1",
+      key: "MOB-1",
+      title: "Fix mobile issues list view",
+      description: "Ensure issues list is visible on mobile",
+      type: "BUG",
+      status: "TODO",
+      priority: "HIGH",
+      projectId: "p1",
+      reporterId: "u1",
+      assigneeId: null,
+      sprintId: null,
+      versionId: null,
+      parentId: null,
+      storyPoints: 3,
+      order: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      dueDate: null,
+      startDate: null,
+      originalEstimateSeconds: null,
+      remainingEstimateSeconds: null,
+      components: [],
+      labels: [],
+    };
+
+    const html = renderToStaticMarkup(
+      React.createElement(IssuesListView, {
+        project: mockProject,
+        initialIssues: [mockIssue],
+        initialSelectedIssueKey: "MOB-1",
+        users: [],
+        sprints: [],
+        statuses: [
+          { id: "s1", name: "TODO", category: "TODO", order: 0, projectId: "p1", color: "#42526e", wipLimit: null, isBacklog: false, createdAt: new Date(), updatedAt: new Date() },
+        ],
+      })
+    );
+
+    // The left list is hidden on mobile: "hidden md:block"
+    expect(html).toContain("border-r border-jira-gray-300 overflow-y-auto divide-y divide-jira-gray-200 shrink-0 bg-white hidden md:block");
+    // Detail panel is visible on mobile: "block"
+    expect(html).toContain("flex-1 overflow-y-auto bg-white p-3.5 sm:p-6 block");
+    // Back to issues list button is present
+    expect(html).toContain("Back to issues list");
   });
 });

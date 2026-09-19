@@ -150,6 +150,18 @@ describe("keyboard shortcuts dispatch simulation", () => {
     expect(onCloseModal).toHaveBeenCalledTimes(1);
   });
 
+  it("does not trigger issue creation when onCreateIssue handler is not registered (unauthorized user)", () => {
+    const onFocusSearch = vi.fn();
+    const { dispatch } = createShortcutDispatcher({
+      onFocusSearch,
+      // onCreateIssue is undefined for unauthorized users
+    });
+
+    dispatch({ key: "c" });
+    dispatch({ key: "C" });
+    expect(onFocusSearch).not.toHaveBeenCalled();
+  });
+
   it("suppresses single-key shortcuts when user is in an input or textarea", () => {
     const onCreateIssue = vi.fn();
     const onFocusSearch = vi.fn();

@@ -74,6 +74,7 @@ export default function RoadmapView({
           allIssues={epics.map((e) => ({ ...e, type: "EPIC" as const, projectId: project.id })) as any}
           sprints={sprints}
           project={project}
+          onActiveIssueChange={(newIssue) => setActiveIssue(newIssue)}
           onClose={() => setActiveIssue(null)}
           onIssueUpdated={(updated) => {
             if (activeIssue?.id === updated.id) {

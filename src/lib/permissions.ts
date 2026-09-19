@@ -165,6 +165,10 @@ export function canManageSprints(role: ProjectRole | null | undefined): boolean 
   return hasPermission(role, "MANAGE_SPRINTS");
 }
 
+export function canManageVersions(role: ProjectRole | null | undefined): boolean {
+  return hasPermission(role, "MANAGE_VERSIONS");
+}
+
 export function canCreateIssue(role: ProjectRole | null | undefined): boolean {
   return hasPermission(role, "CREATE_ISSUE");
 }

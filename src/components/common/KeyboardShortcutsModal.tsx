@@ -28,6 +28,7 @@ const SHORTCUTS: ShortcutItem[] = [
   { keys: ["g", "p"], description: "Go to All Projects", category: "Navigation" },
 
   // Forms & Dialogs
+  { keys: ["←", "→"], description: "Navigate to previous / next issue", category: "Forms & Dialogs" },
   { keys: ["⌘ / Ctrl", "↵"], description: "Submit form or modal", category: "Forms & Dialogs" },
   { keys: ["Esc"], description: "Cancel or close dialog", category: "Forms & Dialogs" },
 ];

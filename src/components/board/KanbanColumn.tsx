@@ -18,6 +18,7 @@ interface KanbanColumnProps {
   doneStatusNames?: string[];
   onSelectEpic?: (epicIdOrKey: string) => void;
   columnRef?: (el: HTMLDivElement | null) => void;
+  canMove?: boolean;
 }
 
 export default function KanbanColumn({
@@ -32,6 +33,7 @@ export default function KanbanColumn({
   doneStatusNames,
   onSelectEpic,
   columnRef,
+  canMove = true,
 }: KanbanColumnProps) {
   const isOverLimit = !!(wipLimit && issues.length > wipLimit);
   const targetDroppableId = droppableId || id;
@@ -128,6 +130,7 @@ export default function KanbanColumn({
                 onClick={() => onIssueClick(issue)}
                 doneStatusNames={doneStatusNames}
                 onSelectEpic={onSelectEpic}
+                canMove={canMove}
               />
             ))}
             {provided.placeholder}

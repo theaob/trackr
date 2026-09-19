@@ -9,7 +9,8 @@ import { getProjectWorkflow } from "@/lib/actions/workflows";
 import CustomFieldRenderer from "@/components/common/CustomFieldRenderer";
 import IssueDescriptionEditor from "@/components/issues/IssueDescriptionEditor";
 import { useCurrentUser } from "@/context/UserContext";
-import { X, Loader2, Sliders } from "lucide-react";
+import { useProjectPermissions } from "@/hooks/useProjectPermissions";
+import { X, Loader2, Sliders, ShieldAlert } from "lucide-react";
 
 interface CreateIssueModalProps {
   project: Project;
@@ -35,6 +36,9 @@ export default function CreateIssueModal({
   const { currentUser } = useCurrentUser();
 
   const [selectedProjectId, setSelectedProjectId] = useState(project.id);
+  const currentSelectedProject = allProjects.find((p) => p.id === selectedProjectId) || project;
+  const permissions = useProjectPermissions(currentSelectedProject);
+
   const [type, setType] = useState<IssueType>("STORY");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -84,6 +88,10 @@ export default function CreateIssueModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!permissions.canCreateIssue) {
+      setError("You do not have permission to create issues in this project.");
+      return;
+    }
     if (!title.trim()) {
       setError("Please enter an issue summary");
       return;
@@ -169,6 +177,13 @@ export default function CreateIssueModal({
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {!permissions.canCreateIssue && (
+          <div className="bg-amber-50 border-b border-amber-200 px-4 sm:px-6 py-2.5 flex items-center gap-2 text-xs text-amber-800">
+            <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>You do not have permission to create issues in this project.</span>
+          </div>
+        )}
 
         {/* Modal Form */}
         <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-sm">
@@ -451,7 +466,7 @@ export default function CreateIssueModal({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !permissions.canCreateIssue}
               className="bg-jira-blue hover:bg-jira-blue-hover text-white px-4 py-2 rounded font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
             >
               {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}

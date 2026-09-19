@@ -886,7 +886,12 @@ export default function BacklogView({
                         }`}
                       >
                         {sprintIssues.map((issue, index) => (
-                          <Draggable key={issue.id} draggableId={issue.id} index={index}>
+                          <Draggable
+                            key={issue.id}
+                            draggableId={issue.id}
+                            index={index}
+                            isDragDisabled={!permissions.canMoveIssue}
+                          >
                             {(dragProvided, dragSnapshot) => (
                               <div
                                 ref={dragProvided.innerRef}
@@ -903,9 +908,13 @@ export default function BacklogView({
                                     <div className="flex items-center gap-2 min-w-0">
                                       <div
                                         {...dragProvided.dragHandleProps}
-                                        className="p-0.5 text-jira-gray-400 hover:text-jira-gray-700 cursor-grab active:cursor-grabbing shrink-0"
+                                        className={`p-0.5 text-jira-gray-400 shrink-0 ${
+                                          permissions.canMoveIssue
+                                            ? "hover:text-jira-gray-700 cursor-grab active:cursor-grabbing"
+                                            : "cursor-default opacity-40"
+                                        }`}
                                         onClick={(e) => e.stopPropagation()}
-                                        title="Drag to reorder"
+                                        title={permissions.canMoveIssue ? "Drag to reorder" : undefined}
                                       >
                                         <GripVertical className="w-3.5 h-3.5" />
                                       </div>
@@ -960,9 +969,17 @@ export default function BacklogView({
                                   <div className="flex items-center gap-2.5 min-w-0">
                                     <div
                                       {...dragProvided.dragHandleProps}
-                                      className="p-0.5 text-jira-gray-400 hover:text-jira-gray-700 cursor-grab active:cursor-grabbing shrink-0"
+                                      className={`p-0.5 text-jira-gray-400 shrink-0 ${
+                                        permissions.canMoveIssue
+                                          ? "hover:text-jira-gray-700 cursor-grab active:cursor-grabbing"
+                                          : "cursor-default opacity-40"
+                                      }`}
                                       onClick={(e) => e.stopPropagation()}
-                                      title="Drag to reorder or move between sprints/backlog"
+                                      title={
+                                        permissions.canMoveIssue
+                                          ? "Drag to reorder or move between sprints/backlog"
+                                          : undefined
+                                      }
                                     >
                                       <GripVertical className="w-3.5 h-3.5" />
                                     </div>
@@ -1075,53 +1092,55 @@ export default function BacklogView({
                         )}
 
                         {/* Inline Create Row */}
-                        {inlineCreateTarget === sprint.id ? (
-                          <div className="p-3 bg-white flex items-center gap-2">
-                            <select
-                              value={inlineType}
-                              onChange={(e) => setInlineType(e.target.value as IssueType)}
-                              className="text-xs border border-jira-gray-300 rounded px-2 py-1.5"
-                            >
-                              <option value="STORY">Story</option>
-                              <option value="TASK">Task</option>
-                              <option value="BUG">Bug</option>
-                            </select>
-                            <input
-                              type="text"
-                              placeholder="What needs to be done?"
-                              value={inlineTitle}
-                              onChange={(e) => setInlineTitle(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") handleInlineCreate(sprint.id);
-                                if (e.key === "Escape") setInlineCreateTarget(null);
+                        {permissions.canCreateIssue && (
+                          inlineCreateTarget === sprint.id ? (
+                            <div className="p-3 bg-white flex items-center gap-2">
+                              <select
+                                value={inlineType}
+                                onChange={(e) => setInlineType(e.target.value as IssueType)}
+                                className="text-xs border border-jira-gray-300 rounded px-2 py-1.5"
+                              >
+                                <option value="STORY">Story</option>
+                                <option value="TASK">Task</option>
+                                <option value="BUG">Bug</option>
+                              </select>
+                              <input
+                                type="text"
+                                placeholder="What needs to be done?"
+                                value={inlineTitle}
+                                onChange={(e) => setInlineTitle(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleInlineCreate(sprint.id);
+                                  if (e.key === "Escape") setInlineCreateTarget(null);
+                                }}
+                                autoFocus
+                                className="flex-1 text-sm border border-jira-gray-300 rounded px-3 py-1.5 focus:border-jira-blue outline-none"
+                              />
+                              <button
+                                onClick={() => handleInlineCreate(sprint.id)}
+                                className="bg-jira-blue text-white text-xs font-semibold px-3 py-1.5 rounded hover:bg-jira-blue-hover"
+                              >
+                                Create
+                              </button>
+                              <button
+                                onClick={() => setInlineCreateTarget(null)}
+                                className="text-xs text-jira-gray-600 hover:bg-jira-gray-100 px-2 py-1.5 rounded"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setInlineCreateTarget(sprint.id);
+                                setInlineTitle("");
                               }}
-                              autoFocus
-                              className="flex-1 text-sm border border-jira-gray-300 rounded px-3 py-1.5 focus:border-jira-blue outline-none"
-                            />
-                            <button
-                              onClick={() => handleInlineCreate(sprint.id)}
-                              className="bg-jira-blue text-white text-xs font-semibold px-3 py-1.5 rounded hover:bg-jira-blue-hover"
+                              className="w-full text-left px-4 py-2 text-xs font-medium text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-50 flex items-center gap-2 transition-colors"
                             >
-                              Create
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Create issue</span>
                             </button>
-                            <button
-                              onClick={() => setInlineCreateTarget(null)}
-                              className="text-xs text-jira-gray-600 hover:bg-jira-gray-100 px-2 py-1.5 rounded"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              setInlineCreateTarget(sprint.id);
-                              setInlineTitle("");
-                            }}
-                            className="w-full text-left px-4 py-2 text-xs font-medium text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-50 flex items-center gap-2 transition-colors"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                            <span>Create issue</span>
-                          </button>
+                          )
                         )}
                       </div>
                     )}
@@ -1152,7 +1171,12 @@ export default function BacklogView({
                   }`}
                 >
                   {backlogIssues.map((issue, index) => (
-                    <Draggable key={issue.id} draggableId={issue.id} index={index}>
+                    <Draggable
+                      key={issue.id}
+                      draggableId={issue.id}
+                      index={index}
+                      isDragDisabled={!permissions.canMoveIssue}
+                    >
                       {(dragProvided, dragSnapshot) => (
                         <div
                           ref={dragProvided.innerRef}
@@ -1169,9 +1193,13 @@ export default function BacklogView({
                               <div className="flex items-center gap-2 min-w-0">
                                 <div
                                   {...dragProvided.dragHandleProps}
-                                  className="p-0.5 text-jira-gray-400 hover:text-jira-gray-700 cursor-grab active:cursor-grabbing shrink-0"
+                                  className={`p-0.5 text-jira-gray-400 shrink-0 ${
+                                    permissions.canMoveIssue
+                                      ? "hover:text-jira-gray-700 cursor-grab active:cursor-grabbing"
+                                      : "cursor-default opacity-40"
+                                  }`}
                                   onClick={(e) => e.stopPropagation()}
-                                  title="Drag to reorder"
+                                  title={permissions.canMoveIssue ? "Drag to reorder" : undefined}
                                 >
                                   <GripVertical className="w-3.5 h-3.5" />
                                 </div>
@@ -1226,9 +1254,17 @@ export default function BacklogView({
                             <div className="flex items-center gap-2.5 min-w-0">
                               <div
                                 {...dragProvided.dragHandleProps}
-                                className="p-0.5 text-jira-gray-400 hover:text-jira-gray-700 cursor-grab active:cursor-grabbing shrink-0"
+                                className={`p-0.5 text-jira-gray-400 shrink-0 ${
+                                  permissions.canMoveIssue
+                                    ? "hover:text-jira-gray-700 cursor-grab active:cursor-grabbing"
+                                    : "cursor-default opacity-40"
+                                }`}
                                 onClick={(e) => e.stopPropagation()}
-                                title="Drag to sprint or reorder"
+                                title={
+                                  permissions.canMoveIssue
+                                    ? "Drag to sprint or reorder"
+                                    : undefined
+                                }
                               >
                                 <GripVertical className="w-3.5 h-3.5" />
                               </div>
@@ -1339,53 +1375,55 @@ export default function BacklogView({
                   )}
 
                   {/* Inline Create Row for Backlog */}
-                  {inlineCreateTarget === "backlog" ? (
-                    <div className="p-3 bg-white flex items-center gap-2">
-                      <select
-                        value={inlineType}
-                        onChange={(e) => setInlineType(e.target.value as IssueType)}
-                        className="text-xs border border-jira-gray-300 rounded px-2 py-1.5"
-                      >
-                        <option value="STORY">Story</option>
-                        <option value="TASK">Task</option>
-                        <option value="BUG">Bug</option>
-                      </select>
-                      <input
-                        type="text"
-                        placeholder="What needs to be done?"
-                        value={inlineTitle}
-                        onChange={(e) => setInlineTitle(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleInlineCreate(null);
-                          if (e.key === "Escape") setInlineCreateTarget(null);
+                  {permissions.canCreateIssue && (
+                    inlineCreateTarget === "backlog" ? (
+                      <div className="p-3 bg-white flex items-center gap-2">
+                        <select
+                          value={inlineType}
+                          onChange={(e) => setInlineType(e.target.value as IssueType)}
+                          className="text-xs border border-jira-gray-300 rounded px-2 py-1.5"
+                        >
+                          <option value="STORY">Story</option>
+                          <option value="TASK">Task</option>
+                          <option value="BUG">Bug</option>
+                        </select>
+                        <input
+                          type="text"
+                          placeholder="What needs to be done?"
+                          value={inlineTitle}
+                          onChange={(e) => setInlineTitle(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleInlineCreate(null);
+                            if (e.key === "Escape") setInlineCreateTarget(null);
+                          }}
+                          autoFocus
+                          className="flex-1 text-sm border border-jira-gray-300 rounded px-3 py-1.5 focus:border-jira-blue outline-none"
+                        />
+                        <button
+                          onClick={() => handleInlineCreate(null)}
+                          className="bg-jira-blue text-white text-xs font-semibold px-3 py-1.5 rounded hover:bg-jira-blue-hover"
+                        >
+                          Create
+                        </button>
+                        <button
+                          onClick={() => setInlineCreateTarget(null)}
+                          className="text-xs text-jira-gray-600 hover:bg-jira-gray-100 px-2 py-1.5 rounded"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setInlineCreateTarget("backlog");
+                          setInlineTitle("");
                         }}
-                        autoFocus
-                        className="flex-1 text-sm border border-jira-gray-300 rounded px-3 py-1.5 focus:border-jira-blue outline-none"
-                      />
-                      <button
-                        onClick={() => handleInlineCreate(null)}
-                        className="bg-jira-blue text-white text-xs font-semibold px-3 py-1.5 rounded hover:bg-jira-blue-hover"
+                        className="w-full text-left px-4 py-2 text-xs font-medium text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-50 flex items-center gap-2 transition-colors"
                       >
-                        Create
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Create issue in backlog</span>
                       </button>
-                      <button
-                        onClick={() => setInlineCreateTarget(null)}
-                        className="text-xs text-jira-gray-600 hover:bg-jira-gray-100 px-2 py-1.5 rounded"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setInlineCreateTarget("backlog");
-                        setInlineTitle("");
-                      }}
-                      className="w-full text-left px-4 py-2 text-xs font-medium text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-50 flex items-center gap-2 transition-colors"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Create issue in backlog</span>
-                    </button>
+                    )
                   )}
                 </div>
               )}
@@ -1694,6 +1732,7 @@ export default function BacklogView({
           allIssues={[...epics, ...issues]}
           sprints={sprints}
           project={project}
+          onActiveIssueChange={(newIssue) => setActiveIssue(newIssue)}
           onClose={handleCloseDetailModal}
           onIssueUpdated={(up) => {
             setIssues((prev) => prev.map((i) => (i.id === up.id ? up : i)));

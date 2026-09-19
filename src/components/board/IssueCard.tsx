@@ -16,6 +16,7 @@ interface IssueCardProps {
   onClick: () => void;
   doneStatusNames?: string[];
   onSelectEpic?: (epicIdOrKey: string) => void;
+  canMove?: boolean;
 }
 
 export default function IssueCard({
@@ -24,18 +25,19 @@ export default function IssueCard({
   onClick,
   doneStatusNames = ["DONE"],
   onSelectEpic,
+  canMove = true,
 }: IssueCardProps) {
   const completedSubtasks =
     issue.children?.filter((c) => doneStatusNames.includes(c.status)).length || 0;
   const totalSubtasks = issue.children?.length || 0;
 
   return (
-    <Draggable draggableId={issue.id} index={index}>
+    <Draggable draggableId={issue.id} index={index} isDragDisabled={!canMove}>
       {(provided, snapshot) => (
         <div
           ref={provided.innerRef}
           {...provided.draggableProps}
-          {...provided.dragHandleProps}
+          {...(canMove ? provided.dragHandleProps : {})}
           onClick={onClick}
           className={`group bg-white rounded border p-3 mb-2 shadow-[0_1px_2px_rgba(9,30,66,0.25)] hover:shadow-md hover:border-jira-blue transition-all cursor-pointer select-none ${
             snapshot.isDragging

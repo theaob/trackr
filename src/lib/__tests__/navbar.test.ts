@@ -56,16 +56,19 @@ vi.mock("@/context/KeyboardShortcutsContext", () => ({
   }),
 }));
 
+let mockPermissions = {
+  isViewer: false,
+  canCreateIssue: true,
+  roleConfig: {
+    name: "Admin",
+    badgeBg: "bg-blue-100",
+    badgeText: "text-blue-800",
+    border: "border-blue-200",
+  },
+};
+
 vi.mock("@/hooks/useProjectPermissions", () => ({
-  useProjectPermissions: () => ({
-    isViewer: false,
-    roleConfig: {
-      name: "Admin",
-      badgeBg: "bg-blue-100",
-      badgeText: "text-blue-800",
-      border: "border-blue-200",
-    },
-  }),
+  useProjectPermissions: () => mockPermissions,
 }));
 
 vi.mock("@/lib/permissions", () => ({
@@ -134,7 +137,7 @@ describe("Navbar Project Selector", () => {
     expect(html).not.toContain('title="Notifications"');
   });
 
-  it("renders mobile project selector under the right bar and desktop project selector on the left", () => {
+  it("hides the project selector on mobile screens on the top bar", () => {
     mockCurrentUser = {
       id: "u1",
       name: "Test User",
@@ -150,8 +153,44 @@ describe("Navbar Project Selector", () => {
 
     // Desktop project selector is hidden on mobile screens
     expect(html).toContain("hidden md:block relative min-w-0");
-    // Mobile project selector is rendered in the right bar with md:hidden
-    expect(html).toContain('aria-label="Select Project"');
-    expect(html).toContain("md:hidden relative");
+    // No mobile project change button rendered on the top bar
+    expect(html).not.toContain('aria-label="Select Project"');
+  });
+
+  it("disables Create button when user lacks canCreateIssue permission", () => {
+    mockPermissions = {
+      isViewer: true,
+      canCreateIssue: false,
+      roleConfig: {
+        name: "Viewer",
+        badgeBg: "bg-gray-100",
+        badgeText: "text-gray-800",
+        border: "border-gray-200",
+      },
+    };
+
+    const html = renderToStaticMarkup(
+      React.createElement(Navbar, {
+        projects: [mockProject],
+        currentProject: mockProject,
+        onCreateIssueClick: () => {},
+      })
+    );
+
+    expect(html).toContain("disabled");
+    expect(html).toContain("cursor-not-allowed");
+    expect(html).toContain("You do not have permission to create issues in this project");
+  });
+
+  it("does not render Create button when onCreateIssueClick is not provided", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(Navbar, {
+        projects: [mockProject],
+        currentProject: mockProject,
+        onCreateIssueClick: undefined,
+      })
+    );
+
+    expect(html).not.toContain("Create");
   });
 });

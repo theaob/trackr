@@ -16,6 +16,7 @@ import {
   BarChart3,
   Map,
   X,
+  FolderGit2,
 } from "lucide-react";
 import { TrackrLogo } from "@/components/common/TrackrLogo";
 
@@ -146,6 +147,16 @@ export default function Sidebar({
                   </Link>
                 );
               })}
+              <div className="pt-2 mt-2 border-t border-jira-gray-200">
+                <Link
+                  href="/projects"
+                  onClick={onCloseMobile}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-jira-gray-700 hover:bg-jira-gray-200 hover:text-jira-navy transition-colors"
+                >
+                  <FolderGit2 className="w-4.5 h-4.5 text-jira-blue shrink-0" />
+                  <span>Switch Project</span>
+                </Link>
+              </div>
             </div>
           </div>
         </div>

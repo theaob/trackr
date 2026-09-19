@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Issue, IssueStatus, IssueType, PriorityLevel, User, Sprint, Version, CustomField, IssueLink, IssueLabel, WorkflowStatus, WorkflowTransition, Project, Attachment, IssueComponent, Worklog } from "@/types";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
 import UserAvatar from "@/components/common/UserAvatar";
@@ -50,6 +50,8 @@ import {
   AlertCircle,
   Bookmark,
   ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 
@@ -67,6 +69,7 @@ interface IssueDetailModalProps {
    * project's lead.
    */
   project?: Project | null;
+  onActiveIssueChange?: (issue: Issue) => void;
   onClose: () => void;
   onIssueUpdated: (updated: Issue) => void;
   onIssueDeleted: (issueId: string) => void;
@@ -79,6 +82,7 @@ export default function IssueDetailModal({
   sprints = [],
   versions = [],
   project,
+  onActiveIssueChange,
   onClose,
   onIssueUpdated,
   onIssueDeleted,
@@ -103,6 +107,10 @@ export default function IssueDetailModal({
   const [isDeleting, setIsDeleting] = useState(false);
   const [modalPasteUploading, setModalPasteUploading] = useState(false);
   const [modalPasteError, setModalPasteError] = useState<string | null>(null);
+
+  const canDeleteThisIssue =
+    permissions.isAdmin ||
+    (permissions.canDeleteIssue && currentIssue?.reporterId === currentUser?.id);
 
   // Watch state
   const [watching, setWatching] = useState(false);
@@ -196,15 +204,89 @@ export default function IssueDetailModal({
     };
   }, [currentIssue?.id, currentUser]);
 
-  // Escape closes the modal, matching the X button -- unless a nested field
-  // (title edit, add-label input) already handled it and stopped it there.
+  const currentIndex = useMemo(() => {
+    if (!currentIssue || !allIssues || allIssues.length === 0) return -1;
+    return allIssues.findIndex((i) => i.id === currentIssue.id || i.key === currentIssue.key);
+  }, [currentIssue, allIssues]);
+
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex >= 0 && currentIndex < allIssues.length - 1;
+
+  const navigateToIssue = useCallback(
+    async (targetIssue: Issue) => {
+      setNavHistory([]);
+      setCurrentIssue(targetIssue);
+      onActiveIssueChange?.(targetIssue);
+
+      try {
+        const full = await getIssueByKeyOrId(targetIssue.id);
+        if (full) {
+          setCurrentIssue(full as unknown as Issue);
+          onActiveIssueChange?.(full as unknown as Issue);
+        }
+      } catch {}
+
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has("selectedIssue")) {
+          url.searchParams.set("selectedIssue", targetIssue.key);
+          window.history.replaceState({}, "", url.toString());
+        } else if (url.searchParams.has("issue")) {
+          url.searchParams.set("issue", targetIssue.key);
+          window.history.replaceState({}, "", url.toString());
+        }
+      }
+
+      try {
+        window.dispatchEvent(
+          new CustomEvent("jira:open-issue", { detail: { issueKey: targetIssue.key } })
+        );
+      } catch {}
+    },
+    [onActiveIssueChange]
+  );
+
+  const handlePrevIssue = useCallback(() => {
+    if (!hasPrev || currentIndex <= 0) return;
+    navigateToIssue(allIssues[currentIndex - 1]);
+  }, [hasPrev, currentIndex, allIssues, navigateToIssue]);
+
+  const handleNextIssue = useCallback(() => {
+    if (!hasNext || currentIndex < 0 || currentIndex >= allIssues.length - 1) return;
+    navigateToIssue(allIssues[currentIndex + 1]);
+  }, [hasNext, currentIndex, allIssues, navigateToIssue]);
+
+  // Escape closes the modal; ArrowLeft / ArrowRight navigates between issues
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable ||
+          target.closest(".ProseMirror") ||
+          target.closest("[contenteditable='true']"))
+      ) {
+        return;
+      }
+
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        handlePrevIssue();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        handleNextIssue();
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, [onClose, handlePrevIssue, handleNextIssue]);
 
   const handleToggleWatch = async () => {
     if (!currentIssue) return;
@@ -742,6 +824,35 @@ export default function IssueDetailModal({
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Left / Right issue navigation buttons */}
+            {allIssues.length > 1 && currentIndex >= 0 && (
+              <div className="flex items-center gap-1 border-r border-jira-gray-200 pr-2 sm:pr-3 text-xs text-jira-gray-500">
+                <span className="hidden sm:inline text-[11px] font-medium text-jira-gray-500 mr-1 select-none">
+                  {currentIndex + 1} of {allIssues.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={handlePrevIssue}
+                  disabled={!hasPrev}
+                  className="p-1.5 text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-200 rounded transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                  title={hasPrev ? `Previous issue (${allIssues[currentIndex - 1]?.key}) [←]` : "No previous issue"}
+                  aria-label="Previous issue"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNextIssue}
+                  disabled={!hasNext}
+                  className="p-1.5 text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-200 rounded transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                  title={hasNext ? `Next issue (${allIssues[currentIndex + 1]?.key}) [→]` : "No next issue"}
+                  aria-label="Next issue"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
             {currentUser && (
               <button
                 onClick={handleToggleWatch}
@@ -756,7 +867,7 @@ export default function IssueDetailModal({
                 {watcherCount > 0 && <span>{watcherCount}</span>}
               </button>
             )}
-            {permissions.canDeleteIssue && (
+            {canDeleteThisIssue && (
               <button
                 onClick={handleDeleteIssue}
                 disabled={isDeleting}

@@ -133,10 +133,34 @@ export default function IssuesListView({
   const [bulkError, setBulkError] = useState<string | null>(null);
   const [bulkLabelInput, setBulkLabelInput] = useState("");
   const [showBulkLabelInput, setShowBulkLabelInput] = useState(false);
+  const canSelect = permissions.canEditIssue || permissions.canDeleteIssue;
 
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(
-    initialIssues.length > 0 ? initialIssues[0].id : null
+    selectedIssueKey
+      ? (initialIssues.find(
+          (i) =>
+            i.key.toUpperCase() === selectedIssueKey.toUpperCase() ||
+            i.id === selectedIssueKey
+        )?.id ?? null)
+      : null
   );
+  const isMobileDetailOpen = Boolean(selectedIssueId);
+
+  const handleMobileBackToList = () => {
+    setSelectedIssueId(null);
+    if (typeof window !== "undefined") {
+      const currentUrl = new URL(window.location.href);
+      if (
+        currentUrl.searchParams.has("selectedIssue") ||
+        currentUrl.searchParams.has("issue")
+      ) {
+        currentUrl.searchParams.delete("selectedIssue");
+        currentUrl.searchParams.delete("issue");
+        const newSearch = currentUrl.searchParams.toString();
+        router.replace(`${currentUrl.pathname}${newSearch ? `?${newSearch}` : ""}`, { scroll: false });
+      }
+    }
+  };
   const [modalIssue, setModalIssue] = useState<Issue | null>(null);
   const [descriptionDraft, setDescriptionDraft] = useState("");
 
@@ -781,11 +805,11 @@ export default function IssuesListView({
           <div className="flex items-center gap-2">
             <button
               onClick={handleExportCSV}
-              className="text-xs font-medium text-jira-navy bg-jira-gray-100 hover:bg-jira-gray-200 border border-jira-gray-300 px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors"
+              className="text-xs font-medium text-jira-navy bg-jira-gray-100 hover:bg-jira-gray-200 border border-jira-gray-300 px-2.5 sm:px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors"
               title="Export to CSV"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Export CSV</span>
+              <span className="hidden sm:inline">Export CSV</span>
             </button>
 
             <div className="flex items-center border border-jira-gray-300 rounded overflow-hidden">
@@ -1120,7 +1144,7 @@ export default function IssuesListView({
             {/* Left Issue List */}
             <div
               className={`w-full md:w-80 lg:w-96 border-r border-jira-gray-300 overflow-y-auto divide-y divide-jira-gray-200 shrink-0 bg-white ${
-                selectedIssue ? "hidden md:block" : "block"
+                isMobileDetailOpen ? "hidden md:block" : "block"
               }`}
             >
               {filteredAndSortedIssues.length === 0 ? (
@@ -1129,7 +1153,7 @@ export default function IssuesListView({
                 </div>
               ) : (
                 filteredAndSortedIssues.map((issue) => {
-                  const isSelected = selectedIssue?.id === issue.id;
+                  const isSelected = selectedIssueId ? issue.id === selectedIssueId : selectedIssue?.id === issue.id;
                   return (
                     <div
                       key={issue.id}
@@ -1211,7 +1235,7 @@ export default function IssuesListView({
             {/* Right Issue Detail Panel */}
             <div
               className={`flex-1 overflow-y-auto bg-white p-3.5 sm:p-6 ${
-                selectedIssue ? "block" : "hidden md:block"
+                isMobileDetailOpen ? "block" : "hidden md:block"
               }`}
             >
               {selectedIssue ? (
@@ -1219,8 +1243,8 @@ export default function IssuesListView({
                   {/* Mobile Back Button */}
                   <button
                     type="button"
-                    onClick={() => setSelectedIssueId(null)}
-                    className="md:hidden inline-flex items-center gap-1 text-xs text-jira-blue font-semibold hover:underline"
+                    onClick={handleMobileBackToList}
+                    className="md:hidden inline-flex items-center gap-1.5 text-xs text-jira-blue font-semibold hover:underline py-1"
                   >
                     <ChevronLeft className="w-4 h-4" />
                     <span>Back to issues list</span>
@@ -1253,13 +1277,54 @@ export default function IssuesListView({
                       )}
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      {issues.length > 1 && (
+                        <div className="flex items-center gap-1 border-r border-jira-gray-200 pr-2 text-xs text-jira-gray-500">
+                          <span className="hidden sm:inline text-[11px] font-medium text-jira-gray-500 mr-1 select-none">
+                            {issues.findIndex((i) => i.id === selectedIssue.id) + 1} of {issues.length}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const idx = issues.findIndex((i) => i.id === selectedIssue.id);
+                              if (idx > 0) setSelectedIssueId(issues[idx - 1].id);
+                            }}
+                            disabled={issues.findIndex((i) => i.id === selectedIssue.id) <= 0}
+                            className="p-1 text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-200 rounded transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                            title="Previous issue"
+                            aria-label="Previous issue"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const idx = issues.findIndex((i) => i.id === selectedIssue.id);
+                              if (idx >= 0 && idx < issues.length - 1) setSelectedIssueId(issues[idx + 1].id);
+                            }}
+                            disabled={
+                              issues.findIndex((i) => i.id === selectedIssue.id) === -1 ||
+                              issues.findIndex((i) => i.id === selectedIssue.id) >= issues.length - 1
+                            }
+                            className="p-1 text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-200 rounded transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                            title="Next issue"
+                            aria-label="Next issue"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+
                       <select
                         value={selectedIssue.status}
+                        disabled={!permissions.canEditIssue}
                         onChange={(e) =>
                           handleUpdateCurrentIssue({ status: e.target.value as IssueStatus })
                         }
-                        className="bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-xs font-bold text-jira-navy focus:border-jira-blue outline-none"
+                        className={`bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-xs font-bold text-jira-navy focus:border-jira-blue outline-none ${
+                          !permissions.canEditIssue ? "opacity-60 cursor-not-allowed" : ""
+                        }`}
+                        title={!permissions.canEditIssue ? "You do not have permission to edit issues" : undefined}
                       >
                         {statuses.map((s) => (
                           <option key={s.id} value={s.name}>
@@ -1377,29 +1442,35 @@ export default function IssuesListView({
 
                         {activeTab === "comments" && (
                           <div className="space-y-4">
-                            <form onSubmit={handleAddComment} className="flex gap-3 items-start">
-                              <div className="flex-1">
-                                <MentionInput
-                                  value={newComment}
-                                  onChange={setNewComment}
-                                  users={users}
-                                  multiline={true}
-                                  rows={2}
-                                  placeholder="Add a comment... (Type @ to mention, paste images directly)"
-                                  onSubmit={handleAddComment}
-                                  onImagePaste={handleSplitViewImagePaste}
-                                  className="w-full px-3 py-1.5 text-xs border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
-                                />
-                                <p className="mt-1 text-[11px] text-jira-gray-400">Markdown supported</p>
+                            {permissions.canAddComment ? (
+                              <form onSubmit={handleAddComment} className="flex gap-3 items-start">
+                                <div className="flex-1">
+                                  <MentionInput
+                                    value={newComment}
+                                    onChange={setNewComment}
+                                    users={users}
+                                    multiline={true}
+                                    rows={2}
+                                    placeholder="Add a comment... (Type @ to mention, paste images directly)"
+                                    onSubmit={handleAddComment}
+                                    onImagePaste={handleSplitViewImagePaste}
+                                    className="w-full px-3 py-1.5 text-xs border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+                                  />
+                                  <p className="mt-1 text-[11px] text-jira-gray-400">Markdown supported</p>
+                                </div>
+                                <button
+                                  type="submit"
+                                  disabled={isSubmittingComment || !newComment.trim()}
+                                  className="bg-jira-blue text-white text-xs font-semibold px-3 py-1.5 rounded hover:bg-jira-blue-hover disabled:opacity-50"
+                                >
+                                  Post
+                                </button>
+                              </form>
+                            ) : (
+                              <div className="p-3 bg-jira-gray-50 border border-jira-gray-200 rounded text-xs text-jira-gray-500 italic">
+                                You do not have permission to post comments in this project.
                               </div>
-                              <button
-                                type="submit"
-                                disabled={isSubmittingComment || !newComment.trim()}
-                                className="bg-jira-blue text-white text-xs font-semibold px-3 py-1.5 rounded hover:bg-jira-blue-hover disabled:opacity-50"
-                              >
-                                Post
-                              </button>
-                            </form>
+                            )}
 
                             <div className="space-y-3 pt-2">
                               {selectedIssue.comments?.map((comment: any) => (
@@ -1477,10 +1548,13 @@ export default function IssuesListView({
                         </label>
                         <select
                           value={selectedIssue.assigneeId || ""}
+                          disabled={!permissions.canEditIssue}
                           onChange={(e) =>
                             handleUpdateCurrentIssue({ assigneeId: e.target.value || null })
                           }
-                          className="w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none"
+                          className={`w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none ${
+                            !permissions.canEditIssue ? "opacity-60 cursor-not-allowed" : ""
+                          }`}
                         >
                           <option value="">Unassigned</option>
                           {users.map((u) => (
@@ -1497,12 +1571,15 @@ export default function IssuesListView({
                         </label>
                         <select
                           value={selectedIssue.priority}
+                          disabled={!permissions.canEditIssue}
                           onChange={(e) =>
                             handleUpdateCurrentIssue({
                               priority: e.target.value as PriorityLevel,
                             })
                           }
-                          className="w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none"
+                          className={`w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none ${
+                            !permissions.canEditIssue ? "opacity-60 cursor-not-allowed" : ""
+                          }`}
                         >
                           <option value="HIGHEST">Highest</option>
                           <option value="HIGH">High</option>
@@ -1519,6 +1596,7 @@ export default function IssuesListView({
                         <input
                           type="number"
                           value={selectedIssue.storyPoints ?? ""}
+                          disabled={!permissions.canEditIssue}
                           onChange={(e) =>
                             handleUpdateCurrentIssue({
                               storyPoints:
@@ -1526,7 +1604,9 @@ export default function IssuesListView({
                             })
                           }
                           placeholder="None"
-                          className="w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none"
+                          className={`w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none ${
+                            !permissions.canEditIssue ? "opacity-60 cursor-not-allowed" : ""
+                          }`}
                         />
                       </div>
 
@@ -1546,6 +1626,7 @@ export default function IssuesListView({
                         </label>
                         <select
                           value={selectedIssue.sprintId || ""}
+                          disabled={!permissions.canEditIssue || !permissions.canMoveIssue}
                           onChange={(e) => {
                             const newSprintId = e.target.value || null;
                             if (newSprintId && newSprintId !== selectedIssue.sprintId) {
@@ -1566,7 +1647,9 @@ export default function IssuesListView({
                               status: newStatus,
                             });
                           }}
-                          className="w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none"
+                          className={`w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none ${
+                            !permissions.canEditIssue || !permissions.canMoveIssue ? "opacity-60 cursor-not-allowed" : ""
+                          }`}
                         >
                           <option value="">Backlog (No Sprint)</option>
                           {sprints
@@ -1606,109 +1689,115 @@ export default function IssuesListView({
         ) : (
           /* TABLE VIEW */
           <div className="flex-1 overflow-auto p-3 sm:p-6">
-            {selectedIds.size > 0 && (
+            {canSelect && selectedIds.size > 0 && (
               <div className="mb-3 p-2.5 bg-jira-blue-light/40 border border-jira-blue/30 rounded-lg flex flex-wrap items-center gap-2 text-xs">
                 <span className="font-bold text-jira-navy pr-1">
                   {selectedIds.size} selected
                 </span>
 
-                <select
-                  disabled={isBulkActing}
-                  defaultValue=""
-                  onChange={(e) => {
-                    if (e.target.value) handleBulkStatusChange(e.target.value);
-                    e.target.value = "";
-                  }}
-                  className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none disabled:opacity-60"
-                >
-                  <option value="" disabled>
-                    Set status...
-                  </option>
-                  {statuses.map((s) => (
-                    <option key={s.id} value={s.name}>
-                      {prettifyStatusName(s.name)}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  disabled={isBulkActing}
-                  defaultValue=""
-                  onChange={(e) => {
-                    handleBulkAssigneeChange(e.target.value);
-                    e.target.value = "";
-                  }}
-                  className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none disabled:opacity-60"
-                >
-                  <option value="" disabled>
-                    Set assignee...
-                  </option>
-                  <option value="">Unassigned</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  disabled={isBulkActing}
-                  defaultValue=""
-                  onChange={(e) => {
-                    if (e.target.value) handleBulkPriorityChange(e.target.value);
-                    e.target.value = "";
-                  }}
-                  className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none disabled:opacity-60"
-                >
-                  <option value="" disabled>
-                    Set priority...
-                  </option>
-                  <option value="HIGHEST">Highest</option>
-                  <option value="HIGH">High</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="LOW">Low</option>
-                  <option value="LOWEST">Lowest</option>
-                </select>
-
-                {showBulkLabelInput ? (
-                  <form onSubmit={handleBulkAddLabel} className="flex items-center gap-1">
-                    <input
-                      autoFocus
-                      type="text"
-                      value={bulkLabelInput}
+                {permissions.canEditIssue && (
+                  <>
+                    <select
                       disabled={isBulkActing}
-                      onChange={(e) => setBulkLabelInput(e.target.value)}
-                      onBlur={() => {
-                        if (!bulkLabelInput.trim()) setShowBulkLabelInput(false);
+                      defaultValue=""
+                      onChange={(e) => {
+                        if (e.target.value) handleBulkStatusChange(e.target.value);
+                        e.target.value = "";
                       }}
-                      placeholder="Label name..."
-                      className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none w-32"
-                    />
-                    <button
-                      type="submit"
-                      disabled={isBulkActing || !bulkLabelInput.trim()}
-                      className="px-2 py-1 bg-jira-blue text-white rounded font-semibold disabled:opacity-50"
+                      className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none disabled:opacity-60"
                     >
-                      Add
-                    </button>
-                  </form>
-                ) : (
-                  <button
-                    disabled={isBulkActing}
-                    onClick={() => setShowBulkLabelInput(true)}
-                    className="px-2 py-1 bg-white border border-jira-gray-300 rounded text-jira-navy font-medium hover:bg-jira-gray-50 disabled:opacity-60"
-                  >
-                    Add label
-                  </button>
+                      <option value="" disabled>
+                        Set status...
+                      </option>
+                      {statuses.map((s) => (
+                        <option key={s.id} value={s.name}>
+                          {prettifyStatusName(s.name)}
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
+                      disabled={isBulkActing}
+                      defaultValue=""
+                      onChange={(e) => {
+                        handleBulkAssigneeChange(e.target.value);
+                        e.target.value = "";
+                      }}
+                      className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none disabled:opacity-60"
+                    >
+                      <option value="" disabled>
+                        Set assignee...
+                      </option>
+                      <option value="">Unassigned</option>
+                      {users.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
+                      disabled={isBulkActing}
+                      defaultValue=""
+                      onChange={(e) => {
+                        if (e.target.value) handleBulkPriorityChange(e.target.value);
+                        e.target.value = "";
+                      }}
+                      className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none disabled:opacity-60"
+                    >
+                      <option value="" disabled>
+                        Set priority...
+                      </option>
+                      <option value="HIGHEST">Highest</option>
+                      <option value="HIGH">High</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="LOW">Low</option>
+                      <option value="LOWEST">Lowest</option>
+                    </select>
+
+                    {showBulkLabelInput ? (
+                      <form onSubmit={handleBulkAddLabel} className="flex items-center gap-1">
+                        <input
+                          autoFocus
+                          type="text"
+                          value={bulkLabelInput}
+                          disabled={isBulkActing}
+                          onChange={(e) => setBulkLabelInput(e.target.value)}
+                          onBlur={() => {
+                            if (!bulkLabelInput.trim()) setShowBulkLabelInput(false);
+                          }}
+                          placeholder="Label name..."
+                          className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none w-32"
+                        />
+                        <button
+                          type="submit"
+                          disabled={isBulkActing || !bulkLabelInput.trim()}
+                          className="px-2 py-1 bg-jira-blue text-white rounded font-semibold disabled:opacity-50"
+                        >
+                          Add
+                        </button>
+                      </form>
+                    ) : (
+                      <button
+                        disabled={isBulkActing}
+                        onClick={() => setShowBulkLabelInput(true)}
+                        className="px-2 py-1 bg-white border border-jira-gray-300 rounded text-jira-navy font-medium hover:bg-jira-gray-50 disabled:opacity-60"
+                      >
+                        Add label
+                      </button>
+                    )}
+                  </>
                 )}
 
-                <button
-                  disabled={isBulkActing}
-                  onClick={handleBulkDelete}
-                  className="px-2 py-1 bg-white border border-rose-300 text-rose-600 rounded font-semibold hover:bg-rose-50 disabled:opacity-60"
-                >
-                  Delete
-                </button>
+                {permissions.canDeleteIssue && (
+                  <button
+                    disabled={isBulkActing}
+                    onClick={handleBulkDelete}
+                    className="px-2 py-1 bg-white border border-rose-300 text-rose-600 rounded font-semibold hover:bg-rose-50 disabled:opacity-60"
+                  >
+                    Delete
+                  </button>
+                )}
 
                 {isBulkActing && <Loader2 className="w-3.5 h-3.5 animate-spin text-jira-blue" />}
 
@@ -1735,17 +1824,19 @@ export default function IssuesListView({
               <table className="w-full text-left text-xs text-jira-navy">
                 <thead className="bg-jira-gray-100 text-jira-gray-700 font-bold uppercase tracking-wider border-b border-jira-gray-300">
                   <tr>
-                    <th className="py-2.5 px-3 w-8">
-                      <input
-                        type="checkbox"
-                        checked={
-                          filteredAndSortedIssues.length > 0 &&
-                          filteredAndSortedIssues.every((i) => selectedIds.has(i.id))
-                        }
-                        onChange={toggleSelectAllOnPage}
-                        className="cursor-pointer"
-                      />
-                    </th>
+                    {canSelect && (
+                      <th className="py-2.5 px-3 w-8">
+                        <input
+                          type="checkbox"
+                          checked={
+                            filteredAndSortedIssues.length > 0 &&
+                            filteredAndSortedIssues.every((i) => selectedIds.has(i.id))
+                          }
+                          onChange={toggleSelectAllOnPage}
+                          className="cursor-pointer"
+                        />
+                      </th>
+                    )}
                     <th className="py-2.5 px-3">Type</th>
                     <th className="py-2.5 px-3">Key</th>
                     <th className="py-2.5 px-3">Summary</th>
@@ -1760,7 +1851,7 @@ export default function IssuesListView({
                 <tbody className="divide-y divide-jira-gray-200">
                   {filteredAndSortedIssues.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="py-8 text-center text-jira-gray-500">
+                      <td colSpan={canSelect ? 10 : 9} className="py-8 text-center text-jira-gray-500">
                         No issues found matching criteria
                       </td>
                     </tr>
@@ -1773,14 +1864,16 @@ export default function IssuesListView({
                           selectedIds.has(issue.id) ? "bg-jira-blue-subtle/30" : ""
                         }`}
                       >
-                        <td className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.has(issue.id)}
-                            onChange={() => toggleSelectOne(issue.id)}
-                            className="cursor-pointer"
-                          />
-                        </td>
+                        {canSelect && (
+                          <td className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(issue.id)}
+                              onChange={() => toggleSelectOne(issue.id)}
+                              className="cursor-pointer"
+                            />
+                          </td>
+                        )}
                         <td className="py-2 px-3">
                           <IssueTypeBadge type={issue.type} size="xs" />
                         </td>
@@ -1852,7 +1945,7 @@ export default function IssuesListView({
       </div>
 
       {/* Pagination Bar */}
-      <div className="px-6 py-2.5 bg-jira-gray-50 border-t border-jira-gray-300 shrink-0 flex flex-wrap items-center justify-between gap-3 text-xs text-jira-gray-700">
+      <div className="px-3 sm:px-6 py-2.5 bg-jira-gray-50 border-t border-jira-gray-300 shrink-0 flex flex-wrap items-center justify-between gap-2 sm:gap-3 text-xs text-jira-gray-700">
         <div className="flex items-center gap-3">
           <span>
             Showing <strong className="text-jira-navy font-semibold">{totalCount > 0 ? (page - 1) * pageSize + 1 : 0}</strong>–<strong className="text-jira-navy font-semibold">{Math.min(page * pageSize, totalCount)}</strong> of <strong className="text-jira-navy font-semibold">{totalCount.toLocaleString()}</strong> issues
@@ -1926,7 +2019,7 @@ export default function IssuesListView({
 
           {/* Jump to Page */}
           {totalPages > 1 && (
-            <div className="flex items-center gap-1.5 pl-2 border-l border-jira-gray-300">
+            <div className="hidden sm:flex items-center gap-1.5 pl-2 border-l border-jira-gray-300">
               <span className="text-jira-gray-600">Go to:</span>
               <input
                 type="number"
@@ -1961,6 +2054,7 @@ export default function IssuesListView({
           // from a different project (the "All Projects" filter) falls back
           // to the issue's own project relation, same as before this prop existed.
           project={modalIssue.projectId === project?.id ? project : undefined}
+          onActiveIssueChange={(newIssue) => setModalIssue(newIssue)}
           onClose={handleCloseDetailModal}
           onIssueUpdated={(up) => {
             setIssues((prev) => prev.map((i) => (i.id === up.id ? up : i)));

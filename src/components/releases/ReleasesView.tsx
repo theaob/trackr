@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { Project, Version, VersionStatus } from "@/types";
 import { archiveVersion, deleteVersion } from "@/lib/actions/versions";
+import { useProjectPermissions } from "@/hooks/useProjectPermissions";
 import CreateVersionModal from "./CreateVersionModal";
 import ReleaseVersionModal from "./ReleaseVersionModal";
 import ReleaseNotesModal from "./ReleaseNotesModal";
@@ -33,6 +34,7 @@ export default function ReleasesView({
   project,
   initialVersions,
 }: ReleasesViewProps) {
+  const permissions = useProjectPermissions(project);
   const [versions, setVersions] = useState<Version[]>(initialVersions);
   const [statusTab, setStatusTab] = useState<VersionStatus | "ALL">("ALL");
   const [searchQuery, setSearchQuery] = useState("");
@@ -109,16 +111,18 @@ export default function ReleasesView({
             </p>
           </div>
 
-          <button
-            onClick={() => {
-              setEditingVersion(null);
-              setIsCreateModalOpen(true);
-            }}
-            className="text-xs font-semibold px-3.5 py-2 rounded bg-jira-blue text-white hover:bg-jira-blue-hover transition-colors flex items-center gap-1.5 shadow-xs"
-          >
-            <Plus className="w-4 h-4" />
-            Create Version
-          </button>
+          {permissions.canManageVersions && (
+            <button
+              onClick={() => {
+                setEditingVersion(null);
+                setIsCreateModalOpen(true);
+              }}
+              className="text-xs font-semibold px-3.5 py-2 rounded bg-jira-blue text-white hover:bg-jira-blue-hover transition-colors flex items-center gap-1.5 shadow-xs"
+            >
+              <Plus className="w-4 h-4" />
+              Create Version
+            </button>
+          )}
         </div>
 
         {/* Stats Row */}
@@ -285,7 +289,7 @@ export default function ReleasesView({
 
                   {/* Top Right Action Buttons */}
                   <div className="flex items-center gap-2">
-                    {version.status === "UNRELEASED" && (
+                    {permissions.canManageVersions && version.status === "UNRELEASED" && (
                       <button
                         onClick={() => setReleasingVersion(version)}
                         className="text-xs font-semibold px-3 py-1.5 rounded bg-jira-green text-white hover:bg-jira-green/90 transition-colors flex items-center gap-1.5 shadow-xs"
@@ -304,32 +308,36 @@ export default function ReleasesView({
                       Release Notes
                     </button>
 
-                    <button
-                      onClick={() => {
-                        setEditingVersion(version);
-                        setIsCreateModalOpen(true);
-                      }}
-                      className="p-1.5 text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-100 rounded border border-jira-gray-200"
-                      title="Edit version"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
+                    {permissions.canManageVersions && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setEditingVersion(version);
+                            setIsCreateModalOpen(true);
+                          }}
+                          className="p-1.5 text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-100 rounded border border-jira-gray-200"
+                          title="Edit version"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
 
-                    <button
-                      onClick={() => handleArchiveToggle(version)}
-                      className="p-1.5 text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-100 rounded border border-jira-gray-200"
-                      title={version.status === "ARCHIVED" ? "Unarchive version" : "Archive version"}
-                    >
-                      <Archive className="w-3.5 h-3.5" />
-                    </button>
+                        <button
+                          onClick={() => handleArchiveToggle(version)}
+                          className="p-1.5 text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-100 rounded border border-jira-gray-200"
+                          title={version.status === "ARCHIVED" ? "Unarchive version" : "Archive version"}
+                        >
+                          <Archive className="w-3.5 h-3.5" />
+                        </button>
 
-                    <button
-                      onClick={() => handleDelete(version)}
-                      className="p-1.5 text-jira-gray-600 hover:text-jira-red hover:bg-jira-red/10 rounded border border-jira-gray-200"
-                      title="Delete version"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                        <button
+                          onClick={() => handleDelete(version)}
+                          className="p-1.5 text-jira-gray-600 hover:text-jira-red hover:bg-jira-red/10 rounded border border-jira-gray-200"
+                          title="Delete version"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 

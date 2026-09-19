@@ -9,6 +9,7 @@ import CreateProjectModal from "@/components/projects/CreateProjectModal";
 import { SearchProvider } from "@/context/SearchContext";
 import { useCurrentUser } from "@/context/UserContext";
 import { useKeyboardShortcutsContext } from "@/context/KeyboardShortcutsContext";
+import { useProjectPermissions } from "@/hooks/useProjectPermissions";
 import { useRouter } from "next/navigation";
 
 interface ProjectLayoutClientProps {
@@ -30,6 +31,7 @@ export default function ProjectLayoutClient({
 }: ProjectLayoutClientProps) {
   const router = useRouter();
   const { currentUser } = useCurrentUser();
+  const permissions = useProjectPermissions(currentProject);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -38,10 +40,11 @@ export default function ProjectLayoutClient({
   const { registerCreateIssue, registerToggleSidebar } = useKeyboardShortcutsContext();
 
   React.useEffect(() => {
+    if (!permissions.canCreateIssue) return;
     return registerCreateIssue(() => {
       setIsCreateModalOpen(true);
     });
-  }, [registerCreateIssue]);
+  }, [registerCreateIssue, permissions.canCreateIssue]);
 
   React.useEffect(() => {
     return registerToggleSidebar(() => {
@@ -56,7 +59,11 @@ export default function ProjectLayoutClient({
         <Navbar
           projects={projects}
           currentProject={currentProject}
-          onCreateIssueClick={() => setIsCreateModalOpen(true)}
+          onCreateIssueClick={
+            permissions.canCreateIssue
+              ? () => setIsCreateModalOpen(true)
+              : undefined
+          }
           onCreateProjectClick={
             currentUser?.canCreateProjects
               ? () => setIsCreateProjectModalOpen(true)
@@ -78,7 +85,7 @@ export default function ProjectLayoutClient({
         </div>
 
         {/* Global Create Issue Modal */}
-        {isCreateModalOpen && (
+        {isCreateModalOpen && permissions.canCreateIssue && (
           <CreateIssueModal
             project={currentProject}
             allProjects={projects}

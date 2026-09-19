@@ -807,6 +807,7 @@ export default function KanbanBoard({
                   onIssueClick={(issue) => setActiveIssue(issue)}
                   doneStatusNames={doneStatusNames}
                   onSelectEpic={handleOpenEpic}
+                  canMove={permissions.canMoveIssue}
                 />
               ))}
             </div>
@@ -992,6 +993,7 @@ export default function KanbanBoard({
                             onIssueClick={(issue) => setActiveIssue(issue)}
                             doneStatusNames={doneStatusNames}
                             onSelectEpic={handleOpenEpic}
+                            canMove={permissions.canMoveIssue}
                           />
                         ))}
                       </div>
@@ -1012,6 +1014,7 @@ export default function KanbanBoard({
           allIssues={[...epics, ...issues]}
           sprints={sprints}
           project={project}
+          onActiveIssueChange={(newIssue) => setActiveIssue(newIssue)}
           onClose={handleCloseDetailModal}
           onIssueUpdated={handleIssueUpdated}
           onIssueDeleted={handleIssueDeleted}
