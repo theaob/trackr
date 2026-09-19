@@ -100,22 +100,123 @@ export default function KanbanBoard({
   const [groupBy, setGroupBy] = useState<SwimlaneGroupBy>("NONE");
   const [collapsedLanes, setCollapsedLanes] = useState<Record<string, boolean>>({});
 
-  // Mobile column switcher state
-  const [activeMobileColumn, setActiveMobileColumn] = useState<string>("");
+  // Mobile column switcher state & scroll synchronization
+  const [activeMobileColumn, setActiveMobileColumn] = useState<string>(() => COLUMNS[0]?.id || "");
   const columnRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
+  const tabRefs = React.useRef<Record<string, HTMLButtonElement | null>>({});
+  const boardContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const isProgrammaticScrollRef = React.useRef(false);
+  const programmaticScrollTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const scrollRafId = React.useRef<number | null>(null);
 
   useEffect(() => {
-    if (COLUMNS.length > 0 && !activeMobileColumn) {
+    if (
+      COLUMNS.length > 0 &&
+      (!activeMobileColumn || !COLUMNS.some((c) => c.id === activeMobileColumn))
+    ) {
       setActiveMobileColumn(COLUMNS[0].id);
     }
   }, [COLUMNS, activeMobileColumn]);
 
+  // Keep active mobile tab pill scrolled into view in the top tab bar
+  useEffect(() => {
+    if (activeMobileColumn && tabRefs.current[activeMobileColumn]) {
+      tabRefs.current[activeMobileColumn]?.scrollIntoView({
+        behavior: "smooth",
+        inline: "nearest",
+        block: "nearest",
+      });
+    }
+  }, [activeMobileColumn]);
+
+  // Clean up animation frames and timers on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollRafId.current) {
+        cancelAnimationFrame(scrollRafId.current);
+      }
+      if (programmaticScrollTimeoutRef.current) {
+        clearTimeout(programmaticScrollTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const scrollToColumn = (colId: string) => {
     setActiveMobileColumn(colId);
+    isProgrammaticScrollRef.current = true;
+    if (programmaticScrollTimeoutRef.current) {
+      clearTimeout(programmaticScrollTimeoutRef.current);
+    }
+    programmaticScrollTimeoutRef.current = setTimeout(() => {
+      isProgrammaticScrollRef.current = false;
+    }, 600);
+
     const el = columnRefs.current[colId];
     if (el) {
       el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
     }
+  };
+
+  const updateActiveColumnFromScroll = () => {
+    const container = boardContainerRef.current;
+    if (!container || isProgrammaticScrollRef.current) return;
+
+    const containerRect = container.getBoundingClientRect();
+    if (containerRect.width > 0) {
+      const containerCenter = containerRect.left + containerRect.width / 2;
+      let closestColId = "";
+      let minDistance = Infinity;
+
+      for (const col of COLUMNS) {
+        const el = columnRefs.current[col.id];
+        if (!el) continue;
+        const colRect = el.getBoundingClientRect();
+        const colCenter = colRect.left + colRect.width / 2;
+        const distance = Math.abs(containerCenter - colCenter);
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestColId = col.id;
+        }
+      }
+
+      if (closestColId && closestColId !== activeMobileColumn) {
+        setActiveMobileColumn(closestColId);
+      }
+      return;
+    }
+
+    // Fallback based on scrollLeft + offsetLeft
+    const scrollCenter = container.scrollLeft + container.clientWidth / 2;
+    let closestColId = "";
+    let minDistance = Infinity;
+
+    for (const col of COLUMNS) {
+      const el = columnRefs.current[col.id];
+      if (!el) continue;
+      const colCenter = el.offsetLeft + el.offsetWidth / 2;
+      const distance = Math.abs(scrollCenter - colCenter);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestColId = col.id;
+      }
+    }
+
+    if (closestColId && closestColId !== activeMobileColumn) {
+      setActiveMobileColumn(closestColId);
+    }
+  };
+
+  const handleBoardScroll = () => {
+    if (scrollRafId.current) {
+      cancelAnimationFrame(scrollRafId.current);
+    }
+    scrollRafId.current = requestAnimationFrame(() => {
+      updateActiveColumnFromScroll();
+    });
+  };
+
+  const handleUserInteraction = () => {
+    isProgrammaticScrollRef.current = false;
   };
 
   // Sync issues if initialIssues prop updates
@@ -650,11 +751,14 @@ export default function KanbanBoard({
         {/* Mobile Column Switcher Tab Pills */}
         <div className="md:hidden flex items-center gap-1.5 overflow-x-auto py-1.5 no-scrollbar">
           {COLUMNS.map((col) => {
-            const count = getCellIssues("ALL", col.id).length;
+            const count = filteredIssues.filter((i) => i.status === col.id).length;
             const isActive = activeMobileColumn === col.id;
             return (
               <button
                 key={col.id}
+                ref={(el) => {
+                  tabRefs.current[col.id] = el;
+                }}
                 type="button"
                 onClick={() => scrollToColumn(col.id)}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
@@ -678,7 +782,14 @@ export default function KanbanBoard({
       </div>
 
       {/* Kanban Board Columns Container */}
-      <div className="flex-1 overflow-x-auto overflow-y-auto py-3 sm:py-4 snap-x snap-mandatory scroll-smooth">
+      <div
+        ref={boardContainerRef}
+        onScroll={handleBoardScroll}
+        onTouchStart={handleUserInteraction}
+        onMouseDown={handleUserInteraction}
+        onWheel={handleUserInteraction}
+        className="flex-1 overflow-x-auto overflow-y-auto py-3 sm:py-4 snap-x snap-mandatory scroll-smooth relative"
+      >
         <DragDropContext onDragEnd={handleDragEnd}>
           {groupBy === "NONE" ? (
             /* Default Single Grid Board */
@@ -719,7 +830,10 @@ export default function KanbanBoard({
                   return (
                     <div
                       key={col.id}
-                      className="w-72 shrink-0 flex items-center justify-between px-3 py-2 bg-jira-gray-100 rounded-md border border-jira-gray-200"
+                      ref={(el) => {
+                        columnRefs.current[col.id] = el;
+                      }}
+                      className="w-[85vw] max-w-[340px] sm:w-72 shrink-0 snap-center flex items-center justify-between px-3 py-2 bg-jira-gray-100 rounded-md border border-jira-gray-200"
                     >
                       <h3 className="text-xs font-bold text-jira-navy uppercase tracking-wider">
                         {col.title}

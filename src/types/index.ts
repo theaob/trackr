@@ -38,6 +38,7 @@ export interface User {
   email?: string;
   avatarUrl: string | null;
   role: string;
+  canCreateProjects?: boolean;
 }
 
 export interface Comment {

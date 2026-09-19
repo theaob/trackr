@@ -38,6 +38,18 @@ export async function requireUser(): Promise<SessionUser> {
   return user;
 }
 
+export function canUserCreateProjects(user: SessionUser | null | undefined): boolean {
+  return !!user?.canCreateProjects;
+}
+
+export async function requireCanCreateProject(): Promise<SessionUser> {
+  const user = await requireUser();
+  if (!user.canCreateProjects) {
+    throw new AuthError("You do not have permission to create projects.", 403);
+  }
+  return user;
+}
+
 /**
  * The caller's role on a project: ADMIN for the project lead, otherwise the
  * explicit membership role. Absence of a membership means no access, unless

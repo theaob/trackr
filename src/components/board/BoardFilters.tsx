@@ -138,9 +138,9 @@ export default function BoardFilters({
           className="text-xs bg-jira-gray-100 hover:bg-jira-gray-200 border border-jira-gray-300 rounded-md px-2.5 py-1 font-semibold text-jira-navy outline-none focus:border-jira-blue cursor-pointer transition-colors"
         >
           <option value="NONE">None (Default Board)</option>
-          <option value="ASSIGNEE">Assignee (Kullanıcı)</option>
+          <option value="ASSIGNEE">Assignee</option>
           <option value="EPIC">Epic</option>
-          <option value="PRIORITY">Priority (Öncelik)</option>
+          <option value="PRIORITY">Priority</option>
         </select>
       </div>
     </div>

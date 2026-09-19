@@ -110,6 +110,10 @@ export default function NotificationsMenu() {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
+  if (!currentUser) {
+    return null;
+  }
+
   return (
     <div className="relative" ref={menuRef}>
       {/* Bell Trigger Button */}

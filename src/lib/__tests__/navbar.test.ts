@@ -25,13 +25,17 @@ vi.mock("@/lib/actions/notifications", () => ({
   markAllNotificationsRead: vi.fn(),
 }));
 
+let mockCurrentUser: { id: string; name: string; email: string; role: string } | null = {
+  id: "u1",
+  name: "Test User",
+  email: "test@example.com",
+  role: "ADMIN",
+};
+
 vi.mock("@/context/UserContext", () => ({
   useCurrentUser: () => ({
-    currentUser: {
-      id: "u1",
-      name: "Test User",
-      email: "test@example.com",
-      role: "ADMIN",
+    get currentUser() {
+      return mockCurrentUser;
     },
     users: [],
     setCurrentUser: vi.fn(),
@@ -99,5 +103,55 @@ describe("Navbar Project Selector", () => {
     );
 
     expect(html).toContain("Select Project");
+  });
+
+  it("renders the notification button when a user is logged in", () => {
+    mockCurrentUser = {
+      id: "u1",
+      name: "Test User",
+      email: "test@example.com",
+      role: "ADMIN",
+    };
+    const html = renderToStaticMarkup(
+      React.createElement(Navbar, {
+        projects: [mockProject],
+        currentProject: mockProject,
+      })
+    );
+
+    expect(html).toContain('title="Notifications"');
+  });
+
+  it("does not render the notification button when no user is logged in", () => {
+    mockCurrentUser = null;
+    const html = renderToStaticMarkup(
+      React.createElement(Navbar, {
+        projects: [mockProject],
+        currentProject: mockProject,
+      })
+    );
+
+    expect(html).not.toContain('title="Notifications"');
+  });
+
+  it("renders mobile project selector under the right bar and desktop project selector on the left", () => {
+    mockCurrentUser = {
+      id: "u1",
+      name: "Test User",
+      email: "test@example.com",
+      role: "ADMIN",
+    };
+    const html = renderToStaticMarkup(
+      React.createElement(Navbar, {
+        projects: [mockProject],
+        currentProject: mockProject,
+      })
+    );
+
+    // Desktop project selector is hidden on mobile screens
+    expect(html).toContain("hidden md:block relative min-w-0");
+    // Mobile project selector is rendered in the right bar with md:hidden
+    expect(html).toContain('aria-label="Select Project"');
+    expect(html).toContain("md:hidden relative");
   });
 });

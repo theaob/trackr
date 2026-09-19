@@ -80,6 +80,7 @@ export async function completeSetup(data: {
           passwordHash,
           authProvider: "LOCAL",
           role: "Administrator",
+          canCreateProjects: true,
         },
         select: PUBLIC_USER_SELECT,
       });

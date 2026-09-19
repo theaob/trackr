@@ -7,6 +7,7 @@ import Sidebar from "./Sidebar";
 import CreateIssueModal from "@/components/issues/CreateIssueModal";
 import CreateProjectModal from "@/components/projects/CreateProjectModal";
 import { SearchProvider } from "@/context/SearchContext";
+import { useCurrentUser } from "@/context/UserContext";
 import { useKeyboardShortcutsContext } from "@/context/KeyboardShortcutsContext";
 import { useRouter } from "next/navigation";
 
@@ -28,6 +29,7 @@ export default function ProjectLayoutClient({
   children,
 }: ProjectLayoutClientProps) {
   const router = useRouter();
+  const { currentUser } = useCurrentUser();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -55,7 +57,11 @@ export default function ProjectLayoutClient({
           projects={projects}
           currentProject={currentProject}
           onCreateIssueClick={() => setIsCreateModalOpen(true)}
-          onCreateProjectClick={() => setIsCreateProjectModalOpen(true)}
+          onCreateProjectClick={
+            currentUser?.canCreateProjects
+              ? () => setIsCreateProjectModalOpen(true)
+              : undefined
+          }
           onToggleMobileMenu={() => setIsMobileDrawerOpen((prev) => !prev)}
         />
 
@@ -87,7 +93,7 @@ export default function ProjectLayoutClient({
         )}
 
         {/* Global Create Project Modal */}
-        {isCreateProjectModalOpen && (
+        {isCreateProjectModalOpen && currentUser?.canCreateProjects && (
           <CreateProjectModal
             users={users}
             onClose={() => setIsCreateProjectModalOpen(false)}

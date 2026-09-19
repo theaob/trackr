@@ -74,14 +74,14 @@ export default function AuthModal({
         setCurrentUser(loggedInUser);
         // Add to users list if missing
         setUsers(users.some((u) => u.id === loggedInUser.id) ? users : [...users, loggedInUser]);
-        setSuccessMsg(`Giriş başarılı! Hoş geldiniz, ${loggedInUser.name}`);
+        setSuccessMsg(`Welcome, ${loggedInUser.name}!`);
         if (onSuccess) onSuccess(loggedInUser);
         setTimeout(() => onClose(), 1000);
       } else {
-        setError(res.error || "Giriş başarısız.");
+        setError(res.error || "Sign-in failed.");
       }
     } catch (err: any) {
-      setError(err.message || "Bir hata oluştu.");
+      setError(err.message || "An error occurred.");
     } finally {
       setLoading(false);
     }
@@ -99,14 +99,14 @@ export default function AuthModal({
         const newUser = res.user as unknown as User;
         setCurrentUser(newUser);
         setUsers([...users, newUser]);
-        setSuccessMsg(`Hesap başarıyla oluşturuldu! Hoş geldiniz, ${newUser.name}`);
+        setSuccessMsg(`Account created successfully! Welcome, ${newUser.name}.`);
         if (onSuccess) onSuccess(newUser);
         setTimeout(() => onClose(), 1200);
       } else {
-        setError(res.error || "Hesap oluşturulamadı.");
+        setError(res.error || "Failed to create account.");
       }
     } catch (err: any) {
-      setError(err.message || "Bir hata oluştu.");
+      setError(err.message || "An error occurred.");
     } finally {
       setLoading(false);
     }
@@ -133,9 +133,9 @@ export default function AuthModal({
               <ShieldCheck className="w-5 h-5 text-jira-blue-light" />
             </div>
             <div>
-              <h2 className="text-lg font-bold tracking-tight">Kullanıcı Girişi ve SSO</h2>
+              <h2 className="text-lg font-bold tracking-tight">User Sign In & SSO</h2>
               <p className="text-xs text-jira-gray-400">
-                Bağımsız hesap oluşturun veya Kurumsal SSO ile bağlanın
+                Sign in with local credentials or corporate SSO
               </p>
             </div>
           </div>
@@ -160,7 +160,7 @@ export default function AuthModal({
             }`}
           >
             <LogIn className="w-3.5 h-3.5" />
-            <span>Giriş Yap</span>
+            <span>Sign In</span>
           </button>
 
           <button
@@ -172,7 +172,7 @@ export default function AuthModal({
             }`}
           >
             <UserPlus className="w-3.5 h-3.5" />
-            <span>Hesap Oluştur</span>
+            <span>Create Account</span>
           </button>
         </div>
 
@@ -196,13 +196,13 @@ export default function AuthModal({
           {activeTab === "login" && (
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-jira-navy mb-1">E-posta Adresi</label>
+                <label className="block text-xs font-semibold text-jira-navy mb-1">Email Address</label>
                 <div className="relative">
                   <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
                   <input
                     type="email"
                     required
-                    placeholder="ornek@company.com"
+                    placeholder="name@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue outline-none text-jira-navy"
@@ -211,7 +211,7 @@ export default function AuthModal({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-jira-navy mb-1">Şifre</label>
+                <label className="block text-xs font-semibold text-jira-navy mb-1">Password</label>
                 <div className="relative">
                   <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
                   <input
@@ -231,14 +231,14 @@ export default function AuthModal({
                 className="w-full py-2 bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-bold rounded-md flex items-center justify-center gap-2 shadow-xs transition-colors disabled:opacity-50"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-                <span>Giriş Yap</span>
+                <span>Sign In</span>
               </button>
 
               {ssoConfig?.enabled && (
                 <>
                   <div className="relative py-2 flex items-center justify-center">
                     <div className="border-t border-jira-gray-200 w-full absolute"></div>
-                    <span className="bg-white px-3 text-[11px] text-jira-gray-500 relative font-medium">veya</span>
+                    <span className="bg-white px-3 text-[11px] text-jira-gray-500 relative font-medium">or</span>
                   </div>
 
                   <button
@@ -248,7 +248,7 @@ export default function AuthModal({
                     className="w-full py-2 bg-jira-navy hover:bg-jira-navy/90 text-white text-xs font-semibold rounded-md flex items-center justify-center gap-2 border border-jira-navy transition-colors"
                   >
                     <Building2 className="w-4 h-4 text-emerald-400" />
-                    <span>{ssoConfig?.providerName || "Kurumsal SSO"} ile Giriş Yap</span>
+                    <span>Sign in with {ssoConfig?.providerName || "Corporate SSO"}</span>
                   </button>
                 </>
               )}
@@ -259,13 +259,13 @@ export default function AuthModal({
           {activeTab === "register" && (
             <form onSubmit={handleRegisterSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-jira-navy mb-1">Ad Soyad</label>
+                <label className="block text-xs font-semibold text-jira-navy mb-1">Full Name</label>
                 <div className="relative">
                   <UserIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
                   <input
                     type="text"
                     required
-                    placeholder="Ahmet Yılmaz"
+                    placeholder="Alex Chen"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue outline-none text-jira-navy"
@@ -274,13 +274,13 @@ export default function AuthModal({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-jira-navy mb-1">E-posta Adresi</label>
+                <label className="block text-xs font-semibold text-jira-navy mb-1">Email Address</label>
                 <div className="relative">
                   <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
                   <input
                     type="email"
                     required
-                    placeholder="ahmet.yilmaz@company.com"
+                    placeholder="alex.chen@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue outline-none text-jira-navy"
@@ -289,14 +289,14 @@ export default function AuthModal({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-jira-navy mb-1">Şifre</label>
+                <label className="block text-xs font-semibold text-jira-navy mb-1">Password</label>
                 <div className="relative">
                   <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
                   <input
                     type="password"
                     required
                     minLength={8}
-                    placeholder="Minimum 8 karakter"
+                    placeholder="Minimum 8 characters"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue outline-none text-jira-navy"
@@ -305,17 +305,17 @@ export default function AuthModal({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-jira-navy mb-1">Organizasyon Rolü</label>
+                <label className="block text-xs font-semibold text-jira-navy mb-1">Organization Role</label>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
                   className="w-full px-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue outline-none text-jira-navy bg-white"
                 >
-                  <option value="Developer">Developer (Yazılım Geliştirici)</option>
+                  <option value="Developer">Developer</option>
                   <option value="Senior Developer">Senior Developer</option>
-                  <option value="QA Lead">QA Lead (Test Lideri)</option>
-                  <option value="Product Owner">Product Owner (Ürün Sahibi)</option>
-                  <option value="Project Lead">Project Lead (Proje Yöneticisi)</option>
+                  <option value="QA Lead">QA Lead</option>
+                  <option value="Product Owner">Product Owner</option>
+                  <option value="Project Lead">Project Lead</option>
                 </select>
               </div>
 
@@ -325,7 +325,7 @@ export default function AuthModal({
                 className="w-full py-2.5 bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-bold rounded-md flex items-center justify-center gap-2 shadow-xs transition-colors disabled:opacity-50"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                <span>Bağımsız Kullanıcı Hesabı Oluştur</span>
+                <span>Create Local User Account</span>
               </button>
             </form>
           )}

@@ -76,7 +76,7 @@ export default function ProjectsDirectoryView({
             </p>
           </div>
 
-          {currentUser && (
+          {currentUser?.canCreateProjects && (
             <button
               onClick={() => setIsCreateModalOpen(true)}
               className="bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold px-4 py-2 rounded-md flex items-center gap-1.5 shadow-sm transition-colors self-start sm:self-auto"
@@ -109,7 +109,9 @@ export default function ProjectsDirectoryView({
             <FolderGit2 className="w-10 h-10 text-jira-gray-400 mx-auto mb-3" />
             <h3 className="text-base font-bold text-jira-navy">No projects found</h3>
             <p className="text-xs text-jira-gray-500 mt-1">
-              Try adjusting your search query or create a new project.
+              {currentUser?.canCreateProjects
+                ? "Try adjusting your search query or create a new project."
+                : "Try adjusting your search query or contact an administrator to be added to a project."}
             </p>
           </div>
         ) : (
@@ -236,7 +238,7 @@ export default function ProjectsDirectoryView({
       </div>
 
       {/* Create Project Modal */}
-      {isCreateModalOpen && (
+      {isCreateModalOpen && currentUser?.canCreateProjects && (
         <CreateProjectModal
           users={users}
           onClose={() => setIsCreateModalOpen(false)}

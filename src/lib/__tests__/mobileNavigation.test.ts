@@ -3,12 +3,19 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import Navbar from "@/components/layout/Navbar";
 import Sidebar from "@/components/layout/Sidebar";
+import KanbanBoard from "@/components/board/KanbanBoard";
 import { viewport } from "@/app/layout";
-import { Project } from "@/types";
+import { Project, WorkflowStatus } from "@/types";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/projects/TEST/board",
-  useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }),
+}));
+
+vi.mock("@/lib/actions/issues", () => ({
+  updateIssueStatusAndOrder: vi.fn(),
+  getIssueByKeyOrId: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock("@/lib/auth/session", () => ({
@@ -143,5 +150,37 @@ describe("Mobile Viewport & Navigation", () => {
     expect(html).toContain("Close navigation");
     expect(html).toContain("Active Board");
     expect(html).toContain("Backlog");
+  });
+
+  it("renders mobile column switcher tab pills and scroll-snapping board container in KanbanBoard", () => {
+    const mockStatuses: WorkflowStatus[] = [
+      { id: "s1", name: "TODO", category: "TODO", position: 0, projectId: "p1", color: null, wipLimit: null },
+      { id: "s2", name: "IN_PROGRESS", category: "IN_PROGRESS", position: 1, projectId: "p1", color: null, wipLimit: null },
+      { id: "s3", name: "DONE", category: "DONE", position: 2, projectId: "p1", color: null, wipLimit: null },
+    ];
+
+    const html = renderToStaticMarkup(
+      React.createElement(KanbanBoard, {
+        project: mockProject,
+        initialIssues: [],
+        users: [],
+        sprints: [],
+        statuses: mockStatuses,
+        transitions: [],
+      })
+    );
+
+    // Mobile tabs wrapper
+    expect(html).toContain("md:hidden flex items-center gap-1.5 overflow-x-auto py-1.5 no-scrollbar");
+    // Column tab pills with titles
+    expect(html).toContain("To Do");
+    expect(html).toContain("In Progress");
+    expect(html).toContain("Done");
+    // Active pill styling
+    expect(html).toContain("bg-jira-blue text-white shadow-xs");
+    // Board container with scroll-snapping and relative positioning
+    expect(html).toContain("snap-x snap-mandatory scroll-smooth relative");
+    // Column snap-center styling
+    expect(html).toContain("snap-center");
   });
 });

@@ -10,6 +10,7 @@ export const PUBLIC_USER_SELECT = {
   email: true,
   avatarUrl: true,
   role: true,
+  canCreateProjects: true,
 } as const;
 
 export interface SessionUser {
@@ -18,6 +19,7 @@ export interface SessionUser {
   email: string;
   avatarUrl: string | null;
   role: string;
+  canCreateProjects?: boolean;
 }
 
 /**

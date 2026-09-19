@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import SsoSettingsTab from "./SsoSettingsTab";
 import SystemInfoTab from "./SystemInfoTab";
-import { ShieldCheck, Info, Package, GitCommit } from "lucide-react";
+import UsersSettingsTab from "./UsersSettingsTab";
+import { ShieldCheck, Info, Package, GitCommit, Users } from "lucide-react";
 import { SystemInfo } from "@/lib/systemUtils";
 import { getSystemInfo } from "@/lib/actions/system";
 
@@ -14,7 +15,7 @@ interface GeneralSettingsViewProps {
 export default function GeneralSettingsView({
   initialSystemInfo,
 }: GeneralSettingsViewProps) {
-  const [activeTab, setActiveTab] = useState<"sso" | "info">("sso");
+  const [activeTab, setActiveTab] = useState<"sso" | "users" | "info">("sso");
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(
     initialSystemInfo || null
   );
@@ -79,6 +80,19 @@ export default function GeneralSettingsView({
 
           <button
             type="button"
+            onClick={() => setActiveTab("users")}
+            className={`pb-2.5 text-xs font-semibold tracking-wide border-b-2 transition-colors flex items-center gap-1.5 ${
+              activeTab === "users"
+                ? "border-jira-blue text-jira-blue"
+                : "border-transparent text-jira-gray-600 hover:text-jira-navy"
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            Users & Permissions
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveTab("info")}
             className={`pb-2.5 text-xs font-semibold tracking-wide border-b-2 transition-colors flex items-center gap-1.5 ${
               activeTab === "info"
@@ -95,6 +109,7 @@ export default function GeneralSettingsView({
       {/* Content Area */}
       <div>
         {activeTab === "sso" && <SsoSettingsTab />}
+        {activeTab === "users" && <UsersSettingsTab />}
         {activeTab === "info" && systemInfo && (
           <SystemInfoTab systemInfo={systemInfo} />
         )}

@@ -12,6 +12,8 @@ import {
   requireProjectAccess,
   requireProjectPermission,
   requireUser,
+  requireCanCreateProject,
+  requireAnyProjectAdmin,
   toActionError,
 } from "@/lib/auth/guards";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -170,7 +172,7 @@ export async function createProject(data: {
   leadId?: string;
 }) {
   try {
-    const user = await requireUser();
+    const user = await requireCanCreateProject();
 
     const formattedKey = data.key.trim().toUpperCase();
     if (!formattedKey.match(/^[A-Z0-9]{2,10}$/)) {
@@ -334,3 +336,30 @@ export async function updateProject(
     return toActionError(error, "Failed to update project");
   }
 }
+
+/**
+ * Grant or revoke project creation permission for a user.
+ * Restricted to instance administrators.
+ */
+export async function updateUserProjectPermission(userId: string, canCreateProjects: boolean) {
+  try {
+    await requireAnyProjectAdmin();
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { canCreateProjects },
+      select: PUBLIC_USER_SELECT,
+    });
+
+    try {
+      revalidatePath("/settings");
+      revalidatePath("/projects");
+      revalidatePath("/", "layout");
+    } catch {}
+
+    return { success: true as const, user: updated };
+  } catch (error) {
+    return toActionError(error, "Failed to update user project creation permission");
+  }
+}
+

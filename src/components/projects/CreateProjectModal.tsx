@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from "react";
 import { User } from "@/types";
 import { createProject } from "@/lib/actions/projects";
+import { useCurrentUser } from "@/context/UserContext";
 import { useRouter } from "next/navigation";
-import { X, FolderPlus, Loader2 } from "lucide-react";
+import { X, FolderPlus, Loader2, ShieldAlert } from "lucide-react";
 
 interface CreateProjectModalProps {
   users: User[];
@@ -18,6 +19,8 @@ export default function CreateProjectModal({
   onProjectCreated,
 }: CreateProjectModalProps) {
   const router = useRouter();
+  const { currentUser } = useCurrentUser();
+  const canCreate = !currentUser || !!currentUser.canCreateProjects;
   const [name, setName] = useState("");
   const [key, setKey] = useState("");
   const [keyManuallyEdited, setKeyManuallyEdited] = useState(false);
@@ -41,6 +44,10 @@ export default function CreateProjectModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (currentUser && !currentUser.canCreateProjects) {
+      setError("You do not have permission to create projects.");
+      return;
+    }
     if (!name.trim()) {
       setError("Please enter a project name.");
       return;
@@ -108,6 +115,13 @@ export default function CreateProjectModal({
 
         {/* Form */}
         <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="p-4 sm:p-6 space-y-4 text-sm overflow-y-auto flex-1">
+          {!canCreate && (
+            <div className="p-3 text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded-md font-medium flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>You do not have permission to create projects. Please contact an administrator.</span>
+            </div>
+          )}
+
           {error && (
             <div className="p-3 text-xs bg-rose-50 border border-rose-200 text-rose-700 rounded-md font-medium">
               {error}
@@ -193,7 +207,7 @@ export default function CreateProjectModal({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !canCreate}
               className="bg-jira-blue hover:bg-jira-blue-hover text-white px-4 py-2 rounded font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
             >
               {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}

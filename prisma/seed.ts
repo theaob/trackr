@@ -41,6 +41,7 @@ async function main() {
       avatarUrl: null,
       passwordHash,
       authProvider: "LOCAL",
+      canCreateProjects: true,
     },
   });
 
@@ -52,6 +53,7 @@ async function main() {
       avatarUrl: null,
       passwordHash,
       authProvider: "LOCAL",
+      canCreateProjects: true,
     },
   });
 
