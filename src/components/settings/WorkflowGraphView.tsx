@@ -185,11 +185,12 @@ export function calculateEdgePath(
   const endX = toPos.x;
   const endY = toPos.y + NODE_HEIGHT / 2;
 
+  const colDx = toPos.x - fromPos.x;
   const dx = endX - startX;
   const dy = endY - startY;
 
-  // Forward connection (left to right)
-  if (dx > 30) {
+  // Forward connection (left to right, toPos is in a subsequent column)
+  if (colDx > 30) {
     let curvatureY = 0;
     if (isBidirectional) {
       // Offset bidirectional arrows so they don't overlap
@@ -207,8 +208,8 @@ export function calculateEdgePath(
     return { path, midX, midY };
   }
 
-  // Backward connection (right to left, e.g. return to In Progress or Re-open)
-  if (dx < -30) {
+  // Backward connection (right to left, toPos is in a preceding column)
+  if (colDx < -30) {
     // Loop around top or bottom
     const loopAbove = startY <= toPos.y + NODE_HEIGHT / 2;
     const loopOffset = loopAbove ? -60 : 60;
@@ -219,20 +220,24 @@ export function calculateEdgePath(
     const fromAnchorX = fromPos.x + NODE_WIDTH * 0.5;
     const toAnchorX = toPos.x + NODE_WIDTH * 0.5;
 
-    const midY = Math.min(fromTop, toTop) + loopOffset;
-    const path = `M ${fromAnchorX} ${fromTop} C ${fromAnchorX} ${midY}, ${toAnchorX} ${midY}, ${toAnchorX} ${toTop}`;
+    const controlY = Math.min(fromTop, toTop) + loopOffset;
+    const path = `M ${fromAnchorX} ${fromTop} C ${fromAnchorX} ${controlY}, ${toAnchorX} ${controlY}, ${toAnchorX} ${toTop}`;
+    // Precise apex of cubic Bezier at t=0.5 where P0=fromTop, P1=P2=controlY, P3=toTop
+    const midY = 0.125 * (fromTop + toTop) + 0.75 * controlY;
     return { path, midX: (fromAnchorX + toAnchorX) / 2, midY };
   }
 
   // Same column / vertical connection
   const curveOut = 65;
-  const cp1x = startX + curveOut;
+  const rightX = fromPos.x + NODE_WIDTH;
+  const targetRightX = toPos.x + NODE_WIDTH;
+  const cp1x = rightX + curveOut;
   const cp1y = startY;
-  const cp2x = endX + curveOut;
+  const cp2x = targetRightX + curveOut;
   const cp2y = endY;
 
-  const path = `M ${startX} ${startY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${endX + NODE_WIDTH} ${endY}`;
-  return { path, midX: startX + curveOut * 0.75, midY: (startY + endY) / 2 };
+  const path = `M ${rightX} ${startY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${targetRightX} ${endY}`;
+  return { path, midX: (rightX + targetRightX) / 2 + curveOut * 0.75, midY: (startY + endY) / 2 };
 }
 
 export default function WorkflowGraphView({
@@ -274,8 +279,34 @@ export default function WorkflowGraphView({
   const [connectingFromId, setConnectingFromId] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
 
-  // Hovered edge for delete button
+  // Hovered edge for delete button with grace period to prevent flickering/escaping
   const [hoveredEdgeKey, setHoveredEdgeKey] = useState<string | null>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleEdgeMouseEnter = useCallback((key: string) => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    setHoveredEdgeKey(key);
+  }, []);
+
+  const handleEdgeMouseLeave = useCallback((key: string) => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHoveredEdgeKey((curr) => (curr === key ? null : curr));
+    }, 200);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Canvas zoom and pan
   const [zoom, setZoom] = useState(1);
@@ -623,16 +654,25 @@ export default function WorkflowGraphView({
               const { path, midX, midY } = calculateEdgePath(fromPos, toPos, isBidirectional, isReverse);
 
               return (
-                <g key={edgeKey} data-edge-key={edgeKey} className="group">
-                  {/* Invisible thick path for easy hovering */}
+                <g
+                  key={edgeKey}
+                  data-edge-key={edgeKey}
+                  className="group pointer-events-auto cursor-pointer"
+                  onMouseEnter={() => handleEdgeMouseEnter(edgeKey)}
+                  onMouseLeave={() => handleEdgeMouseLeave(edgeKey)}
+                >
+                  {/* Invisible thick path for easy, reliable hovering */}
                   <path
                     d={path}
                     fill="none"
                     stroke="transparent"
-                    strokeWidth="16"
+                    strokeWidth="28"
+                    strokeLinecap="round"
                     className="pointer-events-auto cursor-pointer"
-                    onMouseEnter={() => setHoveredEdgeKey(edgeKey)}
-                    onMouseLeave={() => setHoveredEdgeKey(null)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEdgeMouseEnter(edgeKey);
+                    }}
                   />
 
                   {/* Visible Directed Bézier Path */}
@@ -652,10 +692,14 @@ export default function WorkflowGraphView({
                       className="pointer-events-auto cursor-pointer transition-transform hover:scale-110"
                       onClick={(e) => {
                         e.stopPropagation();
+                        setHoveredEdgeKey(null);
                         onToggleTransition(t.fromId, t.toId, false);
                       }}
-                      onMouseEnter={() => setHoveredEdgeKey(edgeKey)}
+                      onMouseEnter={() => handleEdgeMouseEnter(edgeKey)}
                     >
+                      <title>Delete transition</title>
+                      {/* Generous invisible hit circle so mouse never slips off */}
+                      <circle r="16" fill="transparent" />
                       <circle r="9" fill="#DC2626" className="shadow-sm" />
                       <line x1="-3" y1="-3" x2="3" y2="3" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
                       <line x1="3" y1="-3" x2="-3" y2="3" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
@@ -682,20 +726,25 @@ export default function WorkflowGraphView({
               const badgeCenterX = targetX - 32;
 
               return (
-                <g key={edgeKey} data-edge-key={edgeKey} className="group general-start-group">
+                <g
+                  key={edgeKey}
+                  data-edge-key={edgeKey}
+                  className="group general-start-group pointer-events-auto cursor-pointer"
+                  onMouseEnter={() => handleEdgeMouseEnter(edgeKey)}
+                  onMouseLeave={() => handleEdgeMouseLeave(edgeKey)}
+                >
                   {/* Invisible hit area for hover */}
                   <rect
                     x={startCircleX - 16}
-                    y={targetY - 20}
+                    y={targetY - 22}
                     width={targetX - startCircleX + 16}
-                    height={40}
+                    height={44}
                     fill="transparent"
                     className="pointer-events-auto cursor-pointer"
-                    onMouseEnter={() => setHoveredEdgeKey(edgeKey)}
-                    onMouseLeave={() => setHoveredEdgeKey(null)}
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedStatusId(statusId);
+                      handleEdgeMouseEnter(edgeKey);
                     }}
                   />
 
@@ -717,8 +766,8 @@ export default function WorkflowGraphView({
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedStatusId(statusId);
+                      handleEdgeMouseEnter(edgeKey);
                     }}
-                    onMouseEnter={() => setHoveredEdgeKey(edgeKey)}
                   >
                     <circle
                       cx={startCircleX}
@@ -771,13 +820,16 @@ export default function WorkflowGraphView({
                       className="pointer-events-auto cursor-pointer transition-transform hover:scale-110"
                       onClick={(e) => {
                         e.stopPropagation();
+                        setHoveredEdgeKey(null);
                         if (onClearTransitions) {
                           onClearTransitions(statusId, "incoming");
                         }
                       }}
-                      onMouseEnter={() => setHoveredEdgeKey(edgeKey)}
+                      onMouseEnter={() => handleEdgeMouseEnter(edgeKey)}
                     >
                       <title>Clear all incoming transitions</title>
+                      {/* Generous invisible hit circle */}
+                      <circle r="16" fill="transparent" />
                       <circle r="9" fill="#DC2626" className="shadow-sm" />
                       <line x1="-3" y1="-3" x2="3" y2="3" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
                       <line x1="3" y1="-3" x2="-3" y2="3" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />

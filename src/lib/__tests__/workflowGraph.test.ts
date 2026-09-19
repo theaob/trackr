@@ -101,13 +101,38 @@ describe("WorkflowGraphView - Geometry and Layout", () => {
     expect(forward.midY).toBeLessThan(reversePair.midY);
   });
 
-  it("calculates a looped path for backward (right-to-left) transitions", () => {
+  it("calculates a looped path for backward (right-to-left) transitions with precise apex midpoint", () => {
     const posDone = { x: 740, y: 60 };
     const posInProgress = { x: 400, y: 60 };
 
-    const { path } = calculateEdgePath(posDone, posInProgress, false, false);
+    const { path, midX, midY } = calculateEdgePath(posDone, posInProgress, false, false);
     expect(path).toContain("M");
     expect(path).toContain("C");
+
+    // midX should be centered between the two anchor points
+    const fromAnchorX = posDone.x + 210 * 0.5; // 845
+    const toAnchorX = posInProgress.x + 210 * 0.5; // 505
+    expect(midX).toBe((fromAnchorX + toAnchorX) / 2);
+
+    // midY should lie on the actual cubic Bezier apex (not offset into empty space)
+    // top = 60, loopOffset = -60 => controlY = 0
+    // apex = 0.125 * (60 + 60) + 0.75 * 0 = 15
+    expect(midY).toBe(15);
+    expect(midY).toBeLessThan(60);
+  });
+
+  it("calculates correct outward curve and midpoint for same-column vertical transitions", () => {
+    const posTop = { x: 400, y: 60 };
+    const posBottom = { x: 400, y: 220 };
+
+    const { path, midX, midY } = calculateEdgePath(posTop, posBottom, false, false);
+    expect(path).toContain("M");
+    expect(path).toContain("C");
+
+    // midX should bulge out to the right of the node cards (x > 400 + 210)
+    expect(midX).toBeGreaterThan(400 + 210);
+    // midY should be vertically centered between startY and endY
+    expect(midY).toBe((60 + 43 + 220 + 43) / 2);
   });
 });
 
@@ -383,5 +408,9 @@ describe("WorkflowGraphView - General Start and Any-Node Separation", () => {
 
     // 4. Footer legend should include General Start
     expect(html).toContain("General Start (from any status)");
+
+    // 5. Forgiving hover stroke along edge
+    expect(html).toContain('stroke-width="28"');
+    expect(html).toContain('stroke-linecap="round"');
   });
 });
