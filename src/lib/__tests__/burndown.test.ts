@@ -100,4 +100,24 @@ describe("computeBurndown", () => {
     expect(series[1].remaining).toBeNull();
     expect(series[series.length - 1].remaining).toBeNull();
   });
+
+  it("calculates burnup metrics (scope, completed, idealCompleted) correctly", () => {
+    const issues = [
+      { id: "1", storyPoints: 5, status: "TODO" },
+      { id: "2", storyPoints: 3, status: "DONE" },
+    ];
+    const series = computeBurndown(issues, [], DONE, start, end, end);
+
+    // Total scope should be 8
+    expect(series[0].scope).toBe(8);
+    expect(series[series.length - 1].scope).toBe(8);
+
+    // Completed should be 3
+    expect(series[0].completed).toBe(3);
+    expect(series[series.length - 1].completed).toBe(3);
+
+    // Ideal completed starts at 0 and ends at total scope (8)
+    expect(series[0].idealCompleted).toBe(0);
+    expect(series[series.length - 1].idealCompleted).toBe(8);
+  });
 });

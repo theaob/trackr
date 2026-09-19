@@ -19,6 +19,18 @@ export interface BurndownPoint {
   ideal: number;
   /** Null for a day after `today`: the sprint hasn't lived that far yet. */
   remaining: number | null;
+  /** Total sprint scope (committed points) */
+  scope: number;
+  /** Completed points as of this day (null after today) */
+  completed: number | null;
+  /** Ideal guideline for burnup (from 0 to total scope) */
+  idealCompleted: number;
+  /** Issue count remaining */
+  remainingIssues: number | null;
+  /** Issue count completed */
+  completedIssues: number | null;
+  /** Total issue count in sprint */
+  totalIssues: number;
 }
 
 /**
@@ -49,11 +61,10 @@ export function statusAsOf(
 }
 
 /**
- * A day-by-day burndown series from `startDate` through `endDate` inclusive.
+ * A day-by-day burndown and burnup series from `startDate` through `endDate` inclusive.
  * `ideal` is a straight line from the sprint's total points to zero. `remaining`
- * is the actual points left as of the end of each day, computed by replaying
- * each issue's status history -- null once a day is later than `today`, since
- * the sprint hasn't reached it yet.
+ * is the actual points left as of the end of each day.
+ * Also computes `scope`, `completed`, and `idealCompleted` for burnup mode.
  */
 export function computeBurndown(
   issues: BurndownIssue[],
@@ -64,6 +75,7 @@ export function computeBurndown(
   today: Date = new Date()
 ): BurndownPoint[] {
   const totalPoints = issues.reduce((sum, i) => sum + (i.storyPoints ?? 0), 0);
+  const totalIssueCount = issues.length;
 
   const changesByIssue = new Map<string, StatusChangeEvent[]>();
   for (const change of statusChanges) {
@@ -86,18 +98,54 @@ export function computeBurndown(
   const doneSet = new Set(doneStatusNames);
 
   return days.map((day, index) => {
-    const ideal = Math.max(0, totalPoints * (1 - index / lastIndex));
+    const progressFraction = index / lastIndex;
+    const ideal = Math.max(0, totalPoints * (1 - progressFraction));
+    const idealCompleted = Math.min(totalPoints, totalPoints * progressFraction);
 
     if (day.getTime() > todayEnd.getTime()) {
-      return { date: day, ideal, remaining: null };
+      return {
+        date: day,
+        ideal,
+        remaining: null,
+        scope: totalPoints,
+        completed: null,
+        idealCompleted,
+        remainingIssues: null,
+        completedIssues: null,
+        totalIssues: totalIssueCount,
+      };
     }
 
     const dayEnd = endOfDay(day);
-    const remaining = issues.reduce((sum, issue) => {
-      const status = statusAsOf(issue, changesByIssue.get(issue.id) ?? [], dayEnd);
-      return doneSet.has(status) ? sum : sum + (issue.storyPoints ?? 0);
-    }, 0);
+    let remaining = 0;
+    let completed = 0;
+    let remainingIssues = 0;
+    let completedIssues = 0;
 
-    return { date: day, ideal, remaining };
+    for (const issue of issues) {
+      const status = statusAsOf(issue, changesByIssue.get(issue.id) ?? [], dayEnd);
+      const isDone = doneSet.has(status);
+      const pts = issue.storyPoints ?? 0;
+
+      if (isDone) {
+        completed += pts;
+        completedIssues++;
+      } else {
+        remaining += pts;
+        remainingIssues++;
+      }
+    }
+
+    return {
+      date: day,
+      ideal,
+      remaining,
+      scope: totalPoints,
+      completed,
+      idealCompleted,
+      remainingIssues,
+      completedIssues,
+      totalIssues: totalIssueCount,
+    };
   });
 }

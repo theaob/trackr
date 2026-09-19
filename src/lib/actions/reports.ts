@@ -4,6 +4,7 @@ import prisma from "@/lib/db";
 import { requireProjectAccess, projectIdForSprint } from "@/lib/auth/guards";
 import { getDoneStatusNames, getWorkflowStatuses } from "@/lib/workflow";
 import { computeBurndown } from "@/lib/burndown";
+import { computeCumulativeFlow, CFDCategory } from "@/lib/cfd";
 
 /** Sprints worth showing in the report selector: no data exists for one that hasn't started. */
 export async function getReportableSprints(projectId: string) {
@@ -101,34 +102,426 @@ export async function getSprintReport(sprintId: string) {
   }
 }
 
-/** Completed story points per completed sprint, oldest first, for the velocity chart. */
-export async function getProjectVelocity(projectId: string, limit = 8) {
+export interface VelocitySprintItem {
+  id: string;
+  name: string;
+  status: string;
+  endDate: Date | null;
+  points: number; // backward compatibility (completed points)
+  completedPoints: number;
+  committedPoints: number;
+  issueCount: number; // backward compatibility (completed count)
+  completedIssues: number;
+  committedIssues: number;
+  reliabilityPct: number;
+}
+
+export interface ProjectVelocityReport {
+  sprints: VelocitySprintItem[];
+  averageCompletedPoints: number;
+  averageCommittedPoints: number;
+  averageReliabilityPct: number;
+}
+
+/** Velocity data per sprint with side-by-side committed vs completed metrics. */
+export async function getProjectVelocity(projectId: string, limit = 8): Promise<VelocitySprintItem[]> {
   try {
     await requireProjectAccess(projectId);
 
-    const sprints = await prisma.sprint.findMany({
-      where: { projectId, status: "COMPLETED" },
-      orderBy: { endDate: "desc" },
-      take: limit,
-      select: {
-        id: true,
-        name: true,
-        endDate: true,
-        issues: { select: { storyPoints: true } },
-      },
-    });
+    const [doneNames, sprints] = await Promise.all([
+      getDoneStatusNames(projectId),
+      prisma.sprint.findMany({
+        where: { projectId, status: { in: ["COMPLETED", "ACTIVE"] } },
+        orderBy: { endDate: "desc" },
+        take: limit,
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          startDate: true,
+          endDate: true,
+          issues: {
+            select: {
+              id: true,
+              storyPoints: true,
+              status: true,
+              createdAt: true,
+            },
+          },
+        },
+      }),
+    ]);
 
-    return sprints
-      .map((s) => ({
+    const sprintItems: VelocitySprintItem[] = sprints.map((s) => {
+      const allIssues = s.issues;
+      const doneIssues = allIssues.filter((i) => doneNames.includes(i.status));
+
+      const completedPoints = doneIssues.reduce((sum, i) => sum + (i.storyPoints ?? 0), 0);
+      const totalPoints = allIssues.reduce((sum, i) => sum + (i.storyPoints ?? 0), 0);
+
+      // For completed sprints, if issues were moved out, completedPoints was the baseline.
+      const committedPoints = Math.max(totalPoints, completedPoints);
+      const committedIssues = Math.max(allIssues.length, doneIssues.length);
+      const completedIssues = doneIssues.length;
+
+      const reliabilityPct =
+        committedPoints > 0
+          ? Math.min(100, Math.round((completedPoints / committedPoints) * 100))
+          : completedIssues > 0
+          ? 100
+          : 0;
+
+      return {
         id: s.id,
         name: s.name,
+        status: s.status,
         endDate: s.endDate,
-        points: s.issues.reduce((sum, i) => sum + (i.storyPoints ?? 0), 0),
-        issueCount: s.issues.length,
-      }))
-      .reverse();
+        points: completedPoints,
+        completedPoints,
+        committedPoints,
+        issueCount: completedIssues,
+        completedIssues,
+        committedIssues,
+        reliabilityPct,
+      };
+    });
+
+    return sprintItems.reverse();
   } catch (error) {
     console.error("Failed to fetch project velocity:", error);
+    return [];
+  }
+}
+
+/** Cumulative Flow Diagram data for Kanban and Scrum projects over a day window. */
+export async function getCumulativeFlowReport(projectId: string, days = 30) {
+  try {
+    await requireProjectAccess(projectId);
+
+    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const endDate = new Date();
+
+    const [workflowStatuses, issues] = await Promise.all([
+      getWorkflowStatuses(projectId),
+      prisma.issue.findMany({
+        where: { projectId },
+        select: { id: true, createdAt: true, status: true, storyPoints: true },
+      }),
+    ]);
+
+    const issueIds = issues.map((i) => i.id);
+    const statusChanges = issueIds.length
+      ? await prisma.activityLog.findMany({
+          where: { issueId: { in: issueIds }, action: "STATUS_CHANGED" },
+          select: { issueId: true, oldValue: true, newValue: true, createdAt: true },
+        })
+      : [];
+
+    const categories: CFDCategory[] = [
+      {
+        key: "DONE",
+        label: "Done",
+        color: "#36B37E",
+        statuses: workflowStatuses.filter((s) => s.category === "DONE").map((s) => s.name),
+      },
+      {
+        key: "IN_PROGRESS",
+        label: "In Progress",
+        color: "#0052CC",
+        statuses: workflowStatuses.filter((s) => s.category === "IN_PROGRESS").map((s) => s.name),
+      },
+      {
+        key: "TODO",
+        label: "To Do / Backlog",
+        color: "#8993A4",
+        statuses: workflowStatuses.filter((s) => s.category === "TODO").map((s) => s.name),
+      },
+    ];
+
+    return computeCumulativeFlow(issues, statusChanges, categories, startDate, endDate);
+  } catch (error) {
+    console.error("Failed to build cumulative flow report:", error);
+    return null;
+  }
+}
+
+export interface DistributionEntry {
+  name: string;
+  color: string;
+  category?: string;
+  count: number;
+  points: number;
+}
+
+export interface AssigneeDistributionEntry {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+  count: number;
+  points: number;
+  completedCount: number;
+  completedPoints: number;
+}
+
+export interface ProjectDistributionReport {
+  totalIssues: number;
+  totalPoints: number;
+  byStatus: DistributionEntry[];
+  byPriority: DistributionEntry[];
+  byType: DistributionEntry[];
+  byAssignee: AssigneeDistributionEntry[];
+}
+
+/** Multi-dimensional issue distribution across status, priority, type, and assignee. */
+export async function getProjectDistribution(
+  projectId: string,
+  sprintId?: string | null
+): Promise<ProjectDistributionReport | null> {
+  try {
+    await requireProjectAccess(projectId);
+
+    const where: any = { projectId };
+    if (sprintId && sprintId !== "ALL") {
+      where.sprintId = sprintId;
+    }
+
+    const [workflowStatuses, issues, users] = await Promise.all([
+      getWorkflowStatuses(projectId),
+      prisma.issue.findMany({
+        where,
+        select: {
+          id: true,
+          status: true,
+          priority: true,
+          type: true,
+          storyPoints: true,
+          assigneeId: true,
+          assignee: { select: { id: true, name: true, avatarUrl: true } },
+        },
+      }),
+      prisma.user.findMany({
+        where: { projectMembers: { some: { projectId } } },
+        select: { id: true, name: true, avatarUrl: true },
+      }),
+    ]);
+
+    const doneNames = new Set(
+      workflowStatuses.filter((s) => s.category === "DONE").map((s) => s.name)
+    );
+
+    // 1. By Status
+    const byStatus = workflowStatuses.map((s) => {
+      const matching = issues.filter((i) => i.status === s.name);
+      return {
+        name: s.name,
+        category: s.category,
+        color: s.color,
+        count: matching.length,
+        points: matching.reduce((sum, i) => sum + (i.storyPoints ?? 0), 0),
+      };
+    });
+
+    // 2. By Priority
+    const priorityColors: Record<string, string> = {
+      HIGHEST: "#FF5630",
+      HIGH: "#FF7452",
+      MEDIUM: "#FFAB00",
+      LOW: "#36B37E",
+      LOWEST: "#0065FF",
+    };
+    const priorityOrder = ["HIGHEST", "HIGH", "MEDIUM", "LOW", "LOWEST"];
+    const byPriority = priorityOrder.map((p) => {
+      const matching = issues.filter((i) => i.priority === p);
+      return {
+        name: p,
+        color: priorityColors[p] || "#8993A4",
+        count: matching.length,
+        points: matching.reduce((sum, i) => sum + (i.storyPoints ?? 0), 0),
+      };
+    });
+
+    // 3. By Issue Type
+    const typeColors: Record<string, string> = {
+      STORY: "#36B37E",
+      BUG: "#E5493A",
+      TASK: "#4BADE8",
+      EPIC: "#904EE2",
+    };
+    const typeOrder = ["STORY", "BUG", "TASK", "EPIC"];
+    const byType = typeOrder.map((t) => {
+      const matching = issues.filter((i) => i.type === t);
+      return {
+        name: t,
+        color: typeColors[t] || "#8993A4",
+        count: matching.length,
+        points: matching.reduce((sum, i) => sum + (i.storyPoints ?? 0), 0),
+      };
+    });
+
+    // 4. By Assignee
+    const assigneeMap = new Map<string, AssigneeDistributionEntry>();
+    assigneeMap.set("unassigned", {
+      id: "unassigned",
+      name: "Unassigned",
+      avatarUrl: null,
+      count: 0,
+      points: 0,
+      completedCount: 0,
+      completedPoints: 0,
+    });
+
+    for (const u of users) {
+      assigneeMap.set(u.id, {
+        id: u.id,
+        name: u.name,
+        avatarUrl: u.avatarUrl,
+        count: 0,
+        points: 0,
+        completedCount: 0,
+        completedPoints: 0,
+      });
+    }
+
+    for (const i of issues) {
+      const key = i.assigneeId || "unassigned";
+      let entry = assigneeMap.get(key);
+      if (!entry) {
+        entry = {
+          id: key,
+          name: i.assignee?.name || "Unknown",
+          avatarUrl: i.assignee?.avatarUrl || null,
+          count: 0,
+          points: 0,
+          completedCount: 0,
+          completedPoints: 0,
+        };
+        assigneeMap.set(key, entry);
+      }
+      const pts = i.storyPoints ?? 0;
+      entry.count++;
+      entry.points += pts;
+      if (doneNames.has(i.status)) {
+        entry.completedCount++;
+        entry.completedPoints += pts;
+      }
+    }
+
+    const byAssignee = Array.from(assigneeMap.values())
+      .filter((a) => a.count > 0 || a.id !== "unassigned")
+      .sort((a, b) => b.count - a.count);
+
+    return {
+      totalIssues: issues.length,
+      totalPoints: issues.reduce((sum, i) => sum + (i.storyPoints ?? 0), 0),
+      byStatus,
+      byPriority,
+      byType,
+      byAssignee,
+    };
+  } catch (error) {
+    console.error("Failed to build distribution report:", error);
+    return null;
+  }
+}
+
+export interface EpicProgressItem {
+  id: string;
+  key: string;
+  title: string;
+  status: string;
+  priority: string;
+  dueDate: Date | null;
+  totalPoints: number;
+  completedPoints: number;
+  inProgressPoints: number;
+  todoPoints: number;
+  totalIssues: number;
+  completedIssues: number;
+  inProgressIssues: number;
+  todoIssues: number;
+  completionPct: number;
+}
+
+/** Epic progress tracking report showing child issue status breakdown. */
+export async function getEpicProgressReport(projectId: string): Promise<EpicProgressItem[]> {
+  try {
+    await requireProjectAccess(projectId);
+
+    const [workflowStatuses, epics] = await Promise.all([
+      getWorkflowStatuses(projectId),
+      prisma.issue.findMany({
+        where: { projectId, type: "EPIC" },
+        select: {
+          id: true,
+          key: true,
+          title: true,
+          status: true,
+          priority: true,
+          dueDate: true,
+          children: {
+            select: {
+              id: true,
+              key: true,
+              title: true,
+              status: true,
+              storyPoints: true,
+            },
+          },
+        },
+        orderBy: [{ createdAt: "desc" }],
+      }),
+    ]);
+
+    const doneNames = new Set(
+      workflowStatuses.filter((s) => s.category === "DONE").map((s) => s.name)
+    );
+    const inProgressNames = new Set(
+      workflowStatuses.filter((s) => s.category === "IN_PROGRESS").map((s) => s.name)
+    );
+
+    return epics.map((epic) => {
+      const children = epic.children || [];
+      const totalPoints = children.reduce((sum, c) => sum + (c.storyPoints ?? 0), 0);
+      const completedPoints = children
+        .filter((c) => doneNames.has(c.status))
+        .reduce((sum, c) => sum + (c.storyPoints ?? 0), 0);
+      const inProgressPoints = children
+        .filter((c) => inProgressNames.has(c.status))
+        .reduce((sum, c) => sum + (c.storyPoints ?? 0), 0);
+      const todoPoints = Math.max(0, totalPoints - completedPoints - inProgressPoints);
+
+      const totalIssues = children.length;
+      const completedIssues = children.filter((c) => doneNames.has(c.status)).length;
+      const inProgressIssues = children.filter((c) => inProgressNames.has(c.status)).length;
+      const todoIssues = totalIssues - completedIssues - inProgressIssues;
+
+      const completionPct =
+        totalPoints > 0
+          ? Math.round((completedPoints / totalPoints) * 100)
+          : totalIssues > 0
+          ? Math.round((completedIssues / totalIssues) * 100)
+          : 0;
+
+      return {
+        id: epic.id,
+        key: epic.key,
+        title: epic.title,
+        status: epic.status,
+        priority: epic.priority,
+        dueDate: epic.dueDate,
+        totalPoints,
+        completedPoints,
+        inProgressPoints,
+        todoPoints,
+        totalIssues,
+        completedIssues,
+        inProgressIssues,
+        todoIssues,
+        completionPct,
+      };
+    });
+  } catch (error) {
+    console.error("Failed to build epic progress report:", error);
     return [];
   }
 }
