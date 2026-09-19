@@ -148,15 +148,30 @@ export default function TimeTrackingField({
   const remainingPct = Math.min(100 - loggedPct, (remaining / denom) * 100);
 
   const saveOriginal = async (seconds: number | null): Promise<string | void> => {
+    const prevOriginal = originalEstimateSeconds;
+    const prevRemaining = remainingEstimateSeconds;
+    const nextRemaining = prevRemaining ?? seconds;
+    onEstimatesChanged(seconds, nextRemaining);
+
     const res = await updateIssue(issueId, { originalEstimateSeconds: seconds });
-    if (!res.success || !res.issue) return res.error || "Failed to save estimate.";
+    if (!res.success || !res.issue) {
+      onEstimatesChanged(prevOriginal, prevRemaining);
+      return res.error || "Failed to save estimate.";
+    }
     const issue = res.issue as { originalEstimateSeconds: number | null; remainingEstimateSeconds: number | null };
     onEstimatesChanged(issue.originalEstimateSeconds, issue.remainingEstimateSeconds);
   };
 
   const saveRemaining = async (seconds: number | null): Promise<string | void> => {
+    const prevOriginal = originalEstimateSeconds;
+    const prevRemaining = remainingEstimateSeconds;
+    onEstimatesChanged(prevOriginal, seconds);
+
     const res = await updateIssue(issueId, { remainingEstimateSeconds: seconds });
-    if (!res.success || !res.issue) return res.error || "Failed to save estimate.";
+    if (!res.success || !res.issue) {
+      onEstimatesChanged(prevOriginal, prevRemaining);
+      return res.error || "Failed to save estimate.";
+    }
     const issue = res.issue as { originalEstimateSeconds: number | null; remainingEstimateSeconds: number | null };
     onEstimatesChanged(issue.originalEstimateSeconds, issue.remainingEstimateSeconds);
   };
@@ -189,11 +204,27 @@ export default function TimeTrackingField({
   };
 
   const handleDeleteWorklog = async (worklogId: string) => {
-    setDeletingId(worklogId);
+    const targetWorklog = worklogs.find((w) => w.id === worklogId);
+    const prevRemaining = remainingEstimateSeconds;
+    const restoredRemaining =
+      prevRemaining != null && targetWorklog
+        ? prevRemaining + targetWorklog.timeSpentSeconds
+        : prevRemaining;
+
+    // Optimistic removal
+    onWorklogRemoved(worklogId, restoredRemaining);
+
     const res = await deleteWorklog(worklogId);
-    setDeletingId(null);
     if (res.success) {
-      onWorklogRemoved(worklogId, res.remainingEstimateSeconds ?? null);
+      if (res.remainingEstimateSeconds !== undefined) {
+        onEstimatesChanged(originalEstimateSeconds, res.remainingEstimateSeconds ?? null);
+      }
+    } else {
+      // Rollback
+      if (targetWorklog) {
+        onWorklogAdded(targetWorklog, prevRemaining);
+      }
+      alert(res.error || "Failed to delete worklog.");
     }
   };
 

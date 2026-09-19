@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Project, Issue, User, Sprint, Version, IssueType, PriorityLevel, IssueStatus, WorkflowStatus, Label } from "@/types";
+import { Project, Issue, User, Sprint, Version, IssueType, PriorityLevel, IssueStatus, WorkflowStatus, Label, Comment } from "@/types";
 import { prettifyStatusName } from "@/lib/workflowDisplay";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
 import UserAvatar from "@/components/common/UserAvatar";
@@ -678,31 +678,61 @@ export default function IssuesListView({
     document.body.removeChild(link);
   };
 
-  // Issue update handler
+  // Issue update handler with optimistic update and rollback
   const handleUpdateCurrentIssue = async (data: Partial<Issue>) => {
     if (!selectedIssue) return;
+    const previousIssues = issues;
+    const optimisticIssue = { ...selectedIssue, ...data };
+    setIssues((prev) => prev.map((i) => (i.id === selectedIssue.id ? (optimisticIssue as Issue) : i)));
+
     const res = await updateIssue(selectedIssue.id, {
       ...data,
       updatedByUserId: currentUser?.id,
     });
     if (res.success && res.issue) {
       const updated = res.issue as unknown as Issue;
-      setIssues((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
+      setIssues((prev) => prev.map((i) => (i.id === updated.id ? { ...optimisticIssue, ...updated } : i)));
+    } else {
+      setIssues(previousIssues);
+      if (res.error) alert(res.error);
     }
   };
 
-  // Add Comment in Split View
+  // Add Comment in Split View with optimistic insertion and rollback
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim() || !currentUser || !selectedIssue) return;
-    setIsSubmittingComment(true);
-    const res = await addComment(selectedIssue.id, currentUser.id, newComment);
-    setIsSubmittingComment(false);
+
+    const commentText = newComment.trim();
+    const tempId = `temp-${Date.now()}`;
+    const optimisticComment: Comment = {
+      id: tempId,
+      content: commentText,
+      issueId: selectedIssue.id,
+      authorId: currentUser.id,
+      author: currentUser,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const previousIssues = issues;
+    const updatedComments = [optimisticComment, ...(selectedIssue.comments || [])];
+    const optimisticSelected = { ...selectedIssue, comments: updatedComments };
+
+    setIssues((prev) => prev.map((i) => (i.id === selectedIssue.id ? optimisticSelected : i)));
+    setNewComment("");
+
+    const res = await addComment(selectedIssue.id, currentUser.id, commentText);
     if (res.success && res.comment) {
-      setNewComment("");
-      const updatedComments = [res.comment, ...(selectedIssue.comments || [])];
-      const updated = { ...selectedIssue, comments: updatedComments };
-      setIssues((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
+      const finalComments = (optimisticSelected.comments || []).map((c) =>
+        c.id === tempId ? (res.comment as unknown as Comment) : c
+      );
+      const finalSelected = { ...optimisticSelected, comments: finalComments };
+      setIssues((prev) => prev.map((i) => (i.id === selectedIssue.id ? finalSelected : i)));
+    } else {
+      setIssues(previousIssues);
+      setNewComment(commentText);
+      alert(res.error || "Failed to post comment.");
     }
   };
 

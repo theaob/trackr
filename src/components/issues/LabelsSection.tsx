@@ -58,22 +58,46 @@ export default function LabelsSection({
       setInput("");
       return;
     }
-    setSubmitting(true);
+
+    const tempId = `temp-${Date.now()}`;
+    const optimisticLabel: IssueLabel = {
+      id: tempId,
+      issueId,
+      labelId: tempId,
+      label: {
+        id: tempId,
+        projectId,
+        name,
+        createdAt: new Date(),
+      },
+    };
+
+    onLabelAdded(optimisticLabel);
+    setInput("");
     setError(null);
+    setAdding(false);
+
     const res = await addIssueLabel(issueId, name);
-    setSubmitting(false);
     if (res.success && res.issueLabel) {
+      onLabelRemoved(tempId);
       onLabelAdded(res.issueLabel as unknown as IssueLabel);
-      setInput("");
-      inputRef.current?.focus();
     } else {
+      onLabelRemoved(tempId);
+      setInput(name);
+      setAdding(true);
       setError((res as { error?: string }).error || "Failed to add label.");
     }
   };
 
   const handleRemove = async (labelId: string) => {
+    const targetLabel = labels.find((l) => l.labelId === labelId || l.id === labelId);
+    onLabelRemoved(labelId);
+
     const res = await removeIssueLabel(issueId, labelId);
-    if (res.success) onLabelRemoved(labelId);
+    if (!res.success) {
+      if (targetLabel) onLabelAdded(targetLabel);
+      alert((res as { error?: string }).error || "Failed to remove label.");
+    }
   };
 
   if (labels.length === 0 && !canEdit) return null;

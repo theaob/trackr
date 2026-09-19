@@ -152,15 +152,15 @@ export default function ChildIssuesSection({
   };
 
   const handleUnlink = async (childId: string) => {
-    setUnlinkingId(childId);
+    const targetChild = children.find((c) => c.id === childId);
+    onChildRemoved(childId);
+
     const res = await updateIssue(childId, {
       parentId: null,
     });
-    setUnlinkingId(null);
 
-    if (res.success) {
-      onChildRemoved(childId);
-    } else {
+    if (!res.success) {
+      if (targetChild) onChildAdded(targetChild);
       alert(res.error || "Failed to unlink issue.");
     }
   };

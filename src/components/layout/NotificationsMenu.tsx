@@ -98,16 +98,24 @@ export default function NotificationsMenu() {
   };
 
   const handleMarkOnlyAsRead = async (notif: Notification) => {
-    await markNotificationAsRead(notif.id);
+    const previous = notifications;
     setNotifications((prev) =>
       prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n))
     );
+    const res = await markNotificationAsRead(notif.id);
+    if (!res.success) {
+      setNotifications(previous);
+    }
   };
 
   const handleMarkAllAsRead = async () => {
     if (!currentUser) return;
-    await markAllNotificationsAsRead(currentUser.id);
+    const previous = notifications;
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    const res = await markAllNotificationsAsRead(currentUser.id);
+    if (!res.success) {
+      setNotifications(previous);
+    }
   };
 
   if (!currentUser) {

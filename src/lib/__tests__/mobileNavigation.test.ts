@@ -154,9 +154,9 @@ describe("Mobile Viewport & Navigation", () => {
 
   it("renders mobile column switcher tab pills and scroll-snapping board container in KanbanBoard", () => {
     const mockStatuses: WorkflowStatus[] = [
-      { id: "s1", name: "TODO", category: "TODO", position: 0, projectId: "p1", color: null, wipLimit: null },
-      { id: "s2", name: "IN_PROGRESS", category: "IN_PROGRESS", position: 1, projectId: "p1", color: null, wipLimit: null },
-      { id: "s3", name: "DONE", category: "DONE", position: 2, projectId: "p1", color: null, wipLimit: null },
+      { id: "s1", name: "TODO", category: "TODO", order: 0, projectId: "p1", color: "#42526e", wipLimit: null, isBacklog: false, createdAt: new Date(), updatedAt: new Date() },
+      { id: "s2", name: "IN_PROGRESS", category: "IN_PROGRESS", order: 1, projectId: "p1", color: "#0052cc", wipLimit: null, isBacklog: false, createdAt: new Date(), updatedAt: new Date() },
+      { id: "s3", name: "DONE", category: "DONE", order: 2, projectId: "p1", color: "#00875a", wipLimit: null, isBacklog: false, createdAt: new Date(), updatedAt: new Date() },
     ];
 
     const html = renderToStaticMarkup(

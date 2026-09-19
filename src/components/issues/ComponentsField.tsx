@@ -39,17 +39,40 @@ export default function ComponentsField({
   const available = projectComponents.filter((c) => !attachedIds.has(c.id));
 
   const handleAdd = async (componentId: string) => {
-    setSubmittingId(componentId);
+    const comp = projectComponents.find((c) => c.id === componentId);
+    if (!comp) return;
+
+    const tempId = `temp-${Date.now()}`;
+    const optimisticComponent = {
+      id: tempId,
+      issueId,
+      componentId,
+      component: comp,
+      createdAt: new Date(),
+    };
+
+    onComponentAdded(optimisticComponent as unknown as IssueComponent);
+    setAdding(false);
+
     const res = await addIssueComponent(issueId, componentId);
-    setSubmittingId(null);
     if (res.success && res.issueComponent) {
+      onComponentRemoved(tempId);
       onComponentAdded(res.issueComponent as unknown as IssueComponent);
+    } else {
+      onComponentRemoved(tempId);
+      alert((res as { error?: string }).error || "Failed to add component.");
     }
   };
 
   const handleRemove = async (componentId: string) => {
+    const target = components.find((c) => c.componentId === componentId);
+    onComponentRemoved(componentId);
+
     const res = await removeIssueComponent(issueId, componentId);
-    if (res.success) onComponentRemoved(componentId);
+    if (!res.success) {
+      if (target) onComponentAdded(target);
+      alert((res as { error?: string }).error || "Failed to remove component.");
+    }
   };
 
   if (components.length === 0 && !canEdit) return null;

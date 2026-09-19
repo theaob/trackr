@@ -305,13 +305,18 @@ export default function BacklogView({
 
   const handleRenameSprint = async (sprintId: string) => {
     if (!renameValue.trim()) return;
-    const res = await renameSprint(sprintId, renameValue);
-    if (res.success && res.sprint) {
-      setSprints((prev) =>
-        prev.map((s) => (s.id === sprintId ? { ...s, name: res.sprint!.name } : s))
-      );
-    }
+    const previous = sprints;
+    const newName = renameValue.trim();
     setRenamingSprintId(null);
+    setSprints((prev) =>
+      prev.map((s) => (s.id === sprintId ? { ...s, name: newName } : s))
+    );
+
+    const res = await renameSprint(sprintId, newName);
+    if (!res.success) {
+      setSprints(previous);
+      alert(res.error || "Failed to rename sprint.");
+    }
   };
 
   const handleDeleteSprint = async (sprintId: string) => {
@@ -552,19 +557,67 @@ export default function BacklogView({
       }
     }
 
+    const titleText = inlineTitle.trim();
+    const tempId = `temp-${Date.now()}`;
+    const initialStatus = sprintId ? initialStatusName : primaryBacklogStatusName;
+
+    // Optimistic issue object
+    const optimisticIssue: Issue = {
+      id: tempId,
+      key: `${project.key}-...`,
+      title: titleText,
+      description: null,
+      status: initialStatus,
+      priority: "MEDIUM",
+      type: inlineType,
+      storyPoints: null,
+      originalEstimateSeconds: null,
+      remainingEstimateSeconds: null,
+      dueDate: null,
+      startDate: null,
+      projectId: project.id,
+      sprintId: sprintId,
+      parentId: null,
+      versionId: null,
+      reporterId: currentUser?.id || null,
+      reporter: currentUser || null,
+      assigneeId: null,
+      assignee: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      order: 0,
+      labels: [],
+      comments: [],
+      attachments: [],
+      components: [],
+      worklogs: [],
+    };
+
+    // Show card immediately and clear input
+    setIssues((prev) => [optimisticIssue, ...prev]);
+    setInlineTitle("");
+    setInlineCreateTarget(null);
+
     const res = await createIssue({
       projectId: project.id,
-      title: inlineTitle.trim(),
+      title: titleText,
       type: inlineType,
       sprintId: sprintId,
-      status: sprintId ? initialStatusName : primaryBacklogStatusName,
+      status: initialStatus,
       reporterId: currentUser?.id,
     });
 
     if (res.success && res.issue) {
-      setIssues([res.issue as Issue, ...issues]);
-      setInlineTitle("");
-      setInlineCreateTarget(null);
+      // Replace optimistic card with real database record
+      setIssues((prev) =>
+        prev.map((i) => (i.id === tempId ? (res.issue as Issue) : i))
+      );
+    } else {
+      // Rollback on failure and restore input
+      setIssues((prev) => prev.filter((i) => i.id !== tempId));
+      setInlineCreateTarget(sprintId);
+      setInlineTitle(titleText);
+      alert(res.error || "Failed to create issue.");
     }
   };
 

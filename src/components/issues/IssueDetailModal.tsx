@@ -208,10 +208,21 @@ export default function IssueDetailModal({
 
   const handleToggleWatch = async () => {
     if (!currentIssue) return;
+    const prevWatching = watching;
+    const prevCount = watcherCount;
+
+    // Optimistic update
+    setWatching(!prevWatching);
+    setWatcherCount(prevWatching ? Math.max(0, prevCount - 1) : prevCount + 1);
+
     const res = await toggleWatch(currentIssue.id);
     if (res.success) {
       setWatching(res.watching);
       setWatcherCount(res.count);
+    } else {
+      // Rollback
+      setWatching(prevWatching);
+      setWatcherCount(prevCount);
     }
   };
 
@@ -354,6 +365,36 @@ export default function IssueDetailModal({
   const childIds = new Set((currentIssue.children || []).map((c: any) => c.id));
   const epics = allIssues.filter((i) => i.type === "EPIC" && i.id !== currentIssue.id && !childIds.has(i.id));
 
+  // Unified optimistic update handler with automatic rollback on error
+  const applyOptimisticUpdate = async (
+    changes: Partial<Issue>,
+    serverPayload: Parameters<typeof updateIssue>[1]
+  ) => {
+    if (!currentIssue) return;
+    const previous = currentIssue;
+    const optimistic = { ...currentIssue, ...changes };
+    setCurrentIssue(optimistic);
+    onIssueUpdated(optimistic);
+
+    const res = await updateIssue(currentIssue.id, {
+      ...serverPayload,
+      updatedByUserId: currentUser?.id,
+    });
+
+    if (res.success && res.issue) {
+      const merged = { ...optimistic, ...res.issue } as unknown as Issue;
+      setCurrentIssue(merged);
+      onIssueUpdated(merged);
+    } else {
+      // Revert to snapshot on error
+      setCurrentIssue(previous);
+      onIssueUpdated(previous);
+      if (res.error) {
+        alert(res.error);
+      }
+    }
+  };
+
   // Handle Save Title
   const handleSaveTitle = async () => {
     if (!title.trim() || title === currentIssue.title) {
@@ -361,117 +402,52 @@ export default function IssueDetailModal({
       setIsEditingTitle(false);
       return;
     }
-    const res = await updateIssue(currentIssue.id, {
-      title: title.trim(),
-      updatedByUserId: currentUser?.id,
-    });
-    if (res.success && res.issue) {
-      // updateIssue's response doesn't refetch labels/links (loaded separately by
-      // their own sections), so merge onto the current issue instead of replacing it.
-      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
-      setCurrentIssue(typed);
-      onIssueUpdated(typed);
-    }
+    const newTitle = title.trim();
     setIsEditingTitle(false);
+    await applyOptimisticUpdate({ title: newTitle }, { title: newTitle });
   };
 
   // Handle Save Description
   const handleSaveDescription = async () => {
-    const res = await updateIssue(currentIssue.id, {
-      description,
-      updatedByUserId: currentUser?.id,
-    });
-    if (res.success && res.issue) {
-      // updateIssue's response doesn't refetch labels/links (loaded separately by
-      // their own sections), so merge onto the current issue instead of replacing it.
-      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
-      setCurrentIssue(typed);
-      onIssueUpdated(typed);
-    }
     setIsEditingDesc(false);
+    await applyOptimisticUpdate({ description }, { description });
   };
 
   // Handle Type Change
   const handleTypeChange = async (newType: IssueType) => {
-    const res = await updateIssue(currentIssue.id, {
-      type: newType,
-      updatedByUserId: currentUser?.id,
-    });
-    if (res.success && res.issue) {
-      // updateIssue's response doesn't refetch labels/links (loaded separately by
-      // their own sections), so merge onto the current issue instead of replacing it.
-      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
-      setCurrentIssue(typed);
-      onIssueUpdated(typed);
-    }
+    await applyOptimisticUpdate({ type: newType }, { type: newType });
   };
 
   // Handle Status Change
-
   const handleStatusChange = async (newStatus: IssueStatus) => {
-    const res = await updateIssue(currentIssue.id, {
-      status: newStatus,
-      updatedByUserId: currentUser?.id,
-    });
-    if (res.success && res.issue) {
-      // updateIssue's response doesn't refetch labels/links (loaded separately by
-      // their own sections), so merge onto the current issue instead of replacing it.
-      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
-      setCurrentIssue(typed);
-      onIssueUpdated(typed);
-    } else if (!res.success && res.error) {
-      alert(res.error);
-    }
+    await applyOptimisticUpdate({ status: newStatus }, { status: newStatus });
   };
 
   // Handle Priority Change
   const handlePriorityChange = async (newPriority: PriorityLevel) => {
-    const res = await updateIssue(currentIssue.id, {
-      priority: newPriority,
-      updatedByUserId: currentUser?.id,
-    });
-    if (res.success && res.issue) {
-      // updateIssue's response doesn't refetch labels/links (loaded separately by
-      // their own sections), so merge onto the current issue instead of replacing it.
-      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
-      setCurrentIssue(typed);
-      onIssueUpdated(typed);
-    }
+    await applyOptimisticUpdate({ priority: newPriority }, { priority: newPriority });
   };
 
   // Handle Assignee Change
   const handleAssigneeChange = async (newAssigneeId: string | null) => {
-    const res = await updateIssue(currentIssue.id, {
-      assigneeId: newAssigneeId,
-      updatedByUserId: currentUser?.id,
-    });
-    if (res.success && res.issue) {
-      // updateIssue's response doesn't refetch labels/links (loaded separately by
-      // their own sections), so merge onto the current issue instead of replacing it.
-      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
-      setCurrentIssue(typed);
-      onIssueUpdated(typed);
-    }
+    const newAssignee = users.find((u) => u.id === newAssigneeId) || null;
+    await applyOptimisticUpdate(
+      { assigneeId: newAssigneeId, assignee: newAssignee },
+      { assigneeId: newAssigneeId }
+    );
   };
 
   // Handle Parent Epic Change
   const handleParentChange = async (parentId: string | null) => {
-    const res = await updateIssue(currentIssue.id, {
-      parentId: parentId || null,
-      updatedByUserId: currentUser?.id,
-    });
-    if (res.success && res.issue) {
-      // updateIssue's response doesn't refetch labels/links (loaded separately by
-      // their own sections), so merge onto the current issue instead of replacing it.
-      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
-      setCurrentIssue(typed);
-      onIssueUpdated(typed);
-    }
+    const newParent = epics.find((e) => e.id === parentId) || null;
+    await applyOptimisticUpdate(
+      { parentId: parentId || null, parent: newParent },
+      { parentId: parentId || null }
+    );
   };
 
   // Handle Sprint Change (supports adding to sprint before it starts)
   const handleSprintChange = async (sprintId: string | null) => {
-    // Prevent adding to completed sprints
     if (sprintId && sprintId !== currentIssue.sprintId) {
       const targetSprint = sprints.find((s) => s.id === sprintId);
       if (targetSprint && targetSprint.status === "COMPLETED") {
@@ -482,101 +458,95 @@ export default function IssueDetailModal({
     const currentIsBacklog = workflowStatuses.find((s) => s.name === currentIssue.status)?.isBacklog;
     const initialStatus = workflowStatuses.find((s) => !s.isBacklog)?.name ?? currentIssue.status;
     const newStatus = sprintId && currentIsBacklog ? initialStatus : currentIssue.status;
-    const res = await updateIssue(currentIssue.id, {
-      sprintId: sprintId || null,
-      status: newStatus,
-      updatedByUserId: currentUser?.id,
-    });
-    if (res.success && res.issue) {
-      // updateIssue's response doesn't refetch labels/links (loaded separately by
-      // their own sections), so merge onto the current issue instead of replacing it.
-      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
-      setCurrentIssue(typed);
-      onIssueUpdated(typed);
-    }
+
+    await applyOptimisticUpdate(
+      { sprintId: sprintId || null, status: newStatus },
+      { sprintId: sprintId || null, status: newStatus }
+    );
   };
 
   // Handle Version Change
   const handleVersionChange = async (versionId: string | null) => {
-    const res = await updateIssue(currentIssue.id, {
-      versionId: versionId || null,
-      updatedByUserId: currentUser?.id,
-    });
-    if (res.success && res.issue) {
-      // updateIssue's response doesn't refetch labels/links (loaded separately by
-      // their own sections), so merge onto the current issue instead of replacing it.
-      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
-      setCurrentIssue(typed);
-      onIssueUpdated(typed);
-    }
+    const newVersion = versions.find((v) => v.id === versionId) || null;
+    await applyOptimisticUpdate(
+      { versionId: versionId || null, version: newVersion },
+      { versionId: versionId || null }
+    );
   };
 
   // Handle Story Points Change
   const handleStoryPointsChange = async (pointsStr: string) => {
     const points = pointsStr === "" ? null : parseInt(pointsStr, 10);
-    const res = await updateIssue(currentIssue.id, {
-      storyPoints: points,
-      updatedByUserId: currentUser?.id,
-    });
-    if (res.success && res.issue) {
-      // updateIssue's response doesn't refetch labels/links (loaded separately by
-      // their own sections), so merge onto the current issue instead of replacing it.
-      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
-      setCurrentIssue(typed);
-      onIssueUpdated(typed);
-    }
+    await applyOptimisticUpdate({ storyPoints: points }, { storyPoints: points });
   };
 
   // Handle Due Date Change
   const handleDueDateChange = async (dateStr: string) => {
-    const res = await updateIssue(currentIssue.id, {
-      dueDate: dateStr === "" ? null : dateStr,
-      updatedByUserId: currentUser?.id,
-    });
-    if (res.success && res.issue) {
-      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
-      setCurrentIssue(typed);
-      onIssueUpdated(typed);
-    }
+    const due = dateStr === "" ? null : dateStr;
+    await applyOptimisticUpdate({ dueDate: due as any }, { dueDate: due });
   };
 
   // Handle Start Date Change (Epics only -- the field the roadmap plots)
   const handleStartDateChange = async (dateStr: string) => {
-    const res = await updateIssue(currentIssue.id, {
-      startDate: dateStr === "" ? null : dateStr,
-      updatedByUserId: currentUser?.id,
-    });
-    if (res.success && res.issue) {
-      const typed = { ...currentIssue, ...res.issue } as unknown as Issue;
-      setCurrentIssue(typed);
-      onIssueUpdated(typed);
-    }
+    const start = dateStr === "" ? null : dateStr;
+    await applyOptimisticUpdate({ startDate: start as any }, { startDate: start });
   };
 
   // Handle Add Comment
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim() || !currentUser) return;
-    setIsSubmittingComment(true);
-    const res = await addComment(currentIssue.id, currentUser.id, newComment);
-    setIsSubmittingComment(false);
+
+    const commentText = newComment.trim();
+    const tempId = `temp-${Date.now()}`;
+    const optimisticComment = {
+      id: tempId,
+      content: commentText,
+      issueId: currentIssue.id,
+      authorId: currentUser.id,
+      author: currentUser,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const previousIssue = currentIssue;
+    const updatedComments = [optimisticComment, ...(currentIssue.comments || [])];
+    const updatedIssue = { ...currentIssue, comments: updatedComments };
+
+    setCurrentIssue(updatedIssue as unknown as Issue);
+    onIssueUpdated(updatedIssue as unknown as Issue);
+    setNewComment("");
+
+    const res = await addComment(currentIssue.id, currentUser.id, commentText);
     if (res.success && res.comment) {
-      setNewComment("");
-      const updatedComments = [res.comment, ...(currentIssue.comments || [])];
-      const updatedIssue = { ...currentIssue, comments: updatedComments };
-      setCurrentIssue(updatedIssue);
-      onIssueUpdated(updatedIssue);
+      const finalComments = (updatedIssue.comments || []).map((c) =>
+        c.id === tempId ? res.comment : c
+      );
+      const finalIssue = { ...updatedIssue, comments: finalComments };
+      setCurrentIssue(finalIssue as unknown as Issue);
+      onIssueUpdated(finalIssue as unknown as Issue);
+    } else {
+      setCurrentIssue(previousIssue);
+      onIssueUpdated(previousIssue);
+      setNewComment(commentText);
+      alert(res.error || "Failed to add comment.");
     }
   };
 
   // Handle Delete Comment
   const handleDeleteComment = async (commentId: string) => {
+    const previousIssue = currentIssue;
+    const updatedComments = (currentIssue.comments || []).filter((c) => c.id !== commentId);
+    const updatedIssue = { ...currentIssue, comments: updatedComments };
+
+    setCurrentIssue(updatedIssue);
+    onIssueUpdated(updatedIssue);
+
     const res = await deleteComment(commentId);
-    if (res.success) {
-      const updatedComments = (currentIssue.comments || []).filter((c) => c.id !== commentId);
-      const updatedIssue = { ...currentIssue, comments: updatedComments };
-      setCurrentIssue(updatedIssue);
-      onIssueUpdated(updatedIssue);
+    if (!res.success) {
+      setCurrentIssue(previousIssue);
+      onIssueUpdated(previousIssue);
+      alert(res.error || "Failed to delete comment.");
     }
   };
 
@@ -613,7 +583,7 @@ export default function IssueDetailModal({
   const handleLabelRemoved = (labelId: string) => {
     const updatedIssue = {
       ...currentIssue,
-      labels: (currentIssue.labels || []).filter((l) => l.labelId !== labelId),
+      labels: (currentIssue.labels || []).filter((l) => l.labelId !== labelId && l.id !== labelId),
     };
     setCurrentIssue(updatedIssue);
     onIssueUpdated(updatedIssue);
