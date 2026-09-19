@@ -14,9 +14,10 @@ import { useCurrentUser } from "@/context/UserContext";
 import { useSearch } from "@/context/SearchContext";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
 import { prettifyStatusName, isDoneStatus, getDoneStatusNames } from "@/lib/workflowDisplay";
-import { ChevronDown, ChevronRight, Layers, User as UserIcon, Bookmark, AlertCircle, Pencil, Calendar, Target } from "lucide-react";
+import { ChevronDown, ChevronRight, Layers, User as UserIcon, Bookmark, AlertCircle, Pencil, Calendar, Target, Rocket } from "lucide-react";
 import { format } from "date-fns";
 import EditSprintModal from "@/components/sprints/EditSprintModal";
+import CreateVersionModal from "@/components/releases/CreateVersionModal";
 import Link from "next/link";
 
 interface KanbanBoardProps {
@@ -95,6 +96,13 @@ export default function KanbanBoard({
   const [issues, setIssues] = useState<Issue[]>(initialIssues);
   const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isReleaseModalOpen, setIsReleaseModalOpen] = useState(false);
+
+  const boardUnreleasedDoneIssueIds = useMemo(() => {
+    return issues
+      .filter((i) => isDoneStatus(i.status, statuses) && !i.versionId)
+      .map((i) => i.id);
+  }, [issues, statuses]);
 
   // Grouping / Swimlane state
   const [groupBy, setGroupBy] = useState<SwimlaneGroupBy>("NONE");
@@ -697,6 +705,16 @@ export default function KanbanBoard({
                 <span>Edit Sprint</span>
               </button>
             )}
+            {permissions.canManageVersions && (
+              <button
+                onClick={() => setIsReleaseModalOpen(true)}
+                className="text-xs border border-jira-gray-300 text-jira-navy font-semibold px-2.5 py-1.5 rounded hover:bg-jira-gray-100 flex items-center gap-1.5 transition-colors"
+                title="Create a release with completed issues from this board"
+              >
+                <Rocket className="w-3.5 h-3.5 text-jira-blue" />
+                <span>Release...</span>
+              </button>
+            )}
             {!activeSprint && !isKanban && (
               <Link
                 href={`/projects/${project.key}/backlog`}
@@ -1039,6 +1057,20 @@ export default function KanbanBoard({
           isOpen={!!editingSprint}
           onClose={() => setEditingSprint(null)}
           onSprintUpdated={handleSprintUpdated}
+        />
+      )}
+
+      {/* Release / Fix Version Modal */}
+      {isReleaseModalOpen && (
+        <CreateVersionModal
+          projectId={project.id}
+          initialSelectedIssueIds={boardUnreleasedDoneIssueIds}
+          isOpen={isReleaseModalOpen}
+          onClose={() => setIsReleaseModalOpen(false)}
+          onSaved={() => {
+            setIsReleaseModalOpen(false);
+            router.refresh();
+          }}
         />
       )}
     </div>

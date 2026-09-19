@@ -1,9 +1,16 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Project, Version, VersionStatus } from "@/types";
-import { archiveVersion, deleteVersion } from "@/lib/actions/versions";
+import Link from "next/link";
+import { Project, Version, VersionStatus, IssueType } from "@/types";
+import {
+  archiveVersion,
+  deleteVersion,
+  getVersionIssues,
+  removeIssueFromVersion,
+} from "@/lib/actions/versions";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
+import UserAvatar from "@/components/common/UserAvatar";
 import CreateVersionModal from "./CreateVersionModal";
 import ReleaseVersionModal from "./ReleaseVersionModal";
 import ReleaseNotesModal from "./ReleaseNotesModal";
@@ -21,7 +28,11 @@ import {
   CheckCircle2,
   Clock,
   ChevronRight,
+  ChevronDown,
   Package,
+  Loader2,
+  X,
+  ExternalLink,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -44,6 +55,78 @@ export default function ReleasesView({
   const [editingVersion, setEditingVersion] = useState<Version | null>(null);
   const [releasingVersion, setReleasingVersion] = useState<Version | null>(null);
   const [notesVersion, setNotesVersion] = useState<Version | null>(null);
+
+  // Expandable issues state
+  const [expandedVersionIds, setExpandedVersionIds] = useState<Set<string>>(new Set());
+  const [versionIssues, setVersionIssues] = useState<Record<string, any[]>>({});
+  const [loadingVersionIssues, setLoadingVersionIssues] = useState<Record<string, boolean>>({});
+  const [removingIssueId, setRemovingIssueId] = useState<string | null>(null);
+
+  const toggleExpandIssues = async (versionId: string) => {
+    setExpandedVersionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(versionId)) {
+        next.delete(versionId);
+      } else {
+        next.add(versionId);
+      }
+      return next;
+    });
+
+    if (!versionIssues[versionId] && !loadingVersionIssues[versionId]) {
+      setLoadingVersionIssues((prev) => ({ ...prev, [versionId]: true }));
+      try {
+        const issues = await getVersionIssues(versionId);
+        setVersionIssues((prev) => ({ ...prev, [versionId]: issues }));
+      } finally {
+        setLoadingVersionIssues((prev) => ({ ...prev, [versionId]: false }));
+      }
+    }
+  };
+
+  const handleRemoveIssue = async (versionId: string, issueId: string) => {
+    setRemovingIssueId(issueId);
+    try {
+      const res = await removeIssueFromVersion(issueId);
+      if (res.success) {
+        setVersionIssues((prev) => ({
+          ...prev,
+          [versionId]: (prev[versionId] || []).filter((i) => i.id !== issueId),
+        }));
+        if (res.version) {
+          handleVersionSaved(res.version as unknown as Version);
+        }
+      }
+    } finally {
+      setRemovingIssueId(null);
+    }
+  };
+
+  const getTypeColor = (type: IssueType) => {
+    switch (type) {
+      case "BUG":
+        return "bg-rose-500 text-white";
+      case "TASK":
+        return "bg-blue-500 text-white";
+      case "STORY":
+        return "bg-emerald-500 text-white";
+      case "EPIC":
+        return "bg-purple-600 text-white";
+      default:
+        return "bg-jira-gray-500 text-white";
+    }
+  };
+
+  const getCategoryBadge = (category: string) => {
+    switch (category) {
+      case "DONE":
+        return "bg-emerald-100 text-emerald-800 border-emerald-200";
+      case "IN_PROGRESS":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      default:
+        return "bg-jira-gray-100 text-jira-gray-700 border-jira-gray-200";
+    }
+  };
 
   // Filtered versions
   const filteredVersions = useMemo(() => {
@@ -74,6 +157,12 @@ export default function ReleasesView({
       }
       return [saved, ...prev];
     });
+
+    if (saved.id && (expandedVersionIds.has(saved.id) || versionIssues[saved.id])) {
+      getVersionIssues(saved.id).then((freshIssues) => {
+        setVersionIssues((prev) => ({ ...prev, [saved.id]: freshIssues }));
+      });
+    }
   };
 
   const handleArchiveToggle = async (v: Version) => {
@@ -393,6 +482,147 @@ export default function ReleasesView({
                       <span className="w-2.5 h-2.5 rounded-full bg-jira-gray-400" />
                       <span>To Do ({counts.todo})</span>
                     </div>
+                  </div>
+
+                  {/* Expandable Issues Section */}
+                  <div className="pt-3 border-t border-jira-gray-200">
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => toggleExpandIssues(version.id)}
+                        className="flex items-center gap-2 text-xs font-semibold text-jira-navy hover:text-jira-blue transition-colors group"
+                      >
+                        <ChevronRight
+                          className={`w-3.5 h-3.5 text-jira-gray-400 group-hover:text-jira-blue transition-transform duration-200 ${
+                            expandedVersionIds.has(version.id) ? "rotate-90 text-jira-blue" : ""
+                          }`}
+                        />
+                        <span>Issues in this release</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-jira-gray-100 text-jira-gray-700 group-hover:bg-jira-blue/10 group-hover:text-jira-blue">
+                          {counts.total}
+                        </span>
+                      </button>
+
+                      {permissions.canManageVersions && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingVersion(version);
+                            setIsCreateModalOpen(true);
+                          }}
+                          className="text-xs font-medium text-jira-blue hover:text-jira-blue-hover hover:underline flex items-center gap-1"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Manage / Add Issues</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {expandedVersionIds.has(version.id) && (
+                      <div className="mt-3 space-y-2">
+                        {loadingVersionIssues[version.id] ? (
+                          <div className="py-4 flex items-center justify-center gap-2 text-xs text-jira-gray-500">
+                            <Loader2 className="w-4 h-4 animate-spin text-jira-blue" />
+                            <span>Loading release issues...</span>
+                          </div>
+                        ) : (versionIssues[version.id] || []).length === 0 ? (
+                          <div className="py-4 px-3 bg-jira-gray-50 border border-dashed border-jira-gray-300 rounded text-center text-xs text-jira-gray-500">
+                            No issues assigned to this release. Click{" "}
+                            {permissions.canManageVersions && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingVersion(version);
+                                  setIsCreateModalOpen(true);
+                                }}
+                                className="text-jira-blue font-semibold hover:underline inline"
+                              >
+                                Manage / Add Issues
+                              </button>
+                            )}{" "}
+                            to set the Fix Version on issues.
+                          </div>
+                        ) : (
+                          <div className="border border-jira-gray-200 rounded-md divide-y divide-jira-gray-200 overflow-hidden bg-white">
+                            {(versionIssues[version.id] || []).map((issue) => (
+                              <div
+                                key={issue.id}
+                                className="px-3 py-2 flex items-center justify-between gap-3 text-xs hover:bg-jira-gray-50/70 transition-colors"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                  <span
+                                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${getTypeColor(
+                                      issue.type
+                                    )}`}
+                                  >
+                                    {issue.type}
+                                  </span>
+                                  <Link
+                                    href={`/projects/${project.key}/issues?selectedIssue=${issue.key}`}
+                                    className="font-mono font-semibold text-jira-blue hover:underline shrink-0 flex items-center gap-1"
+                                    title="View issue"
+                                  >
+                                    <span>{issue.key}</span>
+                                    <ExternalLink className="w-2.5 h-2.5 text-jira-gray-400" />
+                                  </Link>
+                                  <span className="text-jira-navy font-medium truncate" title={issue.title}>
+                                    {issue.title}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-2.5 shrink-0">
+                                  {issue.storyPoints !== undefined && issue.storyPoints !== null && (
+                                    <span
+                                      className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-jira-gray-100 text-jira-gray-700"
+                                      title="Story Points"
+                                    >
+                                      {issue.storyPoints} pts
+                                    </span>
+                                  )}
+
+                                  <span
+                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getCategoryBadge(
+                                      issue.category
+                                    )}`}
+                                  >
+                                    {issue.status}
+                                  </span>
+
+                                  {issue.assignee ? (
+                                    <div className="flex items-center gap-1.5" title={`Assignee: ${issue.assignee.name}`}>
+                                      <UserAvatar user={issue.assignee} size="sm" />
+                                      <span className="text-[11px] text-jira-gray-600 hidden md:inline max-w-[90px] truncate">
+                                        {issue.assignee.name}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-[11px] text-jira-gray-400 italic">
+                                      Unassigned
+                                    </span>
+                                  )}
+
+                                  {permissions.canManageVersions && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveIssue(version.id, issue.id)}
+                                      disabled={removingIssueId === issue.id}
+                                      className="p-1 text-jira-gray-400 hover:text-jira-red hover:bg-rose-50 rounded transition-colors disabled:opacity-50 ml-1"
+                                      title="Remove issue from release"
+                                    >
+                                      {removingIssueId === issue.id ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                      ) : (
+                                        <X className="w-3.5 h-3.5" />
+                                      )}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

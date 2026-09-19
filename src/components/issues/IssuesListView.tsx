@@ -593,6 +593,13 @@ export default function IssuesListView({
   const handleBulkPriorityChange = (priority: string) =>
     runBulkAction(() => bulkUpdateIssues(Array.from(selectedIds), { priority: priority as PriorityLevel }));
 
+  const handleBulkVersionChange = (versionId: string) =>
+    runBulkAction(() =>
+      bulkUpdateIssues(Array.from(selectedIds), {
+        versionId: versionId === "NONE" ? null : versionId,
+      })
+    );
+
   const handleBulkAddLabel = (e: React.FormEvent) => {
     e.preventDefault();
     const name = bulkLabelInput.trim();
@@ -1754,6 +1761,28 @@ export default function IssuesListView({
                       <option value="LOW">Low</option>
                       <option value="LOWEST">Lowest</option>
                     </select>
+
+                    {versions.length > 0 && (
+                      <select
+                        disabled={isBulkActing}
+                        defaultValue=""
+                        onChange={(e) => {
+                          if (e.target.value) handleBulkVersionChange(e.target.value);
+                          e.target.value = "";
+                        }}
+                        className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none disabled:opacity-60"
+                      >
+                        <option value="" disabled>
+                          Set fix version...
+                        </option>
+                        <option value="NONE">None (Unassigned)</option>
+                        {versions.map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {v.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
 
                     {showBulkLabelInput ? (
                       <form onSubmit={handleBulkAddLabel} className="flex items-center gap-1">

@@ -12,7 +12,7 @@ import {
   toActionError,
 } from "@/lib/auth/guards";
 import { getDoneStatusNames, getStatusCategoryMap } from "@/lib/workflow";
-
+import { computeVersionStats } from "@/lib/versionStats";
 
 export async function getProjectVersions(projectId: string) {
   try {
@@ -35,42 +35,7 @@ export async function getProjectVersions(projectId: string) {
 
     const categoryByStatus = await getStatusCategoryMap(projectId);
 
-    return versions.map((v) => {
-      const total = v.issues.length;
-      let done = 0;
-      let inProgress = 0;
-      let todo = 0;
-      let storyPoints = 0;
-      let completedStoryPoints = 0;
-
-      for (const issue of v.issues) {
-        const pts = issue.storyPoints || 0;
-        storyPoints += pts;
-
-        const category = categoryByStatus.get(issue.status);
-        if (category === "DONE") {
-          done++;
-          completedStoryPoints += pts;
-        } else if (category === "IN_PROGRESS") {
-          inProgress++;
-        } else {
-          todo++;
-        }
-      }
-
-      const { issues, ...rest } = v;
-      return {
-        ...rest,
-        issueCount: {
-          total,
-          done,
-          inProgress,
-          todo,
-          storyPoints,
-          completedStoryPoints,
-        },
-      };
-    });
+    return versions.map((v) => computeVersionStats(v, categoryByStatus));
   } catch (error) {
     console.error("Failed to fetch project versions:", error);
     return [];
@@ -106,6 +71,7 @@ export async function createVersion(data: {
   description?: string;
   startDate?: string | Date | null;
   releaseDate?: string | Date | null;
+  issueIds?: string[];
 }) {
   try {
     const { user } = await requireProjectPermission(data.projectId, "MANAGE_VERSIONS");
@@ -127,15 +93,48 @@ export async function createVersion(data: {
       },
     });
 
+    if (data.issueIds && data.issueIds.length > 0) {
+      await prisma.issue.updateMany({
+        where: {
+          id: { in: data.issueIds },
+          projectId: data.projectId,
+        },
+        data: {
+          versionId: version.id,
+        },
+      });
+    }
+
     try {
       revalidatePath(`/projects/${project.key}/releases`);
+      revalidatePath(`/projects/${project.key}/board`);
+      revalidatePath(`/projects/${project.key}/backlog`);
+      revalidatePath(`/projects/${project.key}/issues`);
     } catch {}
 
     triggerWebhooks("version:created", version, data.projectId, {
       actor: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
     });
 
-    return { success: true as const, version };
+    const categoryByStatus = await getStatusCategoryMap(data.projectId);
+    const versionWithIssues = await prisma.version.findUnique({
+      where: { id: version.id },
+      include: {
+        issues: {
+          select: {
+            id: true,
+            status: true,
+            storyPoints: true,
+          },
+        },
+      },
+    });
+
+    const formatted = versionWithIssues
+      ? computeVersionStats(versionWithIssues, categoryByStatus)
+      : version;
+
+    return { success: true as const, version: formatted };
   } catch (error) {
     return toActionError(error, "Failed to create version");
   }
@@ -149,10 +148,12 @@ export async function updateVersion(
     startDate?: string | Date | null;
     releaseDate?: string | Date | null;
     status?: VersionStatus;
+    issueIds?: string[];
   }
 ) {
   try {
-    const { user } = await requireProjectPermission(await projectIdForVersion(id), "MANAGE_VERSIONS");
+    const projectId = await projectIdForVersion(id);
+    const { user } = await requireProjectPermission(projectId, "MANAGE_VERSIONS");
 
     const existing = await prisma.version.findUnique({
       where: { id },
@@ -175,17 +176,236 @@ export async function updateVersion(
       },
     });
 
+    if (data.issueIds !== undefined) {
+      // Unassign issues that were previously in this version but not in new list
+      await prisma.issue.updateMany({
+        where: {
+          versionId: id,
+          id: { notIn: data.issueIds },
+        },
+        data: {
+          versionId: null,
+        },
+      });
+
+      // Assign newly selected issues
+      if (data.issueIds.length > 0) {
+        await prisma.issue.updateMany({
+          where: {
+            id: { in: data.issueIds },
+            projectId: existing.projectId,
+          },
+          data: {
+            versionId: id,
+          },
+        });
+      }
+    }
+
     try {
       revalidatePath(`/projects/${existing.project.key}/releases`);
+      revalidatePath(`/projects/${existing.project.key}/board`);
+      revalidatePath(`/projects/${existing.project.key}/backlog`);
+      revalidatePath(`/projects/${existing.project.key}/issues`);
     } catch {}
 
     triggerWebhooks("version:updated", updated, existing.projectId, {
       actor: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
     });
 
-    return { success: true as const, version: updated };
+    const categoryByStatus = await getStatusCategoryMap(existing.projectId);
+    const versionWithIssues = await prisma.version.findUnique({
+      where: { id: updated.id },
+      include: {
+        issues: {
+          select: {
+            id: true,
+            status: true,
+            storyPoints: true,
+          },
+        },
+      },
+    });
+
+    const formatted = versionWithIssues
+      ? computeVersionStats(versionWithIssues, categoryByStatus)
+      : updated;
+
+    return { success: true as const, version: formatted };
   } catch (error) {
     return toActionError(error, "Failed to update version");
+  }
+}
+
+export async function getReleaseEligibleIssues(projectId: string, currentVersionId?: string) {
+  try {
+    await requireProjectAccess(projectId);
+
+    const [issues, sprints, categoryByStatus] = await Promise.all([
+      prisma.issue.findMany({
+        where: { projectId },
+        select: {
+          id: true,
+          key: true,
+          title: true,
+          status: true,
+          type: true,
+          storyPoints: true,
+          versionId: true,
+          version: { select: { id: true, name: true, status: true } },
+          sprintId: true,
+          sprint: { select: { id: true, name: true, status: true } },
+        },
+        orderBy: [{ key: "asc" }],
+      }),
+      prisma.sprint.findMany({
+        where: { projectId },
+        select: { id: true, name: true, status: true },
+        orderBy: [{ createdAt: "desc" }],
+      }),
+      getStatusCategoryMap(projectId),
+    ]);
+
+    return {
+      issues: issues.map((i) => ({
+        ...i,
+        category: categoryByStatus.get(i.status) || "TODO",
+        isAssignedToCurrent: currentVersionId ? i.versionId === currentVersionId : false,
+      })),
+      sprints,
+    };
+  } catch (error) {
+    console.error("Failed to fetch release eligible issues:", error);
+    return { issues: [], sprints: [] };
+  }
+}
+
+export async function addIssuesToVersion(versionId: string, issueIds: string[]) {
+  try {
+    const projectId = await projectIdForVersion(versionId);
+    await requireProjectPermission(projectId, "MANAGE_VERSIONS");
+
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { key: true },
+    });
+    if (!project) throw new Error("Project not found");
+
+    if (issueIds.length > 0) {
+      await prisma.issue.updateMany({
+        where: {
+          id: { in: issueIds },
+          projectId,
+        },
+        data: {
+          versionId,
+        },
+      });
+    }
+
+    try {
+      revalidatePath(`/projects/${project.key}/releases`);
+      revalidatePath(`/projects/${project.key}/board`);
+      revalidatePath(`/projects/${project.key}/backlog`);
+      revalidatePath(`/projects/${project.key}/issues`);
+    } catch {}
+
+    const categoryByStatus = await getStatusCategoryMap(projectId);
+    const updatedVersion = await prisma.version.findUnique({
+      where: { id: versionId },
+      include: {
+        issues: {
+          select: {
+            id: true,
+            status: true,
+            storyPoints: true,
+          },
+        },
+      },
+    });
+
+    return {
+      success: true as const,
+      version: updatedVersion ? computeVersionStats(updatedVersion, categoryByStatus) : null,
+    };
+  } catch (error) {
+    return toActionError(error, "Failed to add issues to version");
+  }
+}
+
+export async function removeIssueFromVersion(issueId: string) {
+  try {
+    const issue = await prisma.issue.findUnique({
+      where: { id: issueId },
+      include: { project: true },
+    });
+    if (!issue) throw new Error("Issue not found");
+
+    await requireProjectPermission(issue.projectId, "MANAGE_VERSIONS");
+
+    const previousVersionId = issue.versionId;
+
+    await prisma.issue.update({
+      where: { id: issueId },
+      data: { versionId: null },
+    });
+
+    try {
+      revalidatePath(`/projects/${issue.project.key}/releases`);
+      revalidatePath(`/projects/${issue.project.key}/board`);
+      revalidatePath(`/projects/${issue.project.key}/backlog`);
+      revalidatePath(`/projects/${issue.project.key}/issues`);
+    } catch {}
+
+    let updatedVersion = null;
+    if (previousVersionId) {
+      const categoryByStatus = await getStatusCategoryMap(issue.projectId);
+      const v = await prisma.version.findUnique({
+        where: { id: previousVersionId },
+        include: {
+          issues: {
+            select: {
+              id: true,
+              status: true,
+              storyPoints: true,
+            },
+          },
+        },
+      });
+      if (v) {
+        updatedVersion = computeVersionStats(v, categoryByStatus);
+      }
+    }
+
+    return { success: true as const, version: updatedVersion };
+  } catch (error) {
+    return toActionError(error, "Failed to remove issue from version");
+  }
+}
+
+export async function getVersionIssues(versionId: string) {
+  try {
+    const projectId = await projectIdForVersion(versionId);
+    await requireProjectAccess(projectId);
+
+    const issues = await prisma.issue.findMany({
+      where: { versionId },
+      include: {
+        assignee: { select: DISPLAY_USER_SELECT },
+        reporter: { select: DISPLAY_USER_SELECT },
+      },
+      orderBy: [{ key: "asc" }],
+    });
+
+    const categoryByStatus = await getStatusCategoryMap(projectId);
+
+    return issues.map((i) => ({
+      ...i,
+      category: categoryByStatus.get(i.status) || "TODO",
+    }));
+  } catch (error) {
+    console.error("Failed to fetch version issues:", error);
+    return [];
   }
 }
 

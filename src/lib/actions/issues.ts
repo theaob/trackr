@@ -1445,7 +1445,12 @@ export interface BulkActionResult {
  */
 export async function bulkUpdateIssues(
   issueIds: string[],
-  changes: { status?: IssueStatus; assigneeId?: string | null; priority?: PriorityLevel }
+  changes: {
+    status?: IssueStatus;
+    assigneeId?: string | null;
+    priority?: PriorityLevel;
+    versionId?: string | null;
+  }
 ): Promise<BulkActionResult | { success: false; error: string }> {
   const ids = Array.from(new Set(issueIds));
   if (ids.length === 0) return { success: true, succeeded: 0, failed: [] };
