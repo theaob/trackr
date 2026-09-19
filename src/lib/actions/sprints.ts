@@ -11,6 +11,7 @@ import {
   toActionError,
 } from "@/lib/auth/guards";
 import { getDoneStatusNames, getInitialStatusName, getPrimaryBacklogStatusName } from "@/lib/workflow";
+import { planColumnOrder } from "@/lib/boardOrder";
 
 
 /** Sprint issues per sprint, bounded so a large backlog cannot be loaded whole. */
@@ -205,7 +206,12 @@ export async function completeSprint(sprintId: string, moveToSprintId?: string |
 }
 
 
-export async function moveIssueToSprint(issueId: string, sprintId: string | null) {
+export async function moveIssueToSprint(
+  issueId: string,
+  sprintId: string | null,
+  newOrder?: number,
+  orderedIssueIds?: string[]
+) {
   try {
     const issue = await prisma.issue.findUnique({
       where: { id: issueId },
@@ -239,26 +245,77 @@ export async function moveIssueToSprint(issueId: string, sprintId: string | null
         : issue.status
       : backlogStatusName;
 
-    await prisma.issue.update({
-      where: { id: issueId },
-      data: {
-        sprintId,
-        status: newStatus,
-      },
-    });
+    const statusChanged = issue.status !== newStatus;
+    const sprintChanged = issue.sprintId !== sprintId;
+
+    if (orderedIssueIds && orderedIssueIds.length > 0 && newOrder !== undefined) {
+      // Validate sibling IDs belong to the same project
+      const siblingIds = orderedIssueIds
+        .filter((id) => id !== issueId)
+        .slice(0, 500);
+
+      const validSiblingIds = siblingIds.length
+        ? (
+            await prisma.issue.findMany({
+              where: { id: { in: siblingIds }, projectId: issue.projectId },
+              select: { id: true },
+            })
+          ).map((row) => row.id)
+        : [];
+
+      const { resolvedOrder, siblingWrites } = planColumnOrder(
+        issueId,
+        orderedIssueIds,
+        validSiblingIds,
+        newOrder
+      );
+
+      await prisma.$transaction([
+        prisma.issue.update({
+          where: { id: issueId },
+          data: {
+            sprintId,
+            status: newStatus,
+            order: resolvedOrder,
+          },
+        }),
+        ...siblingWrites.map(({ id, order }) =>
+          prisma.issue.update({ where: { id }, data: { order } })
+        ),
+      ]);
+    } else {
+      await prisma.issue.update({
+        where: { id: issueId },
+        data: {
+          sprintId,
+          status: newStatus,
+        },
+      });
+    }
 
     revalidateProjectRoutes(issue.project.key);
 
-    triggerWebhooks(
-      "issue:updated",
-      { issueId, sprintId, status: newStatus },
-      issue.projectId
-    );
+    if (statusChanged || sprintChanged) {
+      triggerWebhooks(
+        "issue:updated",
+        { issueId, sprintId, status: newStatus },
+        issue.projectId
+      );
+    }
 
     return { success: true as const };
   } catch (error) {
     return toActionError(error, "Failed to move issue to sprint");
   }
+}
+
+export async function reorderBacklogIssue(
+  issueId: string,
+  targetSprintId: string | null,
+  newOrder: number,
+  orderedIssueIds: string[]
+) {
+  return moveIssueToSprint(issueId, targetSprintId, newOrder, orderedIssueIds);
 }
 
 export async function updateSprint(

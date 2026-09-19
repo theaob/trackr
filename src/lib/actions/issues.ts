@@ -349,7 +349,7 @@ export async function getBacklogIssues(projectId: string) {
           ...LABELS_INCLUDE,
         },
         orderBy: [{ order: "asc" }, { createdAt: "asc" }],
-        take: 100,
+        take: 500,
       }),
     ]);
 

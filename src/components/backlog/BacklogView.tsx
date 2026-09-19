@@ -10,7 +10,7 @@ import IssueDetailModal from "@/components/issues/IssueDetailModal";
 import CreateIssueModal from "@/components/issues/CreateIssueModal";
 import BacklogContextMenu from "@/components/backlog/BacklogContextMenu";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
-import { createSprint, startSprint, completeSprint, moveIssueToSprint, renameSprint, deleteSprint } from "@/lib/actions/sprints";
+import { createSprint, startSprint, completeSprint, moveIssueToSprint, reorderBacklogIssue, renameSprint, deleteSprint } from "@/lib/actions/sprints";
 import { createIssue, getIssueByKeyOrId } from "@/lib/actions/issues";
 import { useCurrentUser } from "@/context/UserContext";
 import { useSearch } from "@/context/SearchContext";
@@ -356,6 +356,16 @@ export default function BacklogView({
   // Kanban has no sprint planning: just the flat Backlog list below.
   const isKanban = project.boardType === "KANBAN";
 
+  // Check if filtering is active (reordering is paused when search or epic filters are on)
+  const isFiltered = Boolean(searchQuery.trim() || selectedEpicId !== "ALL");
+
+  const sortIssuesByOrder = (a: Issue, b: Issue) => {
+    const orderA = a.order ?? 0;
+    const orderB = b.order ?? 0;
+    if (orderA !== orderB) return orderA - orderB;
+    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+  };
+
   // The project's own backlog/initial status names, not a fixed literal.
   const backlogStatusNames = useMemo(
     () => statuses.filter((s) => s.isBacklog).map((s) => s.name),
@@ -374,12 +384,17 @@ export default function BacklogView({
   const activeSprints = useMemo(() => sprints.filter((s) => s.status === "ACTIVE"), [sprints]);
   const futureSprints = useMemo(() => sprints.filter((s) => s.status === "FUTURE"), [sprints]);
   const backlogIssues = useMemo(
-    () => filteredIssues.filter((i) => i.type !== "EPIC" && !i.sprintId && backlogStatusNames.includes(i.status)),
+    () =>
+      filteredIssues
+        .filter((i) => i.type !== "EPIC" && !i.sprintId && backlogStatusNames.includes(i.status))
+        .sort(sortIssuesByOrder),
     [filteredIssues, backlogStatusNames]
   );
 
   const getSprintIssues = (sprintId: string) => {
-    return filteredIssues.filter((i) => i.type !== "EPIC" && i.sprintId === sprintId);
+    return filteredIssues
+      .filter((i) => i.type !== "EPIC" && i.sprintId === sprintId)
+      .sort(sortIssuesByOrder);
   };
 
   // Create Sprint Action
@@ -469,32 +484,107 @@ export default function BacklogView({
       }
     }
 
-    // Optimistic UI update
+    const targetIssue = issues.find((i) => i.id === issueId);
+    if (!targetIssue) return;
+
+    const newStatus = targetSprintId
+      ? targetIssue.status === primaryBacklogStatusName
+        ? initialStatusName
+        : targetIssue.status
+      : primaryBacklogStatusName;
+
+    const destContainerIssues = targetSprintId
+      ? [...getSprintIssues(targetSprintId)]
+      : [...backlogIssues];
+
+    const destFiltered = destContainerIssues.filter((i) => i.id !== issueId);
+    const updatedIssue: Issue = {
+      ...targetIssue,
+      sprintId: targetSprintId,
+      status: newStatus,
+      order: destFiltered.length,
+    };
+    destFiltered.push(updatedIssue);
+
+    const destOrderMap = new Map<string, number>();
+    destFiltered.forEach((item, idx) => {
+      destOrderMap.set(item.id, idx);
+    });
+
+    const previousIssues = issues;
     setIssues((prev) =>
-      prev.map((i) =>
-        i.id === issueId
-          ? {
-              ...i,
-              sprintId: targetSprintId,
-              status: targetSprintId
-                ? i.status === primaryBacklogStatusName
-                  ? initialStatusName
-                  : i.status
-                : primaryBacklogStatusName,
-            }
-          : i
-      )
+      prev.map((i) => {
+        if (i.id === issueId) {
+          return updatedIssue;
+        }
+        if (destOrderMap.has(i.id)) {
+          return { ...i, order: destOrderMap.get(i.id)! };
+        }
+        return i;
+      })
     );
 
-    const res = await moveIssueToSprint(issueId, targetSprintId);
+    const res = await reorderBacklogIssue(
+      issueId,
+      targetSprintId,
+      destFiltered.length - 1,
+      destFiltered.map((i) => i.id)
+    );
     if (!res.success) {
-      setIssues(initialIssues);
+      setIssues(previousIssues);
+      if (res.error) alert(res.error);
+    }
+  };
+
+  // Move Issue to Top or Bottom of Current Container
+  const handleReorderEdge = async (issueId: string, position: "top" | "bottom") => {
+    if (!permissions.canMoveIssue || isFiltered) return;
+    const targetIssue = issues.find((i) => i.id === issueId);
+    if (!targetIssue) return;
+
+    const isBacklogItem = !targetIssue.sprintId;
+    const containerIssues = isBacklogItem
+      ? [...backlogIssues]
+      : [...getSprintIssues(targetIssue.sprintId!)];
+
+    if (containerIssues.length <= 1) return;
+
+    const remaining = containerIssues.filter((i) => i.id !== issueId);
+    const reordered =
+      position === "top" ? [targetIssue, ...remaining] : [...remaining, targetIssue];
+
+    const orderMap = new Map<string, number>();
+    reordered.forEach((item, idx) => {
+      orderMap.set(item.id, idx);
+    });
+
+    const previousIssues = issues;
+    setIssues((prev) =>
+      prev.map((i) => {
+        if (orderMap.has(i.id)) {
+          return { ...i, order: orderMap.get(i.id)! };
+        }
+        return i;
+      })
+    );
+
+    const targetIndex = position === "top" ? 0 : reordered.length - 1;
+    const res = await reorderBacklogIssue(
+      issueId,
+      targetIssue.sprintId,
+      targetIndex,
+      reordered.map((i) => i.id)
+    );
+
+    if (!res.success) {
+      setIssues(previousIssues);
+      if (res.error) alert(res.error);
     }
   };
 
   // Drag and Drop Handler
   const handleDragEnd = async (result: DropResult) => {
-    if (!permissions.canMoveIssue) {
+    if (!permissions.canMoveIssue || isFiltered) {
       return;
     }
 
@@ -511,10 +601,12 @@ export default function BacklogView({
     const targetSprintId =
       destination.droppableId === "backlog" ? null : destination.droppableId;
 
+    const draggedIssue = issues.find((i) => i.id === draggableId);
+    if (!draggedIssue) return;
+
     // Prevent dragging epics into sprints or dragging into finished sprints
     if (targetSprintId) {
-      const draggedIssue = issues.find((i) => i.id === draggableId);
-      if (draggedIssue?.type === "EPIC") {
+      if (draggedIssue.type === "EPIC") {
         return;
       }
       const targetSprint = sprints.find((s) => s.id === targetSprintId);
@@ -523,26 +615,113 @@ export default function BacklogView({
       }
     }
 
-    // Optimistic UI update
+    const previousIssues = issues;
+
+    // Case 1: Reorder within the same container
+    if (source.droppableId === destination.droppableId) {
+      const containerIssues =
+        destination.droppableId === "backlog"
+          ? [...backlogIssues]
+          : [...getSprintIssues(destination.droppableId)];
+
+      const reordered = Array.from(containerIssues);
+      const [moved] = reordered.splice(source.index, 1);
+      if (!moved) return;
+      reordered.splice(destination.index, 0, moved);
+
+      const orderMap = new Map<string, number>();
+      reordered.forEach((item, idx) => {
+        orderMap.set(item.id, idx);
+      });
+
+      setIssues((prev) =>
+        prev.map((i) => {
+          if (orderMap.has(i.id)) {
+            return { ...i, order: orderMap.get(i.id)! };
+          }
+          return i;
+        })
+      );
+
+      const res = await reorderBacklogIssue(
+        draggableId,
+        targetSprintId,
+        destination.index,
+        reordered.map((i) => i.id)
+      );
+
+      if (!res.success) {
+        setIssues(previousIssues);
+        if (res.error) alert(res.error);
+      }
+      return;
+    }
+
+    // Case 2: Moving across containers (Backlog <-> Sprint, or Sprint A <-> Sprint B)
+    const newStatus = targetSprintId
+      ? draggedIssue.status === primaryBacklogStatusName
+        ? initialStatusName
+        : draggedIssue.status
+      : primaryBacklogStatusName;
+
+    const destContainerIssues =
+      destination.droppableId === "backlog"
+        ? [...backlogIssues]
+        : [...getSprintIssues(destination.droppableId)];
+
+    const destFiltered = destContainerIssues.filter((i) => i.id !== draggableId);
+    const updatedDraggedIssue: Issue = {
+      ...draggedIssue,
+      sprintId: targetSprintId,
+      status: newStatus,
+    };
+
+    destFiltered.splice(destination.index, 0, updatedDraggedIssue);
+
+    const destOrderMap = new Map<string, number>();
+    destFiltered.forEach((item, idx) => {
+      destOrderMap.set(item.id, idx);
+    });
+
+    const sourceContainerIssues =
+      source.droppableId === "backlog"
+        ? [...backlogIssues]
+        : [...getSprintIssues(source.droppableId)];
+    const sourceFiltered = sourceContainerIssues.filter((i) => i.id !== draggableId);
+    const sourceOrderMap = new Map<string, number>();
+    sourceFiltered.forEach((item, idx) => {
+      sourceOrderMap.set(item.id, idx);
+    });
+
     setIssues((prev) =>
       prev.map((i) => {
         if (i.id === draggableId) {
-          const newStatus = targetSprintId
-            ? i.status === primaryBacklogStatusName
-              ? initialStatusName
-              : i.status
-            : primaryBacklogStatusName;
           return {
-            ...i,
-            sprintId: targetSprintId,
-            status: newStatus,
+            ...updatedDraggedIssue,
+            order: destination.index,
           };
+        }
+        if (destOrderMap.has(i.id)) {
+          return { ...i, order: destOrderMap.get(i.id)! };
+        }
+        if (sourceOrderMap.has(i.id)) {
+          return { ...i, order: sourceOrderMap.get(i.id)! };
         }
         return i;
       })
     );
 
-    await moveIssueToSprint(draggableId, targetSprintId);
+    const res = await reorderBacklogIssue(
+      draggableId,
+      targetSprintId,
+      destination.index,
+      destFiltered.map((i) => i.id)
+    );
+
+    if (!res.success) {
+      setIssues(previousIssues);
+      if (res.error) alert(res.error);
+    }
   };
 
   // Inline Quick Create Issue
@@ -743,6 +922,15 @@ export default function BacklogView({
                       ({sprintIssues.length} issues)
                     </span>
 
+                    {isFiltered && (
+                      <span
+                        className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200"
+                        title="Manual reordering is disabled while search or filters are active"
+                      >
+                        Filtered (Reorder paused)
+                      </span>
+                    )}
+
                     {sprint.startDate && sprint.endDate ? (
                       <button
                         type="button"
@@ -890,7 +1078,7 @@ export default function BacklogView({
                             key={issue.id}
                             draggableId={issue.id}
                             index={index}
-                            isDragDisabled={!permissions.canMoveIssue}
+                            isDragDisabled={!permissions.canMoveIssue || isFiltered}
                           >
                             {(dragProvided, dragSnapshot) => (
                               <div
@@ -909,12 +1097,18 @@ export default function BacklogView({
                                       <div
                                         {...dragProvided.dragHandleProps}
                                         className={`p-0.5 text-jira-gray-400 shrink-0 ${
-                                          permissions.canMoveIssue
+                                          permissions.canMoveIssue && !isFiltered
                                             ? "hover:text-jira-gray-700 cursor-grab active:cursor-grabbing"
                                             : "cursor-default opacity-40"
                                         }`}
                                         onClick={(e) => e.stopPropagation()}
-                                        title={permissions.canMoveIssue ? "Drag to reorder" : undefined}
+                                        title={
+                                          !permissions.canMoveIssue
+                                            ? undefined
+                                            : isFiltered
+                                            ? "Reordering is disabled while search or filters are active"
+                                            : "Drag to reorder"
+                                        }
                                       >
                                         <GripVertical className="w-3.5 h-3.5" />
                                       </div>
@@ -935,6 +1129,17 @@ export default function BacklogView({
                                       ) : (
                                         <div className="w-5 h-5 rounded-full border border-dashed border-jira-gray-300" />
                                       )}
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleContextMenu(e, issue);
+                                        }}
+                                        className="p-1 text-jira-gray-400 hover:text-jira-gray-700 hover:bg-jira-gray-100 rounded transition-colors"
+                                        title="More actions"
+                                      >
+                                        <MoreHorizontal className="w-3.5 h-3.5" />
+                                      </button>
                                     </div>
                                   </div>
 
@@ -970,15 +1175,17 @@ export default function BacklogView({
                                     <div
                                       {...dragProvided.dragHandleProps}
                                       className={`p-0.5 text-jira-gray-400 shrink-0 ${
-                                        permissions.canMoveIssue
+                                        permissions.canMoveIssue && !isFiltered
                                           ? "hover:text-jira-gray-700 cursor-grab active:cursor-grabbing"
                                           : "cursor-default opacity-40"
                                       }`}
                                       onClick={(e) => e.stopPropagation()}
                                       title={
-                                        permissions.canMoveIssue
-                                          ? "Drag to reorder or move between sprints/backlog"
-                                          : undefined
+                                        !permissions.canMoveIssue
+                                          ? undefined
+                                          : isFiltered
+                                          ? "Reordering is disabled while search or filters are active"
+                                          : "Drag to reorder or move between sprints/backlog"
                                       }
                                     >
                                       <GripVertical className="w-3.5 h-3.5" />
@@ -1077,6 +1284,19 @@ export default function BacklogView({
                                         <div className="w-6 h-6 rounded-full border border-dashed border-jira-gray-300" />
                                       )}
                                     </div>
+
+                                    {/* Row actions menu trigger */}
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleContextMenu(e, issue);
+                                      }}
+                                      className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 hover:bg-jira-gray-200 rounded text-jira-gray-400 hover:text-jira-gray-700 transition-opacity shrink-0"
+                                      title="More actions"
+                                    >
+                                      <MoreHorizontal className="w-4 h-4" />
+                                    </button>
                                   </div>
                                 </div>
                               </div>
@@ -1158,6 +1378,14 @@ export default function BacklogView({
                 <span className="text-xs text-jira-gray-500 font-medium">
                   ({backlogIssues.length} issues)
                 </span>
+                {isFiltered && (
+                  <span
+                    className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200"
+                    title="Manual reordering is disabled while search or filters are active"
+                  >
+                    Filtered (Reorder paused)
+                  </span>
+                )}
               </div>
             </div>
 
@@ -1175,7 +1403,7 @@ export default function BacklogView({
                       key={issue.id}
                       draggableId={issue.id}
                       index={index}
-                      isDragDisabled={!permissions.canMoveIssue}
+                      isDragDisabled={!permissions.canMoveIssue || isFiltered}
                     >
                       {(dragProvided, dragSnapshot) => (
                         <div
@@ -1194,12 +1422,18 @@ export default function BacklogView({
                                 <div
                                   {...dragProvided.dragHandleProps}
                                   className={`p-0.5 text-jira-gray-400 shrink-0 ${
-                                    permissions.canMoveIssue
+                                    permissions.canMoveIssue && !isFiltered
                                       ? "hover:text-jira-gray-700 cursor-grab active:cursor-grabbing"
                                       : "cursor-default opacity-40"
                                   }`}
                                   onClick={(e) => e.stopPropagation()}
-                                  title={permissions.canMoveIssue ? "Drag to reorder" : undefined}
+                                  title={
+                                    !permissions.canMoveIssue
+                                      ? undefined
+                                      : isFiltered
+                                      ? "Reordering is disabled while search or filters are active"
+                                      : "Drag to reorder"
+                                  }
                                 >
                                   <GripVertical className="w-3.5 h-3.5" />
                                 </div>
@@ -1220,6 +1454,17 @@ export default function BacklogView({
                                 ) : (
                                   <div className="w-5 h-5 rounded-full border border-dashed border-jira-gray-300" />
                                 )}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleContextMenu(e, issue);
+                                  }}
+                                  className="p-1 text-jira-gray-400 hover:text-jira-gray-700 hover:bg-jira-gray-100 rounded transition-colors"
+                                  title="More actions"
+                                >
+                                  <MoreHorizontal className="w-3.5 h-3.5" />
+                                </button>
                               </div>
                             </div>
 
@@ -1255,15 +1500,17 @@ export default function BacklogView({
                               <div
                                 {...dragProvided.dragHandleProps}
                                 className={`p-0.5 text-jira-gray-400 shrink-0 ${
-                                  permissions.canMoveIssue
+                                  permissions.canMoveIssue && !isFiltered
                                     ? "hover:text-jira-gray-700 cursor-grab active:cursor-grabbing"
                                     : "cursor-default opacity-40"
                                 }`}
                                 onClick={(e) => e.stopPropagation()}
                                 title={
-                                  permissions.canMoveIssue
-                                    ? "Drag to sprint or reorder"
-                                    : undefined
+                                  !permissions.canMoveIssue
+                                    ? undefined
+                                    : isFiltered
+                                    ? "Reordering is disabled while search or filters are active"
+                                    : "Drag to sprint or reorder"
                                 }
                               >
                                 <GripVertical className="w-3.5 h-3.5" />
@@ -1360,6 +1607,19 @@ export default function BacklogView({
                                   <div className="w-6 h-6 rounded-full border border-dashed border-jira-gray-300" />
                                 )}
                               </div>
+
+                              {/* Row actions menu trigger */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleContextMenu(e, issue);
+                                }}
+                                className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 hover:bg-jira-gray-200 rounded text-jira-gray-400 hover:text-jira-gray-700 transition-opacity shrink-0"
+                                title="More actions"
+                              >
+                                <MoreHorizontal className="w-4 h-4" />
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -1721,6 +1981,7 @@ export default function BacklogView({
           onClose={() => setContextMenu(null)}
           onMoveToSprint={handleMoveIssue}
           onOpenIssue={(issue) => setActiveIssue(issue)}
+          onReorder={isFiltered ? undefined : handleReorderEdge}
         />
       )}
 

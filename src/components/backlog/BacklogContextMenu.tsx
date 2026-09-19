@@ -11,6 +11,7 @@ import {
   Copy,
   Check,
   ArrowDownToLine,
+  ArrowUpToLine,
   ArrowRight,
   Link2,
 } from "lucide-react";
@@ -24,6 +25,7 @@ interface BacklogContextMenuProps {
   onClose: () => void;
   onMoveToSprint: (issueId: string, sprintId: string | null) => void;
   onOpenIssue: (issue: Issue) => void;
+  onReorder?: (issueId: string, position: "top" | "bottom") => void;
 }
 
 export default function BacklogContextMenu({
@@ -35,6 +37,7 @@ export default function BacklogContextMenu({
   onClose,
   onMoveToSprint,
   onOpenIssue,
+  onReorder,
 }: BacklogContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [copiedKey, setCopiedKey] = useState(false);
@@ -142,6 +145,35 @@ export default function BacklogContextMenu({
           {issue.title}
         </p>
       </div>
+
+      {/* Reorder Group */}
+      {canMove && onReorder && (
+        <div className="py-1">
+          <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-jira-gray-400">
+            Reorder
+          </div>
+          <button
+            onClick={() => {
+              onReorder(issue.id, "top");
+              onClose();
+            }}
+            className="w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-jira-blue-light/50 hover:text-jira-blue transition-colors"
+          >
+            <ArrowUpToLine className="w-3.5 h-3.5 text-jira-gray-500 shrink-0" />
+            <span>{isInBacklog ? "Top of Backlog" : "Top of Sprint"}</span>
+          </button>
+          <button
+            onClick={() => {
+              onReorder(issue.id, "bottom");
+              onClose();
+            }}
+            className="w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-jira-blue-light/50 hover:text-jira-blue transition-colors"
+          >
+            <ArrowDownToLine className="w-3.5 h-3.5 text-jira-gray-500 shrink-0" />
+            <span>{isInBacklog ? "Bottom of Backlog" : "Bottom of Sprint"}</span>
+          </button>
+        </div>
+      )}
 
       {/* Sprints Group */}
       {issue.type === "EPIC" ? (
