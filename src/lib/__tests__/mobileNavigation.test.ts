@@ -381,7 +381,14 @@ describe("Mobile Viewport & Navigation", () => {
   it("hides administrative Create Project and Project Settings on mobile in ProjectsDirectoryView", () => {
     const html = renderToStaticMarkup(
       React.createElement(ProjectsDirectoryView, {
-        initialProjects: [mockProject],
+        initialProjects: [
+          {
+            ...mockProject,
+            lead: null,
+            totalIssues: 5,
+            openIssues: 2,
+          },
+        ],
         users: [],
       })
     );
