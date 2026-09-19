@@ -234,3 +234,64 @@ export async function setWorkflowTransition(
     return toActionError(error, "Failed to update transition");
   }
 }
+
+export async function allowAllIncomingTransitions(projectId: string, toId: string) {
+  try {
+    await requireProjectPermission(projectId, "PROJECT_ADMIN");
+
+    const statuses = await prisma.workflowStatus.findMany({
+      where: { projectId },
+      select: { id: true },
+    });
+    const targetStatus = statuses.find((s) => s.id === toId);
+    if (!targetStatus) {
+      return { success: false as const, error: "Target status not found." };
+    }
+
+    const otherStatusIds = statuses.filter((s) => s.id !== toId).map((s) => s.id);
+    if (otherStatusIds.length === 0) {
+      return { success: true as const };
+    }
+
+    await prisma.$transaction(
+      otherStatusIds.map((fromId) =>
+        prisma.workflowTransition.upsert({
+          where: { fromId_toId: { fromId, toId } },
+          create: { projectId, fromId, toId },
+          update: {},
+        })
+      )
+    );
+
+    await revalidateProject(projectId);
+    return { success: true as const };
+  } catch (error) {
+    return toActionError(error, "Failed to allow incoming transitions");
+  }
+}
+
+export async function clearStatusTransitions(
+  projectId: string,
+  statusId: string,
+  direction: "incoming" | "outgoing" | "both" = "both"
+) {
+  try {
+    await requireProjectPermission(projectId, "PROJECT_ADMIN");
+
+    if (direction === "incoming" || direction === "both") {
+      await prisma.workflowTransition.deleteMany({
+        where: { projectId, toId: statusId },
+      });
+    }
+    if (direction === "outgoing" || direction === "both") {
+      await prisma.workflowTransition.deleteMany({
+        where: { projectId, fromId: statusId },
+      });
+    }
+
+    await revalidateProject(projectId);
+    return { success: true as const };
+  } catch (error) {
+    return toActionError(error, "Failed to clear transitions");
+  }
+}

@@ -8,9 +8,21 @@ import {
   reorderWorkflowStatuses,
   setWorkflowTransition,
   updateWorkflowStatus,
+  allowAllIncomingTransitions,
+  clearStatusTransitions,
 } from "@/lib/actions/workflows";
 import { prettifyStatusName } from "@/lib/workflowDisplay";
-import { ArrowDown, ArrowUp, GitBranch, Loader2, Plus, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  GitBranch,
+  Loader2,
+  Plus,
+  Trash2,
+  Table as TableIcon,
+  Network,
+} from "lucide-react";
+import WorkflowGraphView from "./WorkflowGraphView";
 
 interface WorkflowSettingsTabProps {
   project: Project;
@@ -35,6 +47,7 @@ export default function WorkflowSettingsTab({
     [...initialStatuses].sort((a, b) => a.order - b.order)
   );
   const [transitions, setTransitions] = useState<WorkflowTransition[]>(initialTransitions);
+  const [transitionViewMode, setTransitionViewMode] = useState<"graph" | "matrix">("graph");
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -132,6 +145,37 @@ export default function WorkflowSettingsTab({
           : [...prev, { id: key, projectId: project.id, fromId, toId, createdAt: new Date().toISOString() }]
       );
       if (res.error) setError(res.error);
+    }
+  };
+
+  const handleAllowAllIncoming = async (toId: string) => {
+    const otherStatusIds = statuses.filter((s) => s.id !== toId).map((s) => s.id);
+    const newTransitions = otherStatusIds.map((fromId) => ({
+      id: `${fromId}:${toId}`,
+      projectId: project.id,
+      fromId,
+      toId,
+      createdAt: new Date().toISOString(),
+    }));
+
+    // Optimistic update
+    setTransitions((prev) => {
+      const filtered = prev.filter((t) => t.toId !== toId);
+      return [...filtered, ...newTransitions];
+    });
+
+    const res = await allowAllIncomingTransitions(project.id, toId);
+    if (!res.success && res.error) {
+      setError(res.error);
+    }
+  };
+
+  const handleClearTransitions = async (statusId: string) => {
+    // Optimistic update
+    setTransitions((prev) => prev.filter((t) => t.fromId !== statusId && t.toId !== statusId));
+    const res = await clearStatusTransitions(project.id, statusId, "both");
+    if (!res.success && res.error) {
+      setError(res.error);
     }
   };
 
@@ -304,69 +348,112 @@ export default function WorkflowSettingsTab({
       </div>
 
       {/* Transitions */}
-      <div>
-        <h3 className="text-sm font-bold text-jira-navy flex items-center gap-1.5 mb-1">
-          <GitBranch className="w-3.5 h-3.5 text-jira-blue" />
-          Transitions
-        </h3>
-        <p className="text-[11px] text-jira-gray-500 mb-3">
-          Which status an issue can move to next, from wherever it is now. No box checked between
-          two statuses means that move is refused everywhere -- the board, the issue view, and the
-          API alike.
-        </p>
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-bold text-jira-navy flex items-center gap-1.5 mb-0.5">
+              <GitBranch className="w-3.5 h-3.5 text-jira-blue" />
+              Transitions
+            </h3>
+            <p className="text-[11px] text-jira-gray-500">
+              Configure allowed moves between statuses. An issue can only move between statuses connected by a transition arrow.
+            </p>
+          </div>
 
-        <div className="overflow-x-auto border border-jira-gray-200 rounded-lg">
-          <table className="text-[11px] border-collapse">
-            <thead>
-              <tr>
-                <th className="sticky left-0 bg-jira-gray-50 px-3 py-2 text-left font-bold text-jira-gray-600 border-b border-jira-gray-200">
-                  From \ To
-                </th>
-                {statuses.map((to) => (
-                  <th
-                    key={to.id}
-                    className="px-2 py-2 text-center font-bold text-jira-gray-600 border-b border-l border-jira-gray-200 whitespace-nowrap"
-                  >
-                    {prettifyStatusName(to.name)}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {statuses.map((from) => (
-                <tr key={from.id}>
-                  <td className="sticky left-0 bg-white px-3 py-2 font-semibold text-jira-navy border-b border-jira-gray-200 whitespace-nowrap">
-                    {prettifyStatusName(from.name)}
-                  </td>
-                  {statuses.map((to) => {
-                    const isSelf = from.id === to.id;
-                    const checked = transitionKeys.has(`${from.id}:${to.id}`);
-                    return (
-                      <td
-                        key={to.id}
-                        className="px-2 py-2 text-center border-b border-l border-jira-gray-200"
-                      >
-                        {isSelf ? (
-                          <span className="text-jira-gray-300">—</span>
-                        ) : (
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            disabled={!canManage}
-                            onChange={(e) =>
-                              handleToggleTransition(from.id, to.id, e.target.checked)
-                            }
-                            className="accent-jira-blue disabled:opacity-60"
-                          />
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {/* View Mode Switcher: Graph (Default) vs Matrix */}
+          <div className="flex items-center bg-jira-gray-100 p-0.5 rounded border border-jira-gray-300 text-xs shrink-0">
+            <button
+              type="button"
+              onClick={() => setTransitionViewMode("graph")}
+              className={`px-3 py-1 rounded font-semibold flex items-center gap-1.5 transition-colors ${
+                transitionViewMode === "graph"
+                  ? "bg-white text-jira-blue shadow-2xs"
+                  : "text-jira-gray-600 hover:text-jira-navy"
+              }`}
+            >
+              <Network className="w-3.5 h-3.5" />
+              <span>Graph View</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTransitionViewMode("matrix")}
+              className={`px-3 py-1 rounded font-semibold flex items-center gap-1.5 transition-colors ${
+                transitionViewMode === "matrix"
+                  ? "bg-white text-jira-blue shadow-2xs"
+                  : "text-jira-gray-600 hover:text-jira-navy"
+              }`}
+            >
+              <TableIcon className="w-3.5 h-3.5" />
+              <span>Matrix View</span>
+            </button>
+          </div>
         </div>
+
+        {transitionViewMode === "graph" ? (
+          <WorkflowGraphView
+            projectId={project.id}
+            statuses={statuses}
+            transitions={transitions}
+            canManage={canManage}
+            onToggleTransition={handleToggleTransition}
+            onAllowAllIncoming={handleAllowAllIncoming}
+            onClearTransitions={handleClearTransitions}
+            onAddStatusClick={() => setAddingStatus(true)}
+          />
+        ) : (
+          <div className="overflow-x-auto border border-jira-gray-200 rounded-lg">
+            <table className="text-[11px] border-collapse">
+              <thead>
+                <tr>
+                  <th className="sticky left-0 bg-jira-gray-50 px-3 py-2 text-left font-bold text-jira-gray-600 border-b border-jira-gray-200">
+                    From \ To
+                  </th>
+                  {statuses.map((to) => (
+                    <th
+                      key={to.id}
+                      className="px-2 py-2 text-center font-bold text-jira-gray-600 border-b border-l border-jira-gray-200 whitespace-nowrap"
+                    >
+                      {prettifyStatusName(to.name)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {statuses.map((from) => (
+                  <tr key={from.id}>
+                    <td className="sticky left-0 bg-white px-3 py-2 font-semibold text-jira-navy border-b border-jira-gray-200 whitespace-nowrap">
+                      {prettifyStatusName(from.name)}
+                    </td>
+                    {statuses.map((to) => {
+                      const isSelf = from.id === to.id;
+                      const checked = transitionKeys.has(`${from.id}:${to.id}`);
+                      return (
+                        <td
+                          key={to.id}
+                          className="px-2 py-2 text-center border-b border-l border-jira-gray-200"
+                        >
+                          {isSelf ? (
+                            <span className="text-jira-gray-300">—</span>
+                          ) : (
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              disabled={!canManage}
+                              onChange={(e) =>
+                                handleToggleTransition(from.id, to.id, e.target.checked)
+                              }
+                              className="accent-jira-blue disabled:opacity-60"
+                            />
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
