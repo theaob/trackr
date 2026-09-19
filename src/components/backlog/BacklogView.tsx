@@ -47,6 +47,7 @@ interface BacklogViewProps {
   statuses: WorkflowStatus[];
   searchQuery?: string;
   initialSelectedIssueKey?: string;
+  initialEpics?: Issue[];
 }
 
 export default function BacklogView({
@@ -57,6 +58,7 @@ export default function BacklogView({
   statuses,
   searchQuery: propSearchQuery,
   initialSelectedIssueKey,
+  initialEpics,
 }: BacklogViewProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -70,6 +72,10 @@ export default function BacklogView({
   const searchQuery = propSearchQuery ?? contextSearchQuery;
   const [issues, setIssues] = useState<Issue[]>(initialIssues);
   const [sprints, setSprints] = useState<Sprint[]>(initialSprints);
+  const [epics, setEpics] = useState<Issue[]>(() => {
+    if (initialEpics && initialEpics.length > 0) return initialEpics;
+    return initialIssues.filter((i) => i.type === "EPIC");
+  });
   const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
   const [selectedEpicId, setSelectedEpicId] = useState<string>("ALL");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -79,10 +85,20 @@ export default function BacklogView({
     issue: Issue;
   } | null>(null);
 
+  useEffect(() => {
+    if (initialEpics) {
+      setEpics(initialEpics);
+    }
+  }, [initialEpics]);
+
   const handleOpenEpic = (epicIdOrKey: string) => {
-    const found = issues.find(
-      (i) => i.id === epicIdOrKey || i.key.toUpperCase() === epicIdOrKey.toUpperCase()
-    );
+    const found =
+      epics.find(
+        (i) => i.id === epicIdOrKey || i.key.toUpperCase() === epicIdOrKey.toUpperCase()
+      ) ||
+      issues.find(
+        (i) => i.id === epicIdOrKey || i.key.toUpperCase() === epicIdOrKey.toUpperCase()
+      );
     if (found) {
       setActiveIssue(found);
     } else {
@@ -342,12 +358,12 @@ export default function BacklogView({
   const activeSprints = useMemo(() => sprints.filter((s) => s.status === "ACTIVE"), [sprints]);
   const futureSprints = useMemo(() => sprints.filter((s) => s.status === "FUTURE"), [sprints]);
   const backlogIssues = useMemo(
-    () => filteredIssues.filter((i) => !i.sprintId && backlogStatusNames.includes(i.status)),
+    () => filteredIssues.filter((i) => i.type !== "EPIC" && !i.sprintId && backlogStatusNames.includes(i.status)),
     [filteredIssues, backlogStatusNames]
   );
 
   const getSprintIssues = (sprintId: string) => {
-    return filteredIssues.filter((i) => i.sprintId === sprintId);
+    return filteredIssues.filter((i) => i.type !== "EPIC" && i.sprintId === sprintId);
   };
 
   // Create Sprint Action
@@ -425,8 +441,12 @@ export default function BacklogView({
 
   // Move Issue Sprint
   const handleMoveIssue = async (issueId: string, targetSprintId: string | null) => {
-    // Prevent moving items to finished sprints
+    // Prevent moving epics to sprints or moving items to finished sprints
     if (targetSprintId) {
+      const movedIssue = issues.find((i) => i.id === issueId);
+      if (movedIssue?.type === "EPIC") {
+        return;
+      }
       const targetSprint = sprints.find((s) => s.id === targetSprintId);
       if (targetSprint && targetSprint.status === "COMPLETED") {
         return;
@@ -475,8 +495,12 @@ export default function BacklogView({
     const targetSprintId =
       destination.droppableId === "backlog" ? null : destination.droppableId;
 
-    // Prevent dragging into finished sprints
+    // Prevent dragging epics into sprints or dragging into finished sprints
     if (targetSprintId) {
+      const draggedIssue = issues.find((i) => i.id === draggableId);
+      if (draggedIssue?.type === "EPIC") {
+        return;
+      }
       const targetSprint = sprints.find((s) => s.id === targetSprintId);
       if (targetSprint && targetSprint.status === "COMPLETED") {
         return;
@@ -532,9 +556,6 @@ export default function BacklogView({
       setInlineCreateTarget(null);
     }
   };
-
-  // Epics
-  const epics = useMemo(() => issues.filter((i) => i.type === "EPIC"), [issues]);
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-y-auto px-6 py-5 bg-white">
@@ -1410,16 +1431,23 @@ export default function BacklogView({
         <IssueDetailModal
           issue={activeIssue}
           users={users}
-          allIssues={issues}
+          allIssues={[...epics, ...issues]}
           sprints={sprints}
           project={project}
           onClose={handleCloseDetailModal}
           onIssueUpdated={(up) => {
             setIssues((prev) => prev.map((i) => (i.id === up.id ? up : i)));
+            if (up.type === "EPIC") {
+              setEpics((prev) => {
+                const exists = prev.some((e) => e.id === up.id);
+                return exists ? prev.map((e) => (e.id === up.id ? up : e)) : [up, ...prev];
+              });
+            }
             setActiveIssue(up);
           }}
           onIssueDeleted={(id) => {
             setIssues((prev) => prev.filter((i) => i.id !== id));
+            setEpics((prev) => prev.filter((e) => e.id !== id));
             setActiveIssue(null);
           }}
         />

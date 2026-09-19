@@ -27,6 +27,7 @@ interface KanbanBoardProps {
   transitions: WorkflowTransition[];
   searchQuery?: string;
   initialSelectedIssueKey?: string;
+  initialEpics?: Issue[];
 }
 
 interface Swimlane {
@@ -46,6 +47,7 @@ export default function KanbanBoard({
   transitions,
   searchQuery: propSearchQuery,
   initialSelectedIssueKey,
+  initialEpics,
 }: KanbanBoardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -211,6 +213,7 @@ export default function KanbanBoard({
       // Only show issues for active sprint or unassigned to sprint if no active sprint
       if (activeSprint) {
         if (issue.sprintId !== activeSprint.id) return false;
+        if (issue.type === "EPIC") return false;
       } else {
         if (!boardStatusNames.has(issue.status)) return false;
       }
@@ -260,7 +263,10 @@ export default function KanbanBoard({
   ]);
 
   // Epics list for parent selectors and swimlanes
-  const epics = useMemo(() => issues.filter((i) => i.type === "EPIC"), [issues]);
+  const epics = useMemo(() => {
+    if (initialEpics && initialEpics.length > 0) return initialEpics;
+    return issues.filter((i) => i.type === "EPIC");
+  }, [issues, initialEpics]);
 
   // Build Swimlanes based on groupBy
   const swimlanes = useMemo<Swimlane[]>(() => {
@@ -797,7 +803,7 @@ export default function KanbanBoard({
         <IssueDetailModal
           issue={activeIssue}
           users={users}
-          allIssues={issues}
+          allIssues={[...epics, ...issues]}
           sprints={sprints}
           project={project}
           onClose={handleCloseDetailModal}

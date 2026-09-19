@@ -209,6 +209,9 @@ export async function moveIssueToSprint(issueId: string, sprintId: string | null
     await requireProjectPermission(issue.projectId, "MOVE_ISSUE");
 
     if (sprintId) {
+      if (issue.type === "EPIC") {
+        return { success: false, error: "Epics cannot be assigned to a sprint" };
+      }
       const targetSprint = await prisma.sprint.findUnique({
         where: { id: sprintId },
         select: { projectId: true, status: true },

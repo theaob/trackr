@@ -144,7 +144,11 @@ export default function BacklogContextMenu({
       </div>
 
       {/* Sprints Group */}
-      {canMove ? (
+      {issue.type === "EPIC" ? (
+        <div className="px-3 py-2 text-[11px] text-jira-gray-500 italic">
+          Epics cannot be assigned to a sprint
+        </div>
+      ) : canMove ? (
         <div className="py-1">
           <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-jira-gray-400">
             Move to Sprint

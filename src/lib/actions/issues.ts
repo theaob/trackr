@@ -306,10 +306,11 @@ export async function getBacklogIssues(projectId: string) {
 
     const backlogNames = await getBacklogStatusNames(projectId);
 
-    // Return issues in sprints (up to 300) + top backlog items (up to 100)
+    // Return issues in sprints (up to 300) + top backlog items (up to 100).
+    // Epics are excluded: epics span multiple sprints and are managed via roadmap/filters.
     const [sprintIssues, backlogIssues] = await Promise.all([
       prisma.issue.findMany({
-        where: { projectId, sprintId: { not: null } },
+        where: { projectId, sprintId: { not: null }, type: { not: "EPIC" } },
         include: {
           project: true,
           assignee: USER_SELECT,
@@ -329,7 +330,7 @@ export async function getBacklogIssues(projectId: string) {
         take: 300,
       }),
       prisma.issue.findMany({
-        where: { projectId, sprintId: null, status: { in: backlogNames } },
+        where: { projectId, sprintId: null, status: { in: backlogNames }, type: { not: "EPIC" } },
         include: {
           project: true,
           assignee: USER_SELECT,
@@ -608,6 +609,10 @@ export async function createIssue(data: {
     });
     if (!project) throw new Error("Project not found");
 
+    if (data.type === "EPIC" && data.sprintId) {
+      return { success: false, error: "Epics cannot be assigned to a sprint" };
+    }
+
     const related = await validateIssueRelations(data.projectId, {
       sprintId: data.sprintId,
       versionId: data.versionId,
@@ -827,6 +832,11 @@ export async function updateIssue(
       }
     }
 
+    const willBeEpic = (data.type ?? existing.type) === "EPIC";
+    if (willBeEpic && data.sprintId) {
+      return { success: false, error: "Epics cannot be assigned to a sprint" };
+    }
+
     const related = await validateIssueRelations(projectId, {
       sprintId: data.sprintId !== existing.sprintId ? data.sprintId : null,
       versionId: data.versionId !== existing.versionId ? data.versionId : null,
@@ -883,7 +893,9 @@ export async function updateIssue(
         ...(data.startDate !== undefined && { startDate: data.startDate ? new Date(data.startDate) : null }),
         ...(data.dueDate !== undefined && { dueDate: data.dueDate ? new Date(data.dueDate) : null }),
         ...(data.assigneeId !== undefined && { assigneeId: data.assigneeId }),
-        ...(data.sprintId !== undefined && { sprintId: data.sprintId }),
+        ...(willBeEpic
+          ? (existing.sprintId ? { sprintId: null } : {})
+          : (data.sprintId !== undefined && { sprintId: data.sprintId })),
         ...(data.versionId !== undefined && { versionId: data.versionId }),
         ...(data.parentId !== undefined && { parentId: data.parentId }),
       },
@@ -1133,7 +1145,9 @@ export async function updateIssueStatusAndOrder(
         updatePayload.priority = extraData.priority;
       }
       if (extraData.sprintId !== undefined) {
-        updatePayload.sprintId = extraData.sprintId;
+        if (existing.type !== "EPIC" || extraData.sprintId === null) {
+          updatePayload.sprintId = extraData.sprintId;
+        }
       }
     }
 

@@ -152,7 +152,7 @@ async function main() {
       const reporterId = randomChoice(userIds);
 
       const pSprints = sprintMap[project.id] || [];
-      const sprintId = status !== "BACKLOG" && pSprints.length > 0 && Math.random() > 0.4
+      const sprintId = type !== "EPIC" && status !== "BACKLOG" && pSprints.length > 0 && Math.random() > 0.4
         ? randomChoice(pSprints)
         : null;
 

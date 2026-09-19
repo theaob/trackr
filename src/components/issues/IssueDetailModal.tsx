@@ -1271,31 +1271,33 @@ export default function IssueDetailModal({
               </select>
             </div>
 
-            {/* Sprint (can assign to sprint before it starts) */}
-            <div>
-              <label className="block text-xs font-bold text-jira-gray-600 uppercase tracking-wider mb-1.5">
-                Sprint
-              </label>
-              <select
-                value={currentIssue.sprintId || ""}
-                disabled={!permissions.canEditIssue}
-                onChange={(e) => handleSprintChange(e.target.value || null)}
-                className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <option value="">Backlog (No Sprint)</option>
-                {sprints
-                  .filter((s) => s.status !== "COMPLETED" || s.id === currentIssue.sprintId)
-                  .map((s) => (
-                    <option
-                      key={s.id}
-                      value={s.id}
-                      disabled={s.status === "COMPLETED" && s.id !== currentIssue.sprintId}
-                    >
-                      {s.name} {s.status === "ACTIVE" ? "(Active)" : s.status === "FUTURE" ? "(Future / Planned)" : "(Completed - Closed)"}
-                    </option>
-                  ))}
-              </select>
-            </div>
+            {/* Sprint (Epics span multiple sprints and cannot be assigned to a sprint) */}
+            {currentIssue.type !== "EPIC" && (
+              <div>
+                <label className="block text-xs font-bold text-jira-gray-600 uppercase tracking-wider mb-1.5">
+                  Sprint
+                </label>
+                <select
+                  value={currentIssue.sprintId || ""}
+                  disabled={!permissions.canEditIssue}
+                  onChange={(e) => handleSprintChange(e.target.value || null)}
+                  className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  <option value="">Backlog (No Sprint)</option>
+                  {sprints
+                    .filter((s) => s.status !== "COMPLETED" || s.id === currentIssue.sprintId)
+                    .map((s) => (
+                      <option
+                        key={s.id}
+                        value={s.id}
+                        disabled={s.status === "COMPLETED" && s.id !== currentIssue.sprintId}
+                      >
+                        {s.name} {s.status === "ACTIVE" ? "(Active)" : s.status === "FUTURE" ? "(Future / Planned)" : "(Completed - Closed)"}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
 
             {/* Fix Version */}
             <div>

@@ -107,7 +107,8 @@ export default function CreateIssueModal({
 
     const backlogStatusName = workflowStatuses.find((s) => s.isBacklog)?.name;
     const initialStatusName = workflowStatuses.find((s) => !s.isBacklog)?.name;
-    const status = sprintId ? initialStatusName : backlogStatusName;
+    const effectiveSprintId = type === "EPIC" ? null : (sprintId || null);
+    const status = effectiveSprintId ? initialStatusName : backlogStatusName;
 
     const res = await createIssue({
       projectId: selectedProjectId,
@@ -120,7 +121,7 @@ export default function CreateIssueModal({
       startDate: type === "EPIC" ? startDate || null : null,
       assigneeId: assigneeId || null,
       reporterId: currentUser?.id || null,
-      sprintId: sprintId || null,
+      sprintId: effectiveSprintId,
       versionId: versionId || null,
       parentId: parentId || null,
       status,
@@ -323,7 +324,7 @@ export default function CreateIssueModal({
           </div>
 
           {/* Assignee & Sprint */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className={`grid gap-4 ${type === "EPIC" ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"}`}>
             <div>
               <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
                 Assignee
@@ -342,23 +343,25 @@ export default function CreateIssueModal({
               </select>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
-                Sprint
-              </label>
-              <select
-                value={sprintId}
-                onChange={(e) => setSprintId(e.target.value)}
-                className="w-full bg-white border border-jira-gray-300 rounded px-3 py-2 text-jira-navy focus:border-jira-blue outline-none"
-              >
-                <option value="">Backlog (No Sprint)</option>
-                {projectSprints.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} {s.status === "ACTIVE" ? "(Active Sprint)" : s.status === "FUTURE" ? "(Planned)" : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {type !== "EPIC" && (
+              <div>
+                <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
+                  Sprint
+                </label>
+                <select
+                  value={sprintId}
+                  onChange={(e) => setSprintId(e.target.value)}
+                  className="w-full bg-white border border-jira-gray-300 rounded px-3 py-2 text-jira-navy focus:border-jira-blue outline-none"
+                >
+                  <option value="">Backlog (No Sprint)</option>
+                  {projectSprints.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} {s.status === "ACTIVE" ? "(Active Sprint)" : s.status === "FUTURE" ? "(Planned)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Fix Version */}
