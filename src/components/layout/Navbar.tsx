@@ -147,11 +147,20 @@ export default function Navbar({
               setShowProjectMenu(!showProjectMenu);
               setShowUserMenu(false);
             }}
-            className="flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium text-jira-navy hover:bg-jira-gray-100 transition-colors"
+            className="flex items-center gap-2 px-2.5 py-1 rounded text-jira-navy hover:bg-jira-gray-100 transition-colors text-left"
           >
-            <FolderGit2 className="w-4 h-4 text-jira-blue" />
-            <span>{currentProject ? currentProject.name : "Select Project"}</span>
-            <ChevronDown className="w-3.5 h-3.5 text-jira-gray-600" />
+            <FolderGit2 className="w-4 h-4 text-jira-blue shrink-0" />
+            <div className="flex flex-col leading-none text-left min-w-0">
+              <span className="text-sm font-medium truncate max-w-[180px] sm:max-w-[240px]">
+                {currentProject ? currentProject.name : "Select Project"}
+              </span>
+              {currentProject && (
+                <span className="text-[10px] font-medium text-jira-gray-500 tracking-wider mt-0.5">
+                  {currentProject.key}
+                </span>
+              )}
+            </div>
+            <ChevronDown className="w-3.5 h-3.5 text-jira-gray-600 shrink-0" />
           </button>
 
           {showProjectMenu && (
@@ -168,11 +177,14 @@ export default function Navbar({
                     proj.id === currentProject?.id ? "bg-jira-blue-light/50 font-semibold text-jira-blue" : "text-jira-navy"
                   }`}
                 >
-                  <div className="flex items-center gap-2 truncate">
-                    <span className="w-6 h-6 rounded bg-jira-gray-200 text-jira-gray-800 text-xs font-bold flex items-center justify-center">
+                  <div className="flex items-center gap-2.5 truncate">
+                    <span className="w-6 h-6 rounded bg-jira-gray-200 text-jira-gray-800 text-[10px] font-bold flex items-center justify-center shrink-0">
                       {proj.key.slice(0, 2)}
                     </span>
-                    <span className="truncate">{proj.name}</span>
+                    <div className="flex flex-col leading-tight truncate">
+                      <span className="truncate">{proj.name}</span>
+                      <span className="text-[10px] font-medium text-jira-gray-500 tracking-wider">{proj.key}</span>
+                    </div>
                   </div>
                   {proj.id === currentProject?.id && <Check className="w-4 h-4 text-jira-blue shrink-0" />}
                 </Link>
