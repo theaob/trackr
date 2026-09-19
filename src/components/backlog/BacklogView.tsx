@@ -34,7 +34,9 @@ import {
   CalendarClock,
   Bookmark,
   ExternalLink,
+  Target,
 } from "lucide-react";
+import EditSprintModal from "@/components/sprints/EditSprintModal";
 import { isOverdue } from "@/lib/dueDate";
 import { isDoneStatus, getDoneStatusNames } from "@/lib/workflowDisplay";
 import { format } from "date-fns";
@@ -212,6 +214,15 @@ export default function BacklogView({
 
   // Delete Sprint
   const [deletingSprintId, setDeletingSprintId] = useState<string | null>(null);
+
+  // Edit Sprint
+  const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
+
+  const handleSprintUpdated = (updatedSprint: Sprint) => {
+    setSprints((prev) =>
+      prev.map((s) => (s.id === updatedSprint.id ? { ...s, ...updatedSprint } : s))
+    );
+  };
 
   // Sprint dropdown menu
   const [sprintMenuOpenId, setSprintMenuOpenId] = useState<string | null>(null);
@@ -679,14 +690,35 @@ export default function BacklogView({
                       ({sprintIssues.length} issues)
                     </span>
 
-                    {sprint.startDate && sprint.endDate && (
-                      <span className="text-xs text-jira-gray-500 flex items-center gap-1 ml-2">
+                    {sprint.startDate && sprint.endDate ? (
+                      <button
+                        type="button"
+                        disabled={!permissions.canManageSprints}
+                        onClick={() => permissions.canManageSprints && setEditingSprint(sprint)}
+                        className={`text-xs text-jira-gray-500 flex items-center gap-1 ml-2 px-1.5 py-0.5 rounded transition-colors ${
+                          permissions.canManageSprints ? "hover:bg-jira-gray-200 hover:text-jira-navy cursor-pointer" : ""
+                        }`}
+                        title={permissions.canManageSprints ? "Edit sprint dates" : undefined}
+                      >
+                        <Calendar className="w-3.5 h-3.5 text-jira-gray-400" />
+                        <span>
+                          {format(new Date(sprint.startDate), "MMM d")} - {format(new Date(sprint.endDate), "MMM d")}
+                        </span>
+                      </button>
+                    ) : permissions.canManageSprints ? (
+                      <button
+                        type="button"
+                        onClick={() => setEditingSprint(sprint)}
+                        className="text-[11px] text-jira-blue hover:underline flex items-center gap-1 ml-2 font-medium"
+                        title="Add dates to sprint"
+                      >
                         <Calendar className="w-3.5 h-3.5" />
-                        {format(new Date(sprint.startDate), "MMM d")} - {format(new Date(sprint.endDate), "MMM d")}
-                      </span>
-                    )}
+                        <span>Add dates</span>
+                      </button>
+                    ) : null}
                   </div>
 
+                  {/* Right side: Story Points, Actions */}
                   <div className="flex items-center gap-3">
                     {/* Story Points Badges */}
                     <div className="flex items-center gap-1 text-xs">
@@ -742,14 +774,13 @@ export default function BacklogView({
                           <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-jira-gray-300 rounded-md shadow-lg py-1 z-50 animate-in fade-in">
                             <button
                               onClick={() => {
-                                setRenamingSprintId(sprint.id);
-                                setRenameValue(sprint.name);
+                                setEditingSprint(sprint);
                                 setSprintMenuOpenId(null);
                               }}
                               className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-jira-navy hover:bg-jira-gray-100 transition-colors"
                             >
                               <Pencil className="w-3.5 h-3.5 text-jira-gray-500" />
-                              <span>Rename Sprint</span>
+                              <span>Edit Sprint</span>
                             </button>
                             {sprint.status !== "ACTIVE" && (
                               <button
@@ -769,6 +800,26 @@ export default function BacklogView({
                     )}
                   </div>
                 </div>
+
+                {/* Sprint Goal / Target Subheader */}
+                {sprint.goal && (
+                  <div className="px-4 py-1.5 bg-jira-gray-50 border-b border-jira-gray-200 flex items-center justify-between gap-2 text-xs">
+                    <div
+                      onClick={() => permissions.canManageSprints && setEditingSprint(sprint)}
+                      className={`flex items-center gap-2 text-jira-gray-600 overflow-hidden ${
+                        permissions.canManageSprints ? "hover:text-jira-navy cursor-pointer group/goal" : ""
+                      }`}
+                      title={permissions.canManageSprints ? "Click to edit sprint goal" : undefined}
+                    >
+                      <Target className="w-3.5 h-3.5 text-jira-blue shrink-0" />
+                      <span className="font-semibold text-jira-gray-700 shrink-0">Goal:</span>
+                      <span className="truncate italic text-jira-gray-700">{sprint.goal}</span>
+                      {permissions.canManageSprints && (
+                        <Pencil className="w-3 h-3 text-jira-gray-400 opacity-0 group-hover/goal:opacity-100 transition-opacity shrink-0" />
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Sprint Content */}
                 {!isCollapsed && (
@@ -1484,6 +1535,16 @@ export default function BacklogView({
             setEpics((prev) => prev.filter((e) => e.id !== id));
             setActiveIssue(null);
           }}
+        />
+      )}
+
+      {/* Edit Sprint Modal */}
+      {editingSprint && (
+        <EditSprintModal
+          sprint={editingSprint}
+          isOpen={!!editingSprint}
+          onClose={() => setEditingSprint(null)}
+          onSprintUpdated={handleSprintUpdated}
         />
       )}
     </div>

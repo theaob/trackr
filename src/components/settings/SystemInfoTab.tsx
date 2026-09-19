@@ -115,7 +115,7 @@ export default function SystemInfoTab({ systemInfo }: SystemInfoTabProps) {
           <div className="mt-3 pt-3 border-t border-jira-gray-100 flex items-center justify-between text-xs text-jira-gray-600">
             <span>Status</span>
             <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-700 text-[11px]">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
               Operational
             </span>
           </div>

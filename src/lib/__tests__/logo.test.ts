@@ -4,20 +4,18 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { TrackrLogo, TrackrLogoIcon } from "@/components/common/TrackrLogo";
 
 describe("TrackrLogo", () => {
-  it("renders animated logo by default", () => {
+  it("renders animated logo by default without blink animations", () => {
     const html = renderToStaticMarkup(React.createElement(TrackrLogo));
     expect(html).toContain("Trackr");
     expect(html).toContain("Project OS");
     expect(html).toContain("animateTransform");
-    expect(html).toContain("<animate");
-    expect(html).toContain("animate-ping");
+    expect(html).not.toContain("animate-ping");
   });
 
   it("renders static logo when animated is false", () => {
     const html = renderToStaticMarkup(React.createElement(TrackrLogo, { animated: false }));
     expect(html).toContain("Trackr");
     expect(html).not.toContain("animateTransform");
-    expect(html).not.toContain("<animate");
     expect(html).not.toContain("animate-ping");
   });
 

@@ -69,13 +69,6 @@
         calcMode="spline"
         keySplines="0.4 0 0.2 1; 0.4 0 0.2 1"
       />
-      <animate
-        attributeName="opacity"
-        values="0.15; 0.65; 0.15"
-        dur="2.4s"
-        repeatCount="indefinite"
-        keyTimes="0; 0.5; 1"
-      />
     </path>
     <path
       d="M20 15L23.5 18.5L20 22"
@@ -95,84 +88,9 @@
         calcMode="spline"
         keySplines="0.4 0 0.2 1; 0.4 0 0.2 1"
       />
-      <animate
-        attributeName="opacity"
-        values="0.9; 1; 0.9"
-        dur="2.4s"
-        repeatCount="indefinite"
-        keyTimes="0; 0.5; 1"
-      />
     </path>
   </g>
 
-  <!-- Sonar Radar Ping Waves -->
-  <circle cx="16" cy="25.5" r="1.5" fill="none" stroke="#38BDF8" stroke-width="1.2" opacity="0">
-    <animate
-      attributeName="r"
-      values="1.5; 6.5"
-      dur="2.4s"
-      repeatCount="indefinite"
-      keyTimes="0; 1"
-      calcMode="spline"
-      keySplines="0.1 0.6 0.3 1"
-    />
-    <animate
-      attributeName="opacity"
-      values="0.9; 0"
-      dur="2.4s"
-      repeatCount="indefinite"
-      keyTimes="0; 1"
-      calcMode="spline"
-      keySplines="0.1 0.6 0.3 1"
-    />
-    <animate
-      attributeName="stroke-width"
-      values="1.2; 0.2"
-      dur="2.4s"
-      repeatCount="indefinite"
-    />
-  </circle>
-
-  <circle cx="16" cy="25.5" r="1.5" fill="none" stroke="#818CF8" stroke-width="1" opacity="0">
-    <animate
-      attributeName="r"
-      values="1.5; 6.5"
-      dur="2.4s"
-      begin="1.2s"
-      repeatCount="indefinite"
-      keyTimes="0; 1"
-      calcMode="spline"
-      keySplines="0.1 0.6 0.3 1"
-    />
-    <animate
-      attributeName="opacity"
-      values="0.8; 0"
-      dur="2.4s"
-      begin="1.2s"
-      repeatCount="indefinite"
-      keyTimes="0; 1"
-      calcMode="spline"
-      keySplines="0.1 0.6 0.3 1"
-    />
-    <animate
-      attributeName="stroke-width"
-      values="1; 0.2"
-      dur="2.4s"
-      begin="1.2s"
-      repeatCount="indefinite"
-    />
-  </circle>
-
-  <!-- Core Beacon Dot -->
-  <circle cx="16" cy="25.5" r="1.5" fill="#38BDF8">
-    <animate
-      attributeName="r"
-      values="1.5; 1.85; 1.5"
-      dur="2.4s"
-      repeatCount="indefinite"
-      keyTimes="0; 0.5; 1"
-      calcMode="spline"
-      keySplines="0.4 0 0.2 1; 0.4 0 0.2 1"
-    />
-  </circle>
+  <!-- Accent Anchor Point -->
+  <circle cx="16" cy="25.5" r="1.5" fill="#38BDF8" />
 </svg>

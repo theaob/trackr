@@ -53,7 +53,7 @@ export default function KanbanColumn({
                 title={tooltipText}
                 className={`inline-flex items-center justify-center text-xs font-semibold px-2 py-0.5 rounded-full cursor-help transition-colors ${
                   isOverLimit
-                    ? "bg-rose-100 text-rose-700 font-bold animate-pulse hover:bg-rose-200"
+                    ? "bg-rose-100 text-rose-700 font-bold hover:bg-rose-200"
                     : wipLimit
                     ? "bg-jira-gray-200 text-jira-gray-700 hover:bg-jira-gray-300"
                     : "bg-jira-gray-200 text-jira-gray-700 hover:bg-jira-gray-300"

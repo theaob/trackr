@@ -153,21 +153,12 @@ export function TrackrLogoIcon({
             strokeWidth="1.6"
             strokeLinecap="round"
             strokeLinejoin="round"
-            opacity="0.2"
+            opacity="0.35"
           >
             <animateTransform
               attributeName="transform"
               type="translate"
               values="0 0; 1.5 0; 0 0"
-              dur="2.4s"
-              repeatCount="indefinite"
-              keyTimes="0; 0.5; 1"
-              calcMode="spline"
-              keySplines="0.4 0 0.2 1; 0.4 0 0.2 1"
-            />
-            <animate
-              attributeName="opacity"
-              values="0.15; 0.65; 0.15"
               dur="2.4s"
               repeatCount="indefinite"
               keyTimes="0; 0.5; 1"
@@ -198,117 +189,11 @@ export function TrackrLogoIcon({
               keySplines="0.4 0 0.2 1; 0.4 0 0.2 1"
             />
           )}
-          {animated && (
-            <animate
-              attributeName="opacity"
-              values="0.9; 1; 0.9"
-              dur="2.4s"
-              repeatCount="indefinite"
-              keyTimes="0; 0.5; 1"
-            />
-          )}
         </path>
       </g>
 
-      {/* Subtle pulse radar / tracking point at the bottom */}
-      {/* Wave 1 */}
-      {animated && (
-        <circle
-          cx="16"
-          cy="25.5"
-          r="1.5"
-          fill="none"
-          stroke="#38BDF8"
-          strokeWidth="1.2"
-          opacity="0"
-        >
-          <animate
-            attributeName="r"
-            values="1.5; 6.5"
-            dur="2.4s"
-            repeatCount="indefinite"
-            keyTimes="0; 1"
-            calcMode="spline"
-            keySplines="0.1 0.6 0.3 1"
-          />
-          <animate
-            attributeName="opacity"
-            values="0.9; 0"
-            dur="2.4s"
-            repeatCount="indefinite"
-            keyTimes="0; 1"
-            calcMode="spline"
-            keySplines="0.1 0.6 0.3 1"
-          />
-          <animate
-            attributeName="stroke-width"
-            values="1.2; 0.2"
-            dur="2.4s"
-            repeatCount="indefinite"
-          />
-        </circle>
-      )}
-
-      {/* Wave 2 (staggered) */}
-      {animated && (
-        <circle
-          cx="16"
-          cy="25.5"
-          r="1.5"
-          fill="none"
-          stroke="#818CF8"
-          strokeWidth="1"
-          opacity="0"
-        >
-          <animate
-            attributeName="r"
-            values="1.5; 6.5"
-            dur="2.4s"
-            begin="1.2s"
-            repeatCount="indefinite"
-            keyTimes="0; 1"
-            calcMode="spline"
-            keySplines="0.1 0.6 0.3 1"
-          />
-          <animate
-            attributeName="opacity"
-            values="0.8; 0"
-            dur="2.4s"
-            begin="1.2s"
-            repeatCount="indefinite"
-            keyTimes="0; 1"
-            calcMode="spline"
-            keySplines="0.1 0.6 0.3 1"
-          />
-          <animate
-            attributeName="stroke-width"
-            values="1; 0.2"
-            dur="2.4s"
-            begin="1.2s"
-            repeatCount="indefinite"
-          />
-        </circle>
-      )}
-
-      {/* Core Beacon Dot */}
-      <circle
-        cx="16"
-        cy="25.5"
-        r="1.5"
-        fill="#38BDF8"
-      >
-        {animated && (
-          <animate
-            attributeName="r"
-            values="1.5; 1.85; 1.5"
-            dur="2.4s"
-            repeatCount="indefinite"
-            keyTimes="0; 0.5; 1"
-            calcMode="spline"
-            keySplines="0.4 0 0.2 1; 0.4 0 0.2 1"
-          />
-        )}
-      </circle>
+      {/* Velocity Tracking Point */}
+      <circle cx="16" cy="25.5" r="1.5" fill="#38BDF8" />
     </svg>
   );
 }
@@ -358,12 +243,7 @@ export function TrackrLogo({
             >
               Trackr
             </span>
-            <span className="relative flex h-2 w-2 ml-1 items-center justify-center">
-              {animated && (
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-jira-blue opacity-75 motion-reduce:hidden" />
-              )}
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-jira-blue" />
-            </span>
+            <span className="w-1.5 h-1.5 rounded-full bg-jira-blue ml-1" />
           </div>
           <span
             className={`text-[10px] text-jira-gray-600 font-semibold tracking-wider uppercase ${

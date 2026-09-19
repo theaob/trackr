@@ -253,12 +253,18 @@ export async function moveIssueToSprint(issueId: string, sprintId: string | null
   }
 }
 
-export async function renameSprint(sprintId: string, name: string) {
+export async function updateSprint(
+  sprintId: string,
+  data: {
+    name?: string;
+    startDate?: Date | null;
+    endDate?: Date | null;
+    goal?: string | null;
+  }
+) {
   try {
-    await requireProjectPermission(await projectIdForSprint(sprintId), "MANAGE_SPRINTS");
-
-    const trimmed = name.trim();
-    if (!trimmed) return { success: false, error: "Sprint name cannot be empty" };
+    const projectId = await projectIdForSprint(sprintId);
+    await requireProjectPermission(projectId, "MANAGE_SPRINTS");
 
     const sprint = await prisma.sprint.findUnique({
       where: { id: sprintId },
@@ -267,16 +273,38 @@ export async function renameSprint(sprintId: string, name: string) {
 
     if (!sprint) throw new Error("Sprint not found");
 
+    const trimmedName = data.name !== undefined ? data.name.trim() : undefined;
+    if (trimmedName !== undefined && !trimmedName) {
+      return { success: false, error: "Sprint name cannot be empty" };
+    }
+
+    const newStart = data.startDate !== undefined ? data.startDate : sprint.startDate;
+    const newEnd = data.endDate !== undefined ? data.endDate : sprint.endDate;
+
+    if (newStart && newEnd && newEnd <= newStart) {
+      return { success: false, error: "The sprint end date must come after its start date." };
+    }
+
     const updated = await prisma.sprint.update({
       where: { id: sprintId },
-      data: { name: trimmed },
+      data: {
+        ...(trimmedName !== undefined && { name: trimmedName }),
+        ...(data.startDate !== undefined && { startDate: data.startDate }),
+        ...(data.endDate !== undefined && { endDate: data.endDate }),
+        ...(data.goal !== undefined && { goal: data.goal ? data.goal.trim() : null }),
+      },
+      include: { project: true },
     });
 
     revalidateProjectRoutes(sprint.project.key);
     return { success: true as const, sprint: updated };
   } catch (error) {
-    return toActionError(error, "Failed to rename sprint");
+    return toActionError(error, "Failed to update sprint");
   }
+}
+
+export async function renameSprint(sprintId: string, name: string) {
+  return updateSprint(sprintId, { name });
 }
 
 export async function deleteSprint(sprintId: string) {

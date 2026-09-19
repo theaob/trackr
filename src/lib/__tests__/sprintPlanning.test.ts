@@ -146,4 +146,104 @@ describe("Sprint planning restrictions for Epics", () => {
     expect(scrumBoardIssues[0].key).toBe("PROJ-3");
     expect(scrumBoardIssues[0].type).toBe("TASK");
   });
+
+  describe("Sprint date and target / goal updates", () => {
+    function validateSprintUpdate(
+      currentSprint: { name: string; startDate: Date | null; endDate: Date | null; goal: string | null },
+      updateData: { name?: string; startDate?: Date | null; endDate?: Date | null; goal?: string | null }
+    ): { error?: string; updated?: typeof currentSprint } {
+      const trimmedName = updateData.name !== undefined ? updateData.name.trim() : currentSprint.name;
+      if (trimmedName !== undefined && !trimmedName) {
+        return { error: "Sprint name cannot be empty" };
+      }
+
+      const newStart = updateData.startDate !== undefined ? updateData.startDate : currentSprint.startDate;
+      const newEnd = updateData.endDate !== undefined ? updateData.endDate : currentSprint.endDate;
+
+      if (newStart && newEnd && newEnd <= newStart) {
+        return { error: "The sprint end date must come after its start date." };
+      }
+
+      return {
+        updated: {
+          name: trimmedName,
+          startDate: newStart,
+          endDate: newEnd,
+          goal: updateData.goal !== undefined ? (updateData.goal ? updateData.goal.trim() : null) : currentSprint.goal,
+        },
+      };
+    }
+
+    it("allows updating dates and target / goal on an existing sprint", () => {
+      const sprint = {
+        name: "Sprint 1",
+        startDate: new Date("2026-10-01T00:00:00Z"),
+        endDate: new Date("2026-10-14T23:59:59Z"),
+        goal: "Initial target",
+      };
+
+      const newStart = new Date("2026-10-05T00:00:00Z");
+      const newEnd = new Date("2026-10-25T23:59:59Z");
+      const result = validateSprintUpdate(sprint, {
+        startDate: newStart,
+        endDate: newEnd,
+        goal: "Deliver MVP onboarding flow & payment checkout",
+      });
+
+      expect(result.error).toBeUndefined();
+      expect(result.updated?.startDate).toEqual(newStart);
+      expect(result.updated?.endDate).toEqual(newEnd);
+      expect(result.updated?.goal).toBe("Deliver MVP onboarding flow & payment checkout");
+    });
+
+    it("rejects invalid date ranges where end date is on or before start date", () => {
+      const sprint = {
+        name: "Sprint 2",
+        startDate: new Date("2026-10-01T00:00:00Z"),
+        endDate: new Date("2026-10-15T00:00:00Z"),
+        goal: "Refactor core engine",
+      };
+
+      const invalidResult = validateSprintUpdate(sprint, {
+        startDate: new Date("2026-10-20T00:00:00Z"),
+        endDate: new Date("2026-10-10T00:00:00Z"),
+      });
+
+      expect(invalidResult.error).toBe("The sprint end date must come after its start date.");
+      expect(invalidResult.updated).toBeUndefined();
+
+      const sameDayResult = validateSprintUpdate(sprint, {
+        startDate: new Date("2026-10-10T00:00:00Z"),
+        endDate: new Date("2026-10-10T00:00:00Z"),
+      });
+      expect(sameDayResult.error).toBe("The sprint end date must come after its start date.");
+    });
+
+    it("rejects empty sprint name on update", () => {
+      const sprint = {
+        name: "Sprint 3",
+        startDate: null,
+        endDate: null,
+        goal: null,
+      };
+
+      const result = validateSprintUpdate(sprint, { name: "   " });
+      expect(result.error).toBe("Sprint name cannot be empty");
+    });
+
+    it("allows updating target / goal independently of dates", () => {
+      const sprint = {
+        name: "Sprint 4",
+        startDate: new Date("2026-11-01T00:00:00Z"),
+        endDate: new Date("2026-11-14T00:00:00Z"),
+        goal: null,
+      };
+
+      const result = validateSprintUpdate(sprint, { goal: "Achieve 99.9% uptime and resolve P0 bugs" });
+      expect(result.error).toBeUndefined();
+      expect(result.updated?.goal).toBe("Achieve 99.9% uptime and resolve P0 bugs");
+      expect(result.updated?.startDate).toEqual(sprint.startDate);
+      expect(result.updated?.endDate).toEqual(sprint.endDate);
+    });
+  });
 });

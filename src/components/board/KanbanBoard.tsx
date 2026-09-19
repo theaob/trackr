@@ -14,7 +14,9 @@ import { useCurrentUser } from "@/context/UserContext";
 import { useSearch } from "@/context/SearchContext";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
 import { prettifyStatusName, isDoneStatus, getDoneStatusNames } from "@/lib/workflowDisplay";
-import { ChevronDown, ChevronRight, Layers, User as UserIcon, Bookmark, AlertCircle } from "lucide-react";
+import { ChevronDown, ChevronRight, Layers, User as UserIcon, Bookmark, AlertCircle, Pencil, Calendar, Target } from "lucide-react";
+import { format } from "date-fns";
+import EditSprintModal from "@/components/sprints/EditSprintModal";
 import Link from "next/link";
 
 interface KanbanBoardProps {
@@ -57,7 +59,20 @@ export default function KanbanBoard({
   // Kanban ignores sprints entirely: the board is every non-backlog issue in
   // continuous flow, never scoped to whatever happens to be "active".
   const isKanban = project.boardType === "KANBAN";
-  const activeSprint = isKanban ? undefined : sprints.find((s) => s.status === "ACTIVE");
+  const [boardSprints, setBoardSprints] = useState<Sprint[]>(sprints);
+  const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
+
+  useEffect(() => {
+    setBoardSprints(sprints);
+  }, [sprints]);
+
+  const activeSprint = isKanban ? undefined : boardSprints.find((s) => s.status === "ACTIVE");
+
+  const handleSprintUpdated = (updated: Sprint) => {
+    setBoardSprints((prev) =>
+      prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s))
+    );
+  };
 
   // Board columns: the project's own workflow statuses, in the order it
   // configured, rather than a fixed list. WIP limits are Kanban-only.
@@ -528,6 +543,12 @@ export default function KanbanBoard({
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
                   Active Sprint
                 </span>
+                {activeSprint.startDate && activeSprint.endDate && (
+                  <span className="text-xs text-jira-gray-500 flex items-center gap-1 ml-1.5 font-medium">
+                    <Calendar className="w-3.5 h-3.5 text-jira-gray-400" />
+                    {format(new Date(activeSprint.startDate), "MMM d")} - {format(new Date(activeSprint.endDate), "MMM d")}
+                  </span>
+                )}
                 <div className="flex items-center gap-1 text-xs ml-1">
                   <span
                     title="Total estimated story points"
@@ -547,6 +568,16 @@ export default function KanbanBoard({
           </div>
 
           <div className="flex items-center gap-2">
+            {activeSprint && permissions.canManageSprints && (
+              <button
+                onClick={() => setEditingSprint(activeSprint)}
+                className="text-xs border border-jira-gray-300 text-jira-navy font-semibold px-2.5 py-1.5 rounded hover:bg-jira-gray-100 flex items-center gap-1.5 transition-colors"
+                title="Edit sprint dates, name, or goal"
+              >
+                <Pencil className="w-3.5 h-3.5 text-jira-gray-500" />
+                <span>Edit Sprint</span>
+              </button>
+            )}
             {!activeSprint && !isKanban && (
               <Link
                 href={`/projects/${project.key}/backlog`}
@@ -565,9 +596,20 @@ export default function KanbanBoard({
         )}
 
         {activeSprint?.goal && (
-          <p className="text-xs text-jira-gray-600 italic">
-            Goal: {activeSprint.goal}
-          </p>
+          <div
+            onClick={() => permissions.canManageSprints && setEditingSprint(activeSprint)}
+            className={`flex items-center gap-1.5 text-xs text-jira-gray-600 mt-1 ${
+              permissions.canManageSprints ? "hover:text-jira-navy cursor-pointer group/goal" : ""
+            }`}
+            title={permissions.canManageSprints ? "Click to edit sprint goal" : undefined}
+          >
+            <Target className="w-3.5 h-3.5 text-jira-blue shrink-0" />
+            <span className="font-semibold text-jira-gray-700">Goal:</span>
+            <span className="italic">{activeSprint.goal}</span>
+            {permissions.canManageSprints && (
+              <Pencil className="w-3 h-3 text-jira-gray-400 opacity-0 group-hover/goal:opacity-100 transition-opacity shrink-0" />
+            )}
+          </div>
         )}
 
         {/* Filters Bar */}
@@ -637,7 +679,7 @@ export default function KanbanBoard({
                           title={tooltipText}
                           className={`text-xs font-semibold px-2 py-0.5 rounded-full cursor-help transition-colors ${
                             isOverLimit
-                              ? "bg-rose-100 text-rose-700 font-bold animate-pulse hover:bg-rose-200"
+                              ? "bg-rose-100 text-rose-700 font-bold hover:bg-rose-200"
                               : "bg-jira-gray-200 text-jira-gray-700 hover:bg-jira-gray-300"
                           }`}
                         >
@@ -820,6 +862,16 @@ export default function KanbanBoard({
           epics={epics}
           onClose={() => setIsCreateModalOpen(false)}
           onIssueCreated={handleIssueCreated}
+        />
+      )}
+
+      {/* Edit Sprint Modal */}
+      {editingSprint && (
+        <EditSprintModal
+          sprint={editingSprint}
+          isOpen={!!editingSprint}
+          onClose={() => setEditingSprint(null)}
+          onSprintUpdated={handleSprintUpdated}
         />
       )}
     </div>
