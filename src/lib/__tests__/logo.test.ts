@@ -4,18 +4,20 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { TrackrLogo, TrackrLogoIcon } from "@/components/common/TrackrLogo";
 
 describe("TrackrLogo", () => {
-  it("renders animated logo by default without blink animations", () => {
+  it("renders static logo by default without animations or pings", () => {
     const html = renderToStaticMarkup(React.createElement(TrackrLogo));
     expect(html).toContain("Trackr");
     expect(html).toContain("Project OS");
-    expect(html).toContain("animateTransform");
+    expect(html).not.toContain("animateTransform");
+    expect(html).not.toContain("<animate");
     expect(html).not.toContain("animate-ping");
   });
 
-  it("renders static logo when animated is false", () => {
+  it("renders static logo when animated is explicitly false or true", () => {
     const html = renderToStaticMarkup(React.createElement(TrackrLogo, { animated: false }));
     expect(html).toContain("Trackr");
     expect(html).not.toContain("animateTransform");
+    expect(html).not.toContain("<animate");
     expect(html).not.toContain("animate-ping");
   });
 
@@ -47,6 +49,6 @@ describe("TrackrLogo", () => {
     const html = renderToStaticMarkup(React.createElement(TrackrLogoIcon, { idPrefix: "custom-prefix" }));
     expect(html).toContain("custom-prefix-bg");
     expect(html).toContain("custom-prefix-accent");
-    expect(html).toContain("custom-prefix-shimmer");
+    expect(html).toContain("custom-prefix-bevel");
   });
 });
