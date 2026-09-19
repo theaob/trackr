@@ -25,6 +25,8 @@ import {
   getWorkflowStatuses,
   isTransitionAllowed,
 } from "@/lib/workflow";
+import { TQLParser } from "@/lib/tql/parser";
+import { TQLCompiler } from "@/lib/tql/compiler";
 
 const USER_SELECT = { select: DISPLAY_USER_SELECT } as const;
 
@@ -434,6 +436,7 @@ export interface PaginatedIssuesParams {
   sprintId?: string;
   versionId?: string;
   label?: string;
+  tql?: string;
   sortField?: string;
   sortOrder?: "asc" | "desc";
 }
@@ -443,95 +446,128 @@ export async function getPaginatedIssues(params: PaginatedIssuesParams) {
 
   try {
     const user = await getCurrentUser();
-    const where: any = {};
+    const accessibleIds: string[] = [];
 
     if (params.projectId && params.projectId !== "ALL") {
       await requireProjectAccess(params.projectId);
-      where.projectId = params.projectId;
+      accessibleIds.push(params.projectId);
     } else {
       const ids = await accessibleProjectIds(user?.id ?? null);
       if (ids.length === 0) return empty;
-      where.projectId = { in: ids };
+      accessibleIds.push(...ids);
     }
 
-    if (params.type && params.type !== "ALL") {
-      where.type = params.type;
-    }
+    let where: any = {};
+    let orderBy: any = {};
 
-    if (params.status && params.status !== "ALL") {
-      where.status = params.status;
-    }
-
-    if (params.priority && params.priority !== "ALL") {
-      where.priority = params.priority;
-    }
-
-    if (params.assigneeId && params.assigneeId !== "ALL") {
-      if (params.assigneeId === "UNASSIGNED") {
-        where.assigneeId = null;
-      } else {
-        where.assigneeId = params.assigneeId;
+    if (params.tql && params.tql.trim()) {
+      const parseRes = TQLParser.parse(params.tql);
+      if (!parseRes.success) {
+        return { ...empty, error: parseRes.error.message };
       }
-    }
 
-    if (params.reporterId && params.reporterId !== "ALL") {
-      where.reporterId = params.reporterId;
-    }
+      const [activeSprints, unreleasedVersions] = await Promise.all([
+        prisma.sprint.findMany({
+          where: { projectId: { in: accessibleIds }, status: "ACTIVE" },
+          select: { id: true },
+        }),
+        prisma.version.findMany({
+          where: { projectId: { in: accessibleIds }, status: "UNRELEASED" },
+          select: { id: true },
+        }),
+      ]);
 
-    if (params.sprintId && params.sprintId !== "ALL") {
-      if (params.sprintId === "BACKLOG") {
-        where.sprintId = null;
+      const compiler = new TQLCompiler({
+        currentUserId: user?.id,
+        accessibleProjectIds: accessibleIds,
+        activeSprintIds: activeSprints.map((s) => s.id),
+        unreleasedVersionIds: unreleasedVersions.map((v) => v.id),
+      });
+
+      const compiled = compiler.compile(parseRes.query);
+      where = compiled.where;
+      if (compiled.orderBy.length > 0) {
+        orderBy = compiled.orderBy;
       } else {
-        where.sprintId = params.sprintId;
+        orderBy = { createdAt: "desc" };
       }
-    }
-
-    if (params.versionId && params.versionId !== "ALL") {
-      if (params.versionId === "UNASSIGNED") {
-        where.versionId = null;
-      } else {
-        where.versionId = params.versionId;
-      }
-    }
-
-    if (params.label && params.label !== "ALL") {
-      where.labels = { some: { label: { name: params.label } } };
-    }
-
-    // A single project's own "done" names are known; spanning every
-    // accessible project (params.projectId === "ALL") can't express "done in
-    // whichever workflow each issue's project uses" as one equality filter,
-    // so that case falls back to the literal default category name.
-    const singleProjectId = params.projectId && params.projectId !== "ALL" ? params.projectId : null;
-    const doneNames = singleProjectId ? await getDoneStatusNames(singleProjectId) : ["DONE"];
-
-    if (params.preset === "MY_OPEN" && user) {
-      where.assigneeId = user.id;
-      where.status = { notIn: doneNames };
-    } else if (params.preset === "REPORTED_BY_ME" && user) {
-      where.reporterId = user.id;
-    } else if (params.preset === "DONE") {
-      where.status = { in: doneNames };
-    } else if (params.preset === "HIGH_PRIORITY") {
-      where.priority = { in: ["HIGH", "HIGHEST"] };
-    }
-
-    if (params.search && params.search.trim()) {
-      const q = params.search.trim();
-      where.OR = [
-        { key: { contains: q } },
-        { title: { contains: q } },
-      ];
-    }
-
-    const sortField = params.sortField || "createdAt";
-    const sortOrder = params.sortOrder || "desc";
-    const allowedSortFields = ["key", "title", "status", "priority", "storyPoints", "dueDate", "createdAt", "updatedAt"];
-    const orderBy: any = {};
-    if (allowedSortFields.includes(sortField)) {
-      orderBy[sortField] = sortOrder;
     } else {
-      orderBy.createdAt = "desc";
+      where.projectId = params.projectId && params.projectId !== "ALL" ? params.projectId : { in: accessibleIds };
+
+      if (params.type && params.type !== "ALL") {
+        where.type = params.type;
+      }
+
+      if (params.status && params.status !== "ALL") {
+        where.status = params.status;
+      }
+
+      if (params.priority && params.priority !== "ALL") {
+        where.priority = params.priority;
+      }
+
+      if (params.assigneeId && params.assigneeId !== "ALL") {
+        if (params.assigneeId === "UNASSIGNED") {
+          where.assigneeId = null;
+        } else {
+          where.assigneeId = params.assigneeId;
+        }
+      }
+
+      if (params.reporterId && params.reporterId !== "ALL") {
+        where.reporterId = params.reporterId;
+      }
+
+      if (params.sprintId && params.sprintId !== "ALL") {
+        if (params.sprintId === "BACKLOG") {
+          where.sprintId = null;
+        } else {
+          where.sprintId = params.sprintId;
+        }
+      }
+
+      if (params.versionId && params.versionId !== "ALL") {
+        if (params.versionId === "UNASSIGNED") {
+          where.versionId = null;
+        } else {
+          where.versionId = params.versionId;
+        }
+      }
+
+      if (params.label && params.label !== "ALL") {
+        where.labels = { some: { label: { name: params.label } } };
+      }
+
+      const singleProjectId = params.projectId && params.projectId !== "ALL" ? params.projectId : null;
+      const doneNames = singleProjectId ? await getDoneStatusNames(singleProjectId) : ["DONE"];
+
+      if (params.preset === "MY_OPEN" && user) {
+        where.assigneeId = user.id;
+        where.status = { notIn: doneNames };
+      } else if (params.preset === "REPORTED_BY_ME" && user) {
+        where.reporterId = user.id;
+      } else if (params.preset === "DONE") {
+        where.status = { in: doneNames };
+      } else if (params.preset === "HIGH_PRIORITY") {
+        where.priority = { in: ["HIGH", "HIGHEST"] };
+      }
+
+      if (params.search && params.search.trim()) {
+        const q = params.search.trim();
+        where.OR = [
+          { key: { contains: q } },
+          { title: { contains: q } },
+        ];
+      }
+
+      const sortField = params.sortField || "createdAt";
+      const sortOrder = params.sortOrder || "desc";
+      const allowedSortFields = ["key", "title", "status", "priority", "storyPoints", "dueDate", "createdAt", "updatedAt"];
+      if (allowedSortFields.includes(sortField)) {
+        orderBy[sortField] = sortOrder;
+      } else {
+        orderBy.createdAt = "desc";
+      }
     }
 
     const page = Math.max(1, params.page || 1);

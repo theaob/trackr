@@ -50,9 +50,14 @@ import {
   Loader2,
   RefreshCw,
   CalendarClock,
+  Code2,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { isOverdue } from "@/lib/dueDate";
+import TQLQueryBar from "@/components/issues/tql/TQLQueryBar";
+import { TQLAutocompleteContext } from "@/lib/tql/autocomplete";
+import { basicFiltersToTQL, tqlToBasicFilters } from "@/lib/tql/converter";
+import { TQLParser } from "@/lib/tql/parser";
 
 interface IssuesListViewProps {
   project: Project;
@@ -68,6 +73,8 @@ interface IssuesListViewProps {
   statuses: WorkflowStatus[];
   labels?: Label[];
   initialSelectedIssueKey?: string;
+  initialFilterMode?: "basic" | "tql";
+  initialTqlQuery?: string;
 }
 
 type FilterPreset =
@@ -95,12 +102,17 @@ export default function IssuesListView({
   statuses,
   labels = [],
   initialSelectedIssueKey,
+  initialFilterMode,
+  initialTqlQuery,
 }: IssuesListViewProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const selectedIssueKey =
     searchParams?.get("selectedIssue") || searchParams?.get("issue") || initialSelectedIssueKey;
+
+  const urlMode = searchParams?.get("mode");
+  const urlTql = searchParams?.get("tql");
 
   const { currentUser } = useCurrentUser();
   const permissions = useProjectPermissions(project);
@@ -198,6 +210,12 @@ export default function IssuesListView({
   // View Mode: Split view or Full Table view
   const [viewMode, setViewMode] = useState<"split" | "table">("split");
 
+  // Filter Mode & TQL State
+  const [filterMode, setFilterMode] = useState<"basic" | "tql">(
+    urlMode === "tql" || urlTql ? "tql" : initialFilterMode || (initialTqlQuery ? "tql" : "basic")
+  );
+  const [tqlQuery, setTqlQuery] = useState<string>(urlTql || initialTqlQuery || "");
+
   // Filter States
   const [projectFilter, setProjectFilter] = useState<string>(project?.id || "ALL");
   const [preset, setPreset] = useState<FilterPreset>("ALL");
@@ -228,28 +246,210 @@ export default function IssuesListView({
     }
   }, [globalSearchQuery]);
 
+  const autocompleteContext: TQLAutocompleteContext = useMemo(
+    () => ({
+      projects: (allProjects && allProjects.length > 0 ? allProjects : [project]).map((p) => ({
+        key: p.key,
+        name: p.name,
+      })),
+      statuses: statuses.map((s) => s.name),
+      users: users.map((u) => ({
+        id: u.id,
+        name: u.name,
+        email: u.email || undefined,
+      })),
+      sprints: sprints.map((s) => s.name),
+      versions: versions.map((v) => v.name),
+      labels: labels.map((l) => l.name),
+    }),
+    [allProjects, project, statuses, users, sprints, versions, labels]
+  );
+
+  const updateUrlParams = useCallback(
+    (newMode: "basic" | "tql", newTql?: string) => {
+      if (typeof window === "undefined") return;
+      const currentUrl = new URL(window.location.href);
+      if (newMode === "tql") {
+        currentUrl.searchParams.set("mode", "tql");
+        if (newTql && newTql.trim()) {
+          currentUrl.searchParams.set("tql", newTql.trim());
+        } else {
+          currentUrl.searchParams.delete("tql");
+        }
+      } else {
+        currentUrl.searchParams.delete("mode");
+        currentUrl.searchParams.delete("tql");
+      }
+      const newSearch = currentUrl.searchParams.toString();
+      router.replace(`${currentUrl.pathname}${newSearch ? `?${newSearch}` : ""}`, { scroll: false });
+    },
+    [router]
+  );
+
+  const handleSwitchToTQL = () => {
+    const currentProject =
+      allProjects.find((p) => p.id === projectFilter) ||
+      (projectFilter !== "ALL" ? project : undefined);
+    const currentAssignee = users.find((u) => u.id === assigneeFilter);
+    const currentSprint = sprints.find((s) => s.id === sprintFilter);
+    const currentVersion = versions.find((v) => v.id === versionFilter);
+
+    const generated = basicFiltersToTQL({
+      projectKey: projectFilter !== "ALL" ? currentProject?.key || project?.key : undefined,
+      preset: preset !== "ALL" ? preset : undefined,
+      type: typeFilter !== "ALL" ? typeFilter : undefined,
+      status: statusFilter !== "ALL" ? statusFilter : undefined,
+      priority: priorityFilter !== "ALL" ? priorityFilter : undefined,
+      assigneeId: assigneeFilter,
+      assigneeName: currentAssignee?.name,
+      reporterId: reporterFilter !== "ALL" ? reporterFilter : undefined,
+      sprintId: sprintFilter,
+      sprintName: currentSprint?.name,
+      versionId: versionFilter,
+      versionName: currentVersion?.name,
+      label: labelFilter !== "ALL" ? labelFilter : undefined,
+      search: searchQuery,
+      currentUserId: currentUser?.id,
+      sortField,
+      sortOrder,
+    });
+
+    setTqlQuery(generated);
+    setFilterMode("tql");
+    setPage(1);
+    updateUrlParams("tql", generated);
+  };
+
+  const handleSwitchToBasic = () => {
+    if (!tqlQuery.trim()) {
+      setFilterMode("basic");
+      updateUrlParams("basic");
+      return;
+    }
+
+    const res = tqlToBasicFilters(tqlQuery);
+    if (!res.convertible) {
+      const confirmSwitch = window.confirm(
+        `This query contains advanced JQL features (${res.reason}). Switching to Basic mode will reset those filters. Do you want to continue?`
+      );
+      if (!confirmSwitch) return;
+      handleClearFilters();
+      setFilterMode("basic");
+      updateUrlParams("basic");
+      return;
+    }
+
+    const { state } = res;
+    if (state.projectKey) {
+      const foundProject =
+        allProjects.find((p) => p.key.toUpperCase() === state.projectKey!.toUpperCase()) ||
+        (project.key.toUpperCase() === state.projectKey!.toUpperCase() ? project : null);
+      if (foundProject) {
+        setProjectFilter(foundProject.id);
+      }
+    } else {
+      setProjectFilter("ALL");
+    }
+
+    setTypeFilter((state.type as IssueType) || "ALL");
+    setStatusFilter((state.status as IssueStatus) || "ALL");
+    setPriorityFilter((state.priority as PriorityLevel) || "ALL");
+
+    if (state.assigneeId === "UNASSIGNED") {
+      setAssigneeFilter("UNASSIGNED");
+    } else if (state.assigneeId === "CURRENT_USER" && currentUser) {
+      setAssigneeFilter(currentUser.id);
+    } else if (state.assigneeId) {
+      const foundUser = users.find(
+        (u) =>
+          u.name.toLowerCase() === state.assigneeId!.toLowerCase() ||
+          u.id === state.assigneeId
+      );
+      setAssigneeFilter(foundUser ? foundUser.id : "ALL");
+    } else {
+      setAssigneeFilter("ALL");
+    }
+
+    if (state.sprintId === "BACKLOG") {
+      setSprintFilter("BACKLOG");
+    } else if (state.sprintId) {
+      const foundSprint = sprints.find(
+        (s) =>
+          s.name.toLowerCase() === state.sprintId!.toLowerCase() ||
+          s.id === state.sprintId
+      );
+      setSprintFilter(foundSprint ? foundSprint.id : "ALL");
+    } else {
+      setSprintFilter("ALL");
+    }
+
+    if (state.versionId === "UNASSIGNED") {
+      setVersionFilter("UNASSIGNED");
+    } else if (state.versionId) {
+      const foundVersion = versions.find(
+        (v) =>
+          v.name.toLowerCase() === state.versionId!.toLowerCase() ||
+          v.id === state.versionId
+      );
+      setVersionFilter(foundVersion ? foundVersion.id : "ALL");
+    } else {
+      setVersionFilter("ALL");
+    }
+
+    setLabelFilter(state.label || "ALL");
+    setSearchQuery(state.search || "");
+    if (state.sortField) {
+      setSortField(state.sortField as SortField);
+    }
+    if (state.sortOrder) {
+      setSortOrder(state.sortOrder);
+    }
+
+    setPreset("ALL");
+    setFilterMode("basic");
+    setPage(1);
+    updateUrlParams("basic");
+  };
+
   // Server-side fetch on filter/pagination/sorting changes
   const fetchIssues = useCallback(async () => {
+    if (filterMode === "tql" && tqlQuery.trim()) {
+      const syntaxCheck = TQLParser.parse(tqlQuery);
+      if (!syntaxCheck.success) {
+        return;
+      }
+    }
+
     setIsLoading(true);
     try {
-      const res = await getPaginatedIssues({
-        projectId: projectFilter,
-        page,
-        pageSize,
-        search: searchQuery,
-        preset,
-        currentUserId: currentUser?.id,
-        type: typeFilter,
-        status: statusFilter,
-        priority: priorityFilter,
-        assigneeId: assigneeFilter,
-        reporterId: reporterFilter,
-        sprintId: sprintFilter,
-        versionId: versionFilter,
-        label: labelFilter,
-        sortField,
-        sortOrder,
-      });
+      const res = await getPaginatedIssues(
+        filterMode === "tql"
+          ? {
+              projectId: projectFilter,
+              page,
+              pageSize,
+              tql: tqlQuery,
+              currentUserId: currentUser?.id,
+            }
+          : {
+              projectId: projectFilter,
+              page,
+              pageSize,
+              search: searchQuery,
+              preset,
+              currentUserId: currentUser?.id,
+              type: typeFilter,
+              status: statusFilter,
+              priority: priorityFilter,
+              assigneeId: assigneeFilter,
+              reporterId: reporterFilter,
+              sprintId: sprintFilter,
+              versionId: versionFilter,
+              label: labelFilter,
+              sortField,
+              sortOrder,
+            }
+      );
       setIssues(res.issues as any);
       setTotalCount(res.totalCount);
       setTotalPages(res.totalPages);
@@ -267,6 +467,8 @@ export default function IssuesListView({
       setIsLoading(false);
     }
   }, [
+    filterMode,
+    tqlQuery,
     projectFilter,
     page,
     pageSize,
@@ -301,6 +503,10 @@ export default function IssuesListView({
 
   // Reset Filters
   const handleClearFilters = () => {
+    if (filterMode === "tql") {
+      setTqlQuery("");
+      updateUrlParams("tql", "");
+    }
     setPreset("ALL");
     setSearchQuery("");
     setTypeFilter("ALL");
@@ -380,16 +586,18 @@ export default function IssuesListView({
   };
 
   const hasActiveFilters =
-    preset !== "ALL" ||
-    searchQuery.trim() !== "" ||
-    typeFilter !== "ALL" ||
-    statusFilter !== "ALL" ||
-    priorityFilter !== "ALL" ||
-    assigneeFilter !== "ALL" ||
-    reporterFilter !== "ALL" ||
-    sprintFilter !== "ALL" ||
-    versionFilter !== "ALL" ||
-    labelFilter !== "ALL";
+    filterMode === "tql"
+      ? tqlQuery.trim() !== ""
+      : preset !== "ALL" ||
+        searchQuery.trim() !== "" ||
+        typeFilter !== "ALL" ||
+        statusFilter !== "ALL" ||
+        priorityFilter !== "ALL" ||
+        assigneeFilter !== "ALL" ||
+        reporterFilter !== "ALL" ||
+        sprintFilter !== "ALL" ||
+        versionFilter !== "ALL" ||
+        labelFilter !== "ALL";
 
   // Issues displayed on current page
   const filteredAndSortedIssues = issues;
@@ -577,32 +785,64 @@ export default function IssuesListView({
           </div>
         </div>
 
-        {/* Preset Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-          {[
-            { id: "ALL", label: "All Issues" },
-            { id: "MY_OPEN", label: "My Open Issues" },
-            { id: "REPORTED_BY_ME", label: "Reported by Me" },
-            { id: "RECENTLY_UPDATED", label: "Recently Updated" },
-            { id: "HIGH_PRIORITY", label: "High Priority" },
-            { id: "DONE", label: "Done" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => {
-                setPreset(tab.id as FilterPreset);
+        {filterMode === "tql" ? (
+          <div className="pt-0.5">
+            <TQLQueryBar
+              query={tqlQuery}
+              onChange={(q) => {
+                setTqlQuery(q);
                 setPage(1);
               }}
-              className={`px-3 py-1.5 rounded-md font-medium whitespace-nowrap transition-colors ${
-                preset === tab.id
-                  ? "bg-jira-blue text-white font-semibold shadow-xs"
-                  : "bg-jira-gray-100 text-jira-gray-700 hover:bg-jira-gray-200"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+              onSearch={() => {
+                fetchIssues();
+                updateUrlParams("tql", tqlQuery);
+              }}
+              onSwitchToBasic={handleSwitchToBasic}
+              isLoading={isLoading}
+              context={autocompleteContext}
+            />
+          </div>
+        ) : (
+          <>
+            {/* Preset Tabs & Mode Switcher */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+                {[
+                  { id: "ALL", label: "All Issues" },
+                  { id: "MY_OPEN", label: "My Open Issues" },
+                  { id: "REPORTED_BY_ME", label: "Reported by Me" },
+                  { id: "RECENTLY_UPDATED", label: "Recently Updated" },
+                  { id: "HIGH_PRIORITY", label: "High Priority" },
+                  { id: "DONE", label: "Done" },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setPreset(tab.id as FilterPreset);
+                      setPage(1);
+                    }}
+                    className={`px-3 py-1.5 rounded-md font-medium whitespace-nowrap transition-colors ${
+                      preset === tab.id
+                        ? "bg-jira-blue text-white font-semibold shadow-xs"
+                        : "bg-jira-gray-100 text-jira-gray-700 hover:bg-jira-gray-200"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* JQL Mode Toggle */}
+              <button
+                type="button"
+                onClick={handleSwitchToTQL}
+                className="px-2.5 py-1 text-xs font-semibold text-jira-blue bg-jira-blue/10 hover:bg-jira-blue/20 border border-jira-blue/30 rounded flex items-center gap-1.5 transition-colors shrink-0 cursor-pointer ml-auto"
+                title="Switch to JQL query bar"
+              >
+                <Code2 className="w-3.5 h-3.5" />
+                <span>JQL</span>
+              </button>
+            </div>
 
         {/* Advanced Filters Bar */}
         <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -838,7 +1078,9 @@ export default function IssuesListView({
             </button>
           )}
         </div>
-      </div>
+      </>
+    )}
+  </div>
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-hidden flex">

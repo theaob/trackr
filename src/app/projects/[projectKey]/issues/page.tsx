@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: { projectKey: string };
-  searchParams?: { selectedIssue?: string; issue?: string };
+  searchParams?: { selectedIssue?: string; issue?: string; tql?: string; mode?: string };
 }
 
 export default async function IssuesPage({ params, searchParams }: PageProps) {
@@ -21,7 +21,11 @@ export default async function IssuesPage({ params, searchParams }: PageProps) {
 
   const [allProjects, paginatedData, users, sprints, versions, workflow, labels] = await Promise.all([
     getProjects(),
-    getPaginatedIssues({ projectId: project.id, page: 1, pageSize: 50, sortField: "createdAt", sortOrder: "desc" }),
+    getPaginatedIssues(
+      searchParams?.tql
+        ? { projectId: project.id, tql: searchParams.tql, page: 1, pageSize: 50 }
+        : { projectId: project.id, page: 1, pageSize: 50, sortField: "createdAt", sortOrder: "desc" }
+    ),
     getProjectUsers(project.id),
     getProjectSprints(project.id),
     getProjectVersions(project.id),
@@ -45,6 +49,8 @@ export default async function IssuesPage({ params, searchParams }: PageProps) {
         statuses={workflow.statuses as any}
         labels={labels as any}
         initialSelectedIssueKey={searchParams?.selectedIssue || searchParams?.issue}
+        initialFilterMode={searchParams?.mode === "tql" || searchParams?.tql ? "tql" : "basic"}
+        initialTqlQuery={searchParams?.tql || ""}
       />
     </Suspense>
   );

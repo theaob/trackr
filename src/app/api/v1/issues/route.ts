@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { validatePersonalAccessToken } from "@/lib/auth/tokens";
 import { accessibleProjectIds } from "@/lib/auth/guards";
 import prisma from "@/lib/db";
+import { TQLParser } from "@/lib/tql/parser";
+import { TQLCompiler } from "@/lib/tql/compiler";
 
 export const dynamic = "force-dynamic";
 
@@ -41,15 +43,49 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
+  const tqlParam = searchParams.get("tql");
   const projectKey = searchParams.get("projectKey");
   const limitParam = searchParams.get("limit");
   const limit = limitParam
     ? Math.min(Math.max(parseInt(limitParam, 10) || DEFAULT_LIMIT, 1), MAX_LIMIT)
     : DEFAULT_LIMIT;
 
-  const where: any = { projectId: { in: allowedProjectIds } };
+  let where: any = { projectId: { in: allowedProjectIds } };
+  let orderBy: any = { createdAt: "desc" };
 
-  if (projectKey) {
+  if (tqlParam && tqlParam.trim()) {
+    const parseRes = TQLParser.parse(tqlParam);
+    if (!parseRes.success) {
+      return NextResponse.json(
+        { error: `TQL Syntax Error: ${parseRes.error.message}`, details: parseRes.error },
+        { status: 400 }
+      );
+    }
+
+    const [activeSprints, unreleasedVersions] = await Promise.all([
+      prisma.sprint.findMany({
+        where: { projectId: { in: allowedProjectIds }, status: "ACTIVE" },
+        select: { id: true },
+      }),
+      prisma.version.findMany({
+        where: { projectId: { in: allowedProjectIds }, status: "UNRELEASED" },
+        select: { id: true },
+      }),
+    ]);
+
+    const compiler = new TQLCompiler({
+      currentUserId: auth.user.id,
+      accessibleProjectIds: allowedProjectIds,
+      activeSprintIds: activeSprints.map((s) => s.id),
+      unreleasedVersionIds: unreleasedVersions.map((v) => v.id),
+    });
+
+    const compiled = compiler.compile(parseRes.query);
+    where = compiled.where;
+    if (compiled.orderBy.length > 0) {
+      orderBy = compiled.orderBy;
+    }
+  } else if (projectKey) {
     const project = await prisma.project.findUnique({
       where: { key: projectKey.toUpperCase() },
       select: { id: true },
@@ -66,7 +102,7 @@ export async function GET(request: NextRequest) {
   const issues = await prisma.issue.findMany({
     where,
     take: limit,
-    orderBy: { createdAt: "desc" },
+    orderBy,
     select: {
       id: true,
       key: true,
