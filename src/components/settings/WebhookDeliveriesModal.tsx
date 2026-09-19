@@ -82,41 +82,42 @@ export default function WebhookDeliveriesModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-150">
       <div
-        className="bg-white rounded-lg shadow-2xl border border-jira-gray-300 w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="bg-white rounded-none sm:rounded-lg shadow-2xl border-0 sm:border border-jira-gray-300 w-full h-full sm:h-auto max-w-4xl overflow-hidden flex flex-col max-h-none sm:max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-jira-gray-200 shrink-0 bg-white">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded bg-jira-blue-light/70 flex items-center justify-center text-jira-blue">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-jira-gray-200 shrink-0 bg-white gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded bg-jira-blue-light/70 flex items-center justify-center text-jira-blue shrink-0">
               <History className="w-4 h-4" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-jira-navy">{webhook.name}</h2>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-jira-gray-100 text-jira-gray-600 border border-jira-gray-300">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <h2 className="text-base font-bold text-jira-navy truncate">{webhook.name}</h2>
+                <span className="text-[10px] font-mono px-1.5 sm:px-2 py-0.5 rounded bg-jira-gray-100 text-jira-gray-600 border border-jira-gray-300 truncate max-w-[160px] sm:max-w-none">
                   {webhook.url}
                 </span>
               </div>
-              <p className="text-xs text-jira-gray-500">
+              <p className="text-xs text-jira-gray-500 truncate">
                 Recent delivery audit logs and response codes
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={handleTestPing}
               disabled={isTesting}
-              className="bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors disabled:opacity-50 shadow-2xs"
+              className="bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors disabled:opacity-50 shadow-2xs"
             >
               {isTesting ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
                 <Send className="w-3.5 h-3.5" />
               )}
-              <span>{isTesting ? "Sending Ping..." : "Send Test Ping"}</span>
+              <span className="hidden sm:inline">{isTesting ? "Sending Ping..." : "Send Test Ping"}</span>
+              <span className="sm:hidden">{isTesting ? "Sending..." : "Test"}</span>
             </button>
             <button
               onClick={onClose}
@@ -128,7 +129,7 @@ export default function WebhookDeliveriesModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {isLoading ? (
             <div className="py-16 text-center text-xs text-jira-gray-500 flex items-center justify-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin text-jira-blue" />

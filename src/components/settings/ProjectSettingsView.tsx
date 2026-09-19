@@ -237,7 +237,7 @@ export default function ProjectSettingsView({
 
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto px-8 py-6 bg-white">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto px-4 sm:px-8 py-4 sm:py-6 bg-white">
       {/* Header */}
       <div className="pb-4 border-b border-jira-gray-200">
         <h1 className="text-xl font-bold text-jira-navy tracking-tight">Project Settings</h1>
@@ -246,11 +246,11 @@ export default function ProjectSettingsView({
         </p>
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-6 mt-4 border-b border-jira-gray-200">
+        <div className="flex items-center gap-4 sm:gap-6 mt-4 border-b border-jira-gray-200 overflow-x-auto no-scrollbar">
           <button
             type="button"
             onClick={() => setActiveTab("general")}
-            className={`pb-2.5 text-xs font-semibold tracking-wide border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={`pb-2.5 text-xs font-semibold tracking-wide border-b-2 whitespace-nowrap shrink-0 transition-colors flex items-center gap-1.5 ${
               activeTab === "general"
                 ? "border-jira-blue text-jira-blue"
                 : "border-transparent text-jira-gray-600 hover:text-jira-navy"
@@ -262,7 +262,7 @@ export default function ProjectSettingsView({
           <button
             type="button"
             onClick={() => setActiveTab("fields")}
-            className={`pb-2.5 text-xs font-semibold tracking-wide border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={`pb-2.5 text-xs font-semibold tracking-wide border-b-2 whitespace-nowrap shrink-0 transition-colors flex items-center gap-1.5 ${
               activeTab === "fields"
                 ? "border-jira-blue text-jira-blue"
                 : "border-transparent text-jira-gray-600 hover:text-jira-navy"
@@ -277,7 +277,7 @@ export default function ProjectSettingsView({
           <button
             type="button"
             onClick={() => setActiveTab("components")}
-            className={`pb-2.5 text-xs font-semibold tracking-wide border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={`pb-2.5 text-xs font-semibold tracking-wide border-b-2 whitespace-nowrap shrink-0 transition-colors flex items-center gap-1.5 ${
               activeTab === "components"
                 ? "border-jira-blue text-jira-blue"
                 : "border-transparent text-jira-gray-600 hover:text-jira-navy"
@@ -292,7 +292,7 @@ export default function ProjectSettingsView({
           <button
             type="button"
             onClick={() => setActiveTab("webhooks")}
-            className={`pb-2.5 text-xs font-semibold tracking-wide border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={`pb-2.5 text-xs font-semibold tracking-wide border-b-2 whitespace-nowrap shrink-0 transition-colors flex items-center gap-1.5 ${
               activeTab === "webhooks"
                 ? "border-jira-blue text-jira-blue"
                 : "border-transparent text-jira-gray-600 hover:text-jira-navy"
@@ -307,7 +307,7 @@ export default function ProjectSettingsView({
           <button
             type="button"
             onClick={() => setActiveTab("access")}
-            className={`pb-2.5 text-xs font-semibold tracking-wide border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={`pb-2.5 text-xs font-semibold tracking-wide border-b-2 whitespace-nowrap shrink-0 transition-colors flex items-center gap-1.5 ${
               activeTab === "access"
                 ? "border-jira-blue text-jira-blue"
                 : "border-transparent text-jira-gray-600 hover:text-jira-navy"
@@ -323,7 +323,7 @@ export default function ProjectSettingsView({
           <button
             type="button"
             onClick={() => setActiveTab("workflow")}
-            className={`pb-2.5 text-xs font-semibold tracking-wide border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={`pb-2.5 text-xs font-semibold tracking-wide border-b-2 whitespace-nowrap shrink-0 transition-colors flex items-center gap-1.5 ${
               activeTab === "workflow"
                 ? "border-jira-blue text-jira-blue"
                 : "border-transparent text-jira-gray-600 hover:text-jira-navy"
@@ -571,7 +571,7 @@ export default function ProjectSettingsView({
               </button>
             </div>
           ) : (
-            <div className="border border-jira-gray-200 rounded-lg overflow-hidden bg-white shadow-2xs">
+            <div className="border border-jira-gray-200 rounded-lg overflow-x-auto bg-white shadow-2xs">
               <table className="min-w-full divide-y divide-jira-gray-200 text-left text-xs">
                 <thead className="bg-jira-gray-50 font-semibold text-jira-gray-600">
                   <tr>
@@ -697,7 +697,7 @@ export default function ProjectSettingsView({
               )}
             </div>
           ) : (
-            <div className="border border-jira-gray-200 rounded-lg overflow-hidden bg-white shadow-2xs">
+            <div className="border border-jira-gray-200 rounded-lg overflow-x-auto bg-white shadow-2xs">
               <table className="min-w-full divide-y divide-jira-gray-200 text-left text-xs">
                 <thead className="bg-jira-gray-50 font-semibold text-jira-gray-600">
                   <tr>
@@ -793,7 +793,7 @@ export default function ProjectSettingsView({
               </button>
             </div>
           ) : (
-            <div className="border border-jira-gray-200 rounded-lg overflow-hidden bg-white shadow-2xs">
+            <div className="border border-jira-gray-200 rounded-lg overflow-x-auto bg-white shadow-2xs">
               <table className="min-w-full divide-y divide-jira-gray-200 text-left text-xs">
                 <thead className="bg-jira-gray-50 font-semibold text-jira-gray-600">
                   <tr>

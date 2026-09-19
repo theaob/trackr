@@ -88,10 +88,10 @@ export default function CreateProjectModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 overflow-y-auto animate-in fade-in">
-      <div className="bg-white w-full max-w-lg rounded-lg shadow-2xl border border-jira-gray-300 flex flex-col max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4 overflow-y-auto animate-in fade-in">
+      <div className="bg-white w-full h-full sm:h-auto max-w-lg rounded-none sm:rounded-lg shadow-2xl border-0 sm:border border-jira-gray-300 flex flex-col max-h-none sm:max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-jira-gray-200">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-jira-gray-200">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded bg-jira-blue-light text-jira-blue flex items-center justify-center font-bold">
               <FolderPlus className="w-4 h-4" />
@@ -100,14 +100,14 @@ export default function CreateProjectModal({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-jira-gray-500 hover:text-jira-navy hover:bg-jira-gray-100 rounded"
+            className="text-jira-gray-500 hover:text-jira-navy p-1 rounded-md hover:bg-jira-gray-100 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="p-6 space-y-4 text-sm overflow-y-auto">
+        <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="p-4 sm:p-6 space-y-4 text-sm overflow-y-auto flex-1">
           {error && (
             <div className="p-3 text-xs bg-rose-50 border border-rose-200 text-rose-700 rounded-md font-medium">
               {error}

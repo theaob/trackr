@@ -219,7 +219,7 @@ export default function ReportsView({
   ];
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+    <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
       {/* Header & Main Controls */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-jira-gray-200 pb-4">
         <div>
@@ -252,7 +252,7 @@ export default function ReportsView({
       </div>
 
       {/* Reports Hub Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-jira-gray-200 overflow-x-auto pb-px">
+      <div className="flex items-center gap-1.5 sm:gap-2 border-b border-jira-gray-200 overflow-x-auto no-scrollbar pb-px">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -260,7 +260,7 @@ export default function ReportsView({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-t-md border-b-2 whitespace-nowrap transition-colors ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-2 text-xs font-semibold rounded-t-md border-b-2 whitespace-nowrap transition-colors ${
                 isActive
                   ? "border-jira-blue text-jira-blue bg-jira-blue/5"
                   : "border-transparent text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-100"
@@ -287,7 +287,7 @@ export default function ReportsView({
           {report && (
             <>
               {/* Stat tiles */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
                 <StatTile
                   icon={Target}
                   label={report.isIssueCount ? "Issues Count" : "Story Points"}
@@ -315,7 +315,7 @@ export default function ReportsView({
               </div>
 
               {/* Burndown / Burnup Quick Card */}
-              <div className="bg-white border border-jira-gray-200 rounded-lg p-5 shadow-xs">
+              <div className="bg-white border border-jira-gray-200 rounded-lg p-3.5 sm:p-5 shadow-xs">
                 <div className="flex items-center justify-between mb-1">
                   <h2 className="text-sm font-bold text-jira-navy">Sprint Progress Timeline</h2>
                   <button
@@ -340,7 +340,7 @@ export default function ReportsView({
           )}
 
           {/* Quick Velocity Card */}
-          <div className="bg-white border border-jira-gray-200 rounded-lg p-5 shadow-xs">
+          <div className="bg-white border border-jira-gray-200 rounded-lg p-3.5 sm:p-5 shadow-xs">
             <div className="flex items-center justify-between mb-1">
               <h2 className="text-sm font-bold text-jira-navy">Velocity (Committed vs. Completed)</h2>
               <button
@@ -361,7 +361,7 @@ export default function ReportsView({
 
       {/* TAB 2: BURNDOWN & BURNUP */}
       {activeTab === "burndown" && (
-        <div className="bg-white border border-jira-gray-200 rounded-lg p-5 shadow-xs space-y-2">
+        <div className="bg-white border border-jira-gray-200 rounded-lg p-3.5 sm:p-5 shadow-xs space-y-2">
           <div>
             <h2 className="text-base font-bold text-jira-navy">Sprint Burndown & Burnup</h2>
             <p className="text-xs text-jira-gray-500">
@@ -386,7 +386,7 @@ export default function ReportsView({
 
       {/* TAB 3: VELOCITY */}
       {activeTab === "velocity" && (
-        <div className="bg-white border border-jira-gray-200 rounded-lg p-5 shadow-xs space-y-2">
+        <div className="bg-white border border-jira-gray-200 rounded-lg p-3.5 sm:p-5 shadow-xs space-y-2">
           <div>
             <h2 className="text-base font-bold text-jira-navy">Velocity Chart</h2>
             <p className="text-xs text-jira-gray-500">
@@ -399,7 +399,7 @@ export default function ReportsView({
 
       {/* TAB 4: CUMULATIVE FLOW (CFD) */}
       {activeTab === "cfd" && (
-        <div className="bg-white border border-jira-gray-200 rounded-lg p-5 shadow-xs space-y-2">
+        <div className="bg-white border border-jira-gray-200 rounded-lg p-3.5 sm:p-5 shadow-xs space-y-2">
           <div>
             <h2 className="text-base font-bold text-jira-navy">Cumulative Flow Diagram (CFD)</h2>
             <p className="text-xs text-jira-gray-500">
@@ -417,7 +417,7 @@ export default function ReportsView({
 
       {/* TAB 5: WORKLOAD & DISTRIBUTION */}
       {activeTab === "distribution" && (
-        <div className="bg-white border border-jira-gray-200 rounded-lg p-5 shadow-xs space-y-4">
+        <div className="bg-white border border-jira-gray-200 rounded-lg p-3.5 sm:p-5 shadow-xs space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-base font-bold text-jira-navy">Issue Workload & Distribution</h2>
@@ -460,7 +460,7 @@ export default function ReportsView({
 
       {/* TAB 6: EPIC PROGRESS */}
       {activeTab === "epics" && (
-        <div className="bg-white border border-jira-gray-200 rounded-lg p-5 shadow-xs space-y-2">
+        <div className="bg-white border border-jira-gray-200 rounded-lg p-3.5 sm:p-5 shadow-xs space-y-2">
           <div>
             <h2 className="text-base font-bold text-jira-navy">Epic Progress Report</h2>
             <p className="text-xs text-jira-gray-500">

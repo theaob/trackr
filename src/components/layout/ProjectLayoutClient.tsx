@@ -31,6 +31,7 @@ export default function ProjectLayoutClient({
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
   const { registerCreateIssue, registerToggleSidebar } = useKeyboardShortcutsContext();
 
@@ -55,6 +56,7 @@ export default function ProjectLayoutClient({
           currentProject={currentProject}
           onCreateIssueClick={() => setIsCreateModalOpen(true)}
           onCreateProjectClick={() => setIsCreateProjectModalOpen(true)}
+          onToggleMobileMenu={() => setIsMobileDrawerOpen((prev) => !prev)}
         />
 
         {/* Main Workspace Body: Sidebar + Content */}
@@ -63,6 +65,8 @@ export default function ProjectLayoutClient({
             project={currentProject}
             collapsed={isSidebarCollapsed}
             onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+            isMobileOpen={isMobileDrawerOpen}
+            onCloseMobile={() => setIsMobileDrawerOpen(false)}
           />
           <main className="flex-1 flex flex-col overflow-hidden bg-white">{children}</main>
         </div>

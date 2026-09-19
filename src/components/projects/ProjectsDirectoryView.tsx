@@ -67,7 +67,7 @@ export default function ProjectsDirectoryView({
   return (
     <div className="flex-1 flex flex-col h-full overflow-y-auto bg-jira-gray-50/50">
       {/* Header */}
-      <div className="bg-white border-b border-jira-gray-200 px-8 py-6 shrink-0">
+      <div className="bg-white border-b border-jira-gray-200 px-4 sm:px-8 py-4 sm:py-6 shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 max-w-7xl mx-auto">
           <div>
             <h1 className="text-2xl font-bold text-jira-navy tracking-tight">Projects</h1>
@@ -88,8 +88,8 @@ export default function ProjectsDirectoryView({
         </div>
 
         {/* Search Input */}
-        <div className="max-w-7xl mx-auto mt-5">
-          <div className="relative w-72">
+        <div className="max-w-7xl mx-auto mt-4 sm:mt-5">
+          <div className="relative w-full sm:w-72">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
             <input
               type="text"
@@ -103,7 +103,7 @@ export default function ProjectsDirectoryView({
       </div>
 
       {/* Project Cards Grid */}
-      <div className="p-8 max-w-7xl mx-auto w-full">
+      <div className="p-4 sm:p-8 max-w-7xl mx-auto w-full">
         {filteredProjects.length === 0 ? (
           <div className="p-12 text-center bg-white rounded-lg border border-jira-gray-300">
             <FolderGit2 className="w-10 h-10 text-jira-gray-400 mx-auto mb-3" />

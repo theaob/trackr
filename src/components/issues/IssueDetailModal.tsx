@@ -736,10 +736,10 @@ export default function IssueDetailModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 overflow-y-auto animate-in fade-in">
-      <div className="bg-white w-full max-w-4xl rounded-lg shadow-2xl border border-jira-gray-300 flex flex-col max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4 overflow-y-auto animate-in fade-in">
+      <div className="bg-white w-full max-w-4xl h-full sm:h-auto sm:max-h-[90vh] rounded-none sm:rounded-lg shadow-2xl border border-jira-gray-300 flex flex-col overflow-hidden">
         {/* Header Bar */}
-        <div className="flex items-center justify-between px-6 py-3 border-b border-jira-gray-200 bg-jira-gray-50 shrink-0">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-2.5 sm:py-3 border-b border-jira-gray-200 bg-jira-gray-50 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
             {navHistory.length > 0 && (
               <button
@@ -771,7 +771,7 @@ export default function IssueDetailModal({
             <span className="text-sm font-bold text-jira-gray-700">{currentIssue.key}</span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {currentUser && (
               <button
                 onClick={handleToggleWatch}
@@ -809,7 +809,7 @@ export default function IssueDetailModal({
         {/* Modal Body: 2 Columns */}
         <div className="flex-1 overflow-y-auto flex flex-col md:flex-row">
           {/* Left Main Content */}
-          <div className="flex-1 p-6 space-y-6 md:border-r border-jira-gray-200">
+          <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 md:border-r border-jira-gray-200">
             {/* Title Editing */}
             <div>
               {isEditingTitle ? (
@@ -842,6 +842,73 @@ export default function IssueDetailModal({
                 >
                   {currentIssue.title}
                 </h1>
+              )}
+            </div>
+
+            {/* Mobile Quick Actions Strip (< md) */}
+            <div className="md:hidden flex flex-wrap items-center gap-2 p-3 bg-jira-gray-50 rounded-lg border border-jira-gray-200">
+              {/* Quick Status */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-bold text-jira-gray-500 uppercase">Status:</span>
+                <select
+                  value={currentIssue.status}
+                  disabled={!permissions.canEditIssue}
+                  onChange={(e) => handleStatusChange(e.target.value as IssueStatus)}
+                  className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-xs font-semibold text-jira-navy outline-none focus:border-jira-blue"
+                >
+                  {allowedNextStatusNames(currentIssue.status, workflowStatuses, workflowTransitions).map(
+                    (name) => (
+                      <option key={name} value={name}>
+                        {prettifyStatusName(name)}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+
+              {/* Quick Assignee */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-bold text-jira-gray-500 uppercase">Assignee:</span>
+                <select
+                  value={currentIssue.assigneeId || ""}
+                  disabled={!permissions.canEditIssue}
+                  onChange={(e) => handleAssigneeChange(e.target.value || null)}
+                  className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-xs text-jira-navy outline-none focus:border-jira-blue max-w-[130px] truncate"
+                >
+                  <option value="">Unassigned</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Quick Priority */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-bold text-jira-gray-500 uppercase">Priority:</span>
+                <select
+                  value={currentIssue.priority}
+                  disabled={!permissions.canEditIssue}
+                  onChange={(e) => handlePriorityChange(e.target.value as PriorityLevel)}
+                  className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-xs text-jira-navy outline-none focus:border-jira-blue"
+                >
+                  <option value="HIGHEST">Highest</option>
+                  <option value="HIGH">High</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="LOW">Low</option>
+                  <option value="LOWEST">Lowest</option>
+                </select>
+              </div>
+
+              {/* Story Points */}
+              {currentIssue.storyPoints !== null && (
+                <div className="flex items-center gap-1">
+                  <span className="text-[11px] font-bold text-jira-gray-500 uppercase">Pts:</span>
+                  <span className="text-xs font-bold text-jira-gray-800 bg-jira-gray-200 px-2 py-0.5 rounded-full">
+                    {currentIssue.storyPoints}
+                  </span>
+                </div>
               )}
             </div>
 

@@ -17,6 +17,7 @@ interface KanbanColumnProps {
   minHeightClass?: string;
   doneStatusNames?: string[];
   onSelectEpic?: (epicIdOrKey: string) => void;
+  columnRef?: (el: HTMLDivElement | null) => void;
 }
 
 export default function KanbanColumn({
@@ -30,6 +31,7 @@ export default function KanbanColumn({
   minHeightClass = "min-h-[150px]",
   doneStatusNames,
   onSelectEpic,
+  columnRef,
 }: KanbanColumnProps) {
   const isOverLimit = !!(wipLimit && issues.length > wipLimit);
   const targetDroppableId = droppableId || id;
@@ -40,7 +42,10 @@ export default function KanbanColumn({
     : `${issues.length} ${issues.length === 1 ? "issue" : "issues"}`;
 
   return (
-    <div className="flex flex-col w-72 shrink-0 bg-jira-gray-100 rounded-lg p-2.5 max-h-full border border-jira-gray-200">
+    <div
+      ref={columnRef}
+      className="flex flex-col w-[85vw] max-w-[340px] sm:w-72 shrink-0 snap-center bg-jira-gray-100 rounded-lg p-2.5 max-h-full border border-jira-gray-200"
+    >
       {/* Column Header */}
       {showHeader && (
         <div className="flex items-center justify-between pb-2 mb-1 px-1">

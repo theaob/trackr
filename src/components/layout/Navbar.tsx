@@ -9,6 +9,8 @@ import { useSearch } from "@/context/SearchContext";
 import { useKeyboardShortcutsContext } from "@/context/KeyboardShortcutsContext";
 import NotificationsMenu from "./NotificationsMenu";
 import {
+  Menu,
+  X,
   Search,
   Plus,
   ChevronDown,
@@ -38,6 +40,7 @@ interface NavbarProps {
   currentProject?: Project | null;
   onCreateIssueClick?: () => void;
   onCreateProjectClick?: () => void;
+  onToggleMobileMenu?: () => void;
 }
 
 export default function Navbar({
@@ -45,6 +48,7 @@ export default function Navbar({
   currentProject,
   onCreateIssueClick,
   onCreateProjectClick,
+  onToggleMobileMenu,
 }: NavbarProps) {
   const pathname = usePathname();
   const { currentUser, users, setCurrentUser, setUsers } = useCurrentUser();
@@ -65,6 +69,7 @@ export default function Navbar({
   const [showProjectMenu, setShowProjectMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showTokensModal, setShowTokensModal] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -130,28 +135,70 @@ export default function Navbar({
 
 
   return (
-    <header className="h-14 border-b border-jira-gray-300 bg-white px-4 flex items-center justify-between select-none z-30 relative shadow-sm">
-      {/* Left side: Logo & Navigation */}
-      <div className="flex items-center gap-6">
+    <header className="h-14 border-b border-jira-gray-300 bg-white px-3 sm:px-4 flex items-center justify-between select-none z-30 relative shadow-sm">
+      {/* Full-width Mobile Search Bar Overlay */}
+      {isMobileSearchOpen && (
+        <div className="md:hidden absolute inset-0 bg-white z-50 px-3 flex items-center gap-2 border-b border-jira-gray-300 animate-in fade-in slide-in-from-top-1">
+          <Search className="w-4 h-4 text-jira-blue shrink-0" />
+          <input
+            autoFocus
+            type="text"
+            placeholder="Search issues, keys..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1 py-1.5 text-sm text-jira-navy outline-none bg-transparent"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="p-1 text-jira-gray-400 hover:text-jira-gray-600 transition-colors"
+              aria-label="Clear search query"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+          <button
+            onClick={() => setIsMobileSearchOpen(false)}
+            className="text-xs font-semibold text-jira-blue hover:text-jira-blue-hover px-2 py-1 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {/* Left side: Hamburger, Logo & Project Navigation */}
+      <div className="flex items-center gap-2 sm:gap-6 min-w-0">
+        {/* Mobile Hamburger Menu Button */}
+        {onToggleMobileMenu && (
+          <button
+            type="button"
+            onClick={onToggleMobileMenu}
+            className="md:hidden p-1.5 -ml-1 text-jira-gray-700 hover:text-jira-navy hover:bg-jira-gray-100 rounded-md transition-colors shrink-0"
+            aria-label="Open navigation menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+
         <Link
           href={currentProject ? `/projects/${currentProject.key}/board` : "/projects"}
-          className="flex items-center gap-2 group hover:opacity-95 transition-opacity"
+          className="flex items-center gap-2 group hover:opacity-95 transition-opacity shrink-0"
         >
           <TrackrLogo size="md" />
         </Link>
 
         {/* Project Selector */}
-        <div className="relative">
+        <div className="relative min-w-0">
           <button
             onClick={() => {
               setShowProjectMenu(!showProjectMenu);
               setShowUserMenu(false);
             }}
-            className="flex items-center gap-2 px-2.5 py-1 rounded text-jira-navy hover:bg-jira-gray-100 transition-colors text-left"
+            className="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2.5 py-1 rounded text-jira-navy hover:bg-jira-gray-100 transition-colors text-left max-w-[130px] sm:max-w-none truncate"
           >
             <FolderGit2 className="w-4 h-4 text-jira-blue shrink-0" />
-            <div className="flex flex-col leading-none text-left min-w-0">
-              <span className="text-sm font-medium truncate max-w-[180px] sm:max-w-[240px]">
+            <div className="flex flex-col leading-none text-left min-w-0 truncate">
+              <span className="text-xs sm:text-sm font-medium truncate max-w-[90px] sm:max-w-[240px]">
                 {currentProject ? currentProject.name : "Select Project"}
               </span>
               {currentProject && (
@@ -222,22 +269,32 @@ export default function Navbar({
             onClick={onCreateIssueClick}
             disabled={permissions.isViewer}
             title={permissions.isViewer ? "Viewers cannot create issues in this project" : undefined}
-            className={`text-sm font-semibold px-3.5 py-1.5 rounded flex items-center gap-1.5 shadow-sm transition-colors ${
+            className={`text-sm font-semibold px-2.5 sm:px-3.5 py-1.5 rounded flex items-center gap-1.5 shadow-sm transition-colors shrink-0 ${
               permissions.isViewer
                 ? "bg-jira-gray-200 text-jira-gray-400 cursor-not-allowed opacity-60"
                 : "bg-jira-blue hover:bg-jira-blue-hover text-white"
             }`}
           >
             <Plus className="w-4 h-4" />
-            <span>Create</span>
+            <span className="hidden sm:inline">Create</span>
           </button>
         )}
       </div>
 
       {/* Right side: Search & User Controls */}
-      <div className="flex items-center gap-3">
-        {/* Quick Search */}
-        <div className="relative w-64">
+      <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+        {/* Mobile Search Toggle */}
+        <button
+          type="button"
+          onClick={() => setIsMobileSearchOpen(true)}
+          className="md:hidden p-2 text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-100 rounded-full transition-colors"
+          aria-label="Open search"
+        >
+          <Search className="w-4 h-4" />
+        </button>
+
+        {/* Desktop Quick Search */}
+        <div className="hidden md:block relative w-64">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500 pointer-events-none" />
           <input
             id="global-search-input"
@@ -259,7 +316,7 @@ export default function Navbar({
           onClick={openShortcutsModal}
           title="Keyboard shortcuts (?)"
           aria-label="Keyboard shortcuts"
-          className="p-2 text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-100 rounded-full transition-colors"
+          className="hidden sm:flex p-2 text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-100 rounded-full transition-colors"
         >
           <HelpCircle className="w-4 h-4" />
         </button>

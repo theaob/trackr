@@ -100,6 +100,24 @@ export default function KanbanBoard({
   const [groupBy, setGroupBy] = useState<SwimlaneGroupBy>("NONE");
   const [collapsedLanes, setCollapsedLanes] = useState<Record<string, boolean>>({});
 
+  // Mobile column switcher state
+  const [activeMobileColumn, setActiveMobileColumn] = useState<string>("");
+  const columnRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
+
+  useEffect(() => {
+    if (COLUMNS.length > 0 && !activeMobileColumn) {
+      setActiveMobileColumn(COLUMNS[0].id);
+    }
+  }, [COLUMNS, activeMobileColumn]);
+
+  const scrollToColumn = (colId: string) => {
+    setActiveMobileColumn(colId);
+    const el = columnRefs.current[colId];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    }
+  };
+
   // Sync issues if initialIssues prop updates
   useEffect(() => {
     setIssues(initialIssues);
@@ -519,12 +537,12 @@ export default function KanbanBoard({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden px-6 pt-5 bg-white">
+    <div className="flex-1 flex flex-col h-full overflow-hidden px-3 sm:px-6 pt-3 sm:pt-5 bg-white">
       {/* Board Header & Sprint Info */}
-      <div className="flex flex-col gap-1 shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-jira-navy tracking-tight">
+      <div className="flex flex-col gap-2 shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-lg sm:text-xl font-bold text-jira-navy tracking-tight">
               {activeSprint ? activeSprint.name : isKanban ? "Kanban Board" : "Scrum Board"}
             </h1>
             <span
@@ -544,12 +562,12 @@ export default function KanbanBoard({
                   Active Sprint
                 </span>
                 {activeSprint.startDate && activeSprint.endDate && (
-                  <span className="text-xs text-jira-gray-500 flex items-center gap-1 ml-1.5 font-medium">
+                  <span className="text-xs text-jira-gray-500 flex items-center gap-1 font-medium">
                     <Calendar className="w-3.5 h-3.5 text-jira-gray-400" />
                     {format(new Date(activeSprint.startDate), "MMM d")} - {format(new Date(activeSprint.endDate), "MMM d")}
                   </span>
                 )}
-                <div className="flex items-center gap-1 text-xs ml-1">
+                <div className="flex items-center gap-1 text-xs">
                   <span
                     title="Total estimated story points"
                     className="px-2 py-0.5 rounded-full bg-jira-gray-200 text-jira-gray-800 font-bold text-[11px]"
@@ -567,7 +585,7 @@ export default function KanbanBoard({
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 self-start sm:self-auto">
             {activeSprint && permissions.canManageSprints && (
               <button
                 onClick={() => setEditingSprint(activeSprint)}
@@ -598,7 +616,7 @@ export default function KanbanBoard({
         {activeSprint?.goal && (
           <div
             onClick={() => permissions.canManageSprints && setEditingSprint(activeSprint)}
-            className={`flex items-center gap-1.5 text-xs text-jira-gray-600 mt-1 ${
+            className={`flex items-center gap-1.5 text-xs text-jira-gray-600 mt-0.5 ${
               permissions.canManageSprints ? "hover:text-jira-navy cursor-pointer group/goal" : ""
             }`}
             title={permissions.canManageSprints ? "Click to edit sprint goal" : undefined}
@@ -628,10 +646,39 @@ export default function KanbanBoard({
           onClearFilters={handleClearFilters}
           hasActiveFilters={hasActiveFilters}
         />
+
+        {/* Mobile Column Switcher Tab Pills */}
+        <div className="md:hidden flex items-center gap-1.5 overflow-x-auto py-1.5 no-scrollbar">
+          {COLUMNS.map((col) => {
+            const count = getCellIssues("ALL", col.id).length;
+            const isActive = activeMobileColumn === col.id;
+            return (
+              <button
+                key={col.id}
+                type="button"
+                onClick={() => scrollToColumn(col.id)}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
+                  isActive
+                    ? "bg-jira-blue text-white shadow-xs"
+                    : "bg-jira-gray-100 text-jira-gray-700 hover:bg-jira-gray-200"
+                }`}
+              >
+                <span>{col.title}</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                    isActive ? "bg-white/25 text-white" : "bg-jira-gray-200 text-jira-gray-800"
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Kanban Board Columns Container */}
-      <div className="flex-1 overflow-x-auto overflow-y-auto py-4">
+      <div className="flex-1 overflow-x-auto overflow-y-auto py-3 sm:py-4 snap-x snap-mandatory scroll-smooth">
         <DragDropContext onDragEnd={handleDragEnd}>
           {groupBy === "NONE" ? (
             /* Default Single Grid Board */
@@ -640,6 +687,9 @@ export default function KanbanBoard({
                 <KanbanColumn
                   key={col.id}
                   id={col.id}
+                  columnRef={(el) => {
+                    columnRefs.current[col.id] = el;
+                  }}
                   title={col.title}
                   wipLimit={col.wipLimit}
                   issues={getCellIssues("ALL", col.id)}

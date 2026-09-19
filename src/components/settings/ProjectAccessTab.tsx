@@ -168,9 +168,9 @@ export default function ProjectAccessTab({
 
       {/* Action Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-        <div className="flex items-center gap-3 flex-1 min-w-[280px] max-w-md">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 flex-1 min-w-full sm:min-w-[280px] max-w-md">
           {/* Search Input */}
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-w-[200px]">
             <Search className="w-4 h-4 text-jira-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -182,12 +182,12 @@ export default function ProjectAccessTab({
           </div>
 
           {/* Role Filter Pills */}
-          <div className="flex items-center bg-jira-gray-100 p-0.5 rounded border border-jira-gray-300 text-xs">
+          <div className="flex items-center bg-jira-gray-100 p-0.5 rounded border border-jira-gray-300 text-xs overflow-x-auto no-scrollbar">
             {["ALL", "ADMIN", "MEMBER", "VIEWER"].map((roleKey) => (
               <button
                 key={roleKey}
                 onClick={() => setRoleFilter(roleKey)}
-                className={`px-2 py-1 rounded font-semibold text-[11px] transition-colors ${
+                className={`px-2 py-1 rounded font-semibold text-[11px] whitespace-nowrap transition-colors ${
                   roleFilter === roleKey
                     ? "bg-white text-jira-blue shadow-xs"
                     : "text-jira-gray-600 hover:text-jira-navy"
@@ -223,7 +223,7 @@ export default function ProjectAccessTab({
       </div>
 
       {/* Members Table */}
-      <div className="border border-jira-gray-200 rounded-lg overflow-hidden bg-white shadow-xs">
+      <div className="border border-jira-gray-200 rounded-lg overflow-x-auto bg-white shadow-xs">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="bg-jira-gray-50 border-b border-jira-gray-200 text-jira-gray-600 font-bold uppercase tracking-wider text-[10px]">

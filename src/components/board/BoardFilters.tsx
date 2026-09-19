@@ -42,8 +42,8 @@ export default function BoardFilters({
   const { currentUser } = useCurrentUser();
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 py-3 border-b border-jira-gray-200">
-      <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 py-2 sm:py-3 border-b border-jira-gray-200">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         {/* "Only My Issues" Button - meaningless without a signed-in user. */}
         {currentUser && (
           <button

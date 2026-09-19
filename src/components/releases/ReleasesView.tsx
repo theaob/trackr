@@ -95,8 +95,8 @@ export default function ReleasesView({
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-white">
       {/* Top Header */}
-      <div className="px-6 pt-6 pb-4 border-b border-jira-gray-200 shrink-0 space-y-4">
-        <div className="flex items-center justify-between">
+      <div className="px-3 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b border-jira-gray-200 shrink-0 space-y-3 sm:space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2.5">
               <div className="p-1.5 bg-jira-blue/10 rounded text-jira-blue">
@@ -122,25 +122,25 @@ export default function ReleasesView({
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="p-3 bg-jira-gray-50 border border-jira-gray-200 rounded-lg flex items-center justify-between">
-            <span className="text-xs font-medium text-jira-gray-600">Total Versions</span>
-            <span className="text-lg font-bold text-jira-navy">{totalCount}</span>
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="p-2 sm:p-3 bg-jira-gray-50 border border-jira-gray-200 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+            <span className="text-[11px] sm:text-xs font-medium text-jira-gray-600">Total</span>
+            <span className="text-base sm:text-lg font-bold text-jira-navy">{totalCount}</span>
           </div>
-          <div className="p-3 bg-amber-50/50 border border-amber-200/60 rounded-lg flex items-center justify-between">
-            <span className="text-xs font-medium text-amber-800">Unreleased</span>
-            <span className="text-lg font-bold text-amber-900">{unreleasedCount}</span>
+          <div className="p-2 sm:p-3 bg-amber-50/50 border border-amber-200/60 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+            <span className="text-[11px] sm:text-xs font-medium text-amber-800">Unreleased</span>
+            <span className="text-base sm:text-lg font-bold text-amber-900">{unreleasedCount}</span>
           </div>
-          <div className="p-3 bg-emerald-50/50 border border-emerald-200/60 rounded-lg flex items-center justify-between">
-            <span className="text-xs font-medium text-emerald-800">Released</span>
-            <span className="text-lg font-bold text-emerald-900">{releasedCount}</span>
+          <div className="p-2 sm:p-3 bg-emerald-50/50 border border-emerald-200/60 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+            <span className="text-[11px] sm:text-xs font-medium text-emerald-800">Released</span>
+            <span className="text-base sm:text-lg font-bold text-emerald-900">{releasedCount}</span>
           </div>
         </div>
 
         {/* Filters and Search Bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
           {/* Status Tabs */}
-          <div className="flex items-center gap-1.5 text-xs">
+          <div className="flex items-center gap-1.5 text-xs overflow-x-auto no-scrollbar pb-1">
             {[
               { id: "ALL", label: "All Versions" },
               { id: "UNRELEASED", label: "Unreleased" },
@@ -176,7 +176,7 @@ export default function ReleasesView({
       </div>
 
       {/* Versions List */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-4">
         {filteredVersions.length === 0 ? (
           <div className="py-20 flex flex-col items-center justify-center text-jira-gray-500 gap-3">
             <Package className="w-10 h-10 text-jira-gray-400 stroke-1" />
@@ -224,7 +224,7 @@ export default function ReleasesView({
             return (
               <div
                 key={version.id}
-                className="bg-white border border-jira-gray-300 hover:border-jira-blue/50 rounded-lg p-5 shadow-xs transition-all space-y-4"
+                className="bg-white border border-jira-gray-300 hover:border-jira-blue/50 rounded-lg p-3.5 sm:p-5 shadow-xs transition-all space-y-4"
               >
                 {/* Card Top: Name, Status, Dates, Actions */}
                 <div className="flex flex-wrap items-start justify-between gap-4">
