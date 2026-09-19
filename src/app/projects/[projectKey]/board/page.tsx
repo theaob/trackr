@@ -2,6 +2,7 @@ import React, { Suspense } from "react";
 import { getProjectByKey, getProjectUsers } from "@/lib/actions/projects";
 import { getBoardIssues, getProjectEpics } from "@/lib/actions/issues";
 import { getProjectSprints } from "@/lib/actions/sprints";
+import { getProjectVersions } from "@/lib/actions/versions";
 import { getProjectWorkflow } from "@/lib/actions/workflows";
 import KanbanBoard from "@/components/board/KanbanBoard";
 import { denyPageAccess } from "@/lib/auth/page";
@@ -17,11 +18,12 @@ export default async function BoardPage({ params, searchParams }: PageProps) {
   const project = await getProjectByKey(params.projectKey);
   if (!project) return denyPageAccess(`/projects/${params.projectKey}/board`);
 
-  const [users, sprints, workflow, epics] = await Promise.all([
+  const [users, sprints, workflow, epics, versions] = await Promise.all([
     getProjectUsers(project.id),
     getProjectSprints(project.id),
     getProjectWorkflow(project.id),
     getProjectEpics(project.id),
+    getProjectVersions(project.id),
   ]);
 
   // Kanban ignores sprints entirely: the board is every non-backlog issue,
@@ -39,6 +41,7 @@ export default async function BoardPage({ params, searchParams }: PageProps) {
         initialIssues={issues as any}
         users={users as any}
         sprints={sprints as any}
+        versions={versions as any}
         statuses={boardStatuses as any}
         transitions={workflow.transitions as any}
         initialSelectedIssueKey={searchParams?.selectedIssue || searchParams?.issue}

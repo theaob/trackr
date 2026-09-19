@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Project, User, Sprint, Issue } from "@/types";
+import { Project, User, Sprint, Issue, Version } from "@/types";
 import RoadmapTimeline, { RoadmapEpic } from "./RoadmapTimeline";
 import IssueDetailModal from "@/components/issues/IssueDetailModal";
 import { getIssueByKeyOrId } from "@/lib/actions/issues";
@@ -12,6 +12,7 @@ interface RoadmapViewProps {
   epics: RoadmapEpic[];
   users?: User[];
   sprints?: Sprint[];
+  versions?: Version[];
   initialSelectedIssueKey?: string;
 }
 
@@ -20,6 +21,7 @@ export default function RoadmapView({
   epics,
   users = [],
   sprints = [],
+  versions = [],
   initialSelectedIssueKey,
 }: RoadmapViewProps) {
   const router = useRouter();
@@ -73,6 +75,7 @@ export default function RoadmapView({
           users={users}
           allIssues={epics.map((e) => ({ ...e, type: "EPIC" as const, projectId: project.id })) as any}
           sprints={sprints}
+          versions={versions}
           project={project}
           onActiveIssueChange={(newIssue) => setActiveIssue(newIssue)}
           onClose={() => setActiveIssue(null)}

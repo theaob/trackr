@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
-import { Project, Issue, User, IssueStatus, IssueType, PriorityLevel, Sprint, WorkflowStatus, WorkflowTransition } from "@/types";
+import { Project, Issue, User, IssueStatus, IssueType, PriorityLevel, Sprint, WorkflowStatus, WorkflowTransition, Version } from "@/types";
 import KanbanColumn from "./KanbanColumn";
 import BoardFilters, { SwimlaneGroupBy } from "./BoardFilters";
 import IssueDetailModal from "@/components/issues/IssueDetailModal";
@@ -25,6 +25,7 @@ interface KanbanBoardProps {
   initialIssues: Issue[];
   users: User[];
   sprints: Sprint[];
+  versions?: Version[];
   /** The project's non-backlog workflow statuses, in column order. */
   statuses: WorkflowStatus[];
   transitions: WorkflowTransition[];
@@ -46,6 +47,7 @@ export default function KanbanBoard({
   initialIssues,
   users,
   sprints,
+  versions = [],
   statuses,
   transitions,
   searchQuery: propSearchQuery,
@@ -1031,6 +1033,7 @@ export default function KanbanBoard({
           users={users}
           allIssues={[...epics, ...issues]}
           sprints={sprints}
+          versions={versions}
           project={project}
           onActiveIssueChange={(newIssue) => setActiveIssue(newIssue)}
           onClose={handleCloseDetailModal}
@@ -1044,6 +1047,7 @@ export default function KanbanBoard({
           project={project}
           users={users}
           sprints={sprints}
+          versions={versions}
           epics={epics}
           onClose={() => setIsCreateModalOpen(false)}
           onIssueCreated={handleIssueCreated}

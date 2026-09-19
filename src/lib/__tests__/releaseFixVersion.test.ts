@@ -199,4 +199,58 @@ describe("Release Fix Version & Progress Metrics", () => {
       expect(payload.versionId).toBeNull();
     });
   });
+
+  describe("Issue Detail Fix Version State & Option Handling", () => {
+    const projectVersions = [
+      { id: "v-1", name: "v1.0.0", status: "UNRELEASED" },
+      { id: "v-2", name: "v2.0.0", status: "RELEASED" },
+    ];
+
+    it("matches selected version object and prepares update payload", () => {
+      const selectedVersionId = "v-1";
+      const matchingVersion = projectVersions.find((v) => v.id === selectedVersionId) || null;
+
+      const optimisticChanges = {
+        versionId: selectedVersionId,
+        version: matchingVersion,
+      };
+      const serverPayload = { versionId: selectedVersionId };
+
+      expect(optimisticChanges.version?.name).toBe("v1.0.0");
+      expect(serverPayload.versionId).toBe("v-1");
+    });
+
+    it("clears version when unassigned from detail", () => {
+      const selectedVersionId = null;
+      const matchingVersion = projectVersions.find((v) => v.id === selectedVersionId) || null;
+
+      const optimisticChanges = {
+        versionId: null,
+        version: matchingVersion,
+      };
+      const serverPayload = { versionId: null };
+
+      expect(optimisticChanges.version).toBeNull();
+      expect(serverPayload.versionId).toBeNull();
+    });
+
+    it("preserves an existing version even if not in the active versions list (e.g. archived)", () => {
+      const currentIssueVersion = {
+        id: "v-archived-9",
+        name: "v0.9.0-deprecated",
+        status: "ARCHIVED",
+      };
+
+      // Check if current version should be injected into select options
+      const isAlreadyIncluded = projectVersions.some((v) => v.id === currentIssueVersion.id);
+      expect(isAlreadyIncluded).toBe(false);
+
+      const selectOptions = [
+        ...projectVersions,
+        ...(!isAlreadyIncluded ? [currentIssueVersion] : []),
+      ];
+
+      expect(selectOptions.map((o) => o.name)).toContain("v0.9.0-deprecated");
+    });
+  });
 });

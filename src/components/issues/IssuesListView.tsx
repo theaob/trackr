@@ -1673,6 +1673,41 @@ export default function IssuesListView({
                         </select>
                       </div>
 
+                      {/* Fix Version */}
+                      <div>
+                        <label className="block font-bold text-jira-gray-600 uppercase tracking-wider mb-1">
+                          Fix Version
+                        </label>
+                        <select
+                          value={selectedIssue.versionId || ""}
+                          disabled={!permissions.canEditIssue}
+                          onChange={(e) => {
+                            const vId = e.target.value || null;
+                            const newVersion = versions.find((v) => v.id === vId) || null;
+                            handleUpdateCurrentIssue({
+                              versionId: vId,
+                              version: newVersion,
+                            });
+                          }}
+                          className={`w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none ${
+                            !permissions.canEditIssue ? "opacity-60 cursor-not-allowed" : ""
+                          }`}
+                        >
+                          <option value="">None (Unassigned)</option>
+                          {selectedIssue.version &&
+                            !versions.some((v) => v.id === selectedIssue.version!.id) && (
+                              <option key={selectedIssue.version.id} value={selectedIssue.version.id}>
+                                {selectedIssue.version.name} ({selectedIssue.version.status})
+                              </option>
+                            )}
+                          {versions.map((v) => (
+                            <option key={v.id} value={v.id}>
+                              {v.name} ({v.status})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
                       <div className="pt-3 border-t border-jira-gray-200 text-[11px] text-jira-gray-500 space-y-1">
                         <div>
                           Created:{" "}

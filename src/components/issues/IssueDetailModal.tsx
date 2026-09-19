@@ -12,9 +12,11 @@ import ComponentsField from "@/components/issues/ComponentsField";
 import TimeTrackingField from "@/components/issues/TimeTrackingField";
 import IssueDescriptionEditor from "@/components/issues/IssueDescriptionEditor";
 
+import Link from "next/link";
 import { useCurrentUser } from "@/context/UserContext";
 import { updateIssue, deleteIssue, getIssueByKeyOrId } from "@/lib/actions/issues";
 import { addComment, deleteComment } from "@/lib/actions/comments";
+import { getProjectVersions } from "@/lib/actions/versions";
 import {
   getProjectCustomFields,
   getIssueCustomFieldValues,
@@ -123,6 +125,28 @@ export default function IssueDetailModal({
   // Workflow State (statuses + the transition graph, for the status dropdown)
   const [workflowStatuses, setWorkflowStatuses] = useState<WorkflowStatus[]>([]);
   const [workflowTransitions, setWorkflowTransitions] = useState<WorkflowTransition[]>([]);
+
+  // Versions State (self-sufficient loading if not supplied or empty)
+  const [availableVersions, setAvailableVersions] = useState<Version[]>(versions);
+  const [isLoadingVersions, setIsLoadingVersions] = useState(false);
+
+  useEffect(() => {
+    if (versions && versions.length > 0) {
+      setAvailableVersions(versions);
+    } else if (currentIssue?.projectId) {
+      setIsLoadingVersions(true);
+      getProjectVersions(currentIssue.projectId)
+        .then((fetched) => {
+          if (fetched && Array.isArray(fetched)) {
+            setAvailableVersions(fetched as unknown as Version[]);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to load versions for issue:", err);
+        })
+        .finally(() => setIsLoadingVersions(false));
+    }
+  }, [versions, currentIssue?.projectId]);
 
   useEffect(() => {
     setCurrentIssue(issue);
@@ -549,7 +573,7 @@ export default function IssueDetailModal({
 
   // Handle Version Change
   const handleVersionChange = async (versionId: string | null) => {
-    const newVersion = versions.find((v) => v.id === versionId) || null;
+    const newVersion = availableVersions.find((v) => v.id === versionId) || null;
     await applyOptimisticUpdate(
       { versionId: versionId || null, version: newVersion },
       { versionId: versionId || null }
@@ -1449,9 +1473,14 @@ export default function IssueDetailModal({
 
             {/* Fix Version */}
             <div>
-              <label className="block text-xs font-bold text-jira-gray-600 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                <Tag className="w-3 h-3 text-jira-blue" />
-                Fix Version
+              <label className="block text-xs font-bold text-jira-gray-600 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <Tag className="w-3 h-3 text-jira-blue" />
+                  Fix Version
+                </span>
+                {isLoadingVersions && (
+                  <span className="text-[10px] text-jira-gray-400 font-normal">Loading...</span>
+                )}
               </label>
               <select
                 value={currentIssue.versionId || ""}
@@ -1460,12 +1489,34 @@ export default function IssueDetailModal({
                 className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <option value="">None (Unassigned)</option>
-                {versions.map((v) => (
+                {currentIssue.version &&
+                  !availableVersions.some((v) => v.id === currentIssue.version!.id) && (
+                    <option key={currentIssue.version.id} value={currentIssue.version.id}>
+                      {currentIssue.version.name} ({currentIssue.version.status})
+                    </option>
+                  )}
+                {availableVersions.map((v) => (
                   <option key={v.id} value={v.id}>
                     {v.name} ({v.status})
                   </option>
                 ))}
               </select>
+              {availableVersions.length === 0 && !isLoadingVersions && (
+                <p className="text-[10px] text-jira-gray-400 mt-1">
+                  No releases defined in this project.
+                  {permissions.canManageVersions && (
+                    <>
+                      {" "}Create one under{" "}
+                      <Link
+                        href={`/projects/${project?.key || currentIssue.project?.key || ""}/releases`}
+                        className="text-jira-blue hover:underline font-medium"
+                      >
+                        Releases
+                      </Link>.
+                    </>
+                  )}
+                </p>
+              )}
             </div>
 
             {/* Components */}

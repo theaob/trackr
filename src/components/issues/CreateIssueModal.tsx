@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Project, User, Issue, IssueType, PriorityLevel, Sprint, Version, CustomField, WorkflowStatus } from "@/types";
 import { IssueTypeIcon, PriorityIcon } from "@/components/common/IssueIcons";
 import { createIssue } from "@/lib/actions/issues";
+import { getProjectVersions } from "@/lib/actions/versions";
 import { getProjectCustomFields, batchSetIssueCustomFieldValues } from "@/lib/actions/customFields";
 import { getProjectWorkflow } from "@/lib/actions/workflows";
 import CustomFieldRenderer from "@/components/common/CustomFieldRenderer";
@@ -55,6 +56,9 @@ export default function CreateIssueModal({
 
   // Workflow State (for the initial/backlog status new issues start in)
   const [workflowStatuses, setWorkflowStatuses] = useState<WorkflowStatus[]>([]);
+  const [projectVersions, setProjectVersions] = useState<Version[]>(() =>
+    versions.filter((v) => !v.projectId || v.projectId === selectedProjectId)
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -67,16 +71,26 @@ export default function CreateIssueModal({
     getProjectWorkflow(selectedProjectId).then(({ statuses }) => {
       if (isMounted) setWorkflowStatuses(statuses as unknown as WorkflowStatus[]);
     });
+
+    if (versions && versions.length > 0) {
+      setProjectVersions(
+        versions.filter((v) => !v.projectId || v.projectId === selectedProjectId)
+      );
+    } else {
+      getProjectVersions(selectedProjectId).then((vList) => {
+        if (isMounted && Array.isArray(vList)) {
+          setProjectVersions(vList as unknown as Version[]);
+        }
+      });
+    }
+
     return () => {
       isMounted = false;
     };
-  }, [selectedProjectId]);
+  }, [selectedProjectId, versions]);
 
   const projectSprints = sprints.filter(
     (s) => (!s.projectId || s.projectId === selectedProjectId) && s.status !== "COMPLETED"
-  );
-  const projectVersions = versions.filter(
-    (v) => !v.projectId || v.projectId === selectedProjectId
   );
 
   const [sprintId, setSprintId] = useState<string>(

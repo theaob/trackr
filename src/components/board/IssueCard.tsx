@@ -118,6 +118,14 @@ export default function IssueCard({
                   {format(new Date(issue.dueDate), "MMM d")}
                 </span>
               )}
+              {issue.version && (
+                <span
+                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 truncate max-w-[100px]"
+                  title={`Fix Version: ${issue.version.name}`}
+                >
+                  {issue.version.name}
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-2">

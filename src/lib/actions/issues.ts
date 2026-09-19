@@ -37,6 +37,7 @@ function revalidateProjectRoutes(projectKey: string) {
     revalidatePath(`/projects/${projectKey}/backlog`);
     revalidatePath(`/projects/${projectKey}/reports`);
     revalidatePath(`/projects/${projectKey}/issues`);
+    revalidatePath(`/projects/${projectKey}/releases`);
   } catch {}
 }
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Project, Issue, User, Sprint, IssueType, WorkflowStatus } from "@/types";
+import { Project, Issue, User, Sprint, IssueType, WorkflowStatus, Version } from "@/types";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
 import UserAvatar from "@/components/common/UserAvatar";
 
@@ -46,6 +46,7 @@ interface BacklogViewProps {
   initialIssues: Issue[];
   users: User[];
   initialSprints: Sprint[];
+  versions?: Version[];
   statuses: WorkflowStatus[];
   searchQuery?: string;
   initialSelectedIssueKey?: string;
@@ -57,6 +58,7 @@ export default function BacklogView({
   initialIssues,
   users,
   initialSprints,
+  versions = [],
   statuses,
   searchQuery: propSearchQuery,
   initialSelectedIssueKey,
@@ -1214,6 +1216,14 @@ export default function BacklogView({
                                         {issue.parent.title}
                                       </button>
                                     )}
+                                    {issue.version && (
+                                      <span
+                                        className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 font-medium px-1.5 py-0.5 rounded shrink-0 max-w-[120px] truncate"
+                                        title={`Fix Version: ${issue.version.name}`}
+                                      >
+                                        {issue.version.name}
+                                      </span>
+                                    )}
                                     {issue.labels && issue.labels.length > 0 && (
                                       <div className="flex items-center gap-1 shrink-0">
                                         {issue.labels.slice(0, 2).map((il) => (
@@ -1536,6 +1546,14 @@ export default function BacklogView({
                                 >
                                   {issue.parent.title}
                                 </button>
+                              )}
+                              {issue.version && (
+                                <span
+                                  className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 font-medium px-1.5 py-0.5 rounded shrink-0 max-w-[120px] truncate"
+                                  title={`Fix Version: ${issue.version.name}`}
+                                >
+                                  {issue.version.name}
+                                </span>
                               )}
                               {issue.labels && issue.labels.length > 0 && (
                                 <div className="flex items-center gap-1 shrink-0">
@@ -1992,6 +2010,7 @@ export default function BacklogView({
           users={users}
           allIssues={[...epics, ...issues]}
           sprints={sprints}
+          versions={versions}
           project={project}
           onActiveIssueChange={(newIssue) => setActiveIssue(newIssue)}
           onClose={handleCloseDetailModal}
