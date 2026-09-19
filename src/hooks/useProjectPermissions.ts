@@ -1,19 +1,24 @@
 "use client";
 
 import { useMemo } from "react";
-import { Project, ProjectMember, ProjectRole } from "@/types";
+import { Project, ProjectMember, ProjectRole, CustomRole } from "@/types";
 import { useCurrentUser } from "@/context/UserContext";
 import {
   resolveUserProjectRole,
   hasPermission,
-  ROLE_CONFIG,
+  getRoleBadgeConfig,
 } from "@/lib/permissions";
 
 export function useProjectPermissions(
   project?: Project | null,
-  members?: ProjectMember[] | null
+  members?: ProjectMember[] | null,
+  customRoles?: CustomRole[] | null
 ) {
   const { currentUser } = useCurrentUser();
+  const allCustomRoles = useMemo(
+    () => customRoles || project?.customRoles || [],
+    [customRoles, project?.customRoles]
+  );
 
   const role: ProjectRole | null = useMemo(() => {
     return resolveUserProjectRole(currentUser?.id, project, members);
@@ -24,35 +29,28 @@ export function useProjectPermissions(
     const isAdmin = role === "ADMIN" || isLead;
     const isMember = role === "MEMBER";
     const isViewer = role === "VIEWER" && !isLead;
-    const canViewProject = isAdmin || hasPermission(role, "VIEW_PROJECT");
-
-    const defaultRoleConfig = {
-      name: "No Access",
-      description: "You do not have access permissions for this project.",
-      badgeBg: "bg-gray-100",
-      badgeText: "text-gray-600",
-      border: "border-gray-200",
-    };
+    const canViewProject = isAdmin || hasPermission(role, "VIEW_PROJECT", allCustomRoles);
+    const roleConfig = getRoleBadgeConfig(role, allCustomRoles);
 
     return {
       role,
-      roleConfig: role ? ROLE_CONFIG[role] : defaultRoleConfig,
+      roleConfig,
       isLead,
       isAdmin,
       isMember,
       isViewer,
       canViewProject,
-      canManageProject: isAdmin || hasPermission(role, "PROJECT_ADMIN"),
-      canManageAccess: isAdmin || hasPermission(role, "MANAGE_ACCESS"),
-      canManageSprints: isAdmin || hasPermission(role, "MANAGE_SPRINTS"),
-      canManageVersions: isAdmin || hasPermission(role, "MANAGE_VERSIONS"),
-      canCreateIssue: isAdmin || hasPermission(role, "CREATE_ISSUE"),
-      canEditIssue: isAdmin || hasPermission(role, "EDIT_ISSUE"),
-      canDeleteIssue: isAdmin || hasPermission(role, "DELETE_ISSUE"),
-      canMoveIssue: isAdmin || hasPermission(role, "MOVE_ISSUE"),
-      canAddComment: isAdmin || hasPermission(role, "ADD_COMMENT"),
+      canManageProject: isAdmin || hasPermission(role, "PROJECT_ADMIN", allCustomRoles),
+      canManageAccess: isAdmin || hasPermission(role, "MANAGE_ACCESS", allCustomRoles),
+      canManageSprints: isAdmin || hasPermission(role, "MANAGE_SPRINTS", allCustomRoles),
+      canManageVersions: isAdmin || hasPermission(role, "MANAGE_VERSIONS", allCustomRoles),
+      canCreateIssue: isAdmin || hasPermission(role, "CREATE_ISSUE", allCustomRoles),
+      canEditIssue: isAdmin || hasPermission(role, "EDIT_ISSUE", allCustomRoles),
+      canDeleteIssue: isAdmin || hasPermission(role, "DELETE_ISSUE", allCustomRoles),
+      canMoveIssue: isAdmin || hasPermission(role, "MOVE_ISSUE", allCustomRoles),
+      canAddComment: isAdmin || hasPermission(role, "ADD_COMMENT", allCustomRoles),
     };
-  }, [role, project?.leadId, currentUser?.id]);
+  }, [role, project?.leadId, currentUser?.id, allCustomRoles]);
 
   return permissions;
 }

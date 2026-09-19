@@ -271,7 +271,8 @@ export interface Sprint {
   issues?: Issue[];
 }
 
-export type ProjectRole = "ADMIN" | "MEMBER" | "VIEWER";
+export type BuiltInRole = "ADMIN" | "MEMBER" | "VIEWER";
+export type ProjectRole = BuiltInRole | string;
 
 export type ProjectPermission =
   | "PROJECT_ADMIN"
@@ -285,6 +286,20 @@ export type ProjectPermission =
   | "ADD_COMMENT"
   | "VIEW_PROJECT";
 
+export interface CustomRole {
+  id: string;
+  projectId: string;
+  name: string;
+  description: string | null;
+  color: string;
+  permissions: ProjectPermission[];
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  _count?: {
+    members: number;
+  };
+}
+
 export interface ProjectMember {
   id: string;
   projectId: string;
@@ -292,6 +307,8 @@ export interface ProjectMember {
   userId: string;
   user: User;
   role: ProjectRole;
+  customRoleId?: string | null;
+  customRole?: CustomRole | null;
   createdAt: string | Date;
   updatedAt: string | Date;
 }
@@ -309,6 +326,7 @@ export interface Project {
   leadId: string | null;
   lead?: User | null;
   members?: ProjectMember[];
+  customRoles?: CustomRole[];
   issues?: Issue[];
   sprints?: Sprint[];
   versions?: Version[];

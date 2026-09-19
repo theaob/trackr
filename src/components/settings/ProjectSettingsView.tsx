@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Project, User, CustomField, Webhook, ProjectMember, BoardType, WorkflowStatus, WorkflowTransition, Component } from "@/types";
+import { Project, User, CustomField, Webhook, ProjectMember, BoardType, WorkflowStatus, WorkflowTransition, Component, CustomRole } from "@/types";
 import { updateProject } from "@/lib/actions/projects";
 import { deleteCustomField } from "@/lib/actions/customFields";
 import { deleteComponent } from "@/lib/actions/components";
@@ -58,6 +58,7 @@ interface ProjectSettingsViewProps {
   initialCustomFields?: CustomField[];
   initialWebhooks?: Webhook[];
   initialMembers?: ProjectMember[];
+  initialCustomRoles?: CustomRole[];
   initialWorkflowStatuses?: WorkflowStatus[];
   initialWorkflowTransitions?: WorkflowTransition[];
   initialComponents?: Component[];
@@ -69,6 +70,7 @@ export default function ProjectSettingsView({
   initialCustomFields = [],
   initialWebhooks = [],
   initialMembers = [],
+  initialCustomRoles = [],
   initialWorkflowStatuses = [],
   initialWorkflowTransitions = [],
   initialComponents = [],
@@ -78,7 +80,7 @@ export default function ProjectSettingsView({
   >("general");
   const router = useRouter();
   const [members, setMembers] = useState<ProjectMember[]>(initialMembers);
-  const permissions = useProjectPermissions(project, members);
+  const permissions = useProjectPermissions(project, members, initialCustomRoles);
 
   // General Settings State
   const [name, setName] = useState(project.name);
@@ -968,6 +970,7 @@ export default function ProjectSettingsView({
           <ProjectAccessTab
             project={project}
             initialMembers={members}
+            initialCustomRoles={initialCustomRoles}
             allOrgUsers={users}
             currentUserRole={permissions.role}
             isProjectLead={permissions.isLead}

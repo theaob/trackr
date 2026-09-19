@@ -4,7 +4,7 @@ import { getProjectByKey, getAllUsers } from "@/lib/actions/projects";
 import { getProjectCustomFields } from "@/lib/actions/customFields";
 import { getProjectComponents } from "@/lib/actions/components";
 import { getProjectWebhooks } from "@/lib/actions/webhooks";
-import { getProjectMembers } from "@/lib/actions/access";
+import { getProjectMembers, getProjectCustomRoles } from "@/lib/actions/access";
 import { getProjectWorkflow } from "@/lib/actions/workflows";
 import ProjectSettingsView from "@/components/settings/ProjectSettingsView";
 import { requirePageUser } from "@/lib/auth/page";
@@ -21,7 +21,7 @@ export default async function SettingsPage({ params }: PageProps) {
   const project = await getProjectByKey(params.projectKey);
   if (!project) notFound();
 
-  const [users, customFields, components, webhooks, members, workflow] = await Promise.all([
+  const [users, customFields, components, webhooks, members, workflow, customRoles] = await Promise.all([
     // The full directory here, because this is where members are invited.
     getAllUsers(),
     getProjectCustomFields(project.id),
@@ -30,6 +30,7 @@ export default async function SettingsPage({ params }: PageProps) {
     getProjectWebhooks(project.id),
     getProjectMembers(project.id),
     getProjectWorkflow(project.id),
+    getProjectCustomRoles(project.id),
   ]);
 
   return (
@@ -40,6 +41,7 @@ export default async function SettingsPage({ params }: PageProps) {
       initialComponents={components as any}
       initialWebhooks={webhooks as any}
       initialMembers={members as any}
+      initialCustomRoles={customRoles as any}
       initialWorkflowStatuses={workflow.statuses as any}
       initialWorkflowTransitions={workflow.transitions as any}
     />

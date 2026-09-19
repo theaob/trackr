@@ -1,6 +1,14 @@
-import { ProjectRole, ProjectPermission, Project, ProjectMember, User } from "@/types";
+import {
+  ProjectRole,
+  BuiltInRole,
+  ProjectPermission,
+  Project,
+  ProjectMember,
+  User,
+  CustomRole,
+} from "@/types";
 
-export const ROLE_PERMISSIONS: Record<ProjectRole, ProjectPermission[]> = {
+export const ROLE_PERMISSIONS: Record<BuiltInRole, ProjectPermission[]> = {
   ADMIN: [
     "PROJECT_ADMIN",
     "MANAGE_ACCESS",
@@ -27,7 +35,7 @@ export const ROLE_PERMISSIONS: Record<ProjectRole, ProjectPermission[]> = {
 };
 
 export const ROLE_CONFIG: Record<
-  ProjectRole,
+  BuiltInRole,
   {
     name: string;
     description: string;
@@ -115,10 +123,81 @@ export const PERMISSION_DESCRIPTIONS: Record<
   },
 };
 
-export function hasPermission(role: ProjectRole | null | undefined, permission: ProjectPermission): boolean {
+export function hasPermission(
+  role: ProjectRole | null | undefined,
+  permission: ProjectPermission,
+  customRoles?: CustomRole[] | null
+): boolean {
   if (!role) return false;
-  const allowed = ROLE_PERMISSIONS[role] || [];
-  return allowed.includes(permission);
+
+  if (role in ROLE_PERMISSIONS) {
+    const allowed = ROLE_PERMISSIONS[role as BuiltInRole] || [];
+    return allowed.includes(permission);
+  }
+
+  if (customRoles) {
+    const custom = customRoles.find((r) => r.name === role || r.id === role);
+    if (custom) {
+      const perms: ProjectPermission[] = Array.isArray(custom.permissions)
+        ? custom.permissions
+        : typeof custom.permissions === "string"
+        ? JSON.parse(custom.permissions || "[]")
+        : [];
+      return perms.includes(permission);
+    }
+  }
+
+  return false;
+}
+
+export function getRoleBadgeConfig(
+  role: ProjectRole | null | undefined,
+  customRoles?: CustomRole[] | null
+): {
+  name: string;
+  description: string;
+  badgeBg: string;
+  badgeText: string;
+  border: string;
+  isCustom?: boolean;
+  color?: string;
+} {
+  if (!role) {
+    return {
+      name: "No Access",
+      description: "You do not have access permissions for this project.",
+      badgeBg: "bg-gray-100",
+      badgeText: "text-gray-600",
+      border: "border-gray-200",
+    };
+  }
+
+  if (role in ROLE_CONFIG) {
+    return ROLE_CONFIG[role as BuiltInRole];
+  }
+
+  if (customRoles) {
+    const custom = customRoles.find((r) => r.name === role || r.id === role);
+    if (custom) {
+      return {
+        name: custom.name,
+        description: custom.description || "Custom project role",
+        badgeBg: "bg-slate-50",
+        badgeText: "text-slate-800",
+        border: "border-slate-300",
+        isCustom: true,
+        color: custom.color,
+      };
+    }
+  }
+
+  return {
+    name: role,
+    description: "Project Role",
+    badgeBg: "bg-blue-50",
+    badgeText: "text-blue-700",
+    border: "border-blue-200",
+  };
 }
 
 export function resolveUserProjectRole(
@@ -153,38 +232,38 @@ export function resolveUserProjectRole(
   return anonymousFallback;
 }
 
-export function canManageProject(role: ProjectRole | null | undefined): boolean {
-  return hasPermission(role, "PROJECT_ADMIN");
+export function canManageProject(role: ProjectRole | null | undefined, customRoles?: CustomRole[] | null): boolean {
+  return hasPermission(role, "PROJECT_ADMIN", customRoles);
 }
 
-export function canManageAccess(role: ProjectRole | null | undefined): boolean {
-  return hasPermission(role, "MANAGE_ACCESS");
+export function canManageAccess(role: ProjectRole | null | undefined, customRoles?: CustomRole[] | null): boolean {
+  return hasPermission(role, "MANAGE_ACCESS", customRoles);
 }
 
-export function canManageSprints(role: ProjectRole | null | undefined): boolean {
-  return hasPermission(role, "MANAGE_SPRINTS");
+export function canManageSprints(role: ProjectRole | null | undefined, customRoles?: CustomRole[] | null): boolean {
+  return hasPermission(role, "MANAGE_SPRINTS", customRoles);
 }
 
-export function canManageVersions(role: ProjectRole | null | undefined): boolean {
-  return hasPermission(role, "MANAGE_VERSIONS");
+export function canManageVersions(role: ProjectRole | null | undefined, customRoles?: CustomRole[] | null): boolean {
+  return hasPermission(role, "MANAGE_VERSIONS", customRoles);
 }
 
-export function canCreateIssue(role: ProjectRole | null | undefined): boolean {
-  return hasPermission(role, "CREATE_ISSUE");
+export function canCreateIssue(role: ProjectRole | null | undefined, customRoles?: CustomRole[] | null): boolean {
+  return hasPermission(role, "CREATE_ISSUE", customRoles);
 }
 
-export function canEditIssue(role: ProjectRole | null | undefined): boolean {
-  return hasPermission(role, "EDIT_ISSUE");
+export function canEditIssue(role: ProjectRole | null | undefined, customRoles?: CustomRole[] | null): boolean {
+  return hasPermission(role, "EDIT_ISSUE", customRoles);
 }
 
-export function canDeleteIssue(role: ProjectRole | null | undefined): boolean {
-  return hasPermission(role, "DELETE_ISSUE");
+export function canDeleteIssue(role: ProjectRole | null | undefined, customRoles?: CustomRole[] | null): boolean {
+  return hasPermission(role, "DELETE_ISSUE", customRoles);
 }
 
-export function canMoveIssue(role: ProjectRole | null | undefined): boolean {
-  return hasPermission(role, "MOVE_ISSUE");
+export function canMoveIssue(role: ProjectRole | null | undefined, customRoles?: CustomRole[] | null): boolean {
+  return hasPermission(role, "MOVE_ISSUE", customRoles);
 }
 
-export function canAddComment(role: ProjectRole | null | undefined): boolean {
-  return hasPermission(role, "ADD_COMMENT");
+export function canAddComment(role: ProjectRole | null | undefined, customRoles?: CustomRole[] | null): boolean {
+  return hasPermission(role, "ADD_COMMENT", customRoles);
 }

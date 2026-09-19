@@ -1,6 +1,6 @@
 import prisma from "@/lib/db";
-import { ProjectPermission, ProjectRole } from "@/types";
-import { hasPermission } from "@/lib/permissions";
+import { ProjectPermission, ProjectRole, BuiltInRole } from "@/types";
+import { hasPermission, ROLE_PERMISSIONS } from "@/lib/permissions";
 import { getCurrentUser, SessionUser } from "@/lib/auth/session";
 
 /**
@@ -95,6 +95,61 @@ export interface AuthenticatedProjectAuth extends ProjectAuth {
   user: SessionUser;
 }
 
+export async function checkProjectPermission(
+  userId: string | null,
+  projectId: string,
+  permission: ProjectPermission
+): Promise<{ allowed: boolean; role: ProjectRole | null }> {
+  const [project, member] = await Promise.all([
+    prisma.project.findUnique({
+      where: { id: projectId },
+      select: { leadId: true, allowAnonymousViewers: true },
+    }),
+    userId
+      ? prisma.projectMember.findUnique({
+          where: { projectId_userId: { projectId, userId } },
+          include: { customRole: true },
+        })
+      : Promise.resolve(null),
+  ]);
+
+  if (!project) return { allowed: false, role: null };
+  if (userId && project.leadId === userId) {
+    return { allowed: true, role: "ADMIN" };
+  }
+
+  const role = (member?.role as ProjectRole) || (project.allowAnonymousViewers ? "VIEWER" : null);
+  if (!role) return { allowed: false, role: null };
+
+  if (role in ROLE_PERMISSIONS) {
+    const allowed = (ROLE_PERMISSIONS[role as BuiltInRole] || []).includes(permission);
+    return { allowed, role };
+  }
+
+  // Check custom role relation
+  if (member?.customRole) {
+    const perms: ProjectPermission[] = Array.isArray(member.customRole.permissions)
+      ? member.customRole.permissions
+      : typeof member.customRole.permissions === "string"
+      ? JSON.parse(member.customRole.permissions || "[]")
+      : [];
+    return { allowed: perms.includes(permission), role };
+  }
+
+  // Fallback: look up custom role by name for this project
+  const custom = await prisma.customRole.findFirst({
+    where: { projectId, name: role },
+  });
+  if (custom) {
+    const perms: ProjectPermission[] = typeof custom.permissions === "string"
+      ? JSON.parse(custom.permissions || "[]")
+      : [];
+    return { allowed: perms.includes(permission), role };
+  }
+
+  return { allowed: false, role };
+}
+
 /**
  * Require a signed-in caller holding `permission` on `projectId`.
  *
@@ -107,10 +162,10 @@ export async function requireProjectPermission(
   permission: ProjectPermission
 ): Promise<AuthenticatedProjectAuth> {
   const user = await requireUser();
-  const role = await getProjectRole(user.id, projectId);
+  const { allowed, role } = await checkProjectPermission(user.id, projectId, permission);
 
   if (!role) throw new AuthError(NO_ACCESS);
-  if (!hasPermission(role, permission)) {
+  if (!allowed) {
     throw new AuthError("Your project role does not allow this action.");
   }
 
@@ -126,12 +181,12 @@ export async function requireProjectPermissionAllowingAnonymous(
   permission: ProjectPermission
 ): Promise<ProjectAuth> {
   const user = await getCurrentUser();
-  const role = await getProjectRole(user?.id ?? null, projectId);
+  const { allowed, role } = await checkProjectPermission(user?.id ?? null, projectId, permission);
 
   if (!role) {
     throw new AuthError(user ? NO_ACCESS : NOT_SIGNED_IN, user ? 403 : 401);
   }
-  if (!hasPermission(role, permission)) {
+  if (!allowed) {
     throw new AuthError("Your project role does not allow this action.");
   }
 
@@ -149,8 +204,8 @@ export function requireProjectAccess(projectId: string): Promise<ProjectAuth> {
  */
 export async function canAccessProject(projectId: string): Promise<boolean> {
   const user = await getCurrentUser();
-  const role = await getProjectRole(user?.id ?? null, projectId);
-  return !!role && hasPermission(role, "VIEW_PROJECT");
+  const { allowed } = await checkProjectPermission(user?.id ?? null, projectId, "VIEW_PROJECT");
+  return allowed;
 }
 
 /**

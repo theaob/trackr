@@ -55,6 +55,7 @@ model Project {
   workflowTransitions WorkflowTransition[]
   labels       Label[]
   components   Component[]
+  customRoles  CustomRole[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -198,18 +199,37 @@ model WorkflowTransition {
 }
 
 model ProjectMember {
-  id        String   @id @default(cuid())
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role      String   @default("MEMBER") // "ADMIN", "MEMBER", "VIEWER"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String      @id @default(cuid())
+  projectId    String
+  project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         String      @default("MEMBER") // "ADMIN", "MEMBER", "VIEWER", or custom role name
+  customRoleId String?
+  customRole   CustomRole? @relation(fields: [customRoleId], references: [id], onDelete: SetNull)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   @@unique([projectId, userId])
   @@index([projectId])
   @@index([userId])
+  @@index([customRoleId])
+}
+
+model CustomRole {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  color       String   @default("#0052cc")
+  permissions String   // JSON array of ProjectPermission[]
+  members     ProjectMember[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([projectId, name])
+  @@index([projectId])
 }
 
 model Sprint {
