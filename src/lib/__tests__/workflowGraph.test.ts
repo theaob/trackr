@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import WorkflowGraphView, {
   computeAutoLayout,
   calculateEdgePath,
+  isTransitionFromAnyNode,
 } from "@/components/settings/WorkflowGraphView";
 import { WorkflowStatus, WorkflowTransition } from "@/types";
 
@@ -228,5 +229,159 @@ describe("WorkflowGraphView - Component Rendering", () => {
     );
 
     expect(html).not.toContain("Connect");
+  });
+});
+
+describe("WorkflowGraphView - General Start and Any-Node Separation", () => {
+  const statuses: WorkflowStatus[] = [
+    {
+      id: "s-backlog",
+      projectId: "p1",
+      name: "Backlog",
+      category: "TODO",
+      order: 0,
+      isBacklog: true,
+      color: "#64748B",
+      wipLimit: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: "s-todo",
+      projectId: "p1",
+      name: "To Do",
+      category: "TODO",
+      order: 1,
+      isBacklog: false,
+      color: "#475569",
+      wipLimit: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: "s-in-prog",
+      projectId: "p1",
+      name: "In Progress",
+      category: "IN_PROGRESS",
+      order: 2,
+      isBacklog: false,
+      color: "#0052CC",
+      wipLimit: 3,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: "s-done",
+      projectId: "p1",
+      name: "Done",
+      category: "DONE",
+      order: 3,
+      isBacklog: false,
+      color: "#059669",
+      wipLimit: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ];
+
+  it("isTransitionFromAnyNode detects when a status has transitions from all other nodes", () => {
+    // All other statuses (s-backlog, s-todo, s-in-prog) can transition to s-done
+    const transitionKeys = new Set([
+      "s-backlog:s-todo",
+      "s-todo:s-in-prog",
+      "s-backlog:s-done",
+      "s-todo:s-done",
+      "s-in-prog:s-done",
+    ]);
+
+    expect(isTransitionFromAnyNode("s-done", statuses, transitionKeys)).toBe(true);
+
+    // s-in-prog only has transition from s-todo, not from s-backlog or s-done
+    expect(isTransitionFromAnyNode("s-in-prog", statuses, transitionKeys)).toBe(false);
+
+    // If one transition is missing (e.g. s-backlog:s-done), it's not from any node
+    const missingOne = new Set(["s-todo:s-done", "s-in-prog:s-done"]);
+    expect(isTransitionFromAnyNode("s-done", statuses, missingOne)).toBe(false);
+  });
+
+  it("isTransitionFromAnyNode returns false when workflow has fewer than 2 other nodes", () => {
+    const twoStatuses = statuses.slice(0, 2); // only s-backlog and s-todo
+    const keys = new Set(["s-backlog:s-todo"]);
+    expect(isTransitionFromAnyNode("s-todo", twoStatuses, keys)).toBe(false);
+  });
+
+  it("computeAutoLayout separates any-node transition target with an extra gap", () => {
+    // Both s-in-prog and s-cancelled in IN_PROGRESS, but s-cancelled can be reached from any node
+    const cancelledStatus: WorkflowStatus = {
+      id: "s-cancelled",
+      projectId: "p1",
+      name: "Cancelled",
+      category: "IN_PROGRESS",
+      order: 4,
+      isBacklog: false,
+      color: "#EF4444",
+      wipLimit: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    const testStatuses = [...statuses, cancelledStatus];
+    const keys = new Set([
+      "s-backlog:s-cancelled",
+      "s-todo:s-cancelled",
+      "s-in-prog:s-cancelled",
+      "s-done:s-cancelled",
+    ]);
+
+    const layout = computeAutoLayout(testStatuses, keys);
+
+    // Standard in-prog should be at start y
+    expect(layout["s-in-prog"].y).toBe(60);
+    // Cancelled should be separated below in-prog with standard gap (120) + separation gap (40)
+    expect(layout["s-cancelled"].y).toBe(60 + 120 + 40);
+  });
+
+  it("omits direct incoming edges to any-node target and renders General Start instead", () => {
+    // s-done can be transitioned into from all other nodes (s-backlog, s-todo, s-in-prog)
+    // s-done also has an outgoing transition to s-in-prog (reopen)
+    const transitions: WorkflowTransition[] = [
+      { id: "t1", projectId: "p1", fromId: "s-backlog", toId: "s-todo", createdAt: "" },
+      { id: "t2", projectId: "p1", fromId: "s-todo", toId: "s-in-prog", createdAt: "" },
+      { id: "t3", projectId: "p1", fromId: "s-backlog", toId: "s-done", createdAt: "" },
+      { id: "t4", projectId: "p1", fromId: "s-todo", toId: "s-done", createdAt: "" },
+      { id: "t5", projectId: "p1", fromId: "s-in-prog", toId: "s-done", createdAt: "" },
+      { id: "t6", projectId: "p1", fromId: "s-done", toId: "s-in-prog", createdAt: "" },
+    ];
+
+    const html = renderToStaticMarkup(
+      React.createElement(WorkflowGraphView, {
+        projectId: "p1",
+        statuses,
+        transitions,
+        canManage: true,
+        onToggleTransition: vi.fn(),
+      })
+    );
+
+    // 1. Direct incoming edges to s-done (t3, t4, t5) should NOT be rendered in the SVG
+    // Note: t1, t2, and outgoing t6 SHOULD be rendered
+    // Edge keys in SVG use `key="fromId:toId"`
+    expect(html).not.toContain("s-backlog:s-done");
+    expect(html).not.toContain("s-todo:s-done");
+    expect(html).not.toContain("s-in-prog:s-done");
+
+    // Outgoing transition from s-done (t6) should still be rendered
+    expect(html).toContain("s-done:s-in-prog");
+
+    // 2. General Start element should be rendered
+    expect(html).toContain("general-start:s-done");
+    expect(html).toContain("workflow-arrow-general-start");
+    expect(html).toContain("ALL");
+
+    // 3. Node card should render "General Start" badge and "ALL in" count
+    expect(html).toContain("General Start");
+    expect(html).toContain("ALL in");
+
+    // 4. Footer legend should include General Start
+    expect(html).toContain("General Start (from any status)");
   });
 });

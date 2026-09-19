@@ -30,7 +30,10 @@ interface WorkflowGraphViewProps {
   canManage: boolean;
   onToggleTransition: (fromId: string, toId: string, allowed: boolean) => Promise<void>;
   onAllowAllIncoming?: (toId: string) => Promise<void>;
-  onClearTransitions?: (statusId: string) => Promise<void>;
+  onClearTransitions?: (
+    statusId: string,
+    direction?: "incoming" | "outgoing" | "both"
+  ) => Promise<void>;
   onAddStatusClick?: () => void;
 }
 
@@ -43,7 +46,7 @@ const NODE_WIDTH = 210;
 const NODE_HEIGHT = 86;
 const COL_WIDTH = 340;
 const ROW_GAP = 120;
-const START_X = 60;
+const START_X = 100;
 const START_Y = 60;
 
 const CATEGORY_STYLES: Record<
@@ -83,10 +86,35 @@ const CATEGORY_STYLES: Record<
   },
 };
 
+/**
+ * Check if a status can be transitioned into from any node in the workflow.
+ * Holds true when there are at least 2 other statuses and every other status
+ * has an active transition pointing to this status.
+ */
+export function isTransitionFromAnyNode(
+  statusId: string,
+  statuses: WorkflowStatus[],
+  transitionKeys: Set<string>
+): boolean {
+  const otherStatuses = statuses.filter((s) => s.id !== statusId);
+  return (
+    otherStatuses.length >= 2 &&
+    otherStatuses.every((other) => transitionKeys.has(`${other.id}:${statusId}`))
+  );
+}
+
 /** Compute default auto-arranged positions grouped by category columns */
-export function computeAutoLayout(statuses: WorkflowStatus[]): Record<string, NodePosition> {
+export function computeAutoLayout(
+  statuses: WorkflowStatus[],
+  transitions?: WorkflowTransition[] | Set<string>
+): Record<string, NodePosition> {
   const result: Record<string, NodePosition> = {};
   const categories: WorkflowStatusCategory[] = ["TODO", "IN_PROGRESS", "DONE"];
+
+  const transitionKeys =
+    transitions instanceof Set
+      ? transitions
+      : new Set((transitions || []).map((t) => `${t.fromId}:${t.toId}`));
 
   const grouped: Record<WorkflowStatusCategory, WorkflowStatus[]> = {
     TODO: [],
@@ -104,15 +132,40 @@ export function computeAutoLayout(statuses: WorkflowStatus[]): Record<string, No
 
   // Order each group by status.order
   for (const cat of categories) {
-    grouped[cat].sort((a, b) => a.order - b.order);
+    const list = grouped[cat];
+    list.sort((a, b) => a.order - b.order);
+
     const colIdx = cat === "TODO" ? 0 : cat === "IN_PROGRESS" ? 1 : 2;
     const colX = START_X + colIdx * COL_WIDTH;
 
-    grouped[cat].forEach((status, rowIdx) => {
+    // Separate standard statuses from any-node transition target statuses
+    const standard = list.filter((s) => !isTransitionFromAnyNode(s.id, statuses, transitionKeys));
+    const allIncoming = list.filter((s) => isTransitionFromAnyNode(s.id, statuses, transitionKeys));
+
+    let currentY = START_Y;
+
+    // Standard statuses placed first
+    standard.forEach((status) => {
       result[status.id] = {
         x: colX,
-        y: START_Y + rowIdx * ROW_GAP,
+        y: currentY,
       };
+      currentY += ROW_GAP;
+    });
+
+    // If there were standard statuses and there are all-incoming statuses,
+    // separate them with an extra gap so the general start status is clearly detached!
+    if (standard.length > 0 && allIncoming.length > 0) {
+      currentY += 40;
+    }
+
+    // All-incoming statuses placed with separation
+    allIncoming.forEach((status) => {
+      result[status.id] = {
+        x: colX,
+        y: currentY,
+      };
+      currentY += ROW_GAP;
     });
   }
 
@@ -192,9 +245,26 @@ export default function WorkflowGraphView({
   onClearTransitions,
   onAddStatusClick,
 }: WorkflowGraphViewProps) {
+  // Set of transition keys: "fromId:toId"
+  const transitionKeys = useMemo(
+    () => new Set(transitions.map((t) => `${t.fromId}:${t.toId}`)),
+    [transitions]
+  );
+
+  // Status IDs that can be transitioned into from any node
+  const globalTransitionStatusIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of statuses) {
+      if (isTransitionFromAnyNode(s.id, statuses, transitionKeys)) {
+        set.add(s.id);
+      }
+    }
+    return set;
+  }, [statuses, transitionKeys]);
+
   // Positions of nodes on canvas
   const [positions, setPositions] = useState<Record<string, NodePosition>>(() =>
-    computeAutoLayout(statuses)
+    computeAutoLayout(statuses, transitions)
   );
 
   // Selected status for inspector panel
@@ -222,7 +292,7 @@ export default function WorkflowGraphView({
   // Sync positions when status count changes or new statuses added
   useEffect(() => {
     setPositions((prev) => {
-      const auto = computeAutoLayout(statuses);
+      const auto = computeAutoLayout(statuses, transitions);
       const next = { ...prev };
       let updated = false;
       for (const s of statuses) {
@@ -233,13 +303,7 @@ export default function WorkflowGraphView({
       }
       return updated ? next : prev;
     });
-  }, [statuses]);
-
-  // Set of transition keys: "fromId:toId"
-  const transitionKeys = useMemo(
-    () => new Set(transitions.map((t) => `${t.fromId}:${t.toId}`)),
-    [transitions]
-  );
+  }, [statuses, transitions]);
 
   // Map of statuses for fast lookup
   const statusMap = useMemo(() => {
@@ -261,7 +325,7 @@ export default function WorkflowGraphView({
 
   // Handle auto-arrange layout
   const handleAutoArrange = () => {
-    setPositions(computeAutoLayout(statuses));
+    setPositions(computeAutoLayout(statuses, transitions));
     setPan({ x: 0, y: 0 });
     setZoom(1);
   };
@@ -322,7 +386,9 @@ export default function WorkflowGraphView({
           y: e.clientY - panStart.y,
         });
       } else if (draggingNodeId) {
-        const newX = Math.max(20, Math.round(e.clientX / zoom - dragOffset.x));
+        const isAllIncoming = globalTransitionStatusIds.has(draggingNodeId);
+        const minX = isAllIncoming ? 80 : 20;
+        const newX = Math.max(minX, Math.round(e.clientX / zoom - dragOffset.x));
         const newY = Math.max(20, Math.round(e.clientY / zoom - dragOffset.y));
         setPositions((prev) => ({
           ...prev,
@@ -358,7 +424,7 @@ export default function WorkflowGraphView({
       window.removeEventListener("mouseup", handleMouseUp);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isPanning, draggingNodeId, dragOffset, connectingFromId, pan, zoom, panStart]);
+  }, [isPanning, draggingNodeId, dragOffset, connectingFromId, pan, zoom, panStart, globalTransitionStatusIds]);
 
   // Selected status details for inspector
   const selectedStatus = selectedStatusId ? statusMap.get(selectedStatusId) : null;
@@ -514,13 +580,32 @@ export default function WorkflowGraphView({
               >
                 <path d="M 0 1 L 10 5 L 0 9 z" fill="#0052CC" />
               </marker>
+
+              {/* General Start Arrow Marker */}
+              <marker
+                id="workflow-arrow-general-start"
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#0F172A" />
+              </marker>
             </defs>
 
             {/* Grid Pattern Background Rect */}
             <rect width="100%" height="100%" fill="url(#workflow-grid)" />
 
-            {/* Render Transitions as Directed Edges */}
+            {/* Render Transitions as Directed Edges (omitting incoming edges to any-node targets) */}
             {transitions.map((t) => {
+              // If the target node can be transitioned into from any node,
+              // do NOT connect incoming edges to it. Instead it has a general start.
+              if (globalTransitionStatusIds.has(t.toId)) {
+                return null;
+              }
+
               const fromPos = positions[t.fromId];
               const toPos = positions[t.toId];
               if (!fromPos || !toPos) return null;
@@ -538,7 +623,7 @@ export default function WorkflowGraphView({
               const { path, midX, midY } = calculateEdgePath(fromPos, toPos, isBidirectional, isReverse);
 
               return (
-                <g key={edgeKey} className="group">
+                <g key={edgeKey} data-edge-key={edgeKey} className="group">
                   {/* Invisible thick path for easy hovering */}
                   <path
                     d={path}
@@ -580,6 +665,128 @@ export default function WorkflowGraphView({
               );
             })}
 
+            {/* General Start Indicators for Nodes Transitionable from Any Node */}
+            {Array.from(globalTransitionStatusIds).map((statusId) => {
+              const pos = positions[statusId];
+              if (!pos) return null;
+
+              const edgeKey = `general-start:${statusId}`;
+              const isHovered = hoveredEdgeKey === edgeKey;
+              const isSelected = selectedStatusId === statusId;
+              const isHighlighted = isHovered || isSelected;
+
+              const targetX = pos.x;
+              const targetY = pos.y + NODE_HEIGHT / 2;
+              const startCircleX = targetX - 66;
+              const lineStartX = targetX - 52;
+              const badgeCenterX = targetX - 32;
+
+              return (
+                <g key={edgeKey} data-edge-key={edgeKey} className="group general-start-group">
+                  {/* Invisible hit area for hover */}
+                  <rect
+                    x={startCircleX - 16}
+                    y={targetY - 20}
+                    width={targetX - startCircleX + 16}
+                    height={40}
+                    fill="transparent"
+                    className="pointer-events-auto cursor-pointer"
+                    onMouseEnter={() => setHoveredEdgeKey(edgeKey)}
+                    onMouseLeave={() => setHoveredEdgeKey(null)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedStatusId(statusId);
+                    }}
+                  />
+
+                  {/* Directed Arrow Line from General Start to Node */}
+                  <line
+                    x1={lineStartX}
+                    y1={targetY}
+                    x2={targetX}
+                    y2={targetY}
+                    stroke={isHighlighted ? "#0052CC" : "#0F172A"}
+                    strokeWidth={isHighlighted ? 2.5 : 2}
+                    markerEnd={`url(#workflow-arrow${isHighlighted ? "-active" : "-general-start"})`}
+                    className="transition-colors duration-150"
+                  />
+
+                  {/* General Start Symbol (Initial State Circle with White Center) */}
+                  <g
+                    className="pointer-events-auto cursor-pointer transition-transform group-hover:scale-110"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedStatusId(statusId);
+                    }}
+                    onMouseEnter={() => setHoveredEdgeKey(edgeKey)}
+                  >
+                    <circle
+                      cx={startCircleX}
+                      cy={targetY}
+                      r="13"
+                      fill={isHighlighted ? "#0052CC" : "#0F172A"}
+                      stroke={isHighlighted ? "#0052CC" : "#334155"}
+                      strokeWidth="1.5"
+                      className="shadow-sm transition-colors duration-150"
+                    />
+                    <circle
+                      cx={startCircleX}
+                      cy={targetY}
+                      r="4.5"
+                      fill="#FFFFFF"
+                    />
+                  </g>
+
+                  {/* Badge above arrow: "ALL" */}
+                  {!isHovered && (
+                    <g className="pointer-events-none transition-opacity">
+                      <rect
+                        x={badgeCenterX - 15}
+                        y={targetY - 24}
+                        width="30"
+                        height="15"
+                        rx="7.5"
+                        fill={isHighlighted ? "#EFF6FF" : "#F8FAFC"}
+                        stroke={isHighlighted ? "#0052CC" : "#94A3B8"}
+                        strokeWidth="1"
+                      />
+                      <text
+                        x={badgeCenterX}
+                        y={targetY - 13}
+                        textAnchor="middle"
+                        fontSize="9"
+                        fontWeight="700"
+                        fill={isHighlighted ? "#0052CC" : "#334155"}
+                        letterSpacing="0.05em"
+                      >
+                        ALL
+                      </text>
+                    </g>
+                  )}
+
+                  {/* Delete Transition Badge on Hover */}
+                  {isHovered && canManage && (
+                    <g
+                      transform={`translate(${badgeCenterX}, ${targetY})`}
+                      className="pointer-events-auto cursor-pointer transition-transform hover:scale-110"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onClearTransitions) {
+                          onClearTransitions(statusId, "incoming");
+                        }
+                      }}
+                      onMouseEnter={() => setHoveredEdgeKey(edgeKey)}
+                    >
+                      <title>Clear all incoming transitions</title>
+                      <circle r="9" fill="#DC2626" className="shadow-sm" />
+                      <line x1="-3" y1="-3" x2="3" y2="3" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
+                      <line x1="3" y1="-3" x2="-3" y2="3" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
+                    </g>
+                  )}
+                </g>
+              );
+            })}
+
             {/* Live Rubber-Band Arrow while user is connecting */}
             {connectingFromId && mousePos && positions[connectingFromId] && (
               <line
@@ -602,6 +809,7 @@ export default function WorkflowGraphView({
             const isSelected = selectedStatusId === status.id;
             const isConnectSource = connectingFromId === status.id;
             const isDragging = draggingNodeId === status.id;
+            const isAllIncoming = globalTransitionStatusIds.has(status.id);
 
             // Incoming / Outgoing counts
             const outgoingCount = transitions.filter((t) => t.fromId === status.id).length;
@@ -625,6 +833,8 @@ export default function WorkflowGraphView({
                   isConnectSource ? "ring-2 ring-jira-blue bg-blue-50/50" : ""
                 } ${
                   isDragging ? "opacity-90 shadow-xl" : ""
+                } ${
+                  isAllIncoming ? "ring-1 ring-jira-blue/30" : ""
                 }`}
               >
                 {/* Node Card Header */}
@@ -643,11 +853,19 @@ export default function WorkflowGraphView({
                     </span>
                   </div>
 
-                  {status.isBacklog && (
+                  {isAllIncoming ? (
+                    <span
+                      className="text-[9px] font-bold text-jira-blue bg-blue-100/90 border border-jira-blue/30 px-1.5 py-0.2 rounded flex items-center gap-0.5 shrink-0"
+                      title="Issues in any status can transition directly to this status (General Start)"
+                    >
+                      <Sparkles className="w-2.5 h-2.5 text-jira-blue" />
+                      <span>General Start</span>
+                    </span>
+                  ) : status.isBacklog ? (
                     <span className="text-[9px] font-semibold text-jira-gray-500 bg-jira-gray-200/80 px-1.5 py-0.2 rounded">
                       Backlog
                     </span>
-                  )}
+                  ) : null}
                 </div>
 
                 {/* Node Card Body */}
@@ -665,8 +883,16 @@ export default function WorkflowGraphView({
 
                   <div className="flex items-center justify-between text-[10px] text-jira-gray-500 pt-0.5">
                     <span className="flex items-center gap-1">
-                      <span className="font-semibold text-jira-navy">{incomingCount}</span> in &bull;{" "}
-                      <span className="font-semibold text-jira-navy">{outgoingCount}</span> out
+                      {isAllIncoming ? (
+                        <span className="font-bold text-jira-blue" title="Can be transitioned into from any status">
+                          ALL in
+                        </span>
+                      ) : (
+                        <>
+                          <span className="font-semibold text-jira-navy">{incomingCount}</span> in
+                        </>
+                      )}
+                      &bull; <span className="font-semibold text-jira-navy">{outgoingCount}</span> out
                     </span>
 
                     {/* Quick Connect Action */}
@@ -717,9 +943,17 @@ export default function WorkflowGraphView({
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-jira-gray-100 text-jira-gray-700 uppercase">
                     {selectedStatus.category}
                   </span>
+                  {globalTransitionStatusIds.has(selectedStatus.id) && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-jira-blue border border-jira-blue/30 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-jira-blue" />
+                      General Start
+                    </span>
+                  )}
                 </div>
                 <p className="text-[11px] text-jira-gray-500">
-                  Configure which statuses an issue in &ldquo;{selectedStatus.name}&rdquo; can transition to or from.
+                  {globalTransitionStatusIds.has(selectedStatus.id)
+                    ? `Issues in any status can transition directly to "${selectedStatus.name}". A general start indicator points to this node on the graph.`
+                    : `Configure which statuses an issue in "${selectedStatus.name}" can transition to or from.`}
                 </p>
               </div>
             </div>
@@ -729,11 +963,24 @@ export default function WorkflowGraphView({
                 <button
                   type="button"
                   onClick={() => onAllowAllIncoming(selectedStatus.id)}
-                  className="px-3 py-1 text-xs font-semibold text-jira-blue bg-jira-blue/10 hover:bg-jira-blue/20 rounded border border-jira-blue/30 flex items-center gap-1.5 transition-colors"
-                  title="Allow all other statuses to transition to this status"
+                  disabled={globalTransitionStatusIds.has(selectedStatus.id)}
+                  className={`px-3 py-1 text-xs font-semibold rounded border flex items-center gap-1.5 transition-colors ${
+                    globalTransitionStatusIds.has(selectedStatus.id)
+                      ? "text-emerald-700 bg-emerald-50 border-emerald-300 cursor-default opacity-90"
+                      : "text-jira-blue bg-jira-blue/10 hover:bg-jira-blue/20 border-jira-blue/30 cursor-pointer"
+                  }`}
+                  title={
+                    globalTransitionStatusIds.has(selectedStatus.id)
+                      ? "All other statuses can already transition to this status"
+                      : "Allow all other statuses to transition to this status"
+                  }
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Allow all to transition here</span>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>
+                    {globalTransitionStatusIds.has(selectedStatus.id)
+                      ? "All can transition here (Active)"
+                      : "Allow all to transition here"}
+                  </span>
                 </button>
               )}
 
@@ -839,6 +1086,13 @@ export default function WorkflowGraphView({
           <span className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
             Done
+          </span>
+          <span className="text-jira-gray-300">|</span>
+          <span className="flex items-center gap-1.5 font-medium text-jira-navy">
+            <span className="w-3.5 h-3.5 rounded-full bg-slate-900 flex items-center justify-center">
+              <span className="w-1.5 h-1.5 rounded-full bg-white" />
+            </span>
+            General Start (from any status)
           </span>
           <span className="text-jira-gray-300">|</span>
           <span>

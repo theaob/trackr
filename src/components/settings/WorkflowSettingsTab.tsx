@@ -170,10 +170,19 @@ export default function WorkflowSettingsTab({
     }
   };
 
-  const handleClearTransitions = async (statusId: string) => {
+  const handleClearTransitions = async (
+    statusId: string,
+    direction: "incoming" | "outgoing" | "both" = "both"
+  ) => {
     // Optimistic update
-    setTransitions((prev) => prev.filter((t) => t.fromId !== statusId && t.toId !== statusId));
-    const res = await clearStatusTransitions(project.id, statusId, "both");
+    setTransitions((prev) =>
+      prev.filter((t) => {
+        if (direction === "incoming") return t.toId !== statusId;
+        if (direction === "outgoing") return t.fromId !== statusId;
+        return t.fromId !== statusId && t.toId !== statusId;
+      })
+    );
+    const res = await clearStatusTransitions(project.id, statusId, direction);
     if (!res.success && res.error) {
       setError(res.error);
     }
