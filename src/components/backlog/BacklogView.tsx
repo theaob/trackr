@@ -845,12 +845,10 @@ export default function BacklogView({
                                   )}
                                 </div>
 
-                                <div className="flex items-center gap-4 shrink-0">
-                                  <StatusBadge status={issue.status} />
-                                  <PriorityIcon priority={issue.priority} className="w-4 h-4" />
+                                <div className="flex items-center gap-3 shrink-0">
                                   {issue.dueDate && (
                                     <span
-                                      className={`inline-flex items-center gap-0.5 text-[11px] font-semibold ${
+                                      className={`inline-flex items-center gap-1 text-[11px] font-semibold shrink-0 ${
                                         isOverdue(issue.dueDate, issue.status, doneStatusNames)
                                           ? "text-rose-600"
                                           : "text-jira-gray-500"
@@ -862,23 +860,42 @@ export default function BacklogView({
                                     </span>
                                   )}
 
-                                  {issue.storyPoints !== null && (
-                                    <span className="w-6 h-5 rounded-full bg-jira-gray-200 text-jira-gray-800 text-[11px] font-bold flex items-center justify-center">
-                                      {issue.storyPoints}
-                                    </span>
-                                  )}
+                                  {/* Status Column */}
+                                  <div className="w-28 flex items-center justify-center shrink-0">
+                                    <StatusBadge status={issue.status} className="w-full text-center" />
+                                  </div>
 
-                                  {issue.assignee ? (
-                                    <UserAvatar
-                                      user={issue.assignee}
-                                      size="sm"
-                                      showTooltip
-                                      tooltipPrefix="Assignee"
-                                    />
-                                  ) : (
-                                    <div className="w-6 h-6 rounded-full border border-dashed border-jira-gray-300" />
-                                  )}
+                                  {/* Priority Column */}
+                                  <div className="w-6 flex items-center justify-center shrink-0">
+                                    <PriorityIcon priority={issue.priority} className="w-4 h-4" />
+                                  </div>
 
+                                  {/* Story Points Column */}
+                                  <div className="w-7 flex items-center justify-center shrink-0">
+                                    {issue.storyPoints !== null ? (
+                                      <span className="w-6 h-5 rounded-full bg-jira-gray-200 text-jira-gray-800 text-[11px] font-bold flex items-center justify-center">
+                                        {issue.storyPoints}
+                                      </span>
+                                    ) : (
+                                      <span className="w-6 h-5 rounded-full bg-jira-gray-100 text-jira-gray-400 text-[11px] font-medium flex items-center justify-center select-none">
+                                        -
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Assignee Avatar Column */}
+                                  <div className="w-7 flex items-center justify-center shrink-0">
+                                    {issue.assignee ? (
+                                      <UserAvatar
+                                        user={issue.assignee}
+                                        size="sm"
+                                        showTooltip
+                                        tooltipPrefix="Assignee"
+                                      />
+                                    ) : (
+                                      <div className="w-6 h-6 rounded-full border border-dashed border-jira-gray-300" />
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             )}
@@ -1031,12 +1048,10 @@ export default function BacklogView({
                             )}
                           </div>
 
-                          <div className="flex items-center gap-4 shrink-0">
-                            <StatusBadge status={issue.status} />
-                            <PriorityIcon priority={issue.priority} className="w-4 h-4" />
+                          <div className="flex items-center gap-3 shrink-0">
                             {issue.dueDate && (
                               <span
-                                className={`inline-flex items-center gap-0.5 text-[11px] font-semibold ${
+                                className={`inline-flex items-center gap-1 text-[11px] font-semibold shrink-0 ${
                                   isOverdue(issue.dueDate, issue.status, doneStatusNames)
                                     ? "text-rose-600"
                                     : "text-jira-gray-500"
@@ -1048,23 +1063,42 @@ export default function BacklogView({
                               </span>
                             )}
 
-                            {issue.storyPoints !== null && (
-                              <span className="w-6 h-5 rounded-full bg-jira-gray-200 text-jira-gray-800 text-[11px] font-bold flex items-center justify-center">
-                                {issue.storyPoints}
-                              </span>
-                            )}
+                            {/* Status Column */}
+                            <div className="w-28 flex items-center justify-center shrink-0">
+                              <StatusBadge status={issue.status} className="w-full text-center" />
+                            </div>
 
-                            {issue.assignee ? (
-                              <UserAvatar
-                                user={issue.assignee}
-                                size="sm"
-                                showTooltip
-                                tooltipPrefix="Assignee"
-                              />
-                            ) : (
-                              <div className="w-6 h-6 rounded-full border border-dashed border-jira-gray-300" />
-                            )}
+                            {/* Priority Column */}
+                            <div className="w-6 flex items-center justify-center shrink-0">
+                              <PriorityIcon priority={issue.priority} className="w-4 h-4" />
+                            </div>
 
+                            {/* Story Points Column */}
+                            <div className="w-7 flex items-center justify-center shrink-0">
+                              {issue.storyPoints !== null ? (
+                                <span className="w-6 h-5 rounded-full bg-jira-gray-200 text-jira-gray-800 text-[11px] font-bold flex items-center justify-center">
+                                  {issue.storyPoints}
+                                </span>
+                              ) : (
+                                <span className="w-6 h-5 rounded-full bg-jira-gray-100 text-jira-gray-400 text-[11px] font-medium flex items-center justify-center select-none">
+                                  -
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Assignee Avatar Column */}
+                            <div className="w-7 flex items-center justify-center shrink-0">
+                              {issue.assignee ? (
+                                <UserAvatar
+                                  user={issue.assignee}
+                                  size="sm"
+                                  showTooltip
+                                  tooltipPrefix="Assignee"
+                                />
+                              ) : (
+                                <div className="w-6 h-6 rounded-full border border-dashed border-jira-gray-300" />
+                              )}
+                            </div>
                           </div>
                         </div>
                       )}

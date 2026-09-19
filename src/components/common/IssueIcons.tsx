@@ -203,7 +203,15 @@ export function PriorityIcon({
   }
 }
 
-export function StatusBadge({ status, color }: { status: IssueStatus; color?: string }) {
+export function StatusBadge({
+  status,
+  color,
+  className = "",
+}: {
+  status: IssueStatus;
+  color?: string;
+  className?: string;
+}) {
   const getBadgeStyle = () => {
     switch (status) {
       case "BACKLOG":
@@ -249,11 +257,12 @@ export function StatusBadge({ status, color }: { status: IssueStatus; color?: st
   return (
     <span
       style={customStyle}
-      className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] uppercase tracking-wider border ${
+      title={getLabel()}
+      className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[11px] uppercase tracking-wider border truncate ${
         customStyle ? "" : getBadgeStyle()
-      }`}
+      } ${className}`}
     >
-      {getLabel()}
+      <span className="truncate">{getLabel()}</span>
     </span>
   );
 }

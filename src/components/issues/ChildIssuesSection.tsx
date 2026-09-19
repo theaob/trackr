@@ -450,37 +450,55 @@ export default function ChildIssuesSection({
                   </span>
                 </div>
 
-                {/* Right: Points, Priority, Status, Assignee, Actions */}
+                {/* Right: Status, Priority, Points, Assignee, Actions */}
                 <div
-                  className="flex items-center gap-2 shrink-0"
+                  className="flex items-center gap-2.5 shrink-0"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {child.storyPoints !== null && child.storyPoints !== undefined && (
-                    <span className="text-[10px] font-bold bg-jira-gray-100 text-jira-gray-600 px-1.5 py-0.5 rounded">
-                      {child.storyPoints}
-                    </span>
-                  )}
+                  <div className="w-24 flex items-center justify-center shrink-0">
+                    <StatusBadge status={child.status} className="w-full text-center text-[10px]" />
+                  </div>
 
-                  <PriorityIcon priority={child.priority} className="w-3.5 h-3.5" />
+                  <div className="w-5 flex items-center justify-center shrink-0">
+                    <PriorityIcon priority={child.priority} className="w-3.5 h-3.5" />
+                  </div>
 
-                  <StatusBadge status={child.status} />
+                  <div className="w-6 flex items-center justify-center shrink-0">
+                    {child.storyPoints !== null && child.storyPoints !== undefined ? (
+                      <span className="w-5 h-4 rounded-full bg-jira-gray-100 text-jira-gray-600 text-[10px] font-bold flex items-center justify-center">
+                        {child.storyPoints}
+                      </span>
+                    ) : (
+                      <span className="w-5 h-4 rounded-full text-jira-gray-300 text-[10px] font-medium flex items-center justify-center select-none">
+                        -
+                      </span>
+                    )}
+                  </div>
 
-                  <UserAvatar user={child.assignee} size="sm" />
+                  <div className="w-6 flex items-center justify-center shrink-0">
+                    {child.assignee ? (
+                      <UserAvatar user={child.assignee} size="sm" showTooltip tooltipPrefix="Assignee" />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full border border-dashed border-jira-gray-300" />
+                    )}
+                  </div>
 
                   {canEdit && (
-                    <button
-                      type="button"
-                      disabled={unlinkingId === child.id}
-                      onClick={() => handleUnlink(child.id)}
-                      className="p-1 text-jira-gray-400 hover:text-rose-600 rounded hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-all"
-                      title={isEpic ? "Unlink from epic" : "Unlink subtask"}
-                    >
-                      {unlinkingId === child.id ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Unlink className="w-3.5 h-3.5" />
-                      )}
-                    </button>
+                    <div className="w-6 flex items-center justify-center shrink-0">
+                      <button
+                        type="button"
+                        disabled={unlinkingId === child.id}
+                        onClick={() => handleUnlink(child.id)}
+                        className="p-1 text-jira-gray-400 hover:text-rose-600 rounded hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-all"
+                        title={isEpic ? "Unlink from epic" : "Unlink subtask"}
+                      >
+                        {unlinkingId === child.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Unlink className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
