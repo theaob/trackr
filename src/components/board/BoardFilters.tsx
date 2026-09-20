@@ -5,6 +5,7 @@ import { User, IssueType, PriorityLevel } from "@/types";
 import { useCurrentUser } from "@/context/UserContext";
 import { X, Layers } from "lucide-react";
 import UserAvatar from "@/components/common/UserAvatar";
+import { PriorityIcon } from "@/components/common/IssueIcons";
 
 export type SwimlaneGroupBy = "NONE" | "ASSIGNEE" | "EPIC" | "PRIORITY";
 
@@ -99,11 +100,18 @@ export default function BoardFilters({
         </div>
 
         {/* Priority Filter */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 relative">
+          {selectedPriority !== "ALL" && (
+            <div className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none">
+              <PriorityIcon priority={selectedPriority} className="w-3.5 h-3.5" />
+            </div>
+          )}
           <select
             value={selectedPriority}
             onChange={(e) => onSelectPriority(e.target.value as PriorityLevel | "ALL")}
-            className="text-xs bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-jira-navy font-medium outline-none focus:border-jira-blue"
+            className={`text-xs bg-white border border-jira-gray-300 rounded pr-2.5 py-1 text-jira-navy font-medium outline-none focus:border-jira-blue ${
+              selectedPriority !== "ALL" ? "pl-7" : "px-2.5"
+            }`}
           >
             <option value="ALL">All Priorities</option>
             <option value="HIGHEST">Highest</option>

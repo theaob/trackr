@@ -88,6 +88,17 @@ type FilterPreset =
 type SortField = "key" | "title" | "status" | "priority" | "storyPoints" | "dueDate" | "createdAt" | "updatedAt";
 type SortOrder = "asc" | "desc";
 
+export function resolveNextSelectedIssueId(
+  prevId: string | null,
+  issues: { id: string }[]
+): string | null {
+  if (!prevId || issues.length === 0) return null;
+  if (!issues.some((i) => i.id === prevId)) {
+    return null;
+  }
+  return prevId;
+}
+
 export default function IssuesListView({
   project,
   allProjects = [],
@@ -478,13 +489,7 @@ export default function IssuesListView({
       setTotalCount(res.totalCount);
       setTotalPages(res.totalPages);
       setSelectedIds(new Set());
-      setSelectedIssueId((prevId) => {
-        if (res.issues.length === 0) return null;
-        if (!prevId || !res.issues.some((i: any) => i.id === prevId)) {
-          return res.issues[0].id;
-        }
-        return prevId;
-      });
+      setSelectedIssueId((prevId) => resolveNextSelectedIssueId(prevId, res.issues));
     } catch (err) {
       console.error("Failed to load paginated issues", err);
     } finally {
@@ -997,21 +1002,30 @@ export default function IssuesListView({
           </select>
 
           {/* Priority Filter */}
-          <select
-            value={priorityFilter}
-            onChange={(e) => {
-              setPriorityFilter(e.target.value as PriorityLevel | "ALL");
-              setPage(1);
-            }}
-            className="text-xs bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-jira-navy font-medium outline-none focus:border-jira-blue"
-          >
-            <option value="ALL">Priority: All</option>
-            <option value="HIGHEST">Highest</option>
-            <option value="HIGH">High</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="LOW">Low</option>
-            <option value="LOWEST">Lowest</option>
-          </select>
+          <div className="relative inline-flex items-center">
+            {priorityFilter !== "ALL" && (
+              <div className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                <PriorityIcon priority={priorityFilter} className="w-3.5 h-3.5" />
+              </div>
+            )}
+            <select
+              value={priorityFilter}
+              onChange={(e) => {
+                setPriorityFilter(e.target.value as PriorityLevel | "ALL");
+                setPage(1);
+              }}
+              className={`text-xs bg-white border border-jira-gray-300 rounded pr-2.5 py-1 text-jira-navy font-medium outline-none focus:border-jira-blue ${
+                priorityFilter !== "ALL" ? "pl-7" : "px-2.5"
+              }`}
+            >
+              <option value="ALL">Priority: All</option>
+              <option value="HIGHEST">Highest</option>
+              <option value="HIGH">High</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="LOW">Low</option>
+              <option value="LOWEST">Lowest</option>
+            </select>
+          </div>
 
           {/* Assignee Filter */}
           <select
@@ -1576,24 +1590,29 @@ export default function IssuesListView({
                         <label className="block font-bold text-jira-gray-600 uppercase tracking-wider mb-1">
                           Priority
                         </label>
-                        <select
-                          value={selectedIssue.priority}
-                          disabled={!permissions.canEditIssue}
-                          onChange={(e) =>
-                            handleUpdateCurrentIssue({
-                              priority: e.target.value as PriorityLevel,
-                            })
-                          }
-                          className={`w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none ${
-                            !permissions.canEditIssue ? "opacity-60 cursor-not-allowed" : ""
-                          }`}
-                        >
-                          <option value="HIGHEST">Highest</option>
-                          <option value="HIGH">High</option>
-                          <option value="MEDIUM">Medium</option>
-                          <option value="LOW">Low</option>
-                          <option value="LOWEST">Lowest</option>
-                        </select>
+                        <div className="relative">
+                          <select
+                            value={selectedIssue.priority}
+                            disabled={!permissions.canEditIssue}
+                            onChange={(e) =>
+                              handleUpdateCurrentIssue({
+                                priority: e.target.value as PriorityLevel,
+                              })
+                            }
+                            className={`w-full bg-white border border-jira-gray-300 rounded pl-7 pr-2 py-1 text-jira-navy outline-none ${
+                              !permissions.canEditIssue ? "opacity-60 cursor-not-allowed" : ""
+                            }`}
+                          >
+                            <option value="HIGHEST">Highest</option>
+                            <option value="HIGH">High</option>
+                            <option value="MEDIUM">Medium</option>
+                            <option value="LOW">Low</option>
+                            <option value="LOWEST">Lowest</option>
+                          </select>
+                          <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                            <PriorityIcon priority={selectedIssue.priority} className="w-3.5 h-3.5" />
+                          </div>
+                        </div>
                       </div>
 
                       <div>

@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import Navbar from "@/components/layout/Navbar";
 import Sidebar from "@/components/layout/Sidebar";
 import KanbanBoard from "@/components/board/KanbanBoard";
-import IssuesListView from "@/components/issues/IssuesListView";
+import IssuesListView, { resolveNextSelectedIssueId } from "@/components/issues/IssuesListView";
 import ProjectsDirectoryView from "@/components/projects/ProjectsDirectoryView";
 import ProjectSettingsView from "@/components/settings/ProjectSettingsView";
 import GeneralSettingsView from "@/components/settings/GeneralSettingsView";
@@ -344,6 +344,29 @@ describe("Mobile Viewport & Navigation", () => {
     expect(html).toContain("flex-1 overflow-y-auto bg-white p-3.5 sm:p-6 block");
     // Back to issues list button is present
     expect(html).toContain("Back to issues list");
+  });
+
+  describe("Mobile issues list selection resolution", () => {
+    it("preserves unselected state (null) when issues are loaded without selection", () => {
+      // Prevents automatically opening the first issue on mobile when visiting issues list
+      const issues = [{ id: "i1" }, { id: "i2" }, { id: "i3" }];
+      expect(resolveNextSelectedIssueId(null, issues)).toBeNull();
+    });
+
+    it("returns null when issues list is empty", () => {
+      expect(resolveNextSelectedIssueId(null, [])).toBeNull();
+      expect(resolveNextSelectedIssueId("i1", [])).toBeNull();
+    });
+
+    it("preserves selected issue id when it remains in the updated issues list", () => {
+      const issues = [{ id: "i1" }, { id: "i2" }, { id: "i3" }];
+      expect(resolveNextSelectedIssueId("i2", issues)).toBe("i2");
+    });
+
+    it("clears selection to null (returning mobile to list) when selected issue is filtered out or deleted", () => {
+      const issues = [{ id: "i1" }, { id: "i3" }];
+      expect(resolveNextSelectedIssueId("i2", issues)).toBeNull();
+    });
   });
 
   it("hides administrative Project Settings from mobile navigation drawer while keeping it on desktop", () => {

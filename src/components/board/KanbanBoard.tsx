@@ -14,11 +14,12 @@ import { useCurrentUser } from "@/context/UserContext";
 import { useSearch } from "@/context/SearchContext";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
 import { prettifyStatusName, isDoneStatus, getDoneStatusNames } from "@/lib/workflowDisplay";
-import { ChevronDown, ChevronRight, Layers, User as UserIcon, Bookmark, AlertCircle, Pencil, Calendar, Target, Rocket } from "lucide-react";
+import { ChevronDown, ChevronRight, Layers, User as UserIcon, Bookmark, Pencil, Calendar, Target, Rocket } from "lucide-react";
 import { format } from "date-fns";
 import EditSprintModal from "@/components/sprints/EditSprintModal";
 import CreateVersionModal from "@/components/releases/CreateVersionModal";
 import Link from "next/link";
+import { PriorityIcon } from "@/components/common/IssueIcons";
 
 interface KanbanBoardProps {
   project: Project;
@@ -976,15 +977,12 @@ export default function KanbanBoard({
 
                         {groupBy === "PRIORITY" && (
                           <div className="flex items-center gap-2">
-                            <AlertCircle
-                              className={`w-4 h-4 ${
-                                lane.priority === "HIGHEST" || lane.priority === "HIGH"
-                                  ? "text-rose-600"
-                                  : lane.priority === "MEDIUM"
-                                  ? "text-amber-600"
-                                  : "text-blue-600"
-                              }`}
-                            />
+                            {lane.priority && (
+                              <PriorityIcon
+                                priority={lane.priority as PriorityLevel}
+                                className="w-4 h-4"
+                              />
+                            )}
                             <span className="text-xs font-bold text-jira-navy">
                               {lane.title}
                             </span>
