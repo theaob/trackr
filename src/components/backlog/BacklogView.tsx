@@ -742,6 +742,19 @@ export default function BacklogView({
     const tempId = `temp-${Date.now()}`;
     const initialStatus = sprintId ? initialStatusName : primaryBacklogStatusName;
 
+    // Determine max order among all existing issues in the target container
+    const containerIssues = issues.filter((i) => {
+      if (i.type === "EPIC") return false;
+      if (sprintId) return i.sprintId === sprintId;
+      return !i.sprintId && backlogStatusNames.includes(i.status);
+    });
+
+    const maxOrder = containerIssues.reduce(
+      (max, item) => Math.max(max, item.order ?? 0),
+      -1
+    );
+    const nextOrder = maxOrder + 1;
+
     // Optimistic issue object
     const optimisticIssue: Issue = {
       id: tempId,
@@ -766,7 +779,7 @@ export default function BacklogView({
       assignee: null,
       createdAt: new Date(),
       updatedAt: new Date(),
-      order: 0,
+      order: nextOrder,
       labels: [],
       comments: [],
       attachments: [],
@@ -775,7 +788,7 @@ export default function BacklogView({
     };
 
     // Show card immediately and clear input
-    setIssues((prev) => [optimisticIssue, ...prev]);
+    setIssues((prev) => [...prev, optimisticIssue]);
     setInlineTitle("");
     setInlineCreateTarget(null);
 
@@ -785,6 +798,7 @@ export default function BacklogView({
       type: inlineType,
       sprintId: sprintId,
       status: initialStatus,
+      order: nextOrder,
       reporterId: currentUser?.id,
     });
 

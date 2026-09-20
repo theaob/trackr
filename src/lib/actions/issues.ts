@@ -633,6 +633,7 @@ export async function createIssue(data: {
   storyPoints?: number | null;
   startDate?: string | null;
   dueDate?: string | null;
+  order?: number;
 }) {
   try {
     const { user } = await requireProjectPermission(data.projectId, "CREATE_ISSUE");
@@ -671,6 +672,49 @@ export async function createIssue(data: {
     // The reporter is always the caller: it is an audit field, not an input.
     const reporterId = user.id;
 
+    let order = data.order;
+    if (order === undefined) {
+      if (data.type === "EPIC") {
+        order = 0;
+      } else if (data.sprintId) {
+        const maxSprintOrder = await prisma.issue.aggregate({
+          where: {
+            projectId: data.projectId,
+            sprintId: data.sprintId,
+            type: { not: "EPIC" },
+          },
+          _max: { order: true },
+        });
+        order = (maxSprintOrder._max.order ?? -1) + 1;
+      } else {
+        const backlogNames = await getBacklogStatusNames(data.projectId);
+        const isBacklog = backlogNames.includes(status);
+        if (isBacklog) {
+          const maxBacklogOrder = await prisma.issue.aggregate({
+            where: {
+              projectId: data.projectId,
+              sprintId: null,
+              status: { in: backlogNames },
+              type: { not: "EPIC" },
+            },
+            _max: { order: true },
+          });
+          order = (maxBacklogOrder._max.order ?? -1) + 1;
+        } else {
+          const maxBoardOrder = await prisma.issue.aggregate({
+            where: {
+              projectId: data.projectId,
+              sprintId: null,
+              status,
+              type: { not: "EPIC" },
+            },
+            _max: { order: true },
+          });
+          order = (maxBoardOrder._max.order ?? -1) + 1;
+        }
+      }
+    }
+
     const newIssue = await createIssueWithKey(data.projectId, project.key, (key) =>
       prisma.issue.create({
         data: {
@@ -680,6 +724,7 @@ export async function createIssue(data: {
           type: data.type,
           priority: data.priority || "MEDIUM",
           status,
+          order,
           storyPoints: data.storyPoints ?? null,
           startDate: data.startDate ? new Date(data.startDate) : null,
           dueDate: data.dueDate ? new Date(data.dueDate) : null,

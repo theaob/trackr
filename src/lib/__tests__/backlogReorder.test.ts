@@ -186,4 +186,130 @@ describe("Backlog Reordering Logic", () => {
       expect(sorted.map((i) => i.id)).toEqual(["no-order", "has-order"]);
     });
   });
+
+  describe("New Issue Insertion Order After Reordering", () => {
+    type TestIssue = {
+      id: string;
+      order: number;
+      createdAt: string;
+    };
+
+    const sortIssues = (a: TestIssue, b: TestIssue) =>
+      (a.order ?? 0) - (b.order ?? 0) ||
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+
+    function computeNextOrder(containerIssues: { order?: number | null }[]): number {
+      const maxOrder = containerIssues.reduce(
+        (max, item) => Math.max(max, item.order ?? 0),
+        -1
+      );
+      return maxOrder + 1;
+    }
+
+    it("demonstrates the bug: creating an issue with default order 0 inserts behind the moved item", () => {
+      // Suppose we had task-1 and task-2. User moved task-2 to the top.
+      // Reordered list: [task-2 (order: 0), task-1 (order: 1)]
+      const reorderedBacklog: TestIssue[] = [
+        { id: "task-2", order: 0, createdAt: "2026-01-02T10:00:00Z" },
+        { id: "task-1", order: 1, createdAt: "2026-01-01T10:00:00Z" },
+      ];
+
+      // A new item created with default order 0
+      const buggyNewItem: TestIssue = {
+        id: "task-new",
+        order: 0,
+        createdAt: "2026-01-03T12:00:00Z",
+      };
+
+      const sorted = [...reorderedBacklog, buggyNewItem].sort(sortIssues);
+      // Buggy behavior: task-new lands at index 1 (behind task-2), NOT at the bottom!
+      expect(sorted.map((i) => i.id)).toEqual(["task-2", "task-new", "task-1"]);
+    });
+
+    it("inserts new item at the bottom after an issue is moved to the top", () => {
+      const reorderedBacklog: TestIssue[] = [
+        { id: "task-3", order: 0, createdAt: "2026-01-03T10:00:00Z" },
+        { id: "task-1", order: 1, createdAt: "2026-01-01T10:00:00Z" },
+        { id: "task-2", order: 2, createdAt: "2026-01-02T10:00:00Z" },
+      ];
+
+      const nextOrder = computeNextOrder(reorderedBacklog);
+      expect(nextOrder).toBe(3);
+
+      const newItem: TestIssue = {
+        id: "task-new",
+        order: nextOrder,
+        createdAt: "2026-01-04T12:00:00Z",
+      };
+
+      const sorted = [...reorderedBacklog, newItem].sort(sortIssues);
+      expect(sorted.map((i) => i.id)).toEqual(["task-3", "task-1", "task-2", "task-new"]);
+      expect(sorted.at(-1)?.id).toBe("task-new");
+    });
+
+    it("inserts new item at the bottom after an issue is moved to the bottom", () => {
+      const reorderedBacklog: TestIssue[] = [
+        { id: "task-2", order: 0, createdAt: "2026-01-02T10:00:00Z" },
+        { id: "task-3", order: 1, createdAt: "2026-01-03T10:00:00Z" },
+        { id: "task-1", order: 2, createdAt: "2026-01-01T10:00:00Z" },
+      ];
+
+      const nextOrder = computeNextOrder(reorderedBacklog);
+      expect(nextOrder).toBe(3);
+
+      const newItem: TestIssue = {
+        id: "task-new",
+        order: nextOrder,
+        createdAt: "2026-01-04T12:00:00Z",
+      };
+
+      const sorted = [...reorderedBacklog, newItem].sort(sortIssues);
+      expect(sorted.map((i) => i.id)).toEqual(["task-2", "task-3", "task-1", "task-new"]);
+      expect(sorted.at(-1)?.id).toBe("task-new");
+    });
+
+    it("supports multiple sequential issue creations after reordering", () => {
+      let backlog: TestIssue[] = [
+        { id: "task-2", order: 0, createdAt: "2026-01-02T10:00:00Z" },
+        { id: "task-1", order: 1, createdAt: "2026-01-01T10:00:00Z" },
+      ];
+
+      // Create item A
+      const orderA = computeNextOrder(backlog);
+      expect(orderA).toBe(2);
+      backlog = [...backlog, { id: "task-3", order: orderA, createdAt: "2026-01-03T10:00:00Z" }].sort(sortIssues);
+
+      // Create item B
+      const orderB = computeNextOrder(backlog);
+      expect(orderB).toBe(3);
+      backlog = [...backlog, { id: "task-4", order: orderB, createdAt: "2026-01-04T10:00:00Z" }].sort(sortIssues);
+
+      expect(backlog.map((i) => i.id)).toEqual(["task-2", "task-1", "task-3", "task-4"]);
+    });
+
+    it("handles empty container by returning order 0", () => {
+      const nextOrder = computeNextOrder([]);
+      expect(nextOrder).toBe(0);
+    });
+
+    it("handles legacy backlog where all items have order 0", () => {
+      const legacyBacklog: TestIssue[] = [
+        { id: "task-1", order: 0, createdAt: "2026-01-01T10:00:00Z" },
+        { id: "task-2", order: 0, createdAt: "2026-01-02T10:00:00Z" },
+      ];
+
+      const nextOrder = computeNextOrder(legacyBacklog);
+      expect(nextOrder).toBe(1);
+
+      const newItem: TestIssue = {
+        id: "task-3",
+        order: nextOrder,
+        createdAt: "2026-01-03T10:00:00Z",
+      };
+
+      const sorted = [...legacyBacklog, newItem].sort(sortIssues);
+      expect(sorted.map((i) => i.id)).toEqual(["task-1", "task-2", "task-3"]);
+      expect(sorted.at(-1)?.id).toBe("task-3");
+    });
+  });
 });
