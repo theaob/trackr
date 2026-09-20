@@ -126,6 +126,11 @@ export default function ChildIssuesSection({
     setIsSubmitting(false);
 
     if (res.success && res.issue) {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("jira:issue-created", { detail: { issue: res.issue } })
+        );
+      }
       onChildAdded(res.issue as unknown as Issue);
       setNewTitle("");
       setIsCreating(false);

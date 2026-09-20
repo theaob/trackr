@@ -59,7 +59,6 @@ export default function CreateVersionModal({
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [startDate, setStartDate] = useState("");
   const [releaseDate, setReleaseDate] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,16 +77,12 @@ export default function CreateVersionModal({
     if (version) {
       setName(version.name);
       setDescription(version.description || "");
-      setStartDate(
-        version.startDate ? new Date(version.startDate).toISOString().split("T")[0] : ""
-      );
       setReleaseDate(
         version.releaseDate ? new Date(version.releaseDate).toISOString().split("T")[0] : ""
       );
     } else {
       setName("");
       setDescription("");
-      setStartDate("");
       setReleaseDate("");
     }
     setError(null);
@@ -205,7 +200,7 @@ export default function CreateVersionModal({
         const res = await updateVersion(version.id, {
           name,
           description: description || null,
-          startDate: startDate || null,
+          startDate: null,
           releaseDate: releaseDate || null,
           issueIds,
         });
@@ -221,7 +216,7 @@ export default function CreateVersionModal({
           projectId,
           name,
           description,
-          startDate: startDate || null,
+          startDate: null,
           releaseDate: releaseDate || null,
           issueIds,
         });
@@ -287,33 +282,18 @@ export default function CreateVersionModal({
             />
           </div>
 
-          {/* Dates: Start & Release */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-jira-gray-700 mb-1 flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-jira-gray-500" />
-                Start Date
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full text-xs px-2.5 py-1.5 bg-white border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-jira-gray-700 mb-1 flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-jira-gray-500" />
-                Release Date
-              </label>
-              <input
-                type="date"
-                value={releaseDate}
-                onChange={(e) => setReleaseDate(e.target.value)}
-                className="w-full text-xs px-2.5 py-1.5 bg-white border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
-              />
-            </div>
+          {/* Release Date */}
+          <div>
+            <label className="block text-xs font-semibold text-jira-gray-700 mb-1 flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5 text-jira-gray-500" />
+              Release Date
+            </label>
+            <input
+              type="date"
+              value={releaseDate}
+              onChange={(e) => setReleaseDate(e.target.value)}
+              className="w-full text-xs px-2.5 py-1.5 bg-white border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+            />
           </div>
 
           {/* Description */}

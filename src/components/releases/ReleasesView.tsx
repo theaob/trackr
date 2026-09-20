@@ -355,25 +355,19 @@ export default function ReleasesView({
                       </p>
                     )}
 
-                    {/* Dates */}
-                    <div className="flex items-center gap-4 text-xs text-jira-gray-500 pt-1">
-                      {version.startDate && (
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5" />
-                          Start: {format(new Date(version.startDate), "MMM d, yyyy")}
-                        </span>
-                      )}
-                      {version.releaseDate && (
+                    {/* Release Date */}
+                    {version.releaseDate && (
+                      <div className="flex items-center gap-4 text-xs text-jira-gray-500 pt-1">
                         <span
                           className={`flex items-center gap-1 ${
                             isOverdue ? "text-rose-600 font-semibold" : ""
                           }`}
                         >
                           <Calendar className="w-3.5 h-3.5" />
-                          Release: {format(new Date(version.releaseDate), "MMM d, yyyy")}
+                          Release date: {format(new Date(version.releaseDate), "MMM d, yyyy")}
                         </span>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Top Right Action Buttons */}

@@ -22,6 +22,7 @@ import {
   getBacklogStatusNames,
   getDoneStatusNames,
   getInitialStatusName,
+  getPrimaryBacklogStatusName,
   getWorkflowStatuses,
   isTransitionAllowed,
 } from "@/lib/workflow";
@@ -665,7 +666,13 @@ export async function createIssue(data: {
 
     let status = data.status;
     if (status === undefined) {
-      status = await getInitialStatusName(data.projectId);
+      if (project.boardType === "KANBAN" || !data.sprintId) {
+        status =
+          (await getPrimaryBacklogStatusName(data.projectId)) ??
+          (await getInitialStatusName(data.projectId));
+      } else {
+        status = await getInitialStatusName(data.projectId);
+      }
     } else {
       const workflowStatuses = await getWorkflowStatuses(data.projectId);
       if (!workflowStatuses.some((s) => s.name === status)) {

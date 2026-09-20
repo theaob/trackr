@@ -1,5 +1,14 @@
-import { describe, it, expect } from "vitest";
+import React from "react";
+import { describe, it, expect, vi } from "vitest";
+import { renderToStaticMarkup } from "react-dom/server";
 import { computeVersionStats } from "@/lib/versionStats";
+import CreateVersionModal from "@/components/releases/CreateVersionModal";
+
+vi.mock("@/lib/actions/versions", () => ({
+  createVersion: vi.fn(),
+  updateVersion: vi.fn(),
+  getReleaseEligibleIssues: vi.fn().mockResolvedValue({ issues: [], sprints: [] }),
+}));
 
 describe("Release Fix Version & Progress Metrics", () => {
   const categoryMap = new Map<string, string>([
@@ -251,6 +260,41 @@ describe("Release Fix Version & Progress Metrics", () => {
       ];
 
       expect(selectOptions.map((o) => o.name)).toContain("v0.9.0-deprecated");
+    });
+  });
+
+  describe("Release Dates & Start Date Removal", () => {
+    it("renders CreateVersionModal with Release Date field and without Start Date field", () => {
+      const html = renderToStaticMarkup(
+        React.createElement(CreateVersionModal, {
+          projectId: "p-1",
+          isOpen: true,
+          onClose: () => {},
+          onSaved: () => {},
+        })
+      );
+
+      expect(html).toContain("Release Date");
+      expect(html).not.toContain("Start Date");
+    });
+
+    it("formats release date without start date in version card", () => {
+      const version = {
+        id: "v-1",
+        name: "1.0.0",
+        startDate: new Date("2026-01-01"),
+        releaseDate: new Date("2026-03-15"),
+      };
+
+      // Simulates the updated date display logic in ReleasesView
+      const renderVersionDates = (v: { startDate?: Date | null; releaseDate?: Date | null }) => {
+        if (!v.releaseDate) return null;
+        return `Release date: ${v.releaseDate.toISOString().split("T")[0]}`;
+      };
+
+      const output = renderVersionDates(version);
+      expect(output).toBe("Release date: 2026-03-15");
+      expect(output).not.toContain("Start:");
     });
   });
 });

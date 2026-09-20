@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Project, User, Issue, IssueType, PriorityLevel, Sprint, Version, CustomField, WorkflowStatus } from "@/types";
 import { IssueTypeIcon, PriorityIcon } from "@/components/common/IssueIcons";
 import { createIssue } from "@/lib/actions/issues";
@@ -90,11 +90,15 @@ export default function CreateIssueModal({
     };
   }, [selectedProjectId, versions]);
 
-  const projectSprints = isKanban
-    ? []
-    : sprints.filter(
-        (s) => (!s.projectId || s.projectId === selectedProjectId) && s.status !== "COMPLETED"
-      );
+  const projectSprints = useMemo(
+    () =>
+      isKanban
+        ? []
+        : sprints.filter(
+            (s) => (!s.projectId || s.projectId === selectedProjectId) && s.status !== "COMPLETED"
+          ),
+    [isKanban, sprints, selectedProjectId]
+  );
 
   const [sprintId, setSprintId] = useState<string>(
     isKanban ? "" : projectSprints.find((s) => s.status === "ACTIVE")?.id || ""
@@ -142,7 +146,7 @@ export default function CreateIssueModal({
     const backlogStatusName = workflowStatuses.find((s) => s.isBacklog)?.name;
     const initialStatusName = workflowStatuses.find((s) => !s.isBacklog)?.name;
     const effectiveSprintId = isKanban || type === "EPIC" ? null : (sprintId || null);
-    const status = isKanban || effectiveSprintId ? initialStatusName : backlogStatusName;
+    const status = effectiveSprintId ? initialStatusName : (backlogStatusName ?? initialStatusName);
 
     const res = await createIssue({
       projectId: selectedProjectId,
@@ -166,6 +170,11 @@ export default function CreateIssueModal({
         await batchSetIssueCustomFieldValues(res.issue.id, customFieldValues);
       }
       setIsSubmitting(false);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("jira:issue-created", { detail: { issue: res.issue } })
+        );
+      }
       onIssueCreated(res.issue as Issue);
       onClose();
     } else {

@@ -246,6 +246,34 @@ describe("Kanban Project Sprint Guardrails", () => {
         allowed: true,
       });
     });
+
+    it("resolves status to BACKLOG for Kanban projects and TO DO for Scrum with active sprint", () => {
+      function resolveIssueStatus(
+        project: Project,
+        sprintId: string | null | undefined,
+        type: string,
+        workflowStatuses: WorkflowStatus[]
+      ): string {
+        const isKanban = project.boardType === "KANBAN";
+        const backlogStatusName = workflowStatuses.find((s) => s.isBacklog)?.name;
+        const initialStatusName = workflowStatuses.find((s) => !s.isBacklog)?.name ?? "TODO";
+        const effectiveSprintId = isKanban || type === "EPIC" ? null : (sprintId || null);
+        return effectiveSprintId ? initialStatusName : (backlogStatusName ?? initialStatusName);
+      }
+
+      // Kanban project always resolves to BACKLOG status
+      expect(resolveIssueStatus(kanbanProject, null, "TASK", mockStatuses)).toBe("BACKLOG");
+      expect(resolveIssueStatus(kanbanProject, "sprint-1", "TASK", mockStatuses)).toBe("BACKLOG");
+
+      // Scrum project with active sprint resolves to TO DO
+      expect(resolveIssueStatus(scrumProject, "sprint-1", "STORY", mockStatuses)).toBe("TO DO");
+
+      // Scrum project without sprint (backlog) resolves to BACKLOG
+      expect(resolveIssueStatus(scrumProject, null, "STORY", mockStatuses)).toBe("BACKLOG");
+
+      // Epic resolves to BACKLOG
+      expect(resolveIssueStatus(scrumProject, "sprint-1", "EPIC", mockStatuses)).toBe("BACKLOG");
+    });
   });
 
   describe("IssueDetailModal", () => {

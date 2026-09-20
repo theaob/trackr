@@ -235,6 +235,24 @@ export default function KanbanBoard({
     setIssues(initialIssues);
   }, [initialIssues]);
 
+  // Handle jira:issue-created custom event
+  useEffect(() => {
+    const handleIssueCreatedEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ issue?: Issue }>;
+      const newIssue = customEvent.detail?.issue;
+      if (!newIssue || newIssue.projectId !== project.id) return;
+      setIssues((prev) => {
+        if (prev.some((i) => i.id === newIssue.id)) return prev;
+        return [newIssue, ...prev];
+      });
+    };
+
+    window.addEventListener("jira:issue-created", handleIssueCreatedEvent);
+    return () => {
+      window.removeEventListener("jira:issue-created", handleIssueCreatedEvent);
+    };
+  }, [project.id]);
+
   // Handle selectedIssue query parameter
   useEffect(() => {
     if (!selectedIssueKey) return;

@@ -138,6 +138,16 @@ export default function IssuesListView({
   );
   const [isLoading, setIsLoading] = useState(false);
 
+  // Sync issues if initialIssues prop updates (e.g. from router.refresh())
+  useEffect(() => {
+    setIssues(initialIssues);
+    setTotalCount(initialTotalCount ?? initialIssues.length);
+    setTotalPages(
+      initialTotalPages ??
+        Math.max(1, Math.ceil((initialTotalCount ?? initialIssues.length) / (initialPageSize ?? 50)))
+    );
+  }, [initialIssues, initialTotalCount, initialTotalPages, initialPageSize]);
+
   // Bulk selection, table view only
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkActing, setIsBulkActing] = useState(false);
@@ -225,6 +235,8 @@ export default function IssuesListView({
       window.removeEventListener("jira:open-issue", handleOpenIssueEvent);
     };
   }, [issues]);
+
+
 
   const handleCloseDetailModal = () => {
     setModalIssue(null);
@@ -538,6 +550,36 @@ export default function IssuesListView({
       clearTimeout(timer);
     };
   }, [fetchIssues]);
+
+  // Handle jira:issue-created custom event
+  useEffect(() => {
+    const handleIssueCreatedEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ issue?: Issue }>;
+      const newIssue = customEvent.detail?.issue;
+      if (!newIssue) return;
+
+      const matchesProject =
+        projectFilter === "ALL" || newIssue.projectId === projectFilter;
+
+      if (matchesProject) {
+        setIssues((prev) => {
+          if (prev.some((i) => i.id === newIssue.id)) return prev;
+          return [newIssue, ...prev];
+        });
+        setTotalCount((prev) => prev + 1);
+        if (page !== 1) {
+          setPage(1);
+        } else {
+          fetchIssues();
+        }
+      }
+    };
+
+    window.addEventListener("jira:issue-created", handleIssueCreatedEvent);
+    return () => {
+      window.removeEventListener("jira:issue-created", handleIssueCreatedEvent);
+    };
+  }, [projectFilter, page, fetchIssues]);
 
   // Reset Filters
   const handleClearFilters = () => {

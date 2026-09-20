@@ -129,6 +129,24 @@ export default function BacklogView({
     setIssues(initialIssues);
   }, [initialIssues]);
 
+  // Handle jira:issue-created custom event
+  useEffect(() => {
+    const handleIssueCreatedEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ issue?: Issue }>;
+      const newIssue = customEvent.detail?.issue;
+      if (!newIssue || newIssue.projectId !== project.id) return;
+      setIssues((prev) => {
+        if (prev.some((i) => i.id === newIssue.id)) return prev;
+        return [...prev, newIssue];
+      });
+    };
+
+    window.addEventListener("jira:issue-created", handleIssueCreatedEvent);
+    return () => {
+      window.removeEventListener("jira:issue-created", handleIssueCreatedEvent);
+    };
+  }, [project.id]);
+
   // Handle selectedIssue query parameter
   useEffect(() => {
     if (!selectedIssueKey) return;
@@ -803,6 +821,11 @@ export default function BacklogView({
     });
 
     if (res.success && res.issue) {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("jira:issue-created", { detail: { issue: res.issue } })
+        );
+      }
       // Replace optimistic card with real database record
       setIssues((prev) =>
         prev.map((i) => (i.id === tempId ? (res.issue as Issue) : i))
