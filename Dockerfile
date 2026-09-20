@@ -24,6 +24,8 @@ RUN node ./node_modules/prisma/build/index.js generate
 
 # 4. Builder – full build with Next.js cache preserved across builds
 FROM base AS builder
+ARG GIT_COMMIT=""
+ENV GIT_COMMIT=${GIT_COMMIT}
 WORKDIR /app
 COPY --from=prisma /app/node_modules ./node_modules
 COPY . .
@@ -45,6 +47,8 @@ RUN --mount=type=cache,target=/app/.next/cache \
 
 # 5. Production Runner – minimal final image
 FROM base AS runner
+ARG GIT_COMMIT=""
+ENV GIT_COMMIT=${GIT_COMMIT}
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -69,6 +73,7 @@ VOLUME ["/app/data"]
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/build-info.json* ./
 COPY --from=builder --chown=nextjs:nodejs /app/prisma/schema.prisma ./prisma/schema.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma/template.db ./prisma/template.db
 COPY --from=builder --chown=nextjs:nodejs /app/prisma/template-demo.db ./prisma/template-demo.db

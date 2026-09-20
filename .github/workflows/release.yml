@@ -103,6 +103,7 @@ jobs:
         run: npm run build
         env:
           DATABASE_URL: file:./ci-build.db
+          GIT_COMMIT: ${{ github.sha }}
 
   release-and-publish:
     name: Create Release & Push to Docker Hub
@@ -191,5 +192,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            GIT_COMMIT=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

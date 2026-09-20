@@ -12,6 +12,7 @@ out/
 
 # Production
 build/
+build-info.json
 
 # Misc
 .DS_Store

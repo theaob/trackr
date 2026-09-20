@@ -2,35 +2,40 @@
 
 import packageJson from "../../../package.json";
 import { execSync } from "child_process";
+import fs from "fs";
+import path from "path";
+import crypto from "crypto";
 import prisma from "@/lib/db";
 import { requireAnyProjectAdmin } from "@/lib/auth/guards";
-import { SystemInfo } from "@/lib/systemUtils";
+import { SystemInfo, resolveCommitHash } from "@/lib/systemUtils";
 
 export type { SystemInfo };
 
 let cachedCommit: string | null = null;
 
 export async function getGitCommitHash(): Promise<string> {
-  if (cachedCommit) return cachedCommit;
-  if (process.env.GIT_COMMIT) {
-    cachedCommit = process.env.GIT_COMMIT.slice(0, 7);
-    return cachedCommit;
-  }
-  if (process.env.VERCEL_GIT_COMMIT_SHA) {
-    cachedCommit = process.env.VERCEL_GIT_COMMIT_SHA.slice(0, 7);
-    return cachedCommit;
-  }
+  if (process.env.NODE_ENV === "production" && cachedCommit) return cachedCommit;
+
+  let buildInfo: { commitHash?: string } | null = null;
   try {
-    cachedCommit = execSync("git rev-parse --short HEAD", {
-      stdio: ["ignore", "pipe", "ignore"],
-    })
-      .toString()
-      .trim();
-    return cachedCommit;
-  } catch {
-    cachedCommit = "dfb2de3";
-    return cachedCommit;
-  }
+    const infoPath = path.join(process.cwd(), "build-info.json");
+    if (fs.existsSync(infoPath)) {
+      buildInfo = JSON.parse(fs.readFileSync(infoPath, "utf8"));
+    }
+  } catch {}
+
+  cachedCommit = resolveCommitHash({
+    buildInfo,
+    gitCommitGetter: () =>
+      execSync("git rev-parse --short HEAD", {
+        stdio: ["ignore", "pipe", "ignore"],
+      })
+        .toString()
+        .trim(),
+    fallbackVersion: packageJson.version,
+  });
+
+  return cachedCommit;
 }
 
 export async function getSystemInfo(): Promise<SystemInfo> {

@@ -44,3 +44,4 @@ jobs:
         env:
           # The build needs a schema to talk to, not the production data.
           DATABASE_URL: file:./ci-build.db
+          GIT_COMMIT: ${{ github.sha }}
