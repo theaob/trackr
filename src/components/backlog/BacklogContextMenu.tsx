@@ -21,6 +21,7 @@ interface BacklogContextMenuProps {
   y: number;
   issue: Issue;
   sprints: Sprint[];
+  isKanban?: boolean;
   canMove?: boolean;
   onClose: () => void;
   onMoveToSprint: (issueId: string, sprintId: string | null) => void;
@@ -33,6 +34,7 @@ export default function BacklogContextMenu({
   y,
   issue,
   sprints,
+  isKanban = false,
   canMove = true,
   onClose,
   onMoveToSprint,
@@ -175,115 +177,117 @@ export default function BacklogContextMenu({
         </div>
       )}
 
-      {/* Sprints Group */}
-      {issue.type === "EPIC" ? (
-        <div className="px-3 py-2 text-[11px] text-jira-gray-500 italic">
-          Epics cannot be assigned to a sprint
-        </div>
-      ) : canMove ? (
-        <div className="py-1">
-          <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-jira-gray-400">
-            Move to Sprint
+      {/* Sprints Group (Scrum only) */}
+      {!isKanban && (
+        issue.type === "EPIC" ? (
+          <div className="px-3 py-2 text-[11px] text-jira-gray-500 italic">
+            Epics cannot be assigned to a sprint
           </div>
-
-          {activeSprints.length === 0 && futureSprints.length === 0 ? (
-            <div className="px-3 py-1.5 text-jira-gray-400 italic text-[11px]">
-              No active or planned sprints
+        ) : canMove ? (
+          <div className="py-1">
+            <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-jira-gray-400">
+              Move to Sprint
             </div>
-          ) : (
-            <div className="max-h-48 overflow-y-auto divide-y divide-jira-gray-50">
-              {/* Active Sprints First */}
-              {activeSprints.map((sprint) => {
-                const isCurrent = issue.sprintId === sprint.id;
-                return (
-                  <button
-                    key={sprint.id}
-                    disabled={isCurrent}
-                    onClick={() => {
-                      onMoveToSprint(issue.id, sprint.id);
-                      onClose();
-                    }}
-                    className={`w-full text-left px-3 py-2 flex items-center justify-between gap-2 transition-colors ${
-                      isCurrent
-                        ? "bg-emerald-50/50 text-emerald-900 cursor-default opacity-80"
-                        : "hover:bg-jira-blue-light/50 hover:text-jira-blue"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Play className="w-3.5 h-3.5 text-emerald-600 shrink-0 fill-emerald-600/20" />
-                      <span className="truncate font-semibold text-jira-navy">
-                        {sprint.name}
-                      </span>
-                    </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                        Active
-                      </span>
-                      {isCurrent && (
-                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
+            {activeSprints.length === 0 && futureSprints.length === 0 ? (
+              <div className="px-3 py-1.5 text-jira-gray-400 italic text-[11px]">
+                No active or planned sprints
+              </div>
+            ) : (
+              <div className="max-h-48 overflow-y-auto divide-y divide-jira-gray-50">
+                {/* Active Sprints First */}
+                {activeSprints.map((sprint) => {
+                  const isCurrent = issue.sprintId === sprint.id;
+                  return (
+                    <button
+                      key={sprint.id}
+                      disabled={isCurrent}
+                      onClick={() => {
+                        onMoveToSprint(issue.id, sprint.id);
+                        onClose();
+                      }}
+                      className={`w-full text-left px-3 py-2 flex items-center justify-between gap-2 transition-colors ${
+                        isCurrent
+                          ? "bg-emerald-50/50 text-emerald-900 cursor-default opacity-80"
+                          : "hover:bg-jira-blue-light/50 hover:text-jira-blue"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Play className="w-3.5 h-3.5 text-emerald-600 shrink-0 fill-emerald-600/20" />
+                        <span className="truncate font-semibold text-jira-navy">
+                          {sprint.name}
+                        </span>
+                      </div>
 
-              {/* Future / Planned Sprints */}
-              {futureSprints.map((sprint) => {
-                const isCurrent = issue.sprintId === sprint.id;
-                return (
-                  <button
-                    key={sprint.id}
-                    disabled={isCurrent}
-                    onClick={() => {
-                      onMoveToSprint(issue.id, sprint.id);
-                      onClose();
-                    }}
-                    className={`w-full text-left px-3 py-2 flex items-center justify-between gap-2 transition-colors ${
-                      isCurrent
-                        ? "bg-blue-50/50 text-blue-900 cursor-default opacity-80"
-                        : "hover:bg-jira-blue-light/50 hover:text-jira-blue"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Calendar className="w-3.5 h-3.5 text-jira-gray-500 shrink-0" />
-                      <span className="truncate font-medium text-jira-navy">
-                        {sprint.name}
-                      </span>
-                    </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                          Active
+                        </span>
+                        {isCurrent && (
+                          <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
 
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-jira-gray-200 text-jira-gray-700">
-                        Planned
-                      </span>
-                      {isCurrent && (
-                        <Check className="w-3.5 h-3.5 text-jira-blue shrink-0" />
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+                {/* Future / Planned Sprints */}
+                {futureSprints.map((sprint) => {
+                  const isCurrent = issue.sprintId === sprint.id;
+                  return (
+                    <button
+                      key={sprint.id}
+                      disabled={isCurrent}
+                      onClick={() => {
+                        onMoveToSprint(issue.id, sprint.id);
+                        onClose();
+                      }}
+                      className={`w-full text-left px-3 py-2 flex items-center justify-between gap-2 transition-colors ${
+                        isCurrent
+                          ? "bg-blue-50/50 text-blue-900 cursor-default opacity-80"
+                          : "hover:bg-jira-blue-light/50 hover:text-jira-blue"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Calendar className="w-3.5 h-3.5 text-jira-gray-500 shrink-0" />
+                        <span className="truncate font-medium text-jira-navy">
+                          {sprint.name}
+                        </span>
+                      </div>
 
-          {/* Move to Backlog Option */}
-          {!isInBacklog && (
-            <button
-              onClick={() => {
-                onMoveToSprint(issue.id, null);
-                onClose();
-              }}
-              className="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-amber-50 hover:text-amber-900 transition-colors mt-0.5"
-            >
-              <ArrowDownToLine className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-              <span className="font-semibold text-jira-navy">Send to Backlog</span>
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="px-3 py-2 bg-amber-50/50 text-[11px] text-amber-900 font-medium">
-          Viewer mode (reorder & move disabled)
-        </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-jira-gray-200 text-jira-gray-700">
+                          Planned
+                        </span>
+                        {isCurrent && (
+                          <Check className="w-3.5 h-3.5 text-jira-blue shrink-0" />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Move to Backlog Option */}
+            {!isInBacklog && (
+              <button
+                onClick={() => {
+                  onMoveToSprint(issue.id, null);
+                  onClose();
+                }}
+                className="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-amber-50 hover:text-amber-900 transition-colors mt-0.5"
+              >
+                <ArrowDownToLine className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <span className="font-semibold text-jira-navy">Send to Backlog</span>
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="px-3 py-2 bg-amber-50/50 text-[11px] text-amber-900 font-medium">
+            Viewer mode (reorder & move disabled)
+          </div>
+        )
       )}
 
       {/* Quick Actions */}

@@ -643,12 +643,16 @@ export async function createIssue(data: {
 
     const project = await prisma.project.findUnique({
       where: { id: data.projectId },
-      select: { key: true },
+      select: { key: true, boardType: true },
     });
     if (!project) throw new Error("Project not found");
 
     if (data.type === "EPIC" && data.sprintId) {
       return { success: false, error: "Epics cannot be assigned to a sprint" };
+    }
+
+    if (project.boardType === "KANBAN" && data.sprintId) {
+      return { success: false, error: "Kanban projects do not use sprints" };
     }
 
     const related = await validateIssueRelations(data.projectId, {
@@ -827,6 +831,13 @@ async function validateIssueRelations(
   }
 ): Promise<{ error?: string }> {
   if (links.sprintId) {
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { boardType: true },
+    });
+    if (project?.boardType === "KANBAN") {
+      return { error: "Kanban projects do not use sprints" };
+    }
     const sprint = await prisma.sprint.findUnique({
       where: { id: links.sprintId },
       select: { projectId: true, status: true },
@@ -920,6 +931,10 @@ export async function updateIssue(
     const willBeEpic = (data.type ?? existing.type) === "EPIC";
     if (willBeEpic && data.sprintId) {
       return { success: false, error: "Epics cannot be assigned to a sprint" };
+    }
+
+    if (existing.project.boardType === "KANBAN" && data.sprintId) {
+      return { success: false, error: "Kanban projects do not use sprints" };
     }
 
     const related = await validateIssueRelations(projectId, {

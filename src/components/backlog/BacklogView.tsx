@@ -2009,6 +2009,7 @@ export default function BacklogView({
           y={contextMenu.y}
           issue={contextMenu.issue}
           sprints={sprints}
+          isKanban={isKanban}
           canMove={permissions.canMoveIssue}
           onClose={() => setContextMenu(null)}
           onMoveToSprint={handleMoveIssue}

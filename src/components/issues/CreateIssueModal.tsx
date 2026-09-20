@@ -30,7 +30,7 @@ export default function CreateIssueModal({
   users,
   sprints,
   versions = [],
-  epics,
+  epics = [],
   onClose,
   onIssueCreated,
 }: CreateIssueModalProps) {
@@ -39,6 +39,7 @@ export default function CreateIssueModal({
   const [selectedProjectId, setSelectedProjectId] = useState(project.id);
   const currentSelectedProject = allProjects.find((p) => p.id === selectedProjectId) || project;
   const permissions = useProjectPermissions(currentSelectedProject);
+  const isKanban = currentSelectedProject?.boardType === "KANBAN";
 
   const [type, setType] = useState<IssueType>("STORY");
   const [title, setTitle] = useState("");
@@ -89,13 +90,24 @@ export default function CreateIssueModal({
     };
   }, [selectedProjectId, versions]);
 
-  const projectSprints = sprints.filter(
-    (s) => (!s.projectId || s.projectId === selectedProjectId) && s.status !== "COMPLETED"
-  );
+  const projectSprints = isKanban
+    ? []
+    : sprints.filter(
+        (s) => (!s.projectId || s.projectId === selectedProjectId) && s.status !== "COMPLETED"
+      );
 
   const [sprintId, setSprintId] = useState<string>(
-    projectSprints.find((s) => s.status === "ACTIVE")?.id || ""
+    isKanban ? "" : projectSprints.find((s) => s.status === "ACTIVE")?.id || ""
   );
+
+  useEffect(() => {
+    if (isKanban) {
+      setSprintId("");
+    } else {
+      const active = projectSprints.find((s) => s.status === "ACTIVE")?.id || "";
+      setSprintId(active);
+    }
+  }, [selectedProjectId, isKanban, projectSprints]);
   const [parentId, setParentId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -129,8 +141,8 @@ export default function CreateIssueModal({
 
     const backlogStatusName = workflowStatuses.find((s) => s.isBacklog)?.name;
     const initialStatusName = workflowStatuses.find((s) => !s.isBacklog)?.name;
-    const effectiveSprintId = type === "EPIC" ? null : (sprintId || null);
-    const status = effectiveSprintId ? initialStatusName : backlogStatusName;
+    const effectiveSprintId = isKanban || type === "EPIC" ? null : (sprintId || null);
+    const status = isKanban || effectiveSprintId ? initialStatusName : backlogStatusName;
 
     const res = await createIssue({
       projectId: selectedProjectId,
@@ -353,7 +365,7 @@ export default function CreateIssueModal({
           </div>
 
           {/* Assignee & Sprint */}
-          <div className={`grid gap-4 ${type === "EPIC" ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"}`}>
+          <div className={`grid gap-4 ${type === "EPIC" || isKanban ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"}`}>
             <div>
               <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
                 Assignee
@@ -372,7 +384,7 @@ export default function CreateIssueModal({
               </select>
             </div>
 
-            {type !== "EPIC" && (
+            {type !== "EPIC" && !isKanban && (
               <div>
                 <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
                   Sprint

@@ -80,7 +80,7 @@ interface IssueDetailModalProps {
 export default function IssueDetailModal({
   issue,
   users,
-  allIssues,
+  allIssues = [],
   sprints = [],
   versions = [],
   project,
@@ -91,9 +91,14 @@ export default function IssueDetailModal({
 }: IssueDetailModalProps) {
   const { currentUser } = useCurrentUser();
   const [currentIssue, setCurrentIssue] = useState<Issue | null>(issue);
-  const permissions = useProjectPermissions(
+  const effectiveProject =
     project ||
-      currentIssue?.project ||
+    currentIssue?.project ||
+    null;
+  const isKanban = effectiveProject?.boardType === "KANBAN";
+
+  const permissions = useProjectPermissions(
+    effectiveProject ||
       (currentIssue?.projectId
         ? ({ id: currentIssue.projectId, key: currentIssue.key.split("-")[0] } as any)
         : null)
@@ -1443,8 +1448,8 @@ export default function IssueDetailModal({
               </select>
             </div>
 
-            {/* Sprint (Epics span multiple sprints and cannot be assigned to a sprint) */}
-            {currentIssue.type !== "EPIC" && (
+            {/* Sprint (Epics span multiple sprints and cannot be assigned to a sprint. Kanban projects do not use sprints.) */}
+            {!isKanban && currentIssue.type !== "EPIC" && (
               <div>
                 <label className="block text-xs font-bold text-jira-gray-600 uppercase tracking-wider mb-1.5">
                   Sprint

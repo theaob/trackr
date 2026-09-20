@@ -253,6 +253,9 @@ export default function IssuesListView({
 
   // Filter States
   const [projectFilter, setProjectFilter] = useState<string>(project?.id || "ALL");
+  const activeProject = (allProjects && allProjects.find((p) => p.id === projectFilter)) || project;
+  const isCurrentProjectKanban = activeProject?.boardType === "KANBAN";
+
   const [preset, setPreset] = useState<FilterPreset>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<IssueType | "ALL">("ALL");
@@ -263,6 +266,12 @@ export default function IssuesListView({
   const [sprintFilter, setSprintFilter] = useState<string>("ALL");
   const [versionFilter, setVersionFilter] = useState<string>("ALL");
   const [labelFilter, setLabelFilter] = useState<string>("ALL");
+
+  useEffect(() => {
+    if (isCurrentProjectKanban && sprintFilter !== "ALL") {
+      setSprintFilter("ALL");
+    }
+  }, [isCurrentProjectKanban, sprintFilter]);
 
   // Sorting
   const [sortField, setSortField] = useState<SortField>("createdAt");
@@ -1045,23 +1054,25 @@ export default function IssuesListView({
             ))}
           </select>
 
-          {/* Sprint Filter */}
-          <select
-            value={sprintFilter}
-            onChange={(e) => {
-              setSprintFilter(e.target.value);
-              setPage(1);
-            }}
-            className="text-xs bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-jira-navy font-medium outline-none focus:border-jira-blue"
-          >
-            <option value="ALL">Sprint: All</option>
-            <option value="BACKLOG">Backlog (No Sprint)</option>
-            {sprints.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
+          {/* Sprint Filter (Hidden for Kanban projects) */}
+          {!isCurrentProjectKanban && (
+            <select
+              value={sprintFilter}
+              onChange={(e) => {
+                setSprintFilter(e.target.value);
+                setPage(1);
+              }}
+              className="text-xs bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-jira-navy font-medium outline-none focus:border-jira-blue"
+            >
+              <option value="ALL">Sprint: All</option>
+              <option value="BACKLOG">Backlog (No Sprint)</option>
+              {sprints.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          )}
 
           {/* Version Filter */}
           {versions.length > 0 && (
@@ -1645,52 +1656,54 @@ export default function IssuesListView({
                         </div>
                       </div>
 
-                      {/* Sprint Selector */}
-                      <div>
-                        <label className="block font-bold text-jira-gray-600 uppercase tracking-wider mb-1">
-                          Sprint
-                        </label>
-                        <select
-                          value={selectedIssue.sprintId || ""}
-                          disabled={!permissions.canEditIssue || !permissions.canMoveIssue}
-                          onChange={(e) => {
-                            const newSprintId = e.target.value || null;
-                            if (newSprintId && newSprintId !== selectedIssue.sprintId) {
-                              const targetSprint = sprints.find((s) => s.id === newSprintId);
-                              if (targetSprint && targetSprint.status === "COMPLETED") {
-                                return;
+                      {/* Sprint Selector (Hidden for Epics and Kanban projects) */}
+                      {!((selectedIssue.project?.boardType ?? project?.boardType) === "KANBAN") && selectedIssue.type !== "EPIC" && (
+                        <div>
+                          <label className="block font-bold text-jira-gray-600 uppercase tracking-wider mb-1">
+                            Sprint
+                          </label>
+                          <select
+                            value={selectedIssue.sprintId || ""}
+                            disabled={!permissions.canEditIssue || !permissions.canMoveIssue}
+                            onChange={(e) => {
+                              const newSprintId = e.target.value || null;
+                              if (newSprintId && newSprintId !== selectedIssue.sprintId) {
+                                const targetSprint = sprints.find((s) => s.id === newSprintId);
+                                if (targetSprint && targetSprint.status === "COMPLETED") {
+                                  return;
+                                }
                               }
-                            }
-                            const currentIsBacklog = statuses.find(
-                              (s) => s.name === selectedIssue.status
-                            )?.isBacklog;
-                            const initialStatusName =
-                              statuses.find((s) => !s.isBacklog)?.name ?? selectedIssue.status;
-                            const newStatus =
-                              newSprintId && currentIsBacklog ? initialStatusName : selectedIssue.status;
-                            handleUpdateCurrentIssue({
-                              sprintId: newSprintId,
-                              status: newStatus,
-                            });
-                          }}
-                          className={`w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none ${
-                            !permissions.canEditIssue || !permissions.canMoveIssue ? "opacity-60 cursor-not-allowed" : ""
-                          }`}
-                        >
-                          <option value="">Backlog (No Sprint)</option>
-                          {sprints
-                            .filter((s) => s.status !== "COMPLETED" || s.id === selectedIssue.sprintId)
-                            .map((s) => (
-                              <option
-                                key={s.id}
-                                value={s.id}
-                                disabled={s.status === "COMPLETED" && s.id !== selectedIssue.sprintId}
-                              >
-                                {s.name} {s.status === "ACTIVE" ? "(Active)" : s.status === "FUTURE" ? "(Planned / Unstarted)" : "(Completed - Closed)"}
-                              </option>
-                            ))}
-                        </select>
-                      </div>
+                              const currentIsBacklog = statuses.find(
+                                (s) => s.name === selectedIssue.status
+                              )?.isBacklog;
+                              const initialStatusName =
+                                statuses.find((s) => !s.isBacklog)?.name ?? selectedIssue.status;
+                              const newStatus =
+                                newSprintId && currentIsBacklog ? initialStatusName : selectedIssue.status;
+                              handleUpdateCurrentIssue({
+                                sprintId: newSprintId,
+                                status: newStatus,
+                              });
+                            }}
+                            className={`w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none ${
+                              !permissions.canEditIssue || !permissions.canMoveIssue ? "opacity-60 cursor-not-allowed" : ""
+                            }`}
+                          >
+                            <option value="">Backlog (No Sprint)</option>
+                            {sprints
+                              .filter((s) => s.status !== "COMPLETED" || s.id === selectedIssue.sprintId)
+                              .map((s) => (
+                                <option
+                                  key={s.id}
+                                  value={s.id}
+                                  disabled={s.status === "COMPLETED" && s.id !== selectedIssue.sprintId}
+                                >
+                                  {s.name} {s.status === "ACTIVE" ? "(Active)" : s.status === "FUTURE" ? "(Planned / Unstarted)" : "(Completed - Closed)"}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                      )}
 
                       {/* Fix Version */}
                       <div>

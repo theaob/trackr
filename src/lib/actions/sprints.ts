@@ -31,6 +31,14 @@ export async function getProjectSprints(projectId: string) {
   try {
     await requireProjectAccess(projectId);
 
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { boardType: true },
+    });
+    if (project?.boardType === "KANBAN") {
+      return [];
+    }
+
     return await prisma.sprint.findMany({
       where: { projectId },
       include: {
@@ -59,10 +67,14 @@ export async function createSprint(projectId: string, name: string, goal?: strin
 
     const project = await prisma.project.findUnique({
       where: { id: projectId },
-      select: { key: true },
+      select: { key: true, boardType: true },
     });
 
     if (!project) throw new Error("Project not found");
+
+    if (project.boardType === "KANBAN") {
+      return { success: false, error: "Kanban projects do not use sprints" };
+    }
 
     const sprint = await prisma.sprint.create({
       data: {
@@ -97,6 +109,10 @@ export async function startSprint(
     });
 
     if (!sprint) throw new Error("Sprint not found");
+
+    if (sprint.project.boardType === "KANBAN") {
+      return { success: false, error: "Kanban projects do not use sprints" };
+    }
 
     if (sprint.status === "COMPLETED") {
       return { success: false, error: "A completed sprint cannot be started again." };
@@ -150,6 +166,9 @@ export async function completeSprint(sprintId: string, moveToSprintId?: string |
     });
 
     if (!sprint) throw new Error("Sprint not found");
+    if (sprint.project.boardType === "KANBAN") {
+      return { success: false, error: "Kanban projects do not use sprints" };
+    }
     if (sprint.status === "COMPLETED") {
       return { success: false, error: "This sprint is already complete." };
     }
@@ -223,6 +242,9 @@ export async function moveIssueToSprint(
     await requireProjectPermission(issue.projectId, "MOVE_ISSUE");
 
     if (sprintId) {
+      if (issue.project.boardType === "KANBAN") {
+        return { success: false, error: "Kanban projects do not use sprints" };
+      }
       if (issue.type === "EPIC") {
         return { success: false, error: "Epics cannot be assigned to a sprint" };
       }
@@ -338,6 +360,10 @@ export async function updateSprint(
 
     if (!sprint) throw new Error("Sprint not found");
 
+    if (sprint.project.boardType === "KANBAN") {
+      return { success: false, error: "Kanban projects do not use sprints" };
+    }
+
     const trimmedName = data.name !== undefined ? data.name.trim() : undefined;
     if (trimmedName !== undefined && !trimmedName) {
       return { success: false, error: "Sprint name cannot be empty" };
@@ -386,6 +412,9 @@ export async function deleteSprint(sprintId: string) {
     });
 
     if (!sprint) throw new Error("Sprint not found");
+    if (sprint.project.boardType === "KANBAN") {
+      return { success: false, error: "Kanban projects do not use sprints" };
+    }
     if (sprint.status === "ACTIVE") {
       return { success: false, error: "Cannot delete an active sprint. Complete it first." };
     }
