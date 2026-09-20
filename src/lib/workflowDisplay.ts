@@ -18,8 +18,8 @@ const LEGACY_STATUS_LABELS: Record<string, string> = {
  * as typed; anything else SHOUTING_SNAKE_CASE gets its underscores turned
  * into spaces so a hand-typed all-caps name still reads properly.
  */
-export function prettifyStatusName(name: string): string {
-  if (!name) return name;
+export function prettifyStatusName(name?: string | null): string {
+  if (!name) return "";
   if (LEGACY_STATUS_LABELS[name]) return LEGACY_STATUS_LABELS[name];
   if (/^[A-Z0-9_]+$/.test(name)) {
     return name.replace(/_/g, " ");

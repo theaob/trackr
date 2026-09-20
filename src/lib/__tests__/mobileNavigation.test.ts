@@ -295,7 +295,7 @@ describe("Mobile Viewport & Navigation", () => {
     expect(html).toContain("Fix mobile issues list view");
     expect(html).toContain("border-r border-jira-gray-300 overflow-y-auto divide-y divide-jira-gray-200 shrink-0 bg-white block");
     // Detail panel has "hidden md:block" on mobile
-    expect(html).toContain("flex-1 overflow-y-auto bg-white p-3.5 sm:p-6 hidden md:block");
+    expect(html).toContain("flex-1 min-w-0 overflow-y-auto bg-white p-3.5 sm:p-6 hidden md:block");
   });
 
   it("renders detail panel on mobile when an issue is explicitly selected", () => {
@@ -341,7 +341,7 @@ describe("Mobile Viewport & Navigation", () => {
     // The left list is hidden on mobile: "hidden md:block"
     expect(html).toContain("border-r border-jira-gray-300 overflow-y-auto divide-y divide-jira-gray-200 shrink-0 bg-white hidden md:block");
     // Detail panel is visible on mobile: "block"
-    expect(html).toContain("flex-1 overflow-y-auto bg-white p-3.5 sm:p-6 block");
+    expect(html).toContain("flex-1 min-w-0 overflow-y-auto bg-white p-3.5 sm:p-6 block");
     // Back to issues list button is present
     expect(html).toContain("Back to issues list");
   });

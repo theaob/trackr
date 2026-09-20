@@ -105,16 +105,16 @@ export default function IssueLinksSection({
   if (rows.length === 0 && !canEdit) return null;
 
   return (
-    <div>
+    <div className="min-w-0">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-xs font-bold text-jira-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-          <Link2 className="w-3.5 h-3.5 text-jira-blue" />
-          <span>Linked Issues{rows.length > 0 ? ` (${rows.length})` : ""}</span>
+          <Link2 className="w-3.5 h-3.5 text-jira-blue shrink-0" />
+          <span className="truncate">Linked Issues{rows.length > 0 ? ` (${rows.length})` : ""}</span>
         </h3>
         {canEdit && !adding && (
           <button
             onClick={() => setAdding(true)}
-            className="text-[11px] text-jira-blue hover:underline font-semibold flex items-center gap-1"
+            className="text-[11px] text-jira-blue hover:underline font-semibold flex items-center gap-1 shrink-0"
           >
             <Plus className="w-3 h-3" />
             Add link
@@ -123,9 +123,9 @@ export default function IssueLinksSection({
       </div>
 
       {adding && (
-        <div className="mb-3 p-3 border border-jira-gray-300 rounded-md bg-jira-gray-50/70 space-y-2">
+        <div className="mb-3 p-3 border border-jira-gray-300 rounded-md bg-jira-gray-50/70 space-y-2 min-w-0">
           {error && <div className="text-[11px] text-rose-600 font-medium">{error}</div>}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 min-w-0">
             <select
               value={linkType}
               onChange={(e) => setLinkType(e.target.value as IssueLinkType)}
@@ -137,7 +137,7 @@ export default function IssueLinksSection({
                 </option>
               ))}
             </select>
-            <div className="relative flex-1">
+            <div className="relative flex-1 min-w-[140px]">
               <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-jira-gray-400" />
               <input
                 autoFocus
@@ -168,14 +168,14 @@ export default function IssueLinksSection({
           )}
 
           {results.length > 0 && (
-            <div className="border border-jira-gray-200 rounded divide-y divide-jira-gray-100 max-h-48 overflow-y-auto bg-white">
+            <div className="border border-jira-gray-200 rounded divide-y divide-jira-gray-100 max-h-48 overflow-y-auto bg-white min-w-0">
               {results.map((r) => (
                 <button
                   key={r.id}
                   type="button"
                   disabled={submitting}
                   onClick={() => handlePick(r)}
-                  className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-jira-gray-50 disabled:opacity-50"
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-jira-gray-50 disabled:opacity-50 min-w-0"
                 >
                   <IssueTypeBadge type={r.type} />
                   <span className="text-[11px] font-mono text-jira-gray-500 shrink-0">{r.key}</span>
@@ -188,18 +188,18 @@ export default function IssueLinksSection({
       )}
 
       {rows.length > 0 ? (
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 min-w-0">
           {rows.map((row) => (
             <div
               key={`${row.linkId}-${row.direction}`}
-              className="flex items-center gap-2 px-2.5 py-1.5 border border-jira-gray-200 rounded-md bg-white hover:border-jira-gray-300 group"
+              className="flex items-center gap-2 px-2.5 py-1.5 border border-jira-gray-200 rounded-md bg-white hover:border-jira-gray-300 group min-w-0"
             >
               <button
                 type="button"
                 onClick={() => handleOpen(row.issue)}
-                className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                className="flex items-center gap-2 flex-1 min-w-0 text-left overflow-hidden"
               >
-                <span className="text-[11px] text-jira-gray-500 w-28 shrink-0">
+                <span className="text-[11px] text-jira-gray-500 w-24 sm:w-28 shrink-0 truncate">
                   {describeIssueLink(row.type, row.direction)}
                 </span>
                 <IssueTypeBadge type={row.issue.type} />
@@ -210,7 +210,7 @@ export default function IssueLinksSection({
                   {row.issue.title}
                 </span>
               </button>
-              <StatusBadge status={row.issue.status} />
+              <StatusBadge status={row.issue.status} className="shrink-0" />
               {canEdit && (
                 <button
                   onClick={() => handleRemove(row.linkId)}

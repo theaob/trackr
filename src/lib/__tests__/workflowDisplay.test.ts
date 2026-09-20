@@ -27,6 +27,11 @@ describe("prettifyStatusName", () => {
   it("passes through an empty string", () => {
     expect(prettifyStatusName("")).toBe("");
   });
+
+  it("handles null and undefined safely without throwing", () => {
+    expect(prettifyStatusName(null)).toBe("");
+    expect(prettifyStatusName(undefined)).toBe("");
+  });
 });
 
 describe("allowedNextStatusNames", () => {

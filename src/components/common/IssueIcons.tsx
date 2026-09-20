@@ -208,12 +208,13 @@ export function StatusBadge({
   color,
   className = "",
 }: {
-  status: IssueStatus;
+  status?: IssueStatus | null;
   color?: string;
   className?: string;
 }) {
+  const safeStatus = status || "";
   const getBadgeStyle = () => {
-    switch (status) {
+    switch (safeStatus) {
       case "BACKLOG":
         return "bg-slate-100 text-slate-700 border-slate-200";
       case "TODO":
@@ -232,7 +233,8 @@ export function StatusBadge({
   };
 
   const getLabel = () => {
-    switch (status) {
+    if (!safeStatus) return "UNKNOWN";
+    switch (safeStatus) {
       case "BACKLOG":
         return "BACKLOG";
       case "TODO":
@@ -244,7 +246,7 @@ export function StatusBadge({
       case "DONE":
         return "DONE";
       default:
-        return prettifyStatusName(status).toUpperCase();
+        return (prettifyStatusName(safeStatus) || safeStatus).toUpperCase();
     }
   };
 

@@ -11,6 +11,7 @@ import { useCurrentUser } from "@/context/UserContext";
 import { useSearch } from "@/context/SearchContext";
 import IssueDetailModal from "./IssueDetailModal";
 import ChildIssuesSection from "@/components/issues/ChildIssuesSection";
+import IssueLinksSection from "@/components/issues/IssueLinksSection";
 import IssueDescriptionEditor from "@/components/issues/IssueDescriptionEditor";
 import MentionInput from "@/components/common/MentionInput";
 import MarkdownContent from "@/components/common/MarkdownContent";
@@ -569,8 +570,6 @@ export default function IssuesListView({
         setTotalCount((prev) => prev + 1);
         if (page !== 1) {
           setPage(1);
-        } else {
-          fetchIssues();
         }
       }
     };
@@ -579,7 +578,7 @@ export default function IssuesListView({
     return () => {
       window.removeEventListener("jira:issue-created", handleIssueCreatedEvent);
     };
-  }, [projectFilter, page, fetchIssues]);
+  }, [projectFilter, page]);
 
   // Reset Filters
   const handleClearFilters = () => {
@@ -708,7 +707,7 @@ export default function IssuesListView({
   // for every row costs far more than the table ever shows. Fetch the full
   // record for the one issue on display instead.
   useEffect(() => {
-    if (!selectedIssue || (selectedIssue.comments && selectedIssue.children)) return;
+    if (!selectedIssue || (selectedIssue.comments && selectedIssue.children && selectedIssue.linksAsSource)) return;
 
     let cancelled = false;
     const targetId = selectedIssue.id;
@@ -722,7 +721,7 @@ export default function IssuesListView({
     return () => {
       cancelled = true;
     };
-  }, [selectedIssue]);
+  }, [selectedIssue?.id]);
 
   // Sync description draft when selected issue changes
   useEffect(() => {
@@ -1214,7 +1213,7 @@ export default function IssuesListView({
       <div className="flex-1 overflow-hidden flex">
         {viewMode === "split" ? (
           /* SPLIT VIEW: Left List + Right Details */
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex overflow-hidden min-w-0">
             {/* Left Issue List */}
             <div
               className={`w-full md:w-80 lg:w-96 border-r border-jira-gray-300 overflow-y-auto divide-y divide-jira-gray-200 shrink-0 bg-white ${
@@ -1275,8 +1274,8 @@ export default function IssuesListView({
                             <span
                               className={`flex items-center gap-1 text-[10px] font-medium ${
                                 isOverdue(issue.dueDate, issue.status, doneStatusNames)
-                                  ? "text-rose-600 font-bold"
-                                  : "text-jira-gray-600"
+                                   ? "text-rose-600 font-bold"
+                                   : "text-jira-gray-600"
                               }`}
                             >
                               <CalendarClock className="w-3 h-3" />
@@ -1308,12 +1307,12 @@ export default function IssuesListView({
 
             {/* Right Issue Detail Panel */}
             <div
-              className={`flex-1 overflow-y-auto bg-white p-3.5 sm:p-6 ${
+              className={`flex-1 min-w-0 overflow-y-auto bg-white p-3.5 sm:p-6 ${
                 isMobileDetailOpen ? "block" : "hidden md:block"
               }`}
             >
               {selectedIssue ? (
-                <div className="max-w-4xl space-y-6">
+                <div className="max-w-4xl space-y-6 min-w-0">
                   {/* Mobile Back Button */}
                   <button
                     type="button"
@@ -1429,9 +1428,9 @@ export default function IssuesListView({
                   </div>
 
                   {/* Two Column Layout for Issue Details */}
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-w-0">
                     {/* Main Details (2 cols) */}
-                    <div className="lg:col-span-2 space-y-6">
+                    <div className="lg:col-span-2 space-y-6 min-w-0">
                       {/* Description */}
                       <IssueDescriptionEditor
                         value={descriptionDraft}
@@ -1447,7 +1446,7 @@ export default function IssuesListView({
                       />
 
                       {/* Child / Epic Issues Section */}
-                      <div className="pt-2 border-t border-jira-gray-200">
+                      <div className="pt-2 border-t border-jira-gray-200 min-w-0">
                         <ChildIssuesSection
                           parentIssue={selectedIssue}
                           childIssues={selectedIssue.children as any}
@@ -1483,6 +1482,39 @@ export default function IssuesListView({
                                 }
                               });
                             }
+                          }}
+                        />
+                      </div>
+
+                      {/* Linked Issues Section */}
+                      <div className="pt-2 border-t border-jira-gray-200 min-w-0">
+                        <IssueLinksSection
+                          issueId={selectedIssue.id}
+                          linksAsSource={selectedIssue.linksAsSource}
+                          linksAsTarget={selectedIssue.linksAsTarget}
+                          canEdit={permissions.canEditIssue}
+                          onIssueLinked={(link) => {
+                            const updated = {
+                              ...selectedIssue,
+                              linksAsSource: [...(selectedIssue.linksAsSource || []), link],
+                            };
+                            setIssues((prev) =>
+                              prev.map((i) => (i.id === selectedIssue.id ? updated : i))
+                            );
+                          }}
+                          onIssueUnlinked={(linkId) => {
+                            const updated = {
+                              ...selectedIssue,
+                              linksAsSource: (selectedIssue.linksAsSource || []).filter(
+                                (l: any) => l.id !== linkId
+                              ),
+                              linksAsTarget: (selectedIssue.linksAsTarget || []).filter(
+                                (l: any) => l.id !== linkId
+                              ),
+                            };
+                            setIssues((prev) =>
+                              prev.map((i) => (i.id === selectedIssue.id ? updated : i))
+                            );
                           }}
                         />
                       </div>

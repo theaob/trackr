@@ -171,7 +171,7 @@ export default function ChildIssuesSection({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 min-w-0">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -229,20 +229,20 @@ export default function ChildIssuesSection({
 
       {/* Progress Rollup (if there are children) */}
       {totalCount > 0 && (
-        <div className="bg-jira-gray-50 border border-jira-gray-200 rounded-md p-3 space-y-2">
-          <div className="flex items-center justify-between text-xs text-jira-gray-600">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-jira-navy">
+        <div className="bg-jira-gray-50 border border-jira-gray-200 rounded-md p-3 space-y-2 min-w-0">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-jira-gray-600">
+            <div className="flex items-center gap-2 min-w-0 truncate">
+              <span className="font-semibold text-jira-navy truncate">
                 {doneCount} of {totalCount} completed ({donePct}%)
               </span>
               {totalPoints > 0 && (
-                <span className="text-jira-gray-400">
+                <span className="text-jira-gray-400 shrink-0">
                   &middot; {donePoints} of {totalPoints} story points
                 </span>
               )}
             </div>
 
-            <div className="flex items-center gap-3 text-[11px]">
+            <div className="flex items-center gap-2 sm:gap-3 text-[11px] shrink-0">
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                 {doneCount} Done
@@ -377,7 +377,7 @@ export default function ChildIssuesSection({
             </button>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap sm:flex-nowrap gap-2 min-w-0">
             {isEpic ? (
               <select
                 value={newType}
@@ -402,7 +402,7 @@ export default function ChildIssuesSection({
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
               placeholder="What needs to be done?"
-              className="flex-1 text-xs px-2.5 py-1 border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+              className="flex-1 min-w-[140px] text-xs px-2.5 py-1 border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
             />
 
             <button
@@ -421,17 +421,17 @@ export default function ChildIssuesSection({
 
       {/* Child Issues List / Table */}
       {totalCount > 0 ? (
-        <div className="border border-jira-gray-200 rounded-md overflow-hidden divide-y divide-jira-gray-100 bg-white">
+        <div className="border border-jira-gray-200 rounded-md overflow-hidden divide-y divide-jira-gray-100 bg-white min-w-0">
           {children.map((child) => {
             const isDone = doneStatusNames.includes(child.status);
             return (
               <div
                 key={child.id}
-                className="flex items-center justify-between px-3 py-2 hover:bg-jira-gray-50/80 transition-colors group cursor-pointer"
+                className="flex items-center justify-between px-3 py-2 hover:bg-jira-gray-50/80 transition-colors group cursor-pointer min-w-0"
                 onClick={() => onOpenChild(child.key)}
               >
                 {/* Left: Type Icon, Key, Title */}
-                <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-3">
+                <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
                   <IssueTypeIcon type={child.type} className="w-3.5 h-3.5 shrink-0" />
                   <button
                     type="button"
@@ -457,10 +457,10 @@ export default function ChildIssuesSection({
 
                 {/* Right: Status, Priority, Points, Assignee, Actions */}
                 <div
-                  className="flex items-center gap-2.5 shrink-0"
+                  className="flex items-center gap-1.5 sm:gap-2.5 shrink-0"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="w-24 flex items-center justify-center shrink-0">
+                  <div className="w-20 sm:w-24 flex items-center justify-center shrink-0">
                     <StatusBadge status={child.status} className="w-full text-center text-[10px]" />
                   </div>
 

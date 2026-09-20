@@ -55,9 +55,9 @@ export default function IssueCard({
                   onSelectEpic ? onSelectEpic(issue.parent!.id) : onClick();
                 }}
                 className="text-[10px] font-semibold bg-purple-100 text-purple-800 hover:bg-purple-200 px-1.5 py-0.5 rounded tracking-wide max-w-[200px] truncate transition-colors text-left"
-                title={`Epic: ${issue.parent.title} (${issue.parent.key})`}
+                title={`Epic: ${issue.parent.title || issue.parent.key} (${issue.parent.key})`}
               >
-                {issue.parent.title}
+                {issue.parent.title || issue.parent.key}
               </button>
             </div>
           )}

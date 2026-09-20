@@ -153,20 +153,39 @@ export default function IssueDetailModal({
     }
   }, [versions, currentIssue?.projectId]);
 
+  const issueId = issue?.id;
   useEffect(() => {
-    setCurrentIssue(issue);
-    setTitle(issue?.title || "");
-    setDescription(issue?.description || "");
-    setNavHistory([]);
-
-    if (issue?.id) {
-      getIssueByKeyOrId(issue.id).then((full) => {
-        if (full) {
-          setCurrentIssue(full as unknown as Issue);
-        }
-      });
+    if (!issue) {
+      setCurrentIssue(null);
+      setNavHistory([]);
+      return;
     }
+
+    setCurrentIssue((prev) => {
+      if (prev?.id === issue.id) {
+        return { ...prev, ...issue };
+      }
+      setNavHistory([]);
+      setTitle(issue.title || "");
+      setDescription(issue.description || "");
+      return issue;
+    });
   }, [issue]);
+
+  useEffect(() => {
+    if (!issueId) return;
+
+    getIssueByKeyOrId(issueId).then((full) => {
+      if (full) {
+        setCurrentIssue((prev) => {
+          if (prev?.id === issueId) {
+            return full as unknown as Issue;
+          }
+          return prev;
+        });
+      }
+    });
+  }, [issueId]);
 
   useEffect(() => {
     if (currentIssue) {
@@ -767,28 +786,26 @@ export default function IssueDetailModal({
   };
 
   const handleOpenChild = async (childKeyOrId: string) => {
-    setNavHistory((prev) => [...prev, currentIssue]);
+    if (currentIssue) {
+      setNavHistory((prev) => [...prev, currentIssue]);
+    }
     const fetched = await getIssueByKeyOrId(childKeyOrId);
     if (fetched) {
-      setCurrentIssue(fetched as unknown as Issue);
-      try {
-        window.dispatchEvent(
-          new CustomEvent("jira:open-issue", { detail: { issueKey: fetched.key } })
-        );
-      } catch {}
+      const typed = fetched as unknown as Issue;
+      setCurrentIssue(typed);
+      onActiveIssueChange?.(typed);
     }
   };
 
   const handleOpenParent = async (parentKeyOrId: string) => {
-    setNavHistory((prev) => [...prev, currentIssue]);
+    if (currentIssue) {
+      setNavHistory((prev) => [...prev, currentIssue]);
+    }
     const fetched = await getIssueByKeyOrId(parentKeyOrId);
     if (fetched) {
-      setCurrentIssue(fetched as unknown as Issue);
-      try {
-        window.dispatchEvent(
-          new CustomEvent("jira:open-issue", { detail: { issueKey: fetched.key } })
-        );
-      } catch {}
+      const typed = fetched as unknown as Issue;
+      setCurrentIssue(typed);
+      onActiveIssueChange?.(typed);
     }
   };
 
@@ -797,11 +814,7 @@ export default function IssueDetailModal({
     const prevIssue = navHistory[navHistory.length - 1];
     setNavHistory((prev) => prev.slice(0, -1));
     setCurrentIssue(prevIssue);
-    try {
-      window.dispatchEvent(
-        new CustomEvent("jira:open-issue", { detail: { issueKey: prevIssue.key } })
-      );
-    } catch {}
+    onActiveIssueChange?.(prevIssue);
   };
 
   // Handle Delete Issue
@@ -839,10 +852,10 @@ export default function IssueDetailModal({
                   type="button"
                   onClick={() => handleOpenParent(currentIssue.parent!.id)}
                   className="flex items-center gap-1 text-xs font-semibold text-purple-700 bg-purple-100 hover:bg-purple-200 px-2 py-0.5 rounded transition-colors max-w-[200px] truncate"
-                  title={`Parent Epic: ${currentIssue.parent.title} (${currentIssue.parent.key})`}
+                  title={`Parent Epic: ${currentIssue.parent.title || currentIssue.parent.key} (${currentIssue.parent.key})`}
                 >
                   <Bookmark className="w-3 h-3 text-purple-700 fill-purple-700 shrink-0" />
-                  <span className="truncate">{currentIssue.parent.title}</span>
+                  <span className="truncate">{currentIssue.parent.title || currentIssue.parent.key}</span>
                 </button>
                 <span className="text-jira-gray-400 text-xs">/</span>
               </div>
@@ -917,9 +930,9 @@ export default function IssueDetailModal({
         </div>
 
         {/* Modal Body: 2 Columns */}
-        <div className="flex-1 overflow-y-auto flex flex-col md:flex-row">
+        <div className="flex-1 overflow-y-auto flex flex-col md:flex-row min-w-0">
           {/* Left Main Content */}
-          <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 md:border-r border-jira-gray-200">
+          <div className="flex-1 min-w-0 p-4 sm:p-6 space-y-4 sm:space-y-6 md:border-r border-jira-gray-200">
             {/* Title Editing */}
             <div>
               {isEditingTitle ? (
