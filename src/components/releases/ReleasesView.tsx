@@ -428,7 +428,8 @@ export default function ReleasesView({
                 <div className="pt-2 border-t border-jira-gray-200 space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-jira-navy">
-                      Progress: <strong>{percentDone}% Done</strong>
+                      Progress:{" "}
+                      <strong className="text-jira-green">{percentDone}% Done</strong>
                     </span>
                     <div className="flex items-center gap-3 text-jira-gray-600">
                       <span>

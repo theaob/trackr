@@ -132,10 +132,23 @@ export default function BacklogView({
   // Handle jira:issue-created custom event
   useEffect(() => {
     const handleIssueCreatedEvent = (e: Event) => {
-      const customEvent = e as CustomEvent<{ issue?: Issue }>;
+      const customEvent = e as CustomEvent<{
+        issue?: Issue;
+        source?: string;
+        tempId?: string;
+      }>;
       const newIssue = customEvent.detail?.issue;
       if (!newIssue || newIssue.projectId !== project.id) return;
+      if (customEvent.detail?.source === "backlog-inline") return;
       setIssues((prev) => {
+        if (
+          customEvent.detail?.tempId &&
+          prev.some((i) => i.id === customEvent.detail.tempId)
+        ) {
+          return prev.map((i) =>
+            i.id === customEvent.detail?.tempId ? newIssue : i
+          );
+        }
         if (prev.some((i) => i.id === newIssue.id)) return prev;
         return [...prev, newIssue];
       });
@@ -379,6 +392,15 @@ export default function BacklogView({
   // Check if filtering is active (reordering is paused when search or epic filters are on)
   const isFiltered = Boolean(searchQuery.trim() || selectedEpicId !== "ALL");
 
+  const dedupeById = <T extends { id: string }>(items: T[]): T[] => {
+    const seen = new Set<string>();
+    return items.filter((item) => {
+      if (seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    });
+  };
+
   const sortIssuesByOrder = (a: Issue, b: Issue) => {
     const orderA = a.order ?? 0;
     const orderB = b.order ?? 0;
@@ -405,16 +427,27 @@ export default function BacklogView({
   const futureSprints = useMemo(() => sprints.filter((s) => s.status === "FUTURE"), [sprints]);
   const backlogIssues = useMemo(
     () =>
-      filteredIssues
-        .filter((i) => i.type !== "EPIC" && !i.sprintId && backlogStatusNames.includes(i.status))
-        .sort(sortIssuesByOrder),
+      dedupeById(
+        filteredIssues
+          .filter(
+            (i) =>
+              i.type !== "EPIC" &&
+              !i.sprintId &&
+              backlogStatusNames.some(
+                (b) => b.toLowerCase() === i.status.toLowerCase()
+              )
+          )
+          .sort(sortIssuesByOrder)
+      ),
     [filteredIssues, backlogStatusNames]
   );
 
   const getSprintIssues = (sprintId: string) => {
-    return filteredIssues
-      .filter((i) => i.type !== "EPIC" && i.sprintId === sprintId)
-      .sort(sortIssuesByOrder);
+    return dedupeById(
+      filteredIssues
+        .filter((i) => i.type !== "EPIC" && i.sprintId === sprintId)
+        .sort(sortIssuesByOrder)
+    );
   };
 
   // Create Sprint Action
@@ -492,6 +525,8 @@ export default function BacklogView({
 
   // Move Issue Sprint
   const handleMoveIssue = async (issueId: string, targetSprintId: string | null) => {
+    if (issueId.startsWith("temp-")) return;
+
     // Prevent moving epics to sprints or moving items to finished sprints
     if (targetSprintId) {
       const movedIssue = issues.find((i) => i.id === issueId);
@@ -507,8 +542,11 @@ export default function BacklogView({
     const targetIssue = issues.find((i) => i.id === issueId);
     if (!targetIssue) return;
 
+    const isFromBacklog = backlogStatusNames.some(
+      (b) => b.toLowerCase() === targetIssue.status.toLowerCase()
+    );
     const newStatus = targetSprintId
-      ? targetIssue.status === primaryBacklogStatusName
+      ? isFromBacklog
         ? initialStatusName
         : targetIssue.status
       : primaryBacklogStatusName;
@@ -558,7 +596,7 @@ export default function BacklogView({
 
   // Move Issue to Top or Bottom of Current Container
   const handleReorderEdge = async (issueId: string, position: "top" | "bottom") => {
-    if (!permissions.canMoveIssue || isFiltered) return;
+    if (!permissions.canMoveIssue || isFiltered || issueId.startsWith("temp-")) return;
     const targetIssue = issues.find((i) => i.id === issueId);
     if (!targetIssue) return;
 
@@ -609,7 +647,7 @@ export default function BacklogView({
     }
 
     const { source, destination, draggableId } = result;
-    if (!destination) return;
+    if (!destination || draggableId.startsWith("temp-")) return;
 
     if (
       source.droppableId === destination.droppableId &&
@@ -678,8 +716,11 @@ export default function BacklogView({
     }
 
     // Case 2: Moving across containers (Backlog <-> Sprint, or Sprint A <-> Sprint B)
+    const isFromBacklog = backlogStatusNames.some(
+      (b) => b.toLowerCase() === draggedIssue.status.toLowerCase()
+    );
     const newStatus = targetSprintId
-      ? draggedIssue.status === primaryBacklogStatusName
+      ? isFromBacklog
         ? initialStatusName
         : draggedIssue.status
       : primaryBacklogStatusName;
@@ -764,7 +805,10 @@ export default function BacklogView({
     const containerIssues = issues.filter((i) => {
       if (i.type === "EPIC") return false;
       if (sprintId) return i.sprintId === sprintId;
-      return !i.sprintId && backlogStatusNames.includes(i.status);
+      return (
+        !i.sprintId &&
+        backlogStatusNames.some((b) => b.toLowerCase() === i.status.toLowerCase())
+      );
     });
 
     const maxOrder = containerIssues.reduce(
@@ -821,15 +865,18 @@ export default function BacklogView({
     });
 
     if (res.success && res.issue) {
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(
-          new CustomEvent("jira:issue-created", { detail: { issue: res.issue } })
-        );
-      }
+      const createdIssue = res.issue as Issue;
       // Replace optimistic card with real database record
       setIssues((prev) =>
-        prev.map((i) => (i.id === tempId ? (res.issue as Issue) : i))
+        prev.map((i) => (i.id === tempId ? createdIssue : i))
       );
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("jira:issue-created", {
+            detail: { issue: createdIssue, source: "backlog-inline", tempId },
+          })
+        );
+      }
     } else {
       // Rollback on failure and restore input
       setIssues((prev) => prev.filter((i) => i.id !== tempId));
@@ -1117,7 +1164,7 @@ export default function BacklogView({
                             key={issue.id}
                             draggableId={issue.id}
                             index={index}
-                            isDragDisabled={!permissions.canMoveIssue || isFiltered}
+                            isDragDisabled={!permissions.canMoveIssue || isFiltered || issue.id.startsWith("temp-")}
                           >
                             {(dragProvided, dragSnapshot) => (
                               <div
@@ -1136,7 +1183,7 @@ export default function BacklogView({
                                       <div
                                         {...dragProvided.dragHandleProps}
                                         className={`p-0.5 text-jira-gray-400 shrink-0 ${
-                                          permissions.canMoveIssue && !isFiltered
+                                          permissions.canMoveIssue && !isFiltered && !issue.id.startsWith("temp-")
                                             ? "hover:text-jira-gray-700 cursor-grab active:cursor-grabbing"
                                             : "cursor-default opacity-40"
                                         }`}
@@ -1214,7 +1261,7 @@ export default function BacklogView({
                                     <div
                                       {...dragProvided.dragHandleProps}
                                       className={`p-0.5 text-jira-gray-400 shrink-0 ${
-                                        permissions.canMoveIssue && !isFiltered
+                                        permissions.canMoveIssue && !isFiltered && !issue.id.startsWith("temp-")
                                           ? "hover:text-jira-gray-700 cursor-grab active:cursor-grabbing"
                                           : "cursor-default opacity-40"
                                       }`}
@@ -1450,7 +1497,7 @@ export default function BacklogView({
                       key={issue.id}
                       draggableId={issue.id}
                       index={index}
-                      isDragDisabled={!permissions.canMoveIssue || isFiltered}
+                      isDragDisabled={!permissions.canMoveIssue || isFiltered || issue.id.startsWith("temp-")}
                     >
                       {(dragProvided, dragSnapshot) => (
                         <div
@@ -1469,7 +1516,7 @@ export default function BacklogView({
                                 <div
                                   {...dragProvided.dragHandleProps}
                                   className={`p-0.5 text-jira-gray-400 shrink-0 ${
-                                    permissions.canMoveIssue && !isFiltered
+                                    permissions.canMoveIssue && !isFiltered && !issue.id.startsWith("temp-")
                                       ? "hover:text-jira-gray-700 cursor-grab active:cursor-grabbing"
                                       : "cursor-default opacity-40"
                                   }`}
@@ -1547,7 +1594,7 @@ export default function BacklogView({
                               <div
                                 {...dragProvided.dragHandleProps}
                                 className={`p-0.5 text-jira-gray-400 shrink-0 ${
-                                  permissions.canMoveIssue && !isFiltered
+                                  permissions.canMoveIssue && !isFiltered && !issue.id.startsWith("temp-")
                                     ? "hover:text-jira-gray-700 cursor-grab active:cursor-grabbing"
                                     : "cursor-default opacity-40"
                                 }`}
@@ -2033,7 +2080,7 @@ export default function BacklogView({
           issue={contextMenu.issue}
           sprints={sprints}
           isKanban={isKanban}
-          canMove={permissions.canMoveIssue}
+          canMove={permissions.canMoveIssue && !contextMenu.issue.id.startsWith("temp-")}
           onClose={() => setContextMenu(null)}
           onMoveToSprint={handleMoveIssue}
           onOpenIssue={(issue) => setActiveIssue(issue)}

@@ -699,7 +699,9 @@ export async function createIssue(data: {
         order = (maxSprintOrder._max.order ?? -1) + 1;
       } else {
         const backlogNames = await getBacklogStatusNames(data.projectId);
-        const isBacklog = backlogNames.includes(status);
+        const isBacklog = backlogNames.some(
+          (b) => b.toLowerCase() === status.toLowerCase()
+        );
         if (isBacklog) {
           const maxBacklogOrder = await prisma.issue.aggregate({
             where: {

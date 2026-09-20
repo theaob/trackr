@@ -10,7 +10,12 @@ import {
   requireProjectPermission,
   toActionError,
 } from "@/lib/auth/guards";
-import { getDoneStatusNames, getInitialStatusName, getPrimaryBacklogStatusName } from "@/lib/workflow";
+import {
+  getBacklogStatusNames,
+  getDoneStatusNames,
+  getInitialStatusName,
+  getPrimaryBacklogStatusName,
+} from "@/lib/workflow";
 import { planColumnOrder } from "@/lib/boardOrder";
 
 
@@ -260,9 +265,13 @@ export async function moveIssueToSprint(
       }
     }
 
+    const backlogNames = await getBacklogStatusNames(issue.projectId);
     const backlogStatusName = await getPrimaryBacklogStatusName(issue.projectId);
+    const isFromBacklog = backlogNames.some(
+      (b) => b.toLowerCase() === issue.status.toLowerCase()
+    );
     const newStatus = sprintId
-      ? issue.status === backlogStatusName
+      ? isFromBacklog
         ? await getInitialStatusName(issue.projectId)
         : issue.status
       : backlogStatusName;

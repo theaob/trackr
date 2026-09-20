@@ -312,4 +312,122 @@ describe("Backlog Reordering Logic", () => {
       expect(sorted.at(-1)?.id).toBe("task-3");
     });
   });
+
+  describe("Recently Added Backlog Items and Draggable Safety", () => {
+    function dedupeById<T extends { id: string }>(items: T[]): T[] {
+      const seen = new Set<string>();
+      return items.filter((item) => {
+        if (seen.has(item.id)) return false;
+        seen.add(item.id);
+        return true;
+      });
+    }
+
+    function isDragDisabled(
+      canMoveIssue: boolean,
+      isFiltered: boolean,
+      issueId: string
+    ): boolean {
+      return !canMoveIssue || isFiltered || issueId.startsWith("temp-");
+    }
+
+    function determineNewStatus(
+      targetSprintId: string | null,
+      currentStatus: string,
+      backlogStatusNames: string[],
+      initialStatusName: string,
+      primaryBacklogStatusName: string
+    ): string {
+      const isFromBacklog = backlogStatusNames.some(
+        (b) => b.toLowerCase() === currentStatus.toLowerCase()
+      );
+      return targetSprintId
+        ? isFromBacklog
+          ? initialStatusName
+          : currentStatus
+        : primaryBacklogStatusName;
+    }
+
+    it("deduplicates issue items by id preserving original order", () => {
+      const itemsWithDuplicates = [
+        { id: "issue-1", title: "First" },
+        { id: "issue-2", title: "Second" },
+        { id: "issue-1", title: "First Duplicate" },
+        { id: "issue-3", title: "Third" },
+        { id: "issue-2", title: "Second Duplicate" },
+      ];
+
+      const deduped = dedupeById(itemsWithDuplicates);
+      expect(deduped.map((i) => i.id)).toEqual(["issue-1", "issue-2", "issue-3"]);
+      expect(deduped[0].title).toBe("First");
+    });
+
+    it("prevents dragging for temporary in-flight optimistic issues", () => {
+      expect(isDragDisabled(true, false, "temp-1712345678")).toBe(true);
+      expect(isDragDisabled(true, false, "real-issue-id-123")).toBe(false);
+      expect(isDragDisabled(false, false, "real-issue-id-123")).toBe(true);
+      expect(isDragDisabled(true, true, "real-issue-id-123")).toBe(true);
+    });
+
+    it("allows recently added item to be dragged once real ID is assigned", () => {
+      // Step 1: In-flight optimistic state
+      const tempId = "temp-1712345678";
+      expect(isDragDisabled(true, false, tempId)).toBe(true);
+
+      // Step 2: Database returns persisted issue
+      const persistedId = "cly1234567890";
+      expect(isDragDisabled(true, false, persistedId)).toBe(false);
+
+      // Step 3: Can plan reorder for the persisted issue
+      const reorderedIds = [persistedId, "existing-1", "existing-2"];
+      const plan = planColumnOrder(persistedId, reorderedIds, ["existing-1", "existing-2"], 0);
+      expect(plan.resolvedOrder).toBe(0);
+    });
+
+    it("correctly handles case-insensitive backlog status matching when moving to sprint", () => {
+      const backlogStatuses = ["Backlog", "Icebox"];
+      const initialStatus = "To Do";
+      const primaryBacklog = "Backlog";
+
+      // Issue has lowercase status "backlog"
+      const newStatus1 = determineNewStatus(
+        "sprint-1",
+        "backlog",
+        backlogStatuses,
+        initialStatus,
+        primaryBacklog
+      );
+      expect(newStatus1).toBe("To Do");
+
+      // Issue has uppercase status "BACKLOG"
+      const newStatus2 = determineNewStatus(
+        "sprint-1",
+        "BACKLOG",
+        backlogStatuses,
+        initialStatus,
+        primaryBacklog
+      );
+      expect(newStatus2).toBe("To Do");
+
+      // Issue in progress already moving to another sprint preserves status
+      const newStatus3 = determineNewStatus(
+        "sprint-2",
+        "In Progress",
+        backlogStatuses,
+        initialStatus,
+        primaryBacklog
+      );
+      expect(newStatus3).toBe("In Progress");
+
+      // Moving back to backlog uses primary backlog status
+      const newStatus4 = determineNewStatus(
+        null,
+        "In Progress",
+        backlogStatuses,
+        initialStatus,
+        primaryBacklog
+      );
+      expect(newStatus4).toBe("Backlog");
+    });
+  });
 });
