@@ -12,6 +12,7 @@ import {
   insertMarkdownLink,
   insertCodeBlock,
   handleTabIndent,
+  shouldIndentOnTab,
 } from "@/lib/markdownEditorUtils";
 import {
   Bold,
@@ -327,8 +328,9 @@ export default function IssueDescriptionEditor({
       return;
     }
 
-    // Tab / Shift+Tab: Indent / Outdent
-    if (e.key === "Tab") {
+    // Tab / Shift+Tab: Indent / Outdent list items. Anywhere else Tab moves
+    // focus as usual, so the editor never traps the keyboard.
+    if (e.key === "Tab" && shouldIndentOnTab(e.currentTarget.value, e.currentTarget.selectionStart ?? 0, e.currentTarget.selectionEnd ?? 0)) {
       e.preventDefault();
       applyTransform((text, s, end) => handleTabIndent(text, s, end, e.shiftKey));
       return;
@@ -397,12 +399,15 @@ export default function IssueDescriptionEditor({
   // ----- Editor Mode -----
   const editorContent = (
     <div className={`flex flex-col ${isFullscreen ? "h-full" : ""}`}>
-      {/* Header: tabs + actions */}
+      {/* Header: tabs + actions. These controls stay out of the Tab order
+          (tabIndex -1) so Tab moves straight from the previous field into the
+          text; formatting also has keyboard shortcuts. */}
       <div className="flex items-center justify-between border-b border-jira-gray-200 bg-jira-gray-50/70 rounded-t-md px-1">
         {/* Write / Preview tabs */}
         <div className="flex items-center">
           <button
             type="button"
+            tabIndex={-1}
             onClick={() => setActiveTab("write")}
             className={`px-3 py-1.5 text-xs font-semibold transition-colors border-b-2 ${
               activeTab === "write"
@@ -417,6 +422,7 @@ export default function IssueDescriptionEditor({
           </button>
           <button
             type="button"
+            tabIndex={-1}
             onClick={() => setActiveTab("preview")}
             className={`px-3 py-1.5 text-xs font-semibold transition-colors border-b-2 ${
               activeTab === "preview"
@@ -436,6 +442,7 @@ export default function IssueDescriptionEditor({
           <div className="relative" ref={cheatsheetRef}>
             <button
               type="button"
+              tabIndex={-1}
               onClick={() => setShowCheatsheet(!showCheatsheet)}
               className="p-1.5 text-jira-gray-400 hover:text-jira-gray-600 hover:bg-jira-gray-100 rounded transition-colors"
               title="Markdown cheatsheet"
@@ -463,7 +470,7 @@ export default function IssueDescriptionEditor({
                 <div className="px-3 pt-2 pb-1 border-t border-jira-gray-100">
                   <div className="text-[10px] text-jira-gray-400 space-y-0.5">
                     <div><kbd className="px-1 py-0.5 bg-jira-gray-100 rounded text-[10px]">{modKey}B</kbd> Bold • <kbd className="px-1 py-0.5 bg-jira-gray-100 rounded text-[10px]">{modKey}I</kbd> Italic • <kbd className="px-1 py-0.5 bg-jira-gray-100 rounded text-[10px]">{modKey}K</kbd> Link</div>
-                    <div><kbd className="px-1 py-0.5 bg-jira-gray-100 rounded text-[10px]">Tab</kbd> Indent • <kbd className="px-1 py-0.5 bg-jira-gray-100 rounded text-[10px]">{modKey}↵</kbd> Save</div>
+                    <div><kbd className="px-1 py-0.5 bg-jira-gray-100 rounded text-[10px]">Tab</kbd> Indent list item • <kbd className="px-1 py-0.5 bg-jira-gray-100 rounded text-[10px]">{modKey}↵</kbd> Save</div>
                   </div>
                 </div>
               </div>
@@ -471,6 +478,7 @@ export default function IssueDescriptionEditor({
           </div>
           <button
             type="button"
+            tabIndex={-1}
             onClick={() => setIsFullscreen(!isFullscreen)}
             className="p-1.5 text-jira-gray-400 hover:text-jira-gray-600 hover:bg-jira-gray-100 rounded transition-colors"
             title={isFullscreen ? "Exit fullscreen" : "Fullscreen editor"}
@@ -502,6 +510,7 @@ export default function IssueDescriptionEditor({
                 <div key="heading-dropdown" className="relative" ref={headingMenuRef}>
                   <button
                     type="button"
+                    tabIndex={-1}
                     onClick={() => setShowHeadingMenu(!showHeadingMenu)}
                     className="flex items-center gap-0.5 px-1.5 py-1 text-jira-gray-500 hover:text-jira-gray-700 hover:bg-jira-gray-100 rounded transition-colors text-xs font-medium"
                     title="Headings"
@@ -513,6 +522,7 @@ export default function IssueDescriptionEditor({
                     <div className="absolute left-0 top-full mt-1 w-48 bg-white border border-jira-gray-200 rounded-lg shadow-xl z-50 py-1 animate-in fade-in zoom-in-95">
                       <button
                         type="button"
+                        tabIndex={-1}
                         onClick={() => handleHeadingSelect("# ")}
                         className="w-full px-3 py-1.5 text-left hover:bg-jira-gray-50 flex items-center gap-2"
                       >
@@ -523,6 +533,7 @@ export default function IssueDescriptionEditor({
                       </button>
                       <button
                         type="button"
+                        tabIndex={-1}
                         onClick={() => handleHeadingSelect("## ")}
                         className="w-full px-3 py-1.5 text-left hover:bg-jira-gray-50 flex items-center gap-2"
                       >
@@ -533,6 +544,7 @@ export default function IssueDescriptionEditor({
                       </button>
                       <button
                         type="button"
+                        tabIndex={-1}
                         onClick={() => handleHeadingSelect("### ")}
                         className="w-full px-3 py-1.5 text-left hover:bg-jira-gray-50 flex items-center gap-2"
                       >
@@ -552,6 +564,7 @@ export default function IssueDescriptionEditor({
               <button
                 key={toolbarItem.id}
                 type="button"
+                tabIndex={-1}
                 onClick={() => handleToolbarAction(toolbarItem)}
                 className="p-1.5 text-jira-gray-500 hover:text-jira-gray-700 hover:bg-jira-gray-100 rounded transition-colors"
                 title={

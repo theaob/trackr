@@ -6,6 +6,7 @@ import {
   insertMarkdownLink,
   insertCodeBlock,
   handleTabIndent,
+  shouldIndentOnTab,
 } from "../markdownEditorUtils";
 
 describe("markdownEditorUtils", () => {
@@ -125,11 +126,41 @@ describe("markdownEditorUtils", () => {
     });
   });
 
+  describe("shouldIndentOnTab", () => {
+    it("indents on list items, so nested lists still work", () => {
+      for (const line of ["- item", "  * nested", "+ plus", "1. first", "12) twelfth", "- [ ] task"]) {
+        expect(shouldIndentOnTab(line, line.length, line.length)).toBe(true);
+      }
+    });
+
+    it("indents a multi-line selection", () => {
+      const text = "one\ntwo";
+      expect(shouldIndentOnTab(text, 0, text.length)).toBe(true);
+    });
+
+    it("lets Tab move focus from plain text and an empty field", () => {
+      expect(shouldIndentOnTab("", 0, 0)).toBe(false);
+      expect(shouldIndentOnTab("Just a sentence", 4, 4)).toBe(false);
+      expect(shouldIndentOnTab("-dash but not a list", 3, 3)).toBe(false);
+      // Only the caret's line counts.
+      const text = "- item\nplain";
+      expect(shouldIndentOnTab(text, text.length, text.length)).toBe(false);
+      expect(shouldIndentOnTab(text, 3, 3)).toBe(true);
+    });
+  });
+
   describe("handleTabIndent", () => {
     it("inserts 2 spaces on Tab without selection", () => {
       const text = "hello";
       const res = handleTabIndent(text, 2, 2, false);
       expect(res.newText).toBe("he  llo");
+    });
+
+    it("nests a list item by indenting its line, wherever the caret is", () => {
+      const text = "- one\n- two";
+      const res = handleTabIndent(text, text.length, text.length, false);
+      expect(res.newText).toBe("- one\n  - two");
+      expect(res.newSelectionStart).toBe(text.length + 2);
     });
 
     it("indents multiple lines on Tab", () => {

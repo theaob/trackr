@@ -280,6 +280,22 @@ export function insertCodeBlock(
 /**
  * Smart indentation helper for Tab and Shift+Tab in textareas.
  */
+const LIST_ITEM = /^\s*([-*+]|\d+[.)])\s/;
+
+/**
+ * Whether Tab in the editor should indent rather than move focus: only on a
+ * list item or across a multi-line selection, where indentation means
+ * something in Markdown.
+ */
+export function shouldIndentOnTab(text: string, selectionStart: number, selectionEnd: number): boolean {
+  const selected = text.slice(selectionStart, selectionEnd);
+  if (selected.includes("\n")) return true;
+  const lineStart = text.lastIndexOf("\n", selectionStart - 1) + 1;
+  let lineEnd = text.indexOf("\n", selectionStart);
+  if (lineEnd === -1) lineEnd = text.length;
+  return LIST_ITEM.test(text.slice(lineStart, lineEnd));
+}
+
 export function handleTabIndent(
   text: string,
   selectionStart: number,
@@ -317,7 +333,15 @@ export function handleTabIndent(
     };
   } else {
     if (selectionStart === selectionEnd && !linesSlice.includes("\n")) {
-      // Single cursor: just insert 2 spaces at cursor
+      // Single cursor on a list item: nest it by indenting the whole line.
+      if (LIST_ITEM.test(linesSlice)) {
+        return {
+          newText: text.slice(0, lineStartIndex) + "  " + text.slice(lineStartIndex),
+          newSelectionStart: selectionStart + 2,
+          newSelectionEnd: selectionStart + 2,
+        };
+      }
+      // Single cursor elsewhere: just insert 2 spaces at cursor
       return {
         newText: text.slice(0, selectionStart) + "  " + text.slice(selectionEnd),
         newSelectionStart: selectionStart + 2,
