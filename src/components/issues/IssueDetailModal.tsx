@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Issue, IssueStatus, IssueType, PriorityLevel, User, Sprint, Version, CustomField, IssueLink, IssueLabel, WorkflowStatus, WorkflowTransition, Project, Attachment, IssueComponent, Worklog } from "@/types";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
 import UserAvatar from "@/components/common/UserAvatar";
@@ -260,19 +260,36 @@ export default function IssueDetailModal({
   const hasPrev = currentIndex > 0;
   const hasNext = currentIndex >= 0 && currentIndex < allIssues.length - 1;
 
+  // Navigating quickly fires several overlapping getIssueByKeyOrId() calls;
+  // without a guard, whichever happens to resolve last wins, which isn't
+  // necessarily the last one requested. isMountedRef also stops a fetch that
+  // was still in flight when the modal closed from reaching back into the
+  // parent's onActiveIssueChange and reopening it.
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+  const navigationRequestIdRef = useRef(0);
+
   const navigateToIssue = useCallback(
     async (targetIssue: Issue) => {
+      const requestId = ++navigationRequestIdRef.current;
       setNavHistory([]);
       setCurrentIssue(targetIssue);
       onActiveIssueChange?.(targetIssue);
 
       try {
         const full = await getIssueByKeyOrId(targetIssue.id);
-        if (full) {
+        if (full && isMountedRef.current && navigationRequestIdRef.current === requestId) {
           setCurrentIssue(full as unknown as Issue);
           onActiveIssueChange?.(full as unknown as Issue);
         }
       } catch {}
+
+      if (!isMountedRef.current || navigationRequestIdRef.current !== requestId) return;
 
       if (typeof window !== "undefined") {
         const url = new URL(window.location.href);
