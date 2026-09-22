@@ -13,6 +13,7 @@ import {
 } from "@/lib/auth/guards";
 import { getDoneStatusNames, getStatusCategoryMap } from "@/lib/workflow";
 import { computeVersionStats } from "@/lib/versionStats";
+import { compareIssueKeys } from "@/lib/issueKeys";
 
 export async function getProjectVersions(projectId: string) {
   try {
@@ -256,7 +257,6 @@ export async function getReleaseEligibleIssues(projectId: string, currentVersion
           sprintId: true,
           sprint: { select: { id: true, name: true, status: true } },
         },
-        orderBy: [{ key: "asc" }],
       }),
       prisma.sprint.findMany({
         where: { projectId },
@@ -267,11 +267,16 @@ export async function getReleaseEligibleIssues(projectId: string, currentVersion
     ]);
 
     return {
-      issues: issues.map((i) => ({
-        ...i,
-        category: categoryByStatus.get(i.status) || "TODO",
-        isAssignedToCurrent: currentVersionId ? i.versionId === currentVersionId : false,
-      })),
+      // SQL's ORDER BY key sorts the number as text (APOLLO-10 before
+      // APOLLO-2), so the numeric ordering is done here instead.
+      issues: issues
+        .slice()
+        .sort((a, b) => compareIssueKeys(a.key, b.key))
+        .map((i) => ({
+          ...i,
+          category: categoryByStatus.get(i.status) || "TODO",
+          isAssignedToCurrent: currentVersionId ? i.versionId === currentVersionId : false,
+        })),
       sprints,
     };
   } catch (error) {
@@ -394,15 +399,19 @@ export async function getVersionIssues(versionId: string) {
         assignee: { select: DISPLAY_USER_SELECT },
         reporter: { select: DISPLAY_USER_SELECT },
       },
-      orderBy: [{ key: "asc" }],
     });
 
     const categoryByStatus = await getStatusCategoryMap(projectId);
 
-    return issues.map((i) => ({
-      ...i,
-      category: categoryByStatus.get(i.status) || "TODO",
-    }));
+    // SQL's ORDER BY key sorts the number as text (APOLLO-10 before
+    // APOLLO-2), so the numeric ordering is done here instead.
+    return issues
+      .slice()
+      .sort((a, b) => compareIssueKeys(a.key, b.key))
+      .map((i) => ({
+        ...i,
+        category: categoryByStatus.get(i.status) || "TODO",
+      }));
   } catch (error) {
     console.error("Failed to fetch version issues:", error);
     return [];
@@ -554,12 +563,18 @@ export async function getVersionReleaseNotesData(versionId: string) {
             assignee: { select: DISPLAY_USER_SELECT },
             reporter: { select: DISPLAY_USER_SELECT },
           },
-          orderBy: [{ type: "asc" }, { key: "asc" }],
         },
       },
     });
 
     if (!version) return null;
+
+    // SQL's ORDER BY key sorts the number as text (APOLLO-10 before
+    // APOLLO-2), so the numeric ordering is done here instead. Each
+    // type-filtered bucket below only needs to be key-ordered within
+    // itself, which a plain sort by key guarantees regardless of how the
+    // types interleave.
+    version.issues.sort((a, b) => compareIssueKeys(a.key, b.key));
 
     const features = version.issues.filter((i) => i.type === "STORY" || i.type === "TASK");
     const bugs = version.issues.filter((i) => i.type === "BUG");

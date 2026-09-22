@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createIssueWithKey } from "@/lib/issueKeys";
+import { compareIssueKeys, createIssueWithKey } from "@/lib/issueKeys";
 
 const findMany = vi.fn();
 const count = vi.fn();
@@ -103,5 +103,33 @@ describe("createIssueWithKey", () => {
 
     const key = await createIssueWithKey("p6", "APOLLO", (k) => Promise.resolve(k) as any);
     expect(key).toBe("APOLLO-13");
+  });
+});
+
+describe("compareIssueKeys", () => {
+  it("orders by number, not by string, once past single digits", () => {
+    const keys = ["APOLLO-2", "APOLLO-10", "APOLLO-1", "APOLLO-11", "APOLLO-9"];
+    expect(keys.slice().sort(compareIssueKeys)).toEqual([
+      "APOLLO-1",
+      "APOLLO-2",
+      "APOLLO-9",
+      "APOLLO-10",
+      "APOLLO-11",
+    ]);
+  });
+
+  it("groups by project prefix before comparing numbers", () => {
+    const keys = ["VOY-2", "APOLLO-10", "VOY-1", "APOLLO-2"];
+    expect(keys.slice().sort(compareIssueKeys)).toEqual([
+      "APOLLO-2",
+      "APOLLO-10",
+      "VOY-1",
+      "VOY-2",
+    ]);
+  });
+
+  it("falls back to a plain string compare for keys with no numeric suffix", () => {
+    const keys = ["banana", "apple"];
+    expect(keys.slice().sort(compareIssueKeys)).toEqual(["apple", "banana"]);
   });
 });

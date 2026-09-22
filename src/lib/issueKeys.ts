@@ -4,6 +4,22 @@ import prisma from "@/lib/db";
 const MAX_ATTEMPTS = 25;
 
 /**
+ * Orders issue keys like "APOLLO-2" before "APOLLO-10". A plain string sort
+ * (what SQL's ORDER BY key does) compares the number as text, so "APOLLO-10"
+ * sorts before "APOLLO-2" once a project passes 9 issues.
+ */
+export function compareIssueKeys(a: string, b: string): number {
+  const matchA = a.match(/^(.*-)(\d+)$/);
+  const matchB = b.match(/^(.*-)(\d+)$/);
+  if (!matchA || !matchB) return a.localeCompare(b);
+
+  const [, prefixA, numA] = matchA;
+  const [, prefixB, numB] = matchB;
+  if (prefixA !== prefixB) return prefixA.localeCompare(prefixB);
+  return Number(numA) - Number(numB);
+}
+
+/**
  * Per-project queue of in-flight key allocations.
  *
  * The retry below is what makes the operation correct across processes; this
