@@ -135,6 +135,18 @@ export async function updateWorkflowStatus(
           where: { projectId, status: existing.name },
           data: { status: newName },
         });
+
+        // The burndown and flow reports replay status history by name, so
+        // past entries follow the rename too; otherwise, say, work finished
+        // under "Done" stops counting as done once it's renamed "Closed".
+        await tx.activityLog.updateMany({
+          where: { action: "STATUS_CHANGED", oldValue: existing.name, issue: { projectId } },
+          data: { oldValue: newName },
+        });
+        await tx.activityLog.updateMany({
+          where: { action: "STATUS_CHANGED", newValue: existing.name, issue: { projectId } },
+          data: { newValue: newName },
+        });
       }
 
       return updated;

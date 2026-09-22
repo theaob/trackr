@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { User } from "@/types";
 import { useCurrentUser } from "@/context/UserContext";
-import { registerUser, loginWithCredentials, getSsoPublicConfig } from "@/lib/actions/auth";
+import { registerUser, loginWithCredentials, getSsoPublicConfig, isSelfRegistrationOpen } from "@/lib/actions/auth";
 import {
   Shield,
   KeyRound,
@@ -46,6 +46,8 @@ export default function AuthModal({
 
   // SSO Config State
   const [ssoConfig, setSsoConfig] = useState<any>(null);
+  // Unknown until loaded, and hidden meanwhile, so the tab never flashes up.
+  const [registrationOpen, setRegistrationOpen] = useState(false);
 
   // Status State
   const [loading, setLoading] = useState(false);
@@ -56,6 +58,10 @@ export default function AuthModal({
   useEffect(() => {
     if (isOpen) {
       getSsoPublicConfig().then((cfg) => setSsoConfig(cfg));
+      isSelfRegistrationOpen().then((open) => {
+        setRegistrationOpen(open);
+        if (!open) setActiveTab("login");
+      });
     }
   }, [isOpen]);
 
@@ -163,6 +169,7 @@ export default function AuthModal({
             <span>Sign In</span>
           </button>
 
+          {registrationOpen && (
           <button
             onClick={() => { setActiveTab("register"); setError(null); }}
             className={`pb-3 text-xs font-semibold px-3 border-b-2 flex items-center gap-1.5 transition-colors ${
@@ -174,6 +181,7 @@ export default function AuthModal({
             <UserPlus className="w-3.5 h-3.5" />
             <span>Create Account</span>
           </button>
+          )}
         </div>
 
         {/* Content Body */}
@@ -256,7 +264,7 @@ export default function AuthModal({
           )}
 
           {/* TAB 2: REGISTER */}
-          {activeTab === "register" && (
+          {activeTab === "register" && registrationOpen && (
             <form onSubmit={handleRegisterSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-jira-navy mb-1">Full Name</label>

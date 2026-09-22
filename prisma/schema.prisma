@@ -498,3 +498,11 @@ model SsoConfig {
 
 
 
+
+/// Instance-wide settings; a single row with id "default".
+model InstanceSettings {
+  id                    String   @id @default("default")
+  // Whether anyone can create a local account from the sign-in page.
+  allowSelfRegistration Boolean  @default(true)
+  updatedAt             DateTime @updatedAt
+}

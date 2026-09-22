@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { User } from "@/types";
 import { updateUserProjectPermission } from "@/lib/actions/projects";
-import { getInstanceUsers, setUserInstanceAdmin } from "@/lib/actions/instanceAdmins";
+import { getInstanceUsers, setSelfRegistrationOpen, setUserInstanceAdmin } from "@/lib/actions/instanceAdmins";
+import { isSelfRegistrationOpen } from "@/lib/actions/auth";
 import { useCurrentUser } from "@/context/UserContext";
 import UserAvatar from "@/components/common/UserAvatar";
 import {
@@ -24,6 +25,8 @@ export default function UsersSettingsTab() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+  const [registrationOpen, setRegistrationOpen] = useState<boolean | null>(null);
+  const [updatingRegistration, setUpdatingRegistration] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -31,7 +34,29 @@ export default function UsersSettingsTab() {
 
   useEffect(() => {
     loadUsers();
+    isSelfRegistrationOpen().then(setRegistrationOpen);
   }, []);
+
+  const handleToggleRegistration = async () => {
+    if (registrationOpen === null) return;
+    const nextValue = !registrationOpen;
+    setUpdatingRegistration(true);
+    setMessage(null);
+    setRegistrationOpen(nextValue);
+    const result = await setSelfRegistrationOpen(nextValue);
+    setUpdatingRegistration(false);
+    if (result.success) {
+      setMessage({
+        type: "success",
+        text: nextValue
+          ? "Anyone can now create an account from the sign-in page."
+          : "Account creation from the sign-in page is turned off.",
+      });
+    } else {
+      setRegistrationOpen(!nextValue);
+      setMessage({ type: "error", text: result.error || "Failed to update account creation." });
+    }
+  };
 
   const loadUsers = async () => {
     setLoading(true);
@@ -192,6 +217,29 @@ export default function UsersSettingsTab() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Self-registration */}
+      <div className="bg-white border border-jira-gray-200 rounded-lg p-5 flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h2 className="text-sm font-bold text-jira-navy">Account creation</h2>
+          <p className="text-xs text-jira-gray-600 mt-1 leading-relaxed">
+            Let anyone who can reach this instance create an account from the sign-in page. Turn this off for
+            an instance exposed to the internet; people can still sign in through SSO if it&apos;s set up,
+            or you can turn it back on briefly while someone joins.
+          </p>
+        </div>
+        {registrationOpen === null ? (
+          <Loader2 className="w-4 h-4 animate-spin text-jira-blue shrink-0" />
+        ) : (
+          renderSwitch({
+            on: registrationOpen,
+            busy: updatingRegistration,
+            onColor: "bg-jira-blue",
+            label: "Allow anyone to create an account",
+            onClick: handleToggleRegistration,
+          })
+        )}
       </div>
 
       {/* Notifications */}

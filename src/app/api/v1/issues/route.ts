@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validatePersonalAccessToken } from "@/lib/auth/tokens";
 import { accessibleProjectIds, teamProjectIds } from "@/lib/auth/guards";
+import { clientAddressFrom, tokenByClient, tooManyAttemptsMessage } from "@/lib/auth/attemptLimiter";
 import prisma from "@/lib/db";
 import { TQLParser } from "@/lib/tql/parser";
 import { TQLCompiler } from "@/lib/tql/compiler";
@@ -20,10 +21,20 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const client = clientAddressFrom(request.headers);
+  const wait = client ? tokenByClient.retryAfterMs(client) : 0;
+  if (wait > 0) {
+    return NextResponse.json(
+      { error: tooManyAttemptsMessage(wait) },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(wait / 1000)) } }
+    );
+  }
+
   const token = authHeader.slice("Bearer ".length).trim();
   const auth = await validatePersonalAccessToken(token);
 
   if (!auth.valid) {
+    if (client) tokenByClient.recordFailure(client);
     return NextResponse.json({ error: auth.error }, { status: 401 });
   }
 

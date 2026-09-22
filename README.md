@@ -81,6 +81,8 @@ A modern, full-stack agile project management and issue tracking platform built 
 - 🔐 **Authentication & Access Control**:
   - Email/password sign-in backed by a signed, http-only session cookie.
   - PBKDF2-SHA512 password hashing (210k iterations) with transparent upgrades.
+  - Repeated wrong passwords lock that account's sign-in for 15 minutes, and
+    instance administrators can turn off account creation from the sign-in page.
   - Per-project roles (**Administrator**, **Member**, **Viewer**) enforced on the
     server, not just in the UI.
   - Optional **public projects**: a project can grant read-only access to
@@ -142,7 +144,7 @@ npm start
 | `AUTH_SECRET` | generated | Signs session cookies; 32+ characters. Generate with `openssl rand -hex 32`. When unset, a random secret is written to `<data dir>/.session-secret` on first use, so sessions survive restarts but not a new volume. |
 | `TRACKR_DATA_DIR` | `./data` | Where avatars, issue attachments, and the generated session secret live. |
 | `TRACKR_ALLOW_PRIVATE_WEBHOOKS` | `0` | Set to `1` to let webhooks target loopback, link-local and private addresses. Off by default so a webhook cannot be pointed at internal services. The bundled `/api/mock-webhook-receiver` is on localhost, so trying it out needs this set. |
-| `TRACKR_TRUST_PROXY` | `0` | Set to `1` only when a reverse proxy in front of Trackr terminates HTTPS and forwards `X-Forwarded-Proto: https`. This marks the session cookie `Secure`, which browsers require for HTTPS but silently reject on plain HTTP from anywhere but `localhost`. Leave unset for a direct `http://` deployment (e.g. `docker run -p 3000:3000` with no proxy) — enabling it there breaks sign-in. |
+| `TRACKR_TRUST_PROXY` | `0` | Set to `1` only when a reverse proxy in front of Trackr terminates HTTPS and forwards `X-Forwarded-Proto: https`. This marks the session cookie `Secure`, which browsers require for HTTPS but silently reject on plain HTTP from anywhere but `localhost`. Leave unset for a direct `http://` deployment (e.g. `docker run -p 3000:3000` with no proxy) — enabling it there breaks sign-in. It also makes Trackr trust `X-Forwarded-For`, which turns on per-client-address limits for failed sign-ins and API tokens; the per-account sign-in limit applies either way. |
 | `TRACKR_SEED_PASSWORD` | `trackr-demo` | Password given to the demo accounts by `db:seed`. |
 | `TRACKR_SEED_DEMO` | `0` | Docker only. Set to `1` to boot a fresh container from the seeded demo dataset instead of an empty database + setup wizard. Ignored once a database already exists. |
 
@@ -266,6 +268,10 @@ A few other changes are worth knowing about when upgrading:
   account allowed to create projects (the account from `/setup`, or the first
   demo user); that person can grant it to others under **System Settings →
   Users**. There is always at least one.
+- **Account creation can be turned off.** Anyone who can reach the sign-in
+  page can create an account by default. On an instance exposed to the
+  internet, turn this off under **System Settings → Users**; people can still
+  join through SSO.
 - **Access is membership-driven.** Projects created before memberships existed
   are backfilled once with every user on first load, so nothing disappears, but
   newly registered accounts no longer join every project automatically.

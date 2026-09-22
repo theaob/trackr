@@ -357,10 +357,16 @@ export default function BacklogView({
     const res = await deleteSprint(sprintId);
     if (res.success) {
       setSprints((prev) => prev.filter((s) => s.id !== sprintId));
-      // Move issues back to backlog in local state
+      // Move issues back to backlog in local state; finished ones stay finished.
       setIssues((prev) =>
         prev.map((i) =>
-          i.sprintId === sprintId ? { ...i, sprintId: null, status: primaryBacklogStatusName } : i
+          i.sprintId === sprintId
+            ? {
+                ...i,
+                sprintId: null,
+                status: doneStatusNames.includes(i.status) ? i.status : primaryBacklogStatusName,
+              }
+            : i
         )
       );
     } else if (res.error) {

@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import {
   PUBLIC_USER_SELECT,
@@ -11,8 +12,36 @@ import {
 } from "@/lib/auth/session";
 import { AuthError, requireInstanceAdmin, toActionError } from "@/lib/auth/guards";
 import { loadSsoConfig, ssoHasVerificationKey } from "@/lib/auth/sso";
+import {
+  clientAddressFrom,
+  signInByAccount,
+  signInByClient,
+  tooManyAttemptsMessage,
+} from "@/lib/auth/attemptLimiter";
+
+function requestClientAddress(): string | null {
+  try {
+    return clientAddressFrom(headers());
+  } catch {
+    return null;
+  }
+}
 
 const MIN_PASSWORD_LENGTH = 8;
+
+/**
+ * Whether the sign-in page offers "Create account". Public: it's read before
+ * anyone is signed in. An instance administrator can turn it off.
+ */
+export async function isSelfRegistrationOpen(): Promise<boolean> {
+  try {
+    const settings = await prisma.instanceSettings.findUnique({ where: { id: "default" } });
+    return settings?.allowSelfRegistration ?? true;
+  } catch (error) {
+    console.error("Failed to read instance settings:", error);
+    return false;
+  }
+}
 
 /** The signed-in user, for client components that need to refresh it. */
 export async function getSessionUser() {
@@ -32,6 +61,13 @@ export async function registerUser(data: {
   role?: string;
 }) {
   try {
+    if (!(await isSelfRegistrationOpen())) {
+      return {
+        success: false,
+        error: "Creating an account here is turned off. Ask an administrator to invite you.",
+      };
+    }
+
     const email = data.email.trim().toLowerCase();
     const name = data.name.trim();
 
@@ -91,12 +127,26 @@ export async function loginWithCredentials(email: string, password?: string) {
     const trimmedEmail = email.trim().toLowerCase();
     if (!trimmedEmail || !password) return genericFailure;
 
+    // Unknown emails are throttled exactly like real ones, so the lockout
+    // message can't be used to find out which accounts exist.
+    const client = requestClientAddress();
+    const wait = Math.max(
+      signInByAccount.retryAfterMs(trimmedEmail),
+      client ? signInByClient.retryAfterMs(client) : 0
+    );
+    if (wait > 0) return { success: false as const, error: tooManyAttemptsMessage(wait) };
+    const recordFailure = () => {
+      signInByAccount.recordFailure(trimmedEmail);
+      if (client) signInByClient.recordFailure(client);
+    };
+
     const user = await prisma.user.findUnique({
       where: { email: trimmedEmail },
       select: { id: true, passwordHash: true },
     });
 
     if (!user || !user.passwordHash) {
+      recordFailure();
       // Databases created before passwords existed have no hashes at all, and
       // every sign-in would otherwise look like a typo. Report that only when
       // it is true of the whole instance, so this never becomes a way to test
@@ -114,7 +164,11 @@ export async function loginWithCredentials(email: string, password?: string) {
     }
 
     const { valid, needsRehash } = await verifyPassword(password, user.passwordHash);
-    if (!valid) return genericFailure;
+    if (!valid) {
+      recordFailure();
+      return genericFailure;
+    }
+    signInByAccount.reset(trimmedEmail);
 
     if (needsRehash) {
       await prisma.user.update({

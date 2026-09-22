@@ -45,3 +45,17 @@ export async function setUserInstanceAdmin(userId: string, isInstanceAdmin: bool
     return toActionError(error, "Failed to update instance administrator");
   }
 }
+
+export async function setSelfRegistrationOpen(open: boolean) {
+  try {
+    await requireInstanceAdmin();
+    await prisma.instanceSettings.upsert({
+      where: { id: "default" },
+      create: { id: "default", allowSelfRegistration: open },
+      update: { allowSelfRegistration: open },
+    });
+    return { success: true as const };
+  } catch (error) {
+    return toActionError(error, "Failed to update self-registration");
+  }
+}

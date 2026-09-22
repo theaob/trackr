@@ -22,6 +22,28 @@ import { planColumnOrder } from "@/lib/boardOrder";
 /** Sprint issues per sprint, bounded so a large backlog cannot be loaded whole. */
 const SPRINT_ISSUE_LIMIT = 200;
 
+/**
+ * History entries for moving issues to `newStatus` in bulk. The burndown and
+ * flow reports rebuild the past from these, so a status change made by a
+ * sprint operation must be recorded just like one made on the issue itself.
+ */
+function statusChangeEntries(
+  issues: { id: string; status: string }[],
+  newStatus: string,
+  userId: string
+) {
+  return issues
+    .filter((issue) => issue.status !== newStatus)
+    .map((issue) => ({
+      issueId: issue.id,
+      userId,
+      action: "STATUS_CHANGED",
+      field: "status",
+      oldValue: issue.status,
+      newValue: newStatus,
+    }));
+}
+
 function revalidateProjectRoutes(projectKey: string) {
   try {
     revalidatePath(`/projects/${projectKey}`);
@@ -199,20 +221,29 @@ export async function completeSprint(sprintId: string, moveToSprintId?: string |
     // Closing the sprint and rolling its issues over is one unit of work: a
     // failure partway through must not leave a closed sprint holding open
     // issues.
-    await prisma.$transaction([
-      prisma.sprint.update({
+    await prisma.$transaction(async (tx) => {
+      await tx.sprint.update({
         where: { id: sprintId },
         data: { status: "COMPLETED" },
-      }),
-      prisma.issue.updateMany({
-        where: { sprintId, status: { notIn: doneNames } },
-        data: moveToSprintId
-          ? { sprintId: moveToSprintId }
-          : // Back to the backlog, which means the backlog status too --
-            // otherwise the issues reappear on the board with no sprint.
-            { sprintId: null, status: backlogStatusName! },
-      }),
-    ]);
+      });
+
+      const unfinished = { sprintId, status: { notIn: doneNames } };
+      if (moveToSprintId) {
+        await tx.issue.updateMany({ where: unfinished, data: { sprintId: moveToSprintId } });
+        return;
+      }
+
+      // Back to the backlog, which means the backlog status too -- otherwise
+      // the issues reappear on the board with no sprint.
+      const moving = await tx.issue.findMany({ where: unfinished, select: { id: true, status: true } });
+      await tx.issue.updateMany({
+        where: { id: { in: moving.map((i) => i.id) } },
+        data: { sprintId: null, status: backlogStatusName! },
+      });
+      await tx.activityLog.createMany({
+        data: statusChangeEntries(moving, backlogStatusName!, user.id),
+      });
+    });
 
     revalidateProjectRoutes(sprint.project.key);
     triggerWebhooks(
@@ -244,7 +275,7 @@ export async function moveIssueToSprint(
 
     if (!issue) throw new Error("Issue not found");
 
-    await requireProjectPermission(issue.projectId, "MOVE_ISSUE");
+    const { user } = await requireProjectPermission(issue.projectId, "MOVE_ISSUE");
 
     if (sprintId) {
       if (issue.project.boardType === "KANBAN") {
@@ -321,6 +352,12 @@ export async function moveIssueToSprint(
           sprintId,
           status: newStatus,
         },
+      });
+    }
+
+    if (statusChanged) {
+      await prisma.activityLog.createMany({
+        data: statusChangeEntries([issue], newStatus, user.id),
       });
     }
 
@@ -427,17 +464,35 @@ export async function deleteSprint(sprintId: string) {
     if (sprint.status === "ACTIVE") {
       return { success: false, error: "Cannot delete an active sprint. Complete it first." };
     }
+    if (sprint.status === "COMPLETED") {
+      return {
+        success: false,
+        error: "Completed sprints can't be deleted: their velocity and burndown history depend on them.",
+      };
+    }
 
-    const backlogStatusName = await getPrimaryBacklogStatusName(projectId);
+    const [backlogStatusName, doneNames] = await Promise.all([
+      getPrimaryBacklogStatusName(projectId),
+      getDoneStatusNames(projectId),
+    ]);
 
     // Return the sprint's issues to the backlog, then remove it, as one unit.
-    await prisma.$transaction([
-      prisma.issue.updateMany({
-        where: { sprintId },
+    // Finished issues keep their status: leaving a sprint doesn't undo work.
+    await prisma.$transaction(async (tx) => {
+      const unfinished = await tx.issue.findMany({
+        where: { sprintId, status: { notIn: doneNames } },
+        select: { id: true, status: true },
+      });
+      await tx.issue.updateMany({
+        where: { id: { in: unfinished.map((i) => i.id) } },
         data: { sprintId: null, status: backlogStatusName },
-      }),
-      prisma.sprint.delete({ where: { id: sprintId } }),
-    ]);
+      });
+      await tx.activityLog.createMany({
+        data: statusChangeEntries(unfinished, backlogStatusName, user.id),
+      });
+      await tx.issue.updateMany({ where: { sprintId }, data: { sprintId: null } });
+      await tx.sprint.delete({ where: { id: sprintId } });
+    });
 
     revalidateProjectRoutes(sprint.project.key);
     triggerWebhooks(
