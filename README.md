@@ -191,7 +191,7 @@ docker run -d -p 3000:3000 -v trackr_data:/app/data --name trackr-app ghcr.io/th
 Whenever the version is bumped in `package.json` and pushed to `main` (or a `v*` tag is pushed), the GitHub Actions workflow ([`.github/workflows/release.yml`](.github/workflows/release.yml)) automatically:
 1. Detects the new version and ensures it hasn't been released yet.
 2. Creates a formal **GitHub Release** with auto-generated release notes and changelog.
-3. Builds multi-architecture Docker images (`linux/amd64` and `linux/arm64`).
+3. Builds a `linux/amd64` Docker image.
 4. Pushes the versioned images to **Docker Hub** (`:latest`, `:<version>`, `:<major>.<minor>`) and **GHCR**.
 
 ### Required GitHub Secrets
