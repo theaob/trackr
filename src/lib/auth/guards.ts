@@ -2,6 +2,7 @@ import prisma from "@/lib/db";
 import { ProjectPermission, ProjectRole, BuiltInRole } from "@/types";
 import { hasPermission, ROLE_PERMISSIONS } from "@/lib/permissions";
 import { getCurrentUser, SessionUser } from "@/lib/auth/session";
+import { ensureInstanceAdminExists } from "@/lib/auth/instanceAdmin";
 
 /**
  * Thrown when a caller is not signed in or lacks a permission. Action catch
@@ -232,22 +233,36 @@ export async function isProjectTeamMember(
 }
 
 /**
- * Instance-wide settings (SSO, global webhooks) have no dedicated owner in the
- * data model, so they are restricted to users who administer at least one
- * project — the closest thing to an instance administrator available here.
+ * Instance-wide settings (SSO, global webhooks, system info, who may create
+ * projects, who else is an instance admin) belong to instance admins alone.
+ *
+ * Deliberately not derived from project roles: SSO decides how every account
+ * signs in, so anyone who could configure it could sign in as anyone. Being
+ * trusted with one project must not confer that.
  */
-export async function requireAnyProjectAdmin(): Promise<SessionUser> {
+export async function requireInstanceAdmin(): Promise<SessionUser> {
   const user = await requireUser();
+  await ensureInstanceAdminExists();
 
-  const [ledCount, adminMemberships] = await Promise.all([
-    prisma.project.count({ where: { leadId: user.id } }),
-    prisma.projectMember.count({ where: { userId: user.id, role: "ADMIN" } }),
-  ]);
-
-  if (ledCount === 0 && adminMemberships === 0) {
-    throw new AuthError("Only a project administrator can change instance settings.");
+  const row = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { isInstanceAdmin: true },
+  });
+  if (!row?.isInstanceAdmin) {
+    throw new AuthError("Only an instance administrator can change instance settings.");
   }
   return user;
+}
+
+/** Non-throwing form of requireInstanceAdmin, for deciding what to show. */
+export async function isCurrentUserInstanceAdmin(): Promise<boolean> {
+  try {
+    await requireInstanceAdmin();
+    return true;
+  } catch (error) {
+    if (error instanceof AuthError) return false;
+    throw error;
+  }
 }
 
 /**

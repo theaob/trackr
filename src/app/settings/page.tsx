@@ -2,7 +2,7 @@ import React from "react";
 import { getProjects } from "@/lib/actions/projects";
 import { getSystemInfo } from "@/lib/actions/system";
 import { requirePageUser, denyPageAccess } from "@/lib/auth/page";
-import { requireAnyProjectAdmin } from "@/lib/auth/guards";
+import { requireInstanceAdmin } from "@/lib/auth/guards";
 import Navbar from "@/components/layout/Navbar";
 import GeneralSettingsView from "@/components/settings/GeneralSettingsView";
 import { SearchProvider } from "@/context/SearchContext";
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   await requirePageUser("/settings");
   try {
-    await requireAnyProjectAdmin();
+    await requireInstanceAdmin();
   } catch {
     return denyPageAccess("/settings");
   }

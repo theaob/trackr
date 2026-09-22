@@ -13,7 +13,7 @@ import {
   requireProjectPermission,
   requireUser,
   requireCanCreateProject,
-  requireAnyProjectAdmin,
+  requireInstanceAdmin,
   toActionError,
 } from "@/lib/auth/guards";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -349,7 +349,7 @@ export async function updateProject(
  */
 export async function updateUserProjectPermission(userId: string, canCreateProjects: boolean) {
   try {
-    await requireAnyProjectAdmin();
+    await requireInstanceAdmin();
 
     const updated = await prisma.user.update({
       where: { id: userId },

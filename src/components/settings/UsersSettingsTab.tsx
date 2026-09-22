@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import { User } from "@/types";
-import { getAllUsers, updateUserProjectPermission } from "@/lib/actions/projects";
+import { updateUserProjectPermission } from "@/lib/actions/projects";
+import { getInstanceUsers, setUserInstanceAdmin } from "@/lib/actions/instanceAdmins";
+import { useCurrentUser } from "@/context/UserContext";
 import UserAvatar from "@/components/common/UserAvatar";
 import {
   Users,
@@ -17,6 +19,7 @@ import {
 } from "lucide-react";
 
 export default function UsersSettingsTab() {
+  const { currentUser } = useCurrentUser();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,7 +36,7 @@ export default function UsersSettingsTab() {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const data = await getAllUsers();
+      const data = await getInstanceUsers();
       setUsers(data as User[]);
     } catch {
       setMessage({ type: "error", text: "Failed to load users list." });
@@ -73,6 +76,75 @@ export default function UsersSettingsTab() {
     }
   };
 
+  const handleToggleInstanceAdmin = async (user: User) => {
+    const nextValue = !user.isInstanceAdmin;
+    setUpdatingUserId(user.id);
+    setMessage(null);
+
+    setUsers((prev) =>
+      prev.map((u) => (u.id === user.id ? { ...u, isInstanceAdmin: nextValue } : u))
+    );
+
+    const result = await setUserInstanceAdmin(user.id, nextValue);
+
+    setUpdatingUserId(null);
+
+    if (result.success) {
+      setMessage({
+        type: "success",
+        text: `${user.name} ${nextValue ? "is now" : "is no longer"} an instance administrator.`,
+      });
+      // Taking your own admin rights away ends your access to this page.
+      if (!nextValue && user.id === currentUser?.id) {
+        window.location.href = "/projects";
+      }
+    } else {
+      setUsers((prev) =>
+        prev.map((u) => (u.id === user.id ? { ...u, isInstanceAdmin: !nextValue } : u))
+      );
+      setMessage({
+        type: "error",
+        text: result.error || "Failed to update instance administrator.",
+      });
+    }
+  };
+
+  const renderSwitch = ({
+    on,
+    busy,
+    onColor,
+    label,
+    onClick,
+  }: {
+    on: boolean;
+    busy: boolean;
+    onColor: string;
+    label: string;
+    onClick: () => void;
+  }) => (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={onClick}
+      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-jira-blue focus:ring-offset-1 disabled:opacity-50 ${
+        on ? onColor : "bg-jira-gray-300"
+      }`}
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      title={label}
+    >
+      <span
+        aria-hidden="true"
+        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+          on ? "translate-x-4" : "translate-x-0"
+        } flex items-center justify-center`}
+      >
+        {busy && <Loader2 className="w-2.5 h-2.5 animate-spin text-jira-blue" />}
+      </span>
+    </button>
+  );
+
   const filteredUsers = users.filter((u) => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
@@ -94,10 +166,11 @@ export default function UsersSettingsTab() {
             <FolderPlus className="w-5 h-5" />
           </div>
           <div className="flex-1">
-            <h2 className="text-sm font-bold text-jira-navy">Project Creation Permissions</h2>
+            <h2 className="text-sm font-bold text-jira-navy">Instance Permissions</h2>
             <p className="text-xs text-jira-gray-600 mt-1 leading-relaxed">
-              Control which team members have permission to initialize new projects and boards in Trackr.
-              Users without this permission will not see project creation buttons and cannot call project creation APIs.
+              Choose who can create new projects, and who administers this Trackr instance.
+              Instance administrators manage SSO, global webhooks and these permissions; SSO controls how every
+              account signs in, so grant it only to people you trust with every account.
             </p>
 
             <div className="flex items-center gap-4 mt-3 pt-3 border-t border-jira-gray-100 text-xs">
@@ -168,14 +241,16 @@ export default function UsersSettingsTab() {
         ) : (
           <div className="divide-y divide-jira-gray-100">
             <div className="bg-jira-gray-50/70 px-4 py-2.5 grid grid-cols-12 text-[11px] font-semibold text-jira-gray-600 uppercase tracking-wider">
-              <span className="col-span-5 sm:col-span-4">User</span>
-              <span className="col-span-3 sm:col-span-3">Role</span>
-              <span className="col-span-4 sm:col-span-5 text-right">Project Creation Permission</span>
+              <span className="col-span-6 sm:col-span-4">User</span>
+              <span className="hidden sm:block sm:col-span-2">Role</span>
+              <span className="col-span-3 text-right">Create Projects</span>
+              <span className="col-span-3 text-right">Instance Admin</span>
             </div>
 
             {filteredUsers.map((user) => {
               const isUpdating = updatingUserId === user.id;
               const hasPerm = !!user.canCreateProjects;
+              const isAdmin = !!user.isInstanceAdmin;
 
               return (
                 <div
@@ -183,7 +258,7 @@ export default function UsersSettingsTab() {
                   className="px-4 py-3.5 grid grid-cols-12 items-center hover:bg-jira-gray-50/50 transition-colors"
                 >
                   {/* User info */}
-                  <div className="col-span-5 sm:col-span-4 flex items-center gap-3 min-w-0 pr-2">
+                  <div className="col-span-6 sm:col-span-4 flex items-center gap-3 min-w-0 pr-2">
                     <UserAvatar user={user} size="md" />
                     <div className="min-w-0 leading-tight">
                       <div className="text-xs font-semibold text-jira-navy truncate">
@@ -198,16 +273,16 @@ export default function UsersSettingsTab() {
                   </div>
 
                   {/* Role */}
-                  <div className="col-span-3 sm:col-span-3">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-jira-gray-100 text-jira-gray-700 border border-jira-gray-200">
+                  <div className="hidden sm:block sm:col-span-2 min-w-0">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-jira-gray-100 text-jira-gray-700 border border-jira-gray-200 truncate max-w-full">
                       {user.role || "Member"}
                     </span>
                   </div>
 
-                  {/* Toggle permission */}
-                  <div className="col-span-4 sm:col-span-5 flex items-center justify-end gap-2.5">
+                  {/* Project creation */}
+                  <div className="col-span-3 flex items-center justify-end gap-2">
                     <span
-                      className={`hidden sm:inline-flex items-center gap-1 text-[11px] font-medium ${
+                      className={`hidden md:inline-flex items-center gap-1 text-[11px] font-medium ${
                         hasPerm ? "text-emerald-700" : "text-jira-gray-500"
                       }`}
                     >
@@ -223,30 +298,30 @@ export default function UsersSettingsTab() {
                         </>
                       )}
                     </span>
+                    {renderSwitch({
+                      on: hasPerm,
+                      busy: isUpdating,
+                      onColor: "bg-emerald-600",
+                      label: `Allow ${user.name} to create projects`,
+                      onClick: () => handleTogglePermission(user),
+                    })}
+                  </div>
 
-                    <button
-                      type="button"
-                      disabled={isUpdating}
-                      onClick={() => handleTogglePermission(user)}
-                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-jira-blue focus:ring-offset-1 disabled:opacity-50 ${
-                        hasPerm ? "bg-emerald-600" : "bg-jira-gray-300"
-                      }`}
-                      role="switch"
-                      aria-checked={hasPerm}
-                      title={hasPerm ? "Click to revoke permission" : "Click to grant permission"}
-                    >
-                      <span className="sr-only">Toggle project creation permission</span>
-                      <span
-                        aria-hidden="true"
-                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                          hasPerm ? "translate-x-4" : "translate-x-0"
-                        } flex items-center justify-center`}
-                      >
-                        {isUpdating && (
-                          <Loader2 className="w-2.5 h-2.5 animate-spin text-jira-blue" />
-                        )}
+                  {/* Instance admin */}
+                  <div className="col-span-3 flex items-center justify-end gap-2">
+                    {isAdmin && (
+                      <span className="hidden md:inline-flex items-center gap-1 text-[11px] font-medium text-jira-blue">
+                        <Shield className="w-3 h-3" />
+                        <span>Admin</span>
                       </span>
-                    </button>
+                    )}
+                    {renderSwitch({
+                      on: isAdmin,
+                      busy: isUpdating,
+                      onColor: "bg-jira-blue",
+                      label: `Make ${user.name} an instance administrator`,
+                      onClick: () => handleToggleInstanceAdmin(user),
+                    })}
                   </div>
                 </div>
               );

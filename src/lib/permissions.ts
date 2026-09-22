@@ -267,3 +267,49 @@ export function canMoveIssue(role: ProjectRole | null | undefined, customRoles?:
 export function canAddComment(role: ProjectRole | null | undefined, customRoles?: CustomRole[] | null): boolean {
   return hasPermission(role, "ADD_COMMENT", customRoles);
 }
+
+/** What a role can do, for comparing one role's reach against another's. */
+export interface RoleAuthority {
+  isAdmin: boolean;
+  permissions: ProjectPermission[];
+}
+
+/** A custom role's permissions, whether stored as a JSON string or already parsed. */
+export function parseRolePermissions(permissions: unknown): ProjectPermission[] {
+  if (Array.isArray(permissions)) return permissions as ProjectPermission[];
+  if (typeof permissions === "string") {
+    try {
+      const parsed = JSON.parse(permissions || "[]");
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+/** The authority a role name confers. Unknown roles confer nothing. */
+export function authorityOfRole(
+  role: string | null | undefined,
+  customRoles?: { id: string; name: string; permissions: unknown }[] | null
+): RoleAuthority {
+  if (!role) return { isAdmin: false, permissions: [] };
+  if (role === "ADMIN") return { isAdmin: true, permissions: [...ROLE_PERMISSIONS.ADMIN] };
+  if (role in ROLE_PERMISSIONS) {
+    return { isAdmin: false, permissions: [...ROLE_PERMISSIONS[role as BuiltInRole]] };
+  }
+  const custom = customRoles?.find((r) => r.name === role || r.id === role);
+  return { isAdmin: false, permissions: custom ? parseRolePermissions(custom.permissions) : [] };
+}
+
+/**
+ * Whether someone with `caller` authority may grant, change or take away a
+ * role with `target` authority. Admins may manage any role; anyone else only
+ * roles within their own reach, so the right to manage access can never be
+ * used to gain more of it -- for themselves or for anyone else.
+ */
+export function canManageRoleWithAuthority(caller: RoleAuthority, target: RoleAuthority): boolean {
+  if (caller.isAdmin) return true;
+  if (target.isAdmin) return false;
+  return target.permissions.every((p) => caller.permissions.includes(p));
+}

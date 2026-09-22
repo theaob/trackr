@@ -81,6 +81,7 @@ export async function completeSetup(data: {
           authProvider: "LOCAL",
           role: "Administrator",
           canCreateProjects: true,
+          isInstanceAdmin: true,
         },
         select: PUBLIC_USER_SELECT,
       });

@@ -39,6 +39,7 @@ export interface User {
   avatarUrl: string | null;
   role: string;
   canCreateProjects?: boolean;
+  isInstanceAdmin?: boolean;
 }
 
 export interface Comment {

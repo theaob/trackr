@@ -9,7 +9,7 @@ import {
   getCurrentUser,
   startSession,
 } from "@/lib/auth/session";
-import { AuthError, requireAnyProjectAdmin, toActionError } from "@/lib/auth/guards";
+import { AuthError, requireInstanceAdmin, toActionError } from "@/lib/auth/guards";
 import { loadSsoConfig, ssoHasVerificationKey } from "@/lib/auth/sso";
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -123,9 +123,11 @@ export async function loginWithCredentials(email: string, password?: string) {
       });
     }
 
+    // The caller's own admin flag, so the client can show instance settings
+    // without a reload; it goes only to this user, never into user lists.
     const safeUser = await prisma.user.findUniqueOrThrow({
       where: { id: user.id },
-      select: PUBLIC_USER_SELECT,
+      select: { ...PUBLIC_USER_SELECT, isInstanceAdmin: true },
     });
 
     startSession(safeUser.id);
@@ -216,7 +218,7 @@ export async function getSsoPublicConfig() {
  */
 export async function getSsoConfig() {
   try {
-    await requireAnyProjectAdmin();
+    await requireInstanceAdmin();
     const config = await loadSsoConfig();
 
     const { clientSecret, ...rest } = config;
@@ -244,7 +246,7 @@ export async function updateSsoConfig(data: {
   defaultRole?: string;
 }) {
   try {
-    await requireAnyProjectAdmin();
+    await requireInstanceAdmin();
 
     const certificate = data.certificate?.trim() || null;
     if (certificate && !certificate.includes("-----BEGIN CERTIFICATE-----")) {

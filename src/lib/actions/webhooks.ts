@@ -6,7 +6,8 @@ import { Webhook, WebhookActor, WebhookChangelogItem, WebhookDelivery, WebhookEv
 import { revalidatePath } from "next/cache";
 import {
   AuthError,
-  requireAnyProjectAdmin,
+  isCurrentUserInstanceAdmin,
+  requireInstanceAdmin,
   requireProjectPermission,
   toActionError,
 } from "@/lib/auth/guards";
@@ -17,14 +18,15 @@ import { TQLCompiler } from "@/lib/tql/compiler";
 
 /**
  * A webhook is administered by the project it belongs to. Instance-wide
- * webhooks (no project) are restricted to users who administer some project.
+ * webhooks (no project) receive events from every project, so they are
+ * restricted to instance administrators.
  */
 async function requireWebhookAdmin(projectId: string | null | undefined) {
   if (projectId) {
     await requireProjectPermission(projectId, "PROJECT_ADMIN");
     return;
   }
-  await requireAnyProjectAdmin();
+  await requireInstanceAdmin();
 }
 
 async function requireWebhookAdminById(webhookId: string) {
@@ -60,8 +62,13 @@ export async function getProjectWebhooks(projectId?: string): Promise<Webhook[]>
   try {
     await requireWebhookAdmin(projectId);
 
+    // A global webhook's URL is often a secret in itself (a Slack incoming
+    // webhook, for one), so a project admin sees only their project's hooks.
+    const includeGlobal = !projectId || (await isCurrentUserInstanceAdmin());
     const where: any = projectId
-      ? { OR: [{ projectId }, { projectId: null }] }
+      ? includeGlobal
+        ? { OR: [{ projectId }, { projectId: null }] }
+        : { projectId }
       : { projectId: null };
 
     const webhooks = await prisma.webhook.findMany({

@@ -6,7 +6,7 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import prisma from "@/lib/db";
-import { requireAnyProjectAdmin } from "@/lib/auth/guards";
+import { requireInstanceAdmin } from "@/lib/auth/guards";
 import { SystemInfo, resolveCommitHash } from "@/lib/systemUtils";
 
 export type { SystemInfo };
@@ -39,7 +39,7 @@ export async function getGitCommitHash(): Promise<string> {
 }
 
 export async function getSystemInfo(): Promise<SystemInfo> {
-  await requireAnyProjectAdmin();
+  await requireInstanceAdmin();
 
   const [totalProjects, totalIssues, totalUsers, commitHash] = await Promise.all([
     prisma.project.count(),

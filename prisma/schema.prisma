@@ -17,6 +17,7 @@ model User {
   authProvider   String        @default("LOCAL") // "LOCAL", "SSO"
   ssoSubjectId   String?
   canCreateProjects Boolean    @default(false)
+  isInstanceAdmin   Boolean    @default(false)
   assignedIssues Issue[]       @relation("Assignee")
   reportedIssues Issue[]       @relation("Reporter")
   comments       Comment[]

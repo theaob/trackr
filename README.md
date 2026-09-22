@@ -257,8 +257,15 @@ docker exec -it trackr-app node scripts/set-password.cjs alex.chen@acme.dev
 Re-seeding (`npm run db:seed`) also works, but it **deletes all existing
 projects, issues and comments** — use it only on a throwaway database.
 
-Two other changes are worth knowing about when upgrading:
+A few other changes are worth knowing about when upgrading:
 
+- **Instance settings belong to instance administrators.** SSO, global
+  webhooks, system information, and who may create projects used to be open to
+  anyone who administered any project. They now require the instance
+  administrator flag. On upgrade it's given once, automatically, to the oldest
+  account allowed to create projects (the account from `/setup`, or the first
+  demo user); that person can grant it to others under **System Settings →
+  Users**. There is always at least one.
 - **Access is membership-driven.** Projects created before memberships existed
   are backfilled once with every user on first load, so nothing disappears, but
   newly registered accounts no longer join every project automatically.
@@ -270,7 +277,7 @@ Two other changes are worth knowing about when upgrading:
 SSO is **disabled until it is configured**, and a session is only ever created
 from an ID token whose signature, issuer, audience, expiry and nonce all verify.
 
-1. In **Project Settings → SSO**, set the issuer URL, the client id, and either
+1. As an instance administrator, in **System Settings → SSO**, set the issuer URL, the client id, and either
    the identity provider's X.509 signing certificate (for `RS256` tokens) or the
    client secret (for `HS256` tokens).
 2. Register `https://<your-host>/api/v1/auth/sso/callback` as a redirect URI

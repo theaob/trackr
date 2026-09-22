@@ -5,6 +5,7 @@ import { ProjectRole, BuiltInRole, CustomRole, ProjectPermission } from "@/types
 import { revalidatePath } from "next/cache";
 import { PUBLIC_USER_SELECT } from "@/lib/auth/publicUser";
 import {
+  AuthError,
   isProjectTeamMember,
   requireProjectAccess,
   requireProjectPermission,
@@ -12,8 +13,34 @@ import {
   toActionError,
 } from "@/lib/auth/guards";
 import { ensureProjectMembersSeeded } from "@/lib/projectMembers";
+import { RoleAuthority, authorityOfRole, canManageRoleWithAuthority } from "@/lib/permissions";
 
 const VALID_BUILTIN_ROLES: BuiltInRole[] = ["ADMIN", "MEMBER", "VIEWER"];
+
+const ROLE_CEILING_ERROR =
+  "You can only assign, change or remove roles whose permissions you hold yourself.";
+
+/**
+ * The caller's authority on a project, with a check that refuses any role
+ * change reaching beyond it. Holding MANAGE_ACCESS alone must not be a way to
+ * become (or make someone) an administrator.
+ */
+async function loadRoleCeiling(projectId: string, callerRole: ProjectRole) {
+  const customRoles = await prisma.customRole.findMany({
+    where: { projectId },
+    select: { id: true, name: true, permissions: true },
+  });
+  const caller = authorityOfRole(callerRole, customRoles);
+
+  return {
+    authorityOf: (role: string | null | undefined) => authorityOfRole(role, customRoles),
+    assertCanManage(target: RoleAuthority) {
+      if (!canManageRoleWithAuthority(caller, target)) {
+        throw new AuthError(ROLE_CEILING_ERROR);
+      }
+    },
+  };
+}
 
 export async function getProjectMembers(projectId: string) {
   try {
@@ -56,7 +83,7 @@ export async function addProjectMember(
   customRoleId?: string | null
 ) {
   try {
-    await requireProjectPermission(projectId, "MANAGE_ACCESS");
+    const { role: callerRole } = await requireProjectPermission(projectId, "MANAGE_ACCESS");
 
     let targetRole = role;
     let targetCustomRoleId = customRoleId || null;
@@ -73,7 +100,12 @@ export async function addProjectMember(
       }
       targetRole = custom.name;
       targetCustomRoleId = custom.id;
+    } else {
+      targetCustomRoleId = null;
     }
+
+    const ceiling = await loadRoleCeiling(projectId, callerRole);
+    ceiling.assertCanManage(ceiling.authorityOf(targetRole));
 
     const existing = await prisma.projectMember.findUnique({
       where: {
@@ -123,7 +155,7 @@ export async function updateProjectMemberRole(
   customRoleId?: string | null
 ) {
   try {
-    await requireProjectPermission(projectId, "MANAGE_ACCESS");
+    const { role: callerRole } = await requireProjectPermission(projectId, "MANAGE_ACCESS");
 
     let targetRole = newRole;
     let targetCustomRoleId = customRoleId || null;
@@ -143,6 +175,16 @@ export async function updateProjectMemberRole(
     } else {
       targetCustomRoleId = null;
     }
+
+    // Both ends are checked: the role being taken away as well as the one
+    // being given, so nobody can demote someone who outranks them.
+    const ceiling = await loadRoleCeiling(projectId, callerRole);
+    const currentMembership = await prisma.projectMember.findUnique({
+      where: { projectId_userId: { projectId, userId } },
+      select: { role: true },
+    });
+    ceiling.assertCanManage(ceiling.authorityOf(currentMembership?.role));
+    ceiling.assertCanManage(ceiling.authorityOf(targetRole));
 
     const project = await prisma.project.findUnique({ where: { id: projectId } });
     if (project?.leadId === userId && targetRole !== "ADMIN") {
@@ -202,7 +244,7 @@ export async function updateProjectMemberRole(
 
 export async function removeProjectMember(projectId: string, userId: string) {
   try {
-    await requireProjectPermission(projectId, "MANAGE_ACCESS");
+    const { role: callerRole } = await requireProjectPermission(projectId, "MANAGE_ACCESS");
 
     const project = await prisma.project.findUnique({ where: { id: projectId } });
     if (project?.leadId === userId) {
@@ -226,6 +268,9 @@ export async function removeProjectMember(projectId: string, userId: string) {
         error: "A project must keep at least one administrator.",
       };
     }
+
+    const ceiling = await loadRoleCeiling(projectId, callerRole);
+    ceiling.assertCanManage(ceiling.authorityOf(target?.role));
 
     await prisma.projectMember.delete({
       where: {
@@ -290,7 +335,7 @@ export async function createCustomRole(
   }
 ) {
   try {
-    await requireProjectPermission(projectId, "MANAGE_ACCESS");
+    const { role: callerRole } = await requireProjectPermission(projectId, "MANAGE_ACCESS");
     const trimmedName = data.name.trim();
     if (!trimmedName) {
       return { success: false, error: "Role name cannot be empty." };
@@ -311,6 +356,9 @@ export async function createCustomRole(
     // Ensure VIEW_PROJECT is always included
     const permsSet = new Set(data.permissions || []);
     permsSet.add("VIEW_PROJECT");
+
+    const ceiling = await loadRoleCeiling(projectId, callerRole);
+    ceiling.assertCanManage({ isAdmin: false, permissions: Array.from(permsSet) });
 
     const customRole = await prisma.customRole.create({
       data: {
@@ -359,7 +407,15 @@ export async function updateCustomRole(
       return { success: false, error: "Custom role not found." };
     }
 
-    await requireProjectPermission(existing.projectId, "MANAGE_ACCESS");
+    const { role: callerRole } = await requireProjectPermission(
+      existing.projectId,
+      "MANAGE_ACCESS"
+    );
+
+    // Editing a role changes everyone who holds it -- including, possibly,
+    // the caller -- so the role must be within reach before and after.
+    const ceiling = await loadRoleCeiling(existing.projectId, callerRole);
+    ceiling.assertCanManage(ceiling.authorityOf(existing.name));
 
     const trimmedName = data.name !== undefined ? data.name.trim() : existing.name;
     if (!trimmedName) {
@@ -384,6 +440,7 @@ export async function updateCustomRole(
     if (data.permissions) {
       const permsSet = new Set(data.permissions);
       permsSet.add("VIEW_PROJECT");
+      ceiling.assertCanManage({ isAdmin: false, permissions: Array.from(permsSet) });
       permsString = JSON.stringify(Array.from(permsSet));
     }
 
@@ -440,15 +497,42 @@ export async function deleteCustomRole(roleId: string, fallbackRole: string = "M
       return { success: false, error: "Custom role not found." };
     }
 
-    await requireProjectPermission(existing.projectId, "MANAGE_ACCESS");
+    const { role: callerRole } = await requireProjectPermission(
+      existing.projectId,
+      "MANAGE_ACCESS"
+    );
+
+    // The fallback has to be a real role in this project (not the one being
+    // deleted), and within the caller's reach: every holder of the deleted
+    // role is moved into it, the caller possibly among them.
+    let fallbackCustomRoleId: string | null = null;
+    let fallbackName = fallbackRole;
+    if (!VALID_BUILTIN_ROLES.includes(fallbackRole as BuiltInRole)) {
+      const fallbackCustom = await prisma.customRole.findFirst({
+        where: {
+          projectId: existing.projectId,
+          id: { not: roleId },
+          OR: [{ id: fallbackRole }, { name: fallbackRole }],
+        },
+        select: { id: true, name: true },
+      });
+      if (!fallbackCustom) {
+        return { success: false, error: "Choose an existing role for this role's members." };
+      }
+      fallbackCustomRoleId = fallbackCustom.id;
+      fallbackName = fallbackCustom.name;
+    }
+
+    const ceiling = await loadRoleCeiling(existing.projectId, callerRole);
+    ceiling.assertCanManage(ceiling.authorityOf(existing.name));
+    ceiling.assertCanManage(ceiling.authorityOf(fallbackName));
 
     await prisma.$transaction(async (tx) => {
-      // Safely reassign any members currently assigned to this custom role to the fallback role
       await tx.projectMember.updateMany({
         where: { customRoleId: roleId },
         data: {
-          role: fallbackRole,
-          customRoleId: null,
+          role: fallbackName,
+          customRoleId: fallbackCustomRoleId,
         },
       });
 

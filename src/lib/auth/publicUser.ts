@@ -20,6 +20,7 @@ export interface SessionUser {
   avatarUrl: string | null;
   role: string;
   canCreateProjects?: boolean;
+  isInstanceAdmin?: boolean;
 }
 
 /**

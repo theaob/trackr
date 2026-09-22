@@ -60,10 +60,7 @@ export default function Navbar({
     [projects, currentUser]
   );
 
-  const isInstanceAdmin = useMemo(() => {
-    if (!currentUser) return false;
-    return projects.some((proj) => resolveUserProjectRole(currentUser.id, proj) === "ADMIN");
-  }, [projects, currentUser]);
+  const isInstanceAdmin = !!currentUser?.isInstanceAdmin;
 
   const [showProjectMenu, setShowProjectMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);

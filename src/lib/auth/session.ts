@@ -6,6 +6,7 @@ import { cache } from "react";
 import prisma from "@/lib/db";
 import { dataDir } from "@/lib/paths";
 import { PUBLIC_USER_SELECT, SessionUser } from "@/lib/auth/publicUser";
+import { ensureInstanceAdminExists } from "@/lib/auth/instanceAdmin";
 
 export { PUBLIC_USER_SELECT };
 export type { SessionUser };
@@ -109,9 +110,12 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
   if (!userId) return null;
 
   try {
+    await ensureInstanceAdminExists();
     return await prisma.user.findUnique({
       where: { id: userId },
-      select: PUBLIC_USER_SELECT,
+      // isInstanceAdmin is read for the session only, not added to
+      // PUBLIC_USER_SELECT: user lists shouldn't advertise who the admins are.
+      select: { ...PUBLIC_USER_SELECT, isInstanceAdmin: true },
     });
   } catch (error) {
     console.error("Failed to resolve session user:", error);

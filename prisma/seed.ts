@@ -42,6 +42,7 @@ async function main() {
       passwordHash,
       authProvider: "LOCAL",
       canCreateProjects: true,
+      isInstanceAdmin: true,
     },
   });
 
