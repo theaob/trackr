@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useMemo, useState } from "react";
+import { useChartWidth } from "@/hooks/useChartWidth";
 import { format } from "date-fns";
 import { TrendingDown, TrendingUp, Layers, CheckCircle2, AlertCircle } from "lucide-react";
 import type { BurndownPoint } from "@/lib/burndown";
@@ -13,10 +14,10 @@ interface BurndownChartProps {
   unit?: string;
 }
 
-const WIDTH = 680;
+// Narrowest drawing width; wider containers draw at their real width.
+const BASE_WIDTH = 680;
 const HEIGHT = 280;
 const MARGIN = { top: 28, right: 28, bottom: 32, left: 44 };
-const PLOT_WIDTH = WIDTH - MARGIN.left - MARGIN.right;
 const PLOT_HEIGHT = HEIGHT - MARGIN.top - MARGIN.bottom;
 
 export default function BurndownChart({
@@ -25,6 +26,8 @@ export default function BurndownChart({
   totalIssues,
   unit,
 }: BurndownChartProps) {
+  const [chartRef, WIDTH] = useChartWidth(BASE_WIDTH);
+  const PLOT_WIDTH = WIDTH - MARGIN.left - MARGIN.right;
   const [mode, setMode] = useState<"burndown" | "burnup">("burndown");
   const [metricUnit, setMetricUnit] = useState<"points" | "issues">(
     unit === "issues" ? "issues" : "points"
@@ -51,7 +54,7 @@ export default function BurndownChart({
       points.length > 1
         ? MARGIN.left + (index / (points.length - 1)) * PLOT_WIDTH
         : MARGIN.left + PLOT_WIDTH / 2,
-    [points.length]
+    [points.length, PLOT_WIDTH]
   );
 
   const yAt = useCallback(
@@ -154,7 +157,8 @@ export default function BurndownChart({
 
   const handleMove = (e: React.MouseEvent<SVGRectElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const relX = ((e.clientX - rect.left) / rect.width) * WIDTH;
+    // The hit area covers just the plot, so map across the plot's width.
+    const relX = MARGIN.left + ((e.clientX - rect.left) / rect.width) * PLOT_WIDTH;
     let nearest = 0;
     let nearestDist = Infinity;
     points.forEach((_, i) => {
@@ -309,7 +313,7 @@ export default function BurndownChart({
       </div>
 
       {/* SVG Canvas */}
-      <div className="relative">
+      <div className="relative" ref={chartRef}>
         <svg
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
           className="w-full h-auto select-none"

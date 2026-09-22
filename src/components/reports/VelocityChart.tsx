@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { useChartWidth } from "@/hooks/useChartWidth";
 import { Gauge, CheckCircle2, TrendingUp, HelpCircle } from "lucide-react";
 import { niceAxis } from "./chartScale";
 
@@ -20,14 +21,16 @@ interface VelocityChartProps {
   sprints: VelocitySprint[];
 }
 
-const WIDTH = 680;
+// Narrowest drawing width; wider containers draw at their real width.
+const BASE_WIDTH = 680;
 const HEIGHT = 280;
 const MARGIN = { top: 32, right: 28, bottom: 36, left: 44 };
-const PLOT_WIDTH = WIDTH - MARGIN.left - MARGIN.right;
 const PLOT_HEIGHT = HEIGHT - MARGIN.top - MARGIN.bottom;
 const MAX_BAR_WIDTH = 26;
 
 export default function VelocityChart({ sprints }: VelocityChartProps) {
+  const [chartRef, WIDTH] = useChartWidth(BASE_WIDTH);
+  const PLOT_WIDTH = WIDTH - MARGIN.left - MARGIN.right;
   const [metricUnit, setMetricUnit] = useState<"points" | "issues">("points");
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
@@ -171,7 +174,7 @@ export default function VelocityChart({ sprints }: VelocityChartProps) {
       </div>
 
       {/* SVG Dual-Bar Chart */}
-      <div className="relative">
+      <div className="relative" ref={chartRef}>
         <svg
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
           className="w-full h-auto select-none"

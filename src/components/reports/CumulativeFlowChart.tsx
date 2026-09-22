@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useCallback } from "react";
+import { useChartWidth } from "@/hooks/useChartWidth";
 import { format } from "date-fns";
 import { Layers, Clock, Activity, Zap, CheckCircle2 } from "lucide-react";
 import type { CFDResult, CFDDataPoint, CFDCategory } from "@/lib/cfd";
@@ -13,10 +14,10 @@ interface CumulativeFlowChartProps {
   isLoading?: boolean;
 }
 
-const WIDTH = 680;
+// Narrowest drawing width; wider containers draw at their real width.
+const BASE_WIDTH = 680;
 const HEIGHT = 280;
 const MARGIN = { top: 28, right: 28, bottom: 32, left: 44 };
-const PLOT_WIDTH = WIDTH - MARGIN.left - MARGIN.right;
 const PLOT_HEIGHT = HEIGHT - MARGIN.top - MARGIN.bottom;
 
 export default function CumulativeFlowChart({
@@ -25,6 +26,8 @@ export default function CumulativeFlowChart({
   selectedDays = 30,
   isLoading = false,
 }: CumulativeFlowChartProps) {
+  const [chartRef, WIDTH] = useChartWidth(BASE_WIDTH);
+  const PLOT_WIDTH = WIDTH - MARGIN.left - MARGIN.right;
   const [metricUnit, setMetricUnit] = useState<"issues" | "points">("issues");
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
@@ -47,7 +50,7 @@ export default function CumulativeFlowChart({
       points.length > 1
         ? MARGIN.left + (index / (points.length - 1)) * PLOT_WIDTH
         : MARGIN.left + PLOT_WIDTH / 2,
-    [points.length]
+    [points.length, PLOT_WIDTH]
   );
 
   const yAt = useCallback(
@@ -138,7 +141,8 @@ export default function CumulativeFlowChart({
 
   const handleMove = (e: React.MouseEvent<SVGRectElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const relX = ((e.clientX - rect.left) / rect.width) * WIDTH;
+    // The hit area covers just the plot, so map across the plot's width.
+    const relX = MARGIN.left + ((e.clientX - rect.left) / rect.width) * PLOT_WIDTH;
     let nearest = 0;
     let nearestDist = Infinity;
     points.forEach((_, i) => {
@@ -283,7 +287,7 @@ export default function CumulativeFlowChart({
       )}
 
       {/* SVG Canvas */}
-      <div className="relative">
+      <div className="relative" ref={chartRef}>
         <svg
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
           className="w-full h-auto select-none"
