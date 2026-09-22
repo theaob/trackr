@@ -130,7 +130,7 @@ export default function LabelsSection({
             {canEdit && (
               <button
                 onClick={() => handleRemove(issueLabel.labelId)}
-                className="text-jira-gray-400 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="hidden group-hover:inline-flex text-jira-gray-400 hover:text-rose-600"
                 title="Remove label"
               >
                 <X className="w-3 h-3" />
