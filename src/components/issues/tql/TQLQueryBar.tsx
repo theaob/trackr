@@ -301,23 +301,23 @@ export default function TQLQueryBar({
 
       {/* JQL Syntax Help Modal */}
       {showHelpModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-jira-gray-300 rounded-lg shadow-2xl max-w-2xl w-full p-6 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b border-jira-gray-200">
-              <div className="flex items-center gap-2">
-                <Code2 className="w-5 h-5 text-jira-blue" />
-                <h3 className="font-bold text-base text-jira-navy">Trackr JQL Query Syntax Guide</h3>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-start sm:items-center justify-center overflow-y-auto p-0 sm:p-4">
+          <div className="bg-white border border-jira-gray-300 sm:rounded-lg shadow-2xl max-w-2xl w-full min-h-full sm:min-h-0 sm:max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between gap-2 px-4 py-3 sm:px-6 border-b border-jira-gray-200 shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <Code2 className="w-5 h-5 text-jira-blue shrink-0" />
+                <h3 className="font-bold text-sm sm:text-base text-jira-navy truncate">Trackr JQL Query Syntax Guide</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowHelpModal(false)}
-                className="p-1 text-jira-gray-400 hover:text-jira-gray-700 rounded transition-colors"
+                className="p-1 text-jira-gray-400 hover:text-jira-gray-700 rounded transition-colors shrink-0"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="mt-4 space-y-4 max-h-[70vh] overflow-y-auto text-xs text-jira-gray-700">
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 space-y-4 text-xs text-jira-gray-700">
               <div>
                 <h4 className="font-bold text-jira-navy mb-1.5">Common Query Examples</h4>
                 <div className="space-y-1.5 font-mono text-[11px]">
@@ -355,9 +355,9 @@ export default function TQLQueryBar({
                       }}
                       className="p-2 bg-jira-gray-50 hover:bg-jira-blue-light/50 border border-jira-gray-200 rounded cursor-pointer transition-colors group"
                     >
-                      <div className="flex items-center justify-between text-jira-blue font-semibold">
-                        <span>{example.q}</span>
-                        <span className="text-[10px] text-jira-gray-400 group-hover:text-jira-blue flex items-center gap-0.5">
+                      <div className="flex items-start justify-between gap-2 text-jira-blue font-semibold">
+                        <span className="break-all">{example.q}</span>
+                        <span className="text-[10px] text-jira-gray-400 group-hover:text-jira-blue flex items-center gap-0.5 shrink-0 pt-0.5">
                           Use <ArrowRight className="w-2.5 h-2.5" />
                         </span>
                       </div>
@@ -367,7 +367,7 @@ export default function TQLQueryBar({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-jira-gray-200">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-jira-gray-200">
                 <div>
                   <h4 className="font-bold text-jira-navy mb-1">Supported Fields</h4>
                   <ul className="list-disc list-inside space-y-0.5 text-jira-gray-600">
@@ -395,7 +395,7 @@ export default function TQLQueryBar({
               </div>
             </div>
 
-            <div className="mt-6 pt-3 border-t border-jira-gray-200 flex justify-end">
+            <div className="px-4 py-3 sm:px-6 border-t border-jira-gray-200 flex justify-end shrink-0">
               <button
                 type="button"
                 onClick={() => setShowHelpModal(false)}
