@@ -23,6 +23,12 @@ import { seedDefaultWorkflow } from "@/lib/workflow";
 const PROJECT_INCLUDE = {
   lead: { select: PUBLIC_USER_SELECT },
   members: { select: { userId: true, role: true } },
+  // Every permission check outside Project Settings resolves a member's role
+  // through this same `project` object (useProjectPermissions falls back to
+  // `project.customRoles` when no separate list is passed in), so a member
+  // assigned to a custom role needs it here to have any permissions at all
+  // anywhere but Settings -- not just on custom-role-name display.
+  customRoles: { select: { id: true, name: true, description: true, color: true, permissions: true } },
 } as const;
 
 /**
