@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validatePersonalAccessToken } from "@/lib/auth/tokens";
-import { accessibleProjectIds } from "@/lib/auth/guards";
+import { accessibleProjectIds, teamProjectIds } from "@/lib/auth/guards";
 import prisma from "@/lib/db";
 import { TQLParser } from "@/lib/tql/parser";
 import { TQLCompiler } from "@/lib/tql/compiler";
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
   }
 
   // A token carries its owner's access and no more: the query is confined to
-  // the projects that user belongs to.
+  // the projects that user belongs to, plus those published to everyone.
   const allowedProjectIds = await accessibleProjectIds(auth.user.id);
   if (allowedProjectIds.length === 0) {
     return NextResponse.json({
@@ -130,13 +130,26 @@ export async function GET(request: NextRequest) {
     },
   });
 
+  // The query also covers published projects, whose issues anyone may read.
+  // Their team's email addresses are not public, so an assignee's email is
+  // included only for projects the token owner is actually on -- the same rule
+  // the web UI applies.
+  const teamIds = await teamProjectIds(auth.user.id);
+  const visibleIssues = issues.map(({ assignee, ...issue }) => ({
+    ...issue,
+    assignee:
+      assignee && !teamIds.has(issue.project.id)
+        ? { id: assignee.id, name: assignee.name }
+        : assignee,
+  }));
+
   return NextResponse.json({
     authenticatedUser: {
       id: auth.user.id,
       name: auth.user.name,
       email: auth.user.email,
     },
-    count: issues.length,
-    issues,
+    count: visibleIssues.length,
+    issues: visibleIssues,
   });
 }
