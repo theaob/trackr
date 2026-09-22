@@ -17,6 +17,9 @@ const config: Config = {
             subtle: "#E9F2FF",
           },
           navy: "#172B4D",
+          green: "#00875A",
+          red: "#DE350B",
+          yellow: "#FFAB00",
           gray: {
             50: "#FAFBFC",
             100: "#F4F5F7",
