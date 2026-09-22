@@ -4,6 +4,7 @@ import React, { useState, useRef, useCallback, useEffect } from "react";
 import { User } from "@/types";
 import MentionInput, { ImagePasteResult } from "@/components/common/MentionInput";
 import MarkdownContent from "@/components/common/MarkdownContent";
+import { useModKeyLabel } from "@/hooks/useModKeyLabel";
 import {
   applyWrapFormatting,
   applyLinePrefixFormatting,
@@ -110,6 +111,7 @@ export default function IssueDescriptionEditor({
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const headingMenuRef = useRef<HTMLDivElement>(null);
   const cheatsheetRef = useRef<HTMLDivElement>(null);
+  const modKey = useModKeyLabel();
 
   // Close heading menu on outside click
   useEffect(() => {
@@ -157,14 +159,14 @@ export default function IssueDescriptionEditor({
       id: "bold",
       icon: <Bold className="w-3.5 h-3.5" />,
       label: "Bold",
-      shortcut: "⌘B",
+      shortcut: `${modKey}B`,
       action: (text, s, e) => applyWrapFormatting(text, s, e, "**", "**", "bold text"),
     },
     {
       id: "italic",
       icon: <Italic className="w-3.5 h-3.5" />,
       label: "Italic",
-      shortcut: "⌘I",
+      shortcut: `${modKey}I`,
       action: (text, s, e) => applyWrapFormatting(text, s, e, "*", "*", "italic text"),
     },
     {
@@ -240,7 +242,7 @@ export default function IssueDescriptionEditor({
       id: "link",
       icon: <Link className="w-3.5 h-3.5" />,
       label: "Link",
-      shortcut: "⌘K",
+      shortcut: `${modKey}K`,
       action: (text, s, e) => insertMarkdownLink(text, s, e),
     },
     {
@@ -460,8 +462,8 @@ export default function IssueDescriptionEditor({
                 </div>
                 <div className="px-3 pt-2 pb-1 border-t border-jira-gray-100">
                   <div className="text-[10px] text-jira-gray-400 space-y-0.5">
-                    <div><kbd className="px-1 py-0.5 bg-jira-gray-100 rounded text-[10px]">⌘B</kbd> Bold • <kbd className="px-1 py-0.5 bg-jira-gray-100 rounded text-[10px]">⌘I</kbd> Italic • <kbd className="px-1 py-0.5 bg-jira-gray-100 rounded text-[10px]">⌘K</kbd> Link</div>
-                    <div><kbd className="px-1 py-0.5 bg-jira-gray-100 rounded text-[10px]">Tab</kbd> Indent • <kbd className="px-1 py-0.5 bg-jira-gray-100 rounded text-[10px]">⌘↵</kbd> Save</div>
+                    <div><kbd className="px-1 py-0.5 bg-jira-gray-100 rounded text-[10px]">{modKey}B</kbd> Bold • <kbd className="px-1 py-0.5 bg-jira-gray-100 rounded text-[10px]">{modKey}I</kbd> Italic • <kbd className="px-1 py-0.5 bg-jira-gray-100 rounded text-[10px]">{modKey}K</kbd> Link</div>
+                    <div><kbd className="px-1 py-0.5 bg-jira-gray-100 rounded text-[10px]">Tab</kbd> Indent • <kbd className="px-1 py-0.5 bg-jira-gray-100 rounded text-[10px]">{modKey}↵</kbd> Save</div>
                   </div>
                 </div>
               </div>
@@ -617,7 +619,7 @@ export default function IssueDescriptionEditor({
           </button>
           <span className="text-[11px] text-jira-gray-400 ml-auto flex items-center gap-2">
             <span>
-              <kbd className="px-1 py-0.5 bg-jira-gray-100 border border-jira-gray-200 rounded text-[10px] font-mono">⌘↵</kbd> Save
+              <kbd className="px-1 py-0.5 bg-jira-gray-100 border border-jira-gray-200 rounded text-[10px] font-mono">{modKey}↵</kbd> Save
             </span>
             <span>Markdown supported</span>
           </span>

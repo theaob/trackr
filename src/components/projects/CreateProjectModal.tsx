@@ -5,6 +5,7 @@ import { User } from "@/types";
 import { createProject } from "@/lib/actions/projects";
 import { useCurrentUser } from "@/context/UserContext";
 import { useRouter } from "next/navigation";
+import { useModKeyLabel } from "@/hooks/useModKeyLabel";
 import { X, FolderPlus, Loader2, ShieldAlert } from "lucide-react";
 
 interface CreateProjectModalProps {
@@ -20,6 +21,7 @@ export default function CreateProjectModal({
 }: CreateProjectModalProps) {
   const router = useRouter();
   const { currentUser } = useCurrentUser();
+  const modKey = useModKeyLabel();
   const canCreate = !currentUser || !!currentUser.canCreateProjects;
   const [name, setName] = useState("");
   const [key, setKey] = useState("");
@@ -196,7 +198,7 @@ export default function CreateProjectModal({
 
           <div className="pt-4 border-t border-jira-gray-200 flex items-center justify-end gap-3">
             <span className="text-[11px] text-jira-gray-400 hidden sm:inline mr-1">
-              Press <kbd className="px-1.5 py-0.5 font-mono text-[10px] bg-jira-gray-100 border border-jira-gray-300 rounded text-jira-gray-600">⌘↵</kbd> to submit
+              Press <kbd className="px-1.5 py-0.5 font-mono text-[10px] bg-jira-gray-100 border border-jira-gray-300 rounded text-jira-gray-600">{modKey}↵</kbd> to submit
             </span>
             <button
               type="button"
