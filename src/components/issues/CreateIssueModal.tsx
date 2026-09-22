@@ -11,7 +11,7 @@ import CustomFieldRenderer from "@/components/common/CustomFieldRenderer";
 import IssueDescriptionEditor from "@/components/issues/IssueDescriptionEditor";
 import { useCurrentUser } from "@/context/UserContext";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
-import { useModKeyLabel } from "@/hooks/useModKeyLabel";
+import SubmitShortcutHint from "@/components/common/SubmitShortcutHint";
 import { X, Loader2, Sliders, ShieldAlert } from "lucide-react";
 
 interface CreateIssueModalProps {
@@ -36,7 +36,6 @@ export default function CreateIssueModal({
   onIssueCreated,
 }: CreateIssueModalProps) {
   const { currentUser } = useCurrentUser();
-  const modKey = useModKeyLabel();
 
   const [selectedProjectId, setSelectedProjectId] = useState(project.id);
   const currentSelectedProject = allProjects.find((p) => p.id === selectedProjectId) || project;
@@ -491,9 +490,7 @@ export default function CreateIssueModal({
 
           {/* Modal Footer */}
           <div className="pt-4 border-t border-jira-gray-200 flex items-center justify-end gap-3">
-            <span className="text-[11px] text-jira-gray-400 hidden sm:inline mr-1">
-              Press <kbd className="px-1.5 py-0.5 font-mono text-[10px] bg-jira-gray-100 border border-jira-gray-300 rounded text-jira-gray-600">{modKey}↵</kbd> to submit
-            </span>
+            <SubmitShortcutHint className="hidden sm:inline-flex mr-1" />
             <button
               type="button"
               onClick={onClose}
