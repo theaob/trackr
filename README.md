@@ -298,13 +298,18 @@ from a login attempt started on this instance.
 
 ```bash
 npm run typecheck   # tsc --noEmit
-npm run lint        # next lint
+npm run lint        # next lint; any warning fails
 npm test            # vitest run
 npm run build       # production build
 ```
 
 CI runs all four on every push and pull request, and the release workflow will
-not publish an image unless they pass.
+not publish an image unless they pass. The tests include a check that every
+Tailwind class used under `src/` actually generates CSS, since Tailwind skips
+unknown classes silently.
+
+Bump the version with `npm version patch --no-git-tag-version` so
+`package-lock.json` moves with `package.json`; CI fails when they differ.
 
 ## 🛠 Tech Stack
 

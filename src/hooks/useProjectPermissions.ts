@@ -30,6 +30,7 @@ export function useProjectPermissions(
     const isMember = role === "MEMBER";
     const isViewer = role === "VIEWER" && !isLead;
     const canViewProject = isAdmin || hasPermission(role, "VIEW_PROJECT", allCustomRoles);
+    const canManageProject = isAdmin || hasPermission(role, "PROJECT_ADMIN", allCustomRoles);
     const roleConfig = getRoleBadgeConfig(role, allCustomRoles);
 
     return {
@@ -40,7 +41,10 @@ export function useProjectPermissions(
       isMember,
       isViewer,
       canViewProject,
-      canManageProject: isAdmin || hasPermission(role, "PROJECT_ADMIN", allCustomRoles),
+      canManageProject,
+      // May edit or delete other people's issues, comments, attachments and
+      // logged work. Mirrors canModerateProject on the server.
+      canModerate: canManageProject,
       canManageAccess: isAdmin || hasPermission(role, "MANAGE_ACCESS", allCustomRoles),
       canManageSprints: isAdmin || hasPermission(role, "MANAGE_SPRINTS", allCustomRoles),
       canManageVersions: isAdmin || hasPermission(role, "MANAGE_VERSIONS", allCustomRoles),

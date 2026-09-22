@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useCurrentUser } from "@/context/UserContext";
 import { PersonalAccessToken } from "@/types";
 import {
@@ -65,24 +65,25 @@ export default function PersonalAccessTokensModal({
   const [hasCopied, setHasCopied] = useState(false);
   const [hasCopiedCurl, setHasCopiedCurl] = useState(false);
 
-  // Load tokens when modal opens
-  useEffect(() => {
-    if (!isOpen || !currentUser) return;
-    loadTokens();
-  }, [isOpen, currentUser]);
-
-  const loadTokens = async () => {
-    if (!currentUser) return;
+  const userId = currentUser?.id;
+  const loadTokens = useCallback(async () => {
+    if (!userId) return;
     setIsLoading(true);
     try {
-      const list = await getUserTokens(currentUser.id);
+      const list = await getUserTokens(userId);
       setTokens(list);
     } catch (err) {
       console.error(err);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [userId]);
+
+  // Load tokens when modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+    loadTokens();
+  }, [isOpen, loadTokens]);
 
   if (!isOpen) return null;
 

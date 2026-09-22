@@ -28,6 +28,7 @@ import { addComment, deleteComment } from "@/lib/actions/comments";
 import { uploadAttachment } from "@/lib/actions/attachments";
 import { MAX_ATTACHMENT_SIZE, formatFileSize, generatePastedImageFileName } from "@/lib/attachments";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
+import { useRefetchOnFocus } from "@/hooks/useRefetchOnFocus";
 import {
   Search,
   SlidersHorizontal,
@@ -470,7 +471,8 @@ export default function IssuesListView({
   };
 
   // Server-side fetch on filter/pagination/sorting changes
-  const fetchIssues = useCallback(async () => {
+  // A background refresh keeps the row selection and skips the spinner.
+  const fetchIssues = useCallback(async ({ background = false }: { background?: boolean } = {}) => {
     if (filterMode === "tql" && tqlQuery.trim()) {
       const syntaxCheck = TQLParser.parse(tqlQuery);
       if (!syntaxCheck.success) {
@@ -478,7 +480,7 @@ export default function IssuesListView({
       }
     }
 
-    setIsLoading(true);
+    if (!background) setIsLoading(true);
     try {
       const res = await getPaginatedIssues(
         filterMode === "tql"
@@ -511,12 +513,17 @@ export default function IssuesListView({
       setIssues(res.issues as any);
       setTotalCount(res.totalCount);
       setTotalPages(res.totalPages);
-      setSelectedIds(new Set());
+      if (background) {
+        const stillListed = new Set(res.issues.map((i) => i.id));
+        setSelectedIds((prev) => new Set(Array.from(prev).filter((id) => stillListed.has(id))));
+      } else {
+        setSelectedIds(new Set());
+      }
       setSelectedIssueId((prevId) => resolveNextSelectedIssueId(prevId, res.issues));
     } catch (err) {
       console.error("Failed to load paginated issues", err);
     } finally {
-      setIsLoading(false);
+      if (!background) setIsLoading(false);
     }
   }, [
     filterMode,
@@ -552,6 +559,9 @@ export default function IssuesListView({
       clearTimeout(timer);
     };
   }, [fetchIssues]);
+
+  // Pick up issues changed in another tab or by someone else.
+  useRefetchOnFocus(() => fetchIssues({ background: true }));
 
   // Handle jira:issue-created custom event
   useEffect(() => {
@@ -707,13 +717,17 @@ export default function IssuesListView({
   // The list query does not carry comment and activity threads -- loading them
   // for every row costs far more than the table ever shows. Fetch the full
   // record for the one issue on display instead.
+  // Keyed on whether details are missing, not just the id: a list reload swaps
+  // in the slim record again and the details have to be fetched again.
+  const selectedId = selectedIssue?.id;
+  const selectedNeedsDetails =
+    !!selectedIssue && !(selectedIssue.comments && selectedIssue.children && selectedIssue.linksAsSource);
   useEffect(() => {
-    if (!selectedIssue || (selectedIssue.comments && selectedIssue.children && selectedIssue.linksAsSource)) return;
+    if (!selectedId || !selectedNeedsDetails) return;
 
     let cancelled = false;
-    const targetId = selectedIssue.id;
 
-    getIssueByKeyOrId(targetId).then((fetched) => {
+    getIssueByKeyOrId(selectedId).then((fetched) => {
       if (cancelled || !fetched) return;
       const typed = fetched as unknown as Issue;
       setIssues((prev) => prev.map((i) => (i.id === typed.id ? typed : i)));
@@ -722,7 +736,7 @@ export default function IssuesListView({
     return () => {
       cancelled = true;
     };
-  }, [selectedIssue?.id]);
+  }, [selectedId, selectedNeedsDetails]);
 
   // Sync description draft when selected issue changes
   useEffect(() => {
@@ -1284,7 +1298,7 @@ export default function IssuesListView({
                             </span>
                           )}
                           {issue.storyPoints !== null && (
-                            <span className="px-1.5 py-0.2 rounded-full bg-jira-gray-200 text-jira-gray-700 font-bold text-[10px]">
+                            <span className="px-1.5 py-px rounded-full bg-jira-gray-200 text-jira-gray-700 font-bold text-[10px]">
                               {issue.storyPoints} pts
                             </span>
                           )}

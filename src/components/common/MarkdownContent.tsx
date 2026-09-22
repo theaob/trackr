@@ -16,7 +16,7 @@ function MentionPill({ target, children, users }: { target: string; children?: R
   const matchedUser = users.find((u) => u.id === target);
   return (
     <span
-      className="inline-flex items-center gap-0.5 px-1.5 py-0.2 mx-0.5 rounded-sm bg-jira-blue-subtle text-jira-blue font-semibold text-xs border border-jira-blue/20 hover:bg-jira-blue/10 transition-colors select-none"
+      className="inline-flex items-center gap-0.5 px-1.5 py-px mx-0.5 rounded-sm bg-jira-blue-subtle text-jira-blue font-semibold text-xs border border-jira-blue/20 hover:bg-jira-blue/10 transition-colors select-none"
       title={matchedUser ? `${matchedUser.name} (${matchedUser.role || matchedUser.email})` : undefined}
     >
       <span className="text-jira-blue/70 text-[11px]">@</span>

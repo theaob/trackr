@@ -8,6 +8,7 @@ import {
   projectIdForWorklog,
   requireProjectPermission,
   toActionError,
+  canModerateProject,
 } from "@/lib/auth/guards";
 import { DISPLAY_USER_SELECT } from "@/lib/auth/publicUser";
 import { formatDuration } from "@/lib/duration";
@@ -91,7 +92,8 @@ export async function logWork(
 export async function deleteWorklog(worklogId: string) {
   try {
     const projectId = await projectIdForWorklog(worklogId);
-    const { user, role } = await requireProjectPermission(projectId, "VIEW_PROJECT");
+    const auth = await requireProjectPermission(projectId, "VIEW_PROJECT");
+    const { user } = auth;
 
     const worklog = await prisma.worklog.findUnique({
       where: { id: worklogId },
@@ -100,7 +102,7 @@ export async function deleteWorklog(worklogId: string) {
     if (!worklog) throw new Error("Worklog not found");
 
     // A worklog belongs to its author; project administrators can moderate.
-    if (worklog.authorId !== user.id && role !== "ADMIN") {
+    if (worklog.authorId !== user.id && !(await canModerateProject(auth))) {
       return { success: false as const, error: "You can only delete your own logged work." };
     }
 

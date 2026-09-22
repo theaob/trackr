@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Webhook, WebhookDelivery } from "@/types";
 import { getWebhookDeliveries, testWebhook } from "@/lib/actions/webhooks";
 import {
@@ -33,16 +33,16 @@ export default function WebhookDeliveriesModal({
   const [isTesting, setIsTesting] = useState(false);
   const [expandedDeliveryId, setExpandedDeliveryId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isOpen || !webhook) return;
-    loadDeliveries();
-  }, [isOpen, webhook]);
-
-  const loadDeliveries = async () => {
-    if (!webhook) return;
+  const webhookId = webhook?.id;
+  // Ignores a slow response for a webhook the modal has since moved away from.
+  const latestRequest = useRef(0);
+  const loadDeliveries = useCallback(async () => {
+    if (!webhookId) return;
+    const request = ++latestRequest.current;
     setIsLoading(true);
     try {
-      const data = await getWebhookDeliveries(webhook.id);
+      const data = await getWebhookDeliveries(webhookId);
+      if (request !== latestRequest.current) return;
       setDeliveries(data);
       if (data.length > 0) {
         setExpandedDeliveryId(data[0].id);
@@ -50,9 +50,14 @@ export default function WebhookDeliveriesModal({
     } catch (err) {
       console.error(err);
     } finally {
-      setIsLoading(false);
+      if (request === latestRequest.current) setIsLoading(false);
     }
-  };
+  }, [webhookId]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    loadDeliveries();
+  }, [isOpen, loadDeliveries]);
 
   const handleTestPing = async () => {
     if (!webhook) return;

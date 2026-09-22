@@ -152,6 +152,17 @@ export async function checkProjectPermission(
 }
 
 /**
+ * Whether the caller may moderate other people's issues, comments,
+ * attachments and logged work: the built-in Administrator (which includes the
+ * project lead), or a custom role granted the Project Admin permission.
+ */
+export async function canModerateProject(auth: AuthenticatedProjectAuth): Promise<boolean> {
+  if (auth.role === "ADMIN") return true;
+  const { allowed } = await checkProjectPermission(auth.user.id, auth.projectId, "PROJECT_ADMIN");
+  return allowed;
+}
+
+/**
  * Require a signed-in caller holding `permission` on `projectId`.
  *
  * Every write goes through here, so publishing a project to anonymous viewers

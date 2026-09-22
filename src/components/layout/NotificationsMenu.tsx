@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Notification } from "@/types";
 import { useCurrentUser } from "@/context/UserContext";
 import {
@@ -21,19 +21,18 @@ export default function NotificationsMenu() {
   const [isLoading, setIsLoading] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const fetchNotifications = async () => {
-    if (!currentUser) return;
+  const userId = currentUser?.id;
+  const fetchNotifications = useCallback(async () => {
+    if (!userId) return;
     setIsLoading(true);
-    const data = await getUserNotifications(currentUser.id);
+    const data = await getUserNotifications(userId);
     setNotifications(data as Notification[]);
     setIsLoading(false);
-  };
+  }, [userId]);
 
   useEffect(() => {
-    if (currentUser) {
-      fetchNotifications();
-    }
-  }, [currentUser]);
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   // Click outside listener
   useEffect(() => {

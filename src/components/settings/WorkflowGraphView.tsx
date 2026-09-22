@@ -899,7 +899,7 @@ export default function WorkflowGraphView({
                       style={{ backgroundColor: status.color || style.accent }}
                     />
                     <span
-                      className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded-full ${style.badgeBg} ${style.badgeText}`}
+                      className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-px rounded-full ${style.badgeBg} ${style.badgeText}`}
                     >
                       {style.label}
                     </span>
@@ -907,14 +907,14 @@ export default function WorkflowGraphView({
 
                   {isAllIncoming ? (
                     <span
-                      className="text-[9px] font-bold text-jira-blue bg-blue-100/90 border border-jira-blue/30 px-1.5 py-0.2 rounded flex items-center gap-0.5 shrink-0"
+                      className="text-[9px] font-bold text-jira-blue bg-blue-100/90 border border-jira-blue/30 px-1.5 py-px rounded flex items-center gap-0.5 shrink-0"
                       title="Issues in any status can transition directly to this status (General Start)"
                     >
                       <Sparkles className="w-2.5 h-2.5 text-jira-blue" />
                       <span>General Start</span>
                     </span>
                   ) : status.isBacklog ? (
-                    <span className="text-[9px] font-semibold text-jira-gray-500 bg-jira-gray-200/80 px-1.5 py-0.2 rounded">
+                    <span className="text-[9px] font-semibold text-jira-gray-500 bg-jira-gray-200/80 px-1.5 py-px rounded">
                       Backlog
                     </span>
                   ) : null}

@@ -307,7 +307,7 @@ export default function ProjectSettingsView({
           >
             <Sliders className="w-3.5 h-3.5" />
             Custom Fields
-            <span className="ml-1 px-1.5 py-0.2 bg-jira-gray-100 text-jira-gray-700 rounded-full text-[10px] font-bold">
+            <span className="ml-1 px-1.5 py-px bg-jira-gray-100 text-jira-gray-700 rounded-full text-[10px] font-bold">
               {customFields.length}
             </span>
           </button>
@@ -322,7 +322,7 @@ export default function ProjectSettingsView({
           >
             <Boxes className="w-3.5 h-3.5" />
             Components
-            <span className="ml-1 px-1.5 py-0.2 bg-jira-gray-100 text-jira-gray-700 rounded-full text-[10px] font-bold">
+            <span className="ml-1 px-1.5 py-px bg-jira-gray-100 text-jira-gray-700 rounded-full text-[10px] font-bold">
               {components.length}
             </span>
           </button>
@@ -337,7 +337,7 @@ export default function ProjectSettingsView({
           >
             <WebhookIcon className="w-3.5 h-3.5" />
             Webhooks
-            <span className="ml-1 px-1.5 py-0.2 bg-jira-gray-100 text-jira-gray-700 rounded-full text-[10px] font-bold">
+            <span className="ml-1 px-1.5 py-px bg-jira-gray-100 text-jira-gray-700 rounded-full text-[10px] font-bold">
               {webhooks.length}
             </span>
           </button>
@@ -352,7 +352,7 @@ export default function ProjectSettingsView({
           >
             <Users className="w-3.5 h-3.5" />
             Access & Roles
-            <span className="ml-1 px-1.5 py-0.2 bg-jira-gray-100 text-jira-gray-700 rounded-full text-[10px] font-bold">
+            <span className="ml-1 px-1.5 py-px bg-jira-gray-100 text-jira-gray-700 rounded-full text-[10px] font-bold">
               {members.length}
             </span>
           </button>
@@ -368,7 +368,7 @@ export default function ProjectSettingsView({
           >
             <GitBranch className="w-3.5 h-3.5" />
             Workflow
-            <span className="ml-1 px-1.5 py-0.2 bg-jira-gray-100 text-jira-gray-700 rounded-full text-[10px] font-bold">
+            <span className="ml-1 px-1.5 py-px bg-jira-gray-100 text-jira-gray-700 rounded-full text-[10px] font-bold">
               {initialWorkflowStatuses.length}
             </span>
           </button>
@@ -857,13 +857,13 @@ export default function ProjectSettingsView({
                             <WebhookIcon className="w-3.5 h-3.5 text-jira-blue shrink-0" />
                             <span>{wh.name}</span>
                             {wh.secret && (
-                              <span className="text-[10px] text-jira-gray-500 font-normal px-1.5 py-0.2 bg-jira-gray-100 rounded border border-jira-gray-300">
+                              <span className="text-[10px] text-jira-gray-500 font-normal px-1.5 py-px bg-jira-gray-100 rounded border border-jira-gray-300">
                                 HMAC Signed
                               </span>
                             )}
                             {wh.jqlFilter && (
                               <span
-                                className="text-[10px] text-jira-blue font-mono px-1.5 py-0.2 bg-jira-blue-light/60 rounded border border-jira-blue/30 max-w-[220px] truncate"
+                                className="text-[10px] text-jira-blue font-mono px-1.5 py-px bg-jira-blue-light/60 rounded border border-jira-blue/30 max-w-[220px] truncate"
                                 title={`JQL Filter: ${wh.jqlFilter}`}
                               >
                                 JQL: {wh.jqlFilter}

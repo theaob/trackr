@@ -214,7 +214,7 @@ export default function ProjectAccessTab({
             <Users className="w-4 h-4" />
             <span>Team Members</span>
             <span
-              className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+              className={`px-1.5 py-px rounded-full text-[10px] font-bold ${
                 activeSubTab === "members"
                   ? "bg-jira-blue-light text-jira-blue"
                   : "bg-jira-gray-100 text-jira-gray-600"
@@ -236,7 +236,7 @@ export default function ProjectAccessTab({
             <ShieldCheck className="w-4 h-4" />
             <span>Project Roles</span>
             <span
-              className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+              className={`px-1.5 py-px rounded-full text-[10px] font-bold ${
                 activeSubTab === "roles"
                   ? "bg-jira-blue-light text-jira-blue"
                   : "bg-jira-gray-100 text-jira-gray-600"
@@ -445,7 +445,7 @@ export default function ProjectAccessTab({
                                 {isLead && (
                                   <span
                                     title="Project Lead"
-                                    className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[10px] font-bold"
+                                    className="inline-flex items-center gap-0.5 px-1.5 py-px rounded bg-amber-100 text-amber-800 text-[10px] font-bold"
                                   >
                                     <Crown className="w-3 h-3 text-amber-600" />
                                     Lead
@@ -1045,7 +1045,7 @@ function AddMemberModal({
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-jira-navy">{cfg.name}</span>
                           <span
-                            className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${cfg.badgeBg} ${cfg.badgeText} ${cfg.border}`}
+                            className={`text-[9px] font-bold px-1.5 py-px rounded border ${cfg.badgeBg} ${cfg.badgeText} ${cfg.border}`}
                           >
                             {role}
                           </span>
@@ -1082,7 +1082,7 @@ function AddMemberModal({
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-jira-navy">{cr.name}</span>
                           <span
-                            className="text-[9px] font-bold px-1.5 py-0.2 rounded border flex items-center gap-1"
+                            className="text-[9px] font-bold px-1.5 py-px rounded border flex items-center gap-1"
                             style={{
                               backgroundColor: `${color}15`,
                               borderColor: `${color}40`,
@@ -1536,7 +1536,7 @@ function PermissionsMatrixModal({
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-jira-navy">{permMeta.label}</span>
-                        <span className="text-[10px] uppercase font-semibold px-1.5 py-0.2 rounded bg-jira-gray-100 text-jira-gray-600">
+                        <span className="text-[10px] uppercase font-semibold px-1.5 py-px rounded bg-jira-gray-100 text-jira-gray-600">
                           {permMeta.category}
                         </span>
                       </div>

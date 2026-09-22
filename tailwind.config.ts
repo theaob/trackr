@@ -1,13 +1,28 @@
 import type { Config } from "tailwindcss";
+import animate from "tailwindcss-animate";
 
 const config: Config = {
-  content: [
-    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
-  ],
+  // All of src: class names also live in hooks, context and lib (role badges,
+  // shortcut hints), and anything outside these globs silently gets no CSS.
+  content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
+      // Sizes the components use that Tailwind 3 lacks (they're Tailwind 4's
+      // scale). Without these the classes silently produce no CSS.
+      boxShadow: {
+        "2xs": "0 1px rgb(0 0 0 / 0.05)",
+        xs: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+      },
+      blur: {
+        "2xs": "2px",
+        xs: "4px",
+      },
+      borderRadius: {
+        xs: "0.125rem",
+      },
+      spacing: {
+        "4.5": "1.125rem",
+      },
       colors: {
         jira: {
           blue: {
@@ -43,6 +58,6 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [animate],
 };
 export default config;

@@ -13,6 +13,7 @@ import {
 } from "@/lib/auth/guards";
 import { getCurrentUser } from "@/lib/auth/session";
 import { checkWebhookUrl } from "@/lib/webhookUrl";
+import { postWebhook } from "@/lib/webhookDelivery";
 import { TQLParser } from "@/lib/tql/parser";
 import { TQLCompiler } from "@/lib/tql/compiler";
 
@@ -249,32 +250,20 @@ async function deliverWebhook(
   let errorMsg: string | null = null;
 
   // Re-check at delivery time: the host may resolve differently now than it
-  // did when the webhook was saved.
+  // did when the webhook was saved. postWebhook repeats the check on the very
+  // address it connects to, which is what actually stops DNS rebinding; this
+  // one just gives a clearer error for a URL that's plainly not allowed.
   const urlCheck = await checkWebhookUrl(webhook.url);
 
   if (!urlCheck.ok) {
     errorMsg = urlCheck.error || "Webhook URL is not allowed";
   } else {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000); // 8s timeout
-
     try {
-      const res = await fetch(webhook.url, {
-        method: "POST",
-        headers,
-        body: payloadString,
-        signal: controller.signal,
-        // Following a redirect would sidestep the address check above.
-        redirect: "manual",
-      });
-
+      const res = await postWebhook(webhook.url, payloadString, { headers, timeoutMs: 8000 });
       status = res.status;
-      const text = await res.text();
-      responseBody = text.slice(0, 1000); // Truncate to first 1000 chars
+      responseBody = res.body.slice(0, 1000); // Truncate to first 1000 chars
     } catch (err: any) {
       errorMsg = err?.message || "Request failed";
-    } finally {
-      clearTimeout(timeout);
     }
   }
 

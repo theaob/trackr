@@ -32,3 +32,12 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #8993a4;
 }
+
+/* Open/close animations (tailwindcss-animate) are decoration only; skip them
+   for anyone who has asked their system for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in,
+  .animate-out {
+    animation: none !important;
+  }
+}

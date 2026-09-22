@@ -118,7 +118,8 @@ export default function IssueDetailModal({
 
   const canDeleteThisIssue =
     permissions.isAdmin ||
-    (permissions.canDeleteIssue && currentIssue?.reporterId === currentUser?.id);
+    (permissions.canDeleteIssue &&
+      (permissions.canModerate || currentIssue?.reporterId === currentUser?.id));
 
   // Watch state
   const [watching, setWatching] = useState(false);
@@ -188,12 +189,16 @@ export default function IssueDetailModal({
     });
   }, [issueId]);
 
+  // Reset the drafts only when the saved title or description (or the issue)
+  // changes, so an unrelated update doesn't wipe what's being typed.
+  const savedIssueId = currentIssue?.id;
+  const savedTitle = currentIssue?.title;
+  const savedDescription = currentIssue?.description;
   useEffect(() => {
-    if (currentIssue) {
-      setTitle(currentIssue.title || "");
-      setDescription(currentIssue.description || "");
-    }
-  }, [currentIssue?.id, currentIssue?.title, currentIssue?.description]);
+    if (!savedIssueId) return;
+    setTitle(savedTitle || "");
+    setDescription(savedDescription || "");
+  }, [savedIssueId, savedTitle, savedDescription]);
 
   // Load custom fields & values for this issue
   useEffect(() => {
@@ -1099,7 +1104,7 @@ export default function IssueDetailModal({
                 issueId={currentIssue.id}
                 attachments={currentIssue.attachments}
                 canUpload={permissions.canAddComment}
-                canDelete={(attachment) => permissions.isAdmin || attachment.uploadedById === currentUser?.id}
+                canDelete={(attachment) => permissions.canModerate || attachment.uploadedById === currentUser?.id}
                 onAttachmentAdded={handleAttachmentAdded}
                 onAttachmentRemoved={handleAttachmentRemoved}
               />
@@ -1214,13 +1219,15 @@ export default function IssueDetailModal({
                                 })}
                               </span>
                             </div>
-                            <button
-                              onClick={() => handleDeleteComment(comment.id)}
-                              className="text-jira-gray-400 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                              title="Delete comment"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {(permissions.canModerate || comment.authorId === currentUser?.id) && (
+                              <button
+                                onClick={() => handleDeleteComment(comment.id)}
+                                className="text-jira-gray-400 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="Delete comment"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                           <MarkdownContent
                             text={comment.content}
@@ -1402,7 +1409,7 @@ export default function IssueDetailModal({
               worklogs={currentIssue.worklogs}
               canEdit={permissions.canEditIssue}
               canLogWork={permissions.canAddComment}
-              isAdmin={permissions.isAdmin}
+              isAdmin={permissions.canModerate}
               currentUserId={currentUser?.id}
               onEstimatesChanged={handleEstimatesChanged}
               onWorklogAdded={handleWorklogAdded}

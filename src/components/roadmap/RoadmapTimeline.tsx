@@ -224,7 +224,7 @@ export default function RoadmapTimeline({ epics, onSelectIssue }: RoadmapTimelin
                       </span>
 
                       {hasChildren && (
-                        <span className="text-[10px] bg-jira-gray-100 text-jira-gray-600 px-1.5 py-0.2 rounded-full font-semibold shrink-0 ml-auto mr-1">
+                        <span className="text-[10px] bg-jira-gray-100 text-jira-gray-600 px-1.5 py-px rounded-full font-semibold shrink-0 ml-auto mr-1">
                           {epic.children!.length}
                         </span>
                       )}

@@ -276,7 +276,7 @@ export default function TQLQueryBar({
               >
                 <div className="flex items-center gap-2">
                   <span
-                    className={`text-[9px] font-bold px-1.5 py-0.2 rounded uppercase ${
+                    className={`text-[9px] font-bold px-1.5 py-px rounded uppercase ${
                       item.type === "field"
                         ? "bg-blue-100 text-blue-700"
                         : item.type === "operator"

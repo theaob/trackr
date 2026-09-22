@@ -364,7 +364,7 @@ export default function Navbar({
               {currentUser?.name}
             </span>
             <span
-              className={`text-[9px] font-bold px-1.5 py-0.2 rounded border hidden md:inline ${permissions.roleConfig.badgeBg} ${permissions.roleConfig.badgeText} ${permissions.roleConfig.border}`}
+              className={`text-[9px] font-bold px-1.5 py-px rounded border hidden md:inline ${permissions.roleConfig.badgeBg} ${permissions.roleConfig.badgeText} ${permissions.roleConfig.border}`}
             >
               {permissions.roleConfig.name}
             </span>

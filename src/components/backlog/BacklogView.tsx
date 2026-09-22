@@ -10,8 +10,9 @@ import IssueDetailModal from "@/components/issues/IssueDetailModal";
 import CreateIssueModal from "@/components/issues/CreateIssueModal";
 import BacklogContextMenu from "@/components/backlog/BacklogContextMenu";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
-import { createSprint, startSprint, completeSprint, moveIssueToSprint, reorderBacklogIssue, renameSprint, deleteSprint } from "@/lib/actions/sprints";
-import { createIssue, getIssueByKeyOrId } from "@/lib/actions/issues";
+import { useRefetchOnFocus } from "@/hooks/useRefetchOnFocus";
+import { createSprint, startSprint, completeSprint, moveIssueToSprint, reorderBacklogIssue, renameSprint, deleteSprint, getProjectSprints } from "@/lib/actions/sprints";
+import { createIssue, getIssueByKeyOrId, getBacklogIssues, getProjectEpics } from "@/lib/actions/issues";
 import { useCurrentUser } from "@/context/UserContext";
 import { useSearch } from "@/context/SearchContext";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
@@ -95,6 +96,18 @@ export default function BacklogView({
       setEpics(initialEpics);
     }
   }, [initialEpics]);
+
+  // Pick up issues and sprints changed in another tab or by someone else.
+  useRefetchOnFocus(async () => {
+    const [freshIssues, freshSprints, freshEpics] = await Promise.all([
+      getBacklogIssues(project.id),
+      getProjectSprints(project.id),
+      getProjectEpics(project.id),
+    ]);
+    setIssues(freshIssues as unknown as Issue[]);
+    setSprints(freshSprints as unknown as Sprint[]);
+    setEpics(freshEpics as unknown as Issue[]);
+  });
 
   const handleOpenEpic = (epicIdOrKey: string) => {
     const found =
@@ -1210,7 +1223,7 @@ export default function BacklogView({
                                         {issue.key}
                                       </span>
                                       {issue.parent && (
-                                        <span className="text-[10px] bg-purple-100 text-purple-800 font-semibold px-1.5 py-0.2 rounded truncate max-w-[100px]">
+                                        <span className="text-[10px] bg-purple-100 text-purple-800 font-semibold px-1.5 py-px rounded truncate max-w-[100px]">
                                           {issue.parent.title}
                                         </span>
                                       )}
@@ -1243,7 +1256,7 @@ export default function BacklogView({
                                     <div className="flex items-center gap-2 shrink-0">
                                       <PriorityIcon priority={issue.priority} className="w-3.5 h-3.5" />
                                       {issue.storyPoints !== null && (
-                                        <span className="px-1.5 py-0.2 rounded-full bg-jira-gray-200 text-jira-gray-800 text-[10px] font-bold">
+                                        <span className="px-1.5 py-px rounded-full bg-jira-gray-200 text-jira-gray-800 text-[10px] font-bold">
                                           {issue.storyPoints}
                                         </span>
                                       )}
@@ -1543,7 +1556,7 @@ export default function BacklogView({
                                   {issue.key}
                                 </span>
                                 {issue.parent && (
-                                  <span className="text-[10px] bg-purple-100 text-purple-800 font-semibold px-1.5 py-0.2 rounded truncate max-w-[100px]">
+                                  <span className="text-[10px] bg-purple-100 text-purple-800 font-semibold px-1.5 py-px rounded truncate max-w-[100px]">
                                     {issue.parent.title}
                                   </span>
                                 )}
@@ -1576,7 +1589,7 @@ export default function BacklogView({
                               <div className="flex items-center gap-2 shrink-0">
                                 <PriorityIcon priority={issue.priority} className="w-3.5 h-3.5" />
                                 {issue.storyPoints !== null && (
-                                  <span className="px-1.5 py-0.2 rounded-full bg-jira-gray-200 text-jira-gray-800 text-[10px] font-bold">
+                                  <span className="px-1.5 py-px rounded-full bg-jira-gray-200 text-jira-gray-800 text-[10px] font-bold">
                                     {issue.storyPoints}
                                   </span>
                                 )}

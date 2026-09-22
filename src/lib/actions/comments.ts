@@ -9,6 +9,7 @@ import {
   projectIdForIssue,
   requireProjectPermission,
   toActionError,
+  canModerateProject,
 } from "@/lib/auth/guards";
 import { findMentionedUsers } from "@/lib/mentions";
 import { notifyWatchers } from "@/lib/watcherNotify";
@@ -140,7 +141,8 @@ export async function addComment(
 export async function updateComment(commentId: string, content: string) {
   try {
     const projectId = await projectIdForComment(commentId);
-    const { user, role } = await requireProjectPermission(projectId, "VIEW_PROJECT");
+    const auth = await requireProjectPermission(projectId, "VIEW_PROJECT");
+    const { user } = auth;
 
     if (!content.trim()) return { success: false, error: "Comment cannot be empty" };
 
@@ -156,7 +158,7 @@ export async function updateComment(commentId: string, content: string) {
     if (!comment) throw new Error("Comment not found");
 
     // A comment belongs to its author; project administrators can moderate.
-    if (comment.authorId !== user.id && role !== "ADMIN") {
+    if (comment.authorId !== user.id && !(await canModerateProject(auth))) {
       return { success: false, error: "You can only edit your own comments." };
     }
 
@@ -202,7 +204,8 @@ export async function updateComment(commentId: string, content: string) {
 export async function deleteComment(commentId: string) {
   try {
     const projectId = await projectIdForComment(commentId);
-    const { user, role } = await requireProjectPermission(projectId, "VIEW_PROJECT");
+    const auth = await requireProjectPermission(projectId, "VIEW_PROJECT");
+    const { user } = auth;
 
     const comment = await prisma.comment.findUnique({
       where: { id: commentId },
@@ -216,7 +219,7 @@ export async function deleteComment(commentId: string) {
     if (!comment) throw new Error("Comment not found");
 
     // A comment belongs to its author; project administrators can moderate.
-    if (comment.authorId !== user.id && role !== "ADMIN") {
+    if (comment.authorId !== user.id && !(await canModerateProject(auth))) {
       return { success: false, error: "You can only delete your own comments." };
     }
 

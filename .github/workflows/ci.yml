@@ -27,6 +27,18 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit
 
+      - name: Check lockfile version
+        # Releases are cut from package.json; a lockfile left behind drifts
+        # until someone's next npm install drags it into an unrelated commit.
+        run: |
+          node -e '
+            const pkg = require("./package.json").version;
+            const lock = require("./package-lock.json");
+            if (lock.version !== pkg || lock.packages[""].version !== pkg) {
+              console.error(`package-lock.json is at ${lock.version}, package.json at ${pkg}. Bump with: npm version patch --no-git-tag-version`);
+              process.exit(1);
+            }'
+
       - name: Generate Prisma client
         run: npx prisma generate
 

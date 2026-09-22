@@ -13,6 +13,7 @@ import {
   requireProjectAccess,
   requireProjectPermission,
   toActionError,
+  canModerateProject,
 } from "@/lib/auth/guards";
 import { getCurrentUser } from "@/lib/auth/session";
 import { findMentionedUsers } from "@/lib/mentions";
@@ -1461,7 +1462,8 @@ export async function updateIssueStatusAndOrder(
 export async function deleteIssue(id: string) {
   try {
     const projectId = await projectIdForIssue(id);
-    const { user, role } = await requireProjectPermission(projectId, "DELETE_ISSUE");
+    const auth = await requireProjectPermission(projectId, "DELETE_ISSUE");
+    const { user } = auth;
 
     const issue = await prisma.issue.findUnique({
       where: { id },
@@ -1470,7 +1472,7 @@ export async function deleteIssue(id: string) {
     if (!issue) throw new Error("Issue not found");
 
     // An issue belongs to its reporter; project administrators can delete any issue.
-    if (role !== "ADMIN" && issue.reporterId !== user.id) {
+    if (issue.reporterId !== user.id && !(await canModerateProject(auth))) {
       return {
         success: false as const,
         error: "Only project administrators or the issue's reporter can delete this issue.",

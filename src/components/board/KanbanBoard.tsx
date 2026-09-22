@@ -20,6 +20,7 @@ import EditSprintModal from "@/components/sprints/EditSprintModal";
 import CreateVersionModal from "@/components/releases/CreateVersionModal";
 import Link from "next/link";
 import { PriorityIcon } from "@/components/common/IssueIcons";
+import { useRefetchOnFocus } from "@/hooks/useRefetchOnFocus";
 
 interface KanbanBoardProps {
   project: Project;
@@ -98,29 +99,11 @@ export default function KanbanBoard({
 
   const [issues, setIssues] = useState<Issue[]>(initialIssues);
 
-  // Server actions in another tab (or another user's session) never reach
-  // this one -- there's no push channel, so a card someone else moved just
-  // sits stale here until something asks the server again. Re-fetch the
-  // board whenever this tab regains focus/visibility, which is the moment
-  // someone would actually notice it's out of date.
-  useEffect(() => {
-    const refresh = () => {
-      getBoardIssues(project.id, activeSprint?.id).then((fresh) => {
-        if (Array.isArray(fresh)) setIssues(fresh as unknown as Issue[]);
-      });
-    };
-
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") refresh();
-    };
-
-    document.addEventListener("visibilitychange", handleVisibility);
-    window.addEventListener("focus", refresh);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibility);
-      window.removeEventListener("focus", refresh);
-    };
-  }, [project.id, activeSprint?.id]);
+  // Pick up cards moved in another tab or by someone else.
+  useRefetchOnFocus(async () => {
+    const fresh = await getBoardIssues(project.id, activeSprint?.id);
+    if (Array.isArray(fresh)) setIssues(fresh as unknown as Issue[]);
+  });
 
   const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -833,7 +816,7 @@ export default function KanbanBoard({
               >
                 <span>{col.title}</span>
                 <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  className={`text-[10px] px-1.5 py-px rounded-full font-bold ${
                     isActive ? "bg-white/25 text-white" : "bg-jira-gray-200 text-jira-gray-800"
                   }`}
                 >

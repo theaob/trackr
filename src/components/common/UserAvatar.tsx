@@ -69,6 +69,9 @@ export default function UserAvatar({
 
   if (user?.avatarUrl) {
     return (
+      // Avatars come from arbitrary SSO/Gravatar hosts, which next/image would
+      // need allow-listed one by one; a plain <img> is the right tool here.
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={user.avatarUrl}
         alt={name}

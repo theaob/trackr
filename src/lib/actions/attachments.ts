@@ -8,6 +8,7 @@ import {
   projectIdForIssue,
   requireProjectPermission,
   toActionError,
+  canModerateProject,
 } from "@/lib/auth/guards";
 import { DISPLAY_USER_SELECT } from "@/lib/auth/publicUser";
 import { MAX_ATTACHMENT_SIZE, sanitizeFileName, formatFileSize } from "@/lib/attachments";
@@ -90,7 +91,8 @@ export async function uploadAttachment(issueId: string, formData: FormData) {
 export async function deleteAttachment(attachmentId: string) {
   try {
     const projectId = await projectIdForAttachment(attachmentId);
-    const { user, role } = await requireProjectPermission(projectId, "VIEW_PROJECT");
+    const auth = await requireProjectPermission(projectId, "VIEW_PROJECT");
+    const { user } = auth;
 
     const attachment = await prisma.attachment.findUnique({
       where: { id: attachmentId },
@@ -99,7 +101,7 @@ export async function deleteAttachment(attachmentId: string) {
     if (!attachment) throw new Error("Attachment not found");
 
     // An attachment belongs to its uploader; project administrators can moderate.
-    if (attachment.uploadedById !== user.id && role !== "ADMIN") {
+    if (attachment.uploadedById !== user.id && !(await canModerateProject(auth))) {
       return { success: false, error: "You can only remove attachments you uploaded." };
     }
 
