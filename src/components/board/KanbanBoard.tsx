@@ -9,7 +9,7 @@ import BoardFilters, { SwimlaneGroupBy } from "./BoardFilters";
 import IssueDetailModal from "@/components/issues/IssueDetailModal";
 import CreateIssueModal from "@/components/issues/CreateIssueModal";
 import UserAvatar from "@/components/common/UserAvatar";
-import { updateIssueStatusAndOrder, getIssueByKeyOrId } from "@/lib/actions/issues";
+import { updateIssueStatusAndOrder, getIssueByKeyOrId, getBoardIssues } from "@/lib/actions/issues";
 import { useCurrentUser } from "@/context/UserContext";
 import { useSearch } from "@/context/SearchContext";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
@@ -97,6 +97,31 @@ export default function KanbanBoard({
   const searchQuery = propSearchQuery ?? contextSearchQuery;
 
   const [issues, setIssues] = useState<Issue[]>(initialIssues);
+
+  // Server actions in another tab (or another user's session) never reach
+  // this one -- there's no push channel, so a card someone else moved just
+  // sits stale here until something asks the server again. Re-fetch the
+  // board whenever this tab regains focus/visibility, which is the moment
+  // someone would actually notice it's out of date.
+  useEffect(() => {
+    const refresh = () => {
+      getBoardIssues(project.id, activeSprint?.id).then((fresh) => {
+        if (Array.isArray(fresh)) setIssues(fresh as unknown as Issue[]);
+      });
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("focus", refresh);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [project.id, activeSprint?.id]);
+
   const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isReleaseModalOpen, setIsReleaseModalOpen] = useState(false);
