@@ -59,6 +59,7 @@ import TQLQueryBar from "@/components/issues/tql/TQLQueryBar";
 import { TQLAutocompleteContext } from "@/lib/tql/autocomplete";
 import { basicFiltersToTQL, tqlToBasicFilters } from "@/lib/tql/converter";
 import { TQLParser } from "@/lib/tql/parser";
+import { formatCalendarDate } from "@/lib/calendarDate";
 
 interface IssuesListViewProps {
   project: Project;
@@ -1279,7 +1280,7 @@ export default function IssuesListView({
                               }`}
                             >
                               <CalendarClock className="w-3 h-3" />
-                              {format(new Date(issue.dueDate), "MMM d")}
+                              {formatCalendarDate(issue.dueDate, "MMM d")}
                             </span>
                           )}
                           {issue.storyPoints !== null && (
@@ -2095,7 +2096,7 @@ export default function IssuesListView({
                               }`}
                             >
                               <CalendarClock className="w-3.5 h-3.5" />
-                              {format(new Date(issue.dueDate), "MMM d, yyyy")}
+                              {formatCalendarDate(issue.dueDate, "MMM d, yyyy")}
                             </span>
                           ) : (
                             <span className="text-jira-gray-400">-</span>

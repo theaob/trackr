@@ -40,6 +40,7 @@ import EditSprintModal from "@/components/sprints/EditSprintModal";
 import { isOverdue } from "@/lib/dueDate";
 import { isDoneStatus, getDoneStatusNames } from "@/lib/workflowDisplay";
 import { format } from "date-fns";
+import { formatCalendarDate } from "@/lib/calendarDate";
 
 interface BacklogViewProps {
   project: Project;
@@ -1248,7 +1249,7 @@ export default function BacklogView({
                                               : "text-jira-gray-500"
                                           }`}
                                         >
-                                          {format(new Date(issue.dueDate), "MMM d")}
+                                          {formatCalendarDate(issue.dueDate, "MMM d")}
                                         </span>
                                       )}
                                     </div>
@@ -1335,10 +1336,10 @@ export default function BacklogView({
                                             ? "text-rose-600"
                                             : "text-jira-gray-500"
                                         }`}
-                                        title={`Due ${format(new Date(issue.dueDate), "MMM d, yyyy")}`}
+                                        title={`Due ${formatCalendarDate(issue.dueDate, "MMM d, yyyy")}`}
                                       >
                                         <CalendarClock className="w-3.5 h-3.5" />
-                                        {format(new Date(issue.dueDate), "MMM d")}
+                                        {formatCalendarDate(issue.dueDate, "MMM d")}
                                       </span>
                                     )}
 
@@ -1581,7 +1582,7 @@ export default function BacklogView({
                                         : "text-jira-gray-500"
                                     }`}
                                   >
-                                    {format(new Date(issue.dueDate), "MMM d")}
+                                    {formatCalendarDate(issue.dueDate, "MMM d")}
                                   </span>
                                 )}
                               </div>
@@ -1666,10 +1667,10 @@ export default function BacklogView({
                                       ? "text-rose-600"
                                       : "text-jira-gray-500"
                                   }`}
-                                  title={`Due ${format(new Date(issue.dueDate), "MMM d, yyyy")}`}
+                                  title={`Due ${formatCalendarDate(issue.dueDate, "MMM d, yyyy")}`}
                                 >
                                   <CalendarClock className="w-3.5 h-3.5" />
-                                  {format(new Date(issue.dueDate), "MMM d")}
+                                  {formatCalendarDate(issue.dueDate, "MMM d")}
                                 </span>
                               )}
 

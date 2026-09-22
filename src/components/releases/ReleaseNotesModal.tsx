@@ -1,5 +1,6 @@
 "use client";
 
+import { calendarDateToLocal } from "@/lib/calendarDate";
 import React, { useState, useEffect } from "react";
 import { Version } from "@/types";
 import { getVersionReleaseNotesData } from "@/lib/actions/versions";
@@ -96,7 +97,7 @@ export default function ReleaseNotesModal({
               </h2>
               <p className="text-[11px] text-jira-gray-500">
                 {version.releaseDate
-                  ? `Released on ${new Date(version.releaseDate).toLocaleDateString()}`
+                  ? `Released on ${calendarDateToLocal(version.releaseDate)?.toLocaleDateString()}`
                   : "Unreleased"}
               </p>
             </div>
@@ -172,7 +173,7 @@ export default function ReleaseNotesModal({
                   </h3>
                   <span className="text-xs text-jira-gray-600 font-medium">
                     {version.releaseDate
-                      ? new Date(version.releaseDate).toLocaleDateString()
+                      ? calendarDateToLocal(version.releaseDate)?.toLocaleDateString()
                       : "Pending"}
                   </span>
                 </div>

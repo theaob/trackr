@@ -1,5 +1,6 @@
 "use client";
 
+import { calendarDateToLocal } from "@/lib/calendarDate";
 import React from "react";
 import { CustomField, CustomFieldType } from "@/types";
 import { ExternalLink, Check, Calendar, Hash, Type, List, CheckSquare, Link as LinkIcon } from "lucide-react";
@@ -115,7 +116,7 @@ export default function CustomFieldRenderer({
         return (
           <span className="text-xs text-jira-navy font-medium flex items-center gap-1">
             <Calendar className="w-3.5 h-3.5 text-jira-gray-500" />
-            {new Date(value).toLocaleDateString()}
+            {calendarDateToLocal(value)?.toLocaleDateString()}
           </span>
         );
 

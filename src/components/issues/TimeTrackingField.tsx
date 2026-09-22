@@ -8,6 +8,7 @@ import { logWork, deleteWorklog } from "@/lib/actions/worklogs";
 import { formatDuration, parseDuration } from "@/lib/duration";
 import UserAvatar from "@/components/common/UserAvatar";
 import { Clock, Plus, Trash2, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { formatCalendarDate } from "@/lib/calendarDate";
 
 interface TimeTrackingFieldProps {
   issueId: string;
@@ -358,7 +359,7 @@ export default function TimeTrackingField({
                 </div>
                 {w.description && <p className="text-jira-gray-600 mt-0.5">{w.description}</p>}
                 <span className="text-[10px] text-jira-gray-400">
-                  {format(new Date(w.workDate), "MMM d, yyyy")} &middot;{" "}
+                  {formatCalendarDate(w.workDate, "MMM d, yyyy")} &middot;{" "}
                   {formatDistanceToNow(new Date(w.createdAt), { addSuffix: true })}
                 </span>
               </div>

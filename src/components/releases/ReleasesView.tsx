@@ -35,6 +35,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { format } from "date-fns";
+import { formatCalendarDate } from "@/lib/calendarDate";
 
 interface ReleasesViewProps {
   project: Project;
@@ -364,7 +365,7 @@ export default function ReleasesView({
                           }`}
                         >
                           <Calendar className="w-3.5 h-3.5" />
-                          Release date: {format(new Date(version.releaseDate), "MMM d, yyyy")}
+                          Release date: {formatCalendarDate(version.releaseDate, "MMM d, yyyy")}
                         </span>
                       </div>
                     )}

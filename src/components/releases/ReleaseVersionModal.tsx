@@ -1,5 +1,6 @@
 "use client";
 
+import { todayKey } from "@/lib/calendarDate";
 import React, { useState } from "react";
 import { Version } from "@/types";
 import { releaseVersion } from "@/lib/actions/versions";
@@ -20,9 +21,9 @@ export default function ReleaseVersionModal({
   onClose,
   onReleased,
 }: ReleaseVersionModalProps) {
-  const [releaseDate, setReleaseDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  // Today where the viewer is; toISOString() would give UTC's date, which is
+  // already tomorrow on a US evening.
+  const [releaseDate, setReleaseDate] = useState(() => todayKey());
 
   const unresolvedCount =
     (version.issueCount?.total || 0) - (version.issueCount?.done || 0);

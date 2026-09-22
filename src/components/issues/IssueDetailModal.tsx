@@ -1,5 +1,6 @@
 "use client";
 
+import { calendarDateKey } from "@/lib/calendarDate";
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Issue, IssueStatus, IssueType, PriorityLevel, User, Sprint, Version, CustomField, IssueLink, IssueLabel, WorkflowStatus, WorkflowTransition, Project, Attachment, IssueComponent, Worklog } from "@/types";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
@@ -1417,7 +1418,7 @@ export default function IssueDetailModal({
                 <input
                   type="date"
                   disabled={!permissions.canEditIssue}
-                  value={currentIssue.startDate ? format(new Date(currentIssue.startDate), "yyyy-MM-dd") : ""}
+                  value={calendarDateKey(currentIssue.startDate)}
                   onChange={(e) => handleStartDateChange(e.target.value)}
                   className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                 />
@@ -1432,7 +1433,7 @@ export default function IssueDetailModal({
               <input
                 type="date"
                 disabled={!permissions.canEditIssue}
-                value={currentIssue.dueDate ? format(new Date(currentIssue.dueDate), "yyyy-MM-dd") : ""}
+                value={calendarDateKey(currentIssue.dueDate)}
                 onChange={(e) => handleDueDateChange(e.target.value)}
                 className={`w-full bg-white border rounded px-2.5 py-1.5 text-xs focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed ${
                   isOverdue(

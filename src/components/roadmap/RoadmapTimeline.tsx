@@ -12,6 +12,7 @@ import { Map as MapIcon, ChevronDown, ChevronRight } from "lucide-react";
 import { IssueTypeIcon, StatusBadge } from "@/components/common/IssueIcons";
 import UserAvatar from "@/components/common/UserAvatar";
 import { IssueType, User } from "@/types";
+import { calendarDateToLocal } from "@/lib/calendarDate";
 
 export interface RoadmapChildIssue {
   id: string;
@@ -76,8 +77,8 @@ export default function RoadmapTimeline({ epics, onSelectIssue }: RoadmapTimelin
       const today = new Date();
       return { rangeStart: today, rangeEnd: addDays(today, 30), months: [] as Date[] };
     }
-    const starts = scheduled.map((e) => new Date(e.startDate!).getTime());
-    const ends = scheduled.map((e) => new Date(e.dueDate!).getTime());
+    const starts = scheduled.map((e) => calendarDateToLocal(e.startDate)!.getTime());
+    const ends = scheduled.map((e) => calendarDateToLocal(e.dueDate)!.getTime());
     const minStart = addDays(new Date(Math.min(...starts)), -3);
     const maxEnd = addDays(new Date(Math.max(...ends)), 3);
     const monthList = eachMonthOfInterval({ start: startOfMonth(minStart), end: maxEnd });
@@ -162,8 +163,8 @@ export default function RoadmapTimeline({ epics, onSelectIssue }: RoadmapTimelin
             </div>
 
             {scheduled.map((epic) => {
-              const start = new Date(epic.startDate!);
-              const end = new Date(epic.dueDate!);
+              const start = calendarDateToLocal(epic.startDate)!;
+              const end = calendarDateToLocal(epic.dueDate)!;
               const left = Math.max(0, pctFor(start));
               const width = Math.max(1.2, pctFor(end) - pctFor(start));
               const progress = progressPct(epic);
@@ -285,8 +286,8 @@ export default function RoadmapTimeline({ epics, onSelectIssue }: RoadmapTimelin
                     hasChildren &&
                     epic.children!.map((child) => {
                       const childHasDates = child.startDate && child.dueDate;
-                      const childStart = childHasDates ? new Date(child.startDate!) : null;
-                      const childEnd = childHasDates ? new Date(child.dueDate!) : null;
+                      const childStart = childHasDates ? calendarDateToLocal(child.startDate) : null;
+                      const childEnd = childHasDates ? calendarDateToLocal(child.dueDate) : null;
                       const childLeft = childStart ? Math.max(0, pctFor(childStart)) : left;
                       const childWidth =
                         childStart && childEnd

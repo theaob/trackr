@@ -7,6 +7,7 @@ import { Layers, Calendar, CheckCircle2, Clock, AlertTriangle, ArrowRight } from
 import type { EpicProgressItem } from "@/lib/actions/reports";
 import { PriorityIcon } from "@/components/common/IssueIcons";
 import { PriorityLevel } from "@/types";
+import { formatCalendarDate, isCalendarDateBeforeToday } from "@/lib/calendarDate";
 
 interface EpicProgressChartProps {
   epics: EpicProgressItem[];
@@ -117,7 +118,7 @@ export default function EpicProgressChart({ epics, projectKey }: EpicProgressCha
 
           const todoPct = Math.max(0, 100 - donePct - inProgPct);
 
-          const isOverdue = epic.dueDate && new Date(epic.dueDate) < new Date() && epic.completionPct < 100;
+          const isOverdue = isCalendarDateBeforeToday(epic.dueDate) && epic.completionPct < 100;
 
           return (
             <div
@@ -147,7 +148,7 @@ export default function EpicProgressChart({ epics, projectKey }: EpicProgressCha
                       }`}
                     >
                       <Calendar className="w-3 h-3" />
-                      {format(new Date(epic.dueDate), "MMM d, yyyy")}
+                      {formatCalendarDate(epic.dueDate, "MMM d, yyyy")}
                       {isOverdue && <span className="font-bold ml-0.5">(Overdue)</span>}
                     </span>
                   )}

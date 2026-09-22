@@ -8,6 +8,7 @@ import { CheckSquare, User as UserIcon, CalendarClock } from "lucide-react";
 import UserAvatar from "@/components/common/UserAvatar";
 import { isOverdue } from "@/lib/dueDate";
 import { format } from "date-fns";
+import { formatCalendarDate } from "@/lib/calendarDate";
 
 
 interface IssueCardProps {
@@ -112,10 +113,10 @@ export default function IssueCard({
                       ? "text-rose-600"
                       : "text-jira-gray-500"
                   }`}
-                  title={`Due ${format(new Date(issue.dueDate), "MMM d, yyyy")}`}
+                  title={`Due ${formatCalendarDate(issue.dueDate, "MMM d, yyyy")}`}
                 >
                   <CalendarClock className="w-3 h-3" />
-                  {format(new Date(issue.dueDate), "MMM d")}
+                  {formatCalendarDate(issue.dueDate, "MMM d")}
                 </span>
               )}
               {issue.version && (
