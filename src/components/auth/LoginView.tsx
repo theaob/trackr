@@ -19,7 +19,7 @@ export default function LoginView({
     <div className="min-h-screen w-full bg-jira-gray-100 flex flex-col items-center justify-center gap-6 p-4">
       <TrackrLogo size="lg" />
 
-      <Link
+      <Link prefetch={false}
         href="/projects"
         className="text-xs text-jira-gray-600 hover:text-jira-blue font-medium"
       >

@@ -523,7 +523,7 @@ export default function ReleasesView({
                                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                   {/* Fixed-width columns so rows line up whatever their content. */}
                                   <IssueTypeIcon type={issue.type} className="w-3.5 h-3.5 shrink-0" />
-                                  <Link
+                                  <Link prefetch={false}
                                     href={`/projects/${project.key}/issues?selectedIssue=${issue.key}`}
                                     className="min-w-[5.5rem] font-mono font-semibold text-jira-blue hover:underline shrink-0 flex items-center gap-1"
                                     title="View issue"

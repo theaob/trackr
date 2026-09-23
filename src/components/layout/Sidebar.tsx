@@ -141,7 +141,7 @@ export default function Sidebar({
                 const Icon = item.icon;
 
                 return (
-                  <Link
+                  <Link prefetch={false}
                     key={item.href}
                     href={item.href}
                     onClick={onCloseMobile}
@@ -157,7 +157,7 @@ export default function Sidebar({
                 );
               })}
               <div className="pt-2 mt-2 border-t border-jira-gray-200">
-                <Link
+                <Link prefetch={false}
                   href="/projects"
                   onClick={onCloseMobile}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-jira-gray-700 hover:bg-jira-gray-200 hover:text-jira-navy transition-colors"
@@ -189,7 +189,7 @@ export default function Sidebar({
             const Icon = item.icon;
 
             return (
-              <Link
+              <Link prefetch={false}
                 key={item.href}
                 href={item.href}
                 title={collapsed ? item.name : undefined}

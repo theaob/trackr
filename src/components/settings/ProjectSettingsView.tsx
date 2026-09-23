@@ -256,14 +256,14 @@ export default function ProjectSettingsView({
           Administrative features (project configuration, workflows, state transition graphs, access control, custom fields, and webhooks) are designed for desktop screens.
         </p>
         <div className="flex flex-col gap-2.5 w-full max-w-xs">
-          <Link
+          <Link prefetch={false}
             href={`/projects/${project.key}/board`}
             className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-jira-blue hover:bg-jira-blue-hover text-white rounded-md text-xs font-semibold shadow-xs transition-colors"
           >
             <Kanban className="w-4 h-4" />
             <span>Back to Active Board</span>
           </Link>
-          <Link
+          <Link prefetch={false}
             href={`/projects/${project.key}/issues`}
             className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-jira-gray-100 hover:bg-jira-gray-200 text-jira-navy border border-jira-gray-200 rounded-md text-xs font-semibold transition-colors"
           >

@@ -15,7 +15,16 @@ import IssueDescriptionEditor from "@/components/issues/IssueDescriptionEditor";
 
 import Link from "next/link";
 import { useCurrentUser } from "@/context/UserContext";
-import { updateIssue, deleteIssue, getIssueByKeyOrId } from "@/lib/actions/issues";
+import { updateIssue, deleteIssue, getIssueByKeyOrId, getOlderIssueHistory } from "@/lib/actions/issues";
+import {
+  HistoryKind,
+  historyRemaining,
+  historyTotal,
+  oldestLoadedId,
+  withCommentCountChange,
+  withOlderHistory,
+} from "@/lib/issueHistory";
+import ShowOlderButton from "@/components/issues/ShowOlderButton";
 import { addComment, deleteComment } from "@/lib/actions/comments";
 import { getProjectVersions } from "@/lib/actions/versions";
 import {
@@ -92,6 +101,7 @@ export default function IssueDetailModal({
 }: IssueDetailModalProps) {
   const { currentUser } = useCurrentUser();
   const [currentIssue, setCurrentIssue] = useState<Issue | null>(issue);
+  const [loadingOlder, setLoadingOlder] = useState<HistoryKind | null>(null);
   const effectiveProject =
     project ||
     currentIssue?.project ||
@@ -664,7 +674,10 @@ export default function IssueDetailModal({
 
     const previousIssue = currentIssue;
     const updatedComments = [optimisticComment, ...(currentIssue.comments || [])];
-    const updatedIssue = { ...currentIssue, comments: updatedComments };
+    const updatedIssue = withCommentCountChange(
+      { ...currentIssue, comments: updatedComments } as unknown as Issue,
+      1
+    );
 
     setCurrentIssue(updatedIssue as unknown as Issue);
     onIssueUpdated(updatedIssue as unknown as Issue);
@@ -686,11 +699,21 @@ export default function IssueDetailModal({
     }
   };
 
+  const loadOlderHistory = async (kind: HistoryKind) => {
+    if (!currentIssue) return;
+    const beforeId = oldestLoadedId(currentIssue, kind);
+    if (!beforeId) return;
+    setLoadingOlder(kind);
+    const older = await getOlderIssueHistory(currentIssue.id, kind, beforeId);
+    setLoadingOlder(null);
+    setCurrentIssue((prev) => (prev && prev.id === currentIssue.id ? withOlderHistory(prev, kind, older) : prev));
+  };
+
   // Handle Delete Comment
   const handleDeleteComment = async (commentId: string) => {
     const previousIssue = currentIssue;
     const updatedComments = (currentIssue.comments || []).filter((c) => c.id !== commentId);
-    const updatedIssue = { ...currentIssue, comments: updatedComments };
+    const updatedIssue = withCommentCountChange({ ...currentIssue, comments: updatedComments }, -1);
 
     setCurrentIssue(updatedIssue);
     onIssueUpdated(updatedIssue);
@@ -1134,7 +1157,7 @@ export default function IssueDetailModal({
                   }`}
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
-                  <span>Comments ({currentIssue.comments?.length || 0})</span>
+                  <span>Comments ({historyTotal(currentIssue, "comments")})</span>
                 </button>
                 <button
                   onClick={() => setActiveTab("history")}
@@ -1237,6 +1260,12 @@ export default function IssueDetailModal({
                         </div>
                       </div>
                     ))}
+                    <ShowOlderButton
+                      remaining={historyRemaining(currentIssue, "comments")}
+                      noun="comments"
+                      loading={loadingOlder === "comments"}
+                      onClick={() => loadOlderHistory("comments")}
+                    />
                   </div>
                 </div>
               )}
@@ -1263,6 +1292,12 @@ export default function IssueDetailModal({
                   ) : (
                     <div className="text-jira-gray-500 italic py-2">No activity recorded yet</div>
                   )}
+                  <ShowOlderButton
+                    remaining={historyRemaining(currentIssue, "activity")}
+                    noun="entries"
+                    loading={loadingOlder === "activity"}
+                    onClick={() => loadOlderHistory("activity")}
+                  />
                 </div>
               )}
             </div>
@@ -1550,7 +1585,7 @@ export default function IssueDetailModal({
                   {permissions.canManageVersions && (
                     <>
                       {" "}Create one under{" "}
-                      <Link
+                      <Link prefetch={false}
                         href={`/projects/${project?.key || currentIssue.project?.key || ""}/releases`}
                         className="text-jira-blue hover:underline font-medium"
                       >

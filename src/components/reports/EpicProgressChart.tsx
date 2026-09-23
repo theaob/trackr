@@ -116,7 +116,7 @@ export default function EpicProgressChart({ epics, projectKey }: EpicProgressCha
                   <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-purple-100 text-purple-700 border border-purple-200 shrink-0">
                     {epic.key}
                   </span>
-                  <Link
+                  <Link prefetch={false}
                     href={`/projects/${projectKey}/issues?issue=${epic.key}`}
                     className="text-sm font-semibold text-jira-navy hover:text-jira-blue transition-colors truncate"
                   >

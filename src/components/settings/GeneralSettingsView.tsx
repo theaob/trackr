@@ -43,7 +43,7 @@ export default function GeneralSettingsView({
           System administration, SSO/OIDC configuration, and user permissions are optimized for desktop displays.
         </p>
         <div className="flex flex-col gap-2.5 w-full max-w-xs">
-          <Link
+          <Link prefetch={false}
             href="/projects"
             className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-jira-blue hover:bg-jira-blue-hover text-white rounded-md text-xs font-semibold shadow-xs transition-colors"
           >

@@ -197,7 +197,7 @@ export default function Navbar({
           </button>
         )}
 
-        <Link
+        <Link prefetch={false}
           href={currentProject ? `/projects/${currentProject.key}/board` : "/projects"}
           className="flex items-center gap-2 group hover:opacity-95 transition-opacity shrink-0"
         >
@@ -233,7 +233,7 @@ export default function Navbar({
                 Recent Projects
               </div>
               {accessibleProjects.map((proj) => (
-                <Link
+                <Link prefetch={false}
                   key={proj.id}
                   href={`/projects/${proj.key}/board`}
                   onClick={() => setShowProjectMenu(false)}
@@ -255,7 +255,7 @@ export default function Navbar({
               ))}
 
               <div className="pt-1 mt-1 border-t border-jira-gray-200">
-                <Link
+                <Link prefetch={false}
                   href="/projects"
                   onClick={() => setShowProjectMenu(false)}
                   className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-jira-gray-700 hover:bg-jira-gray-100 hover:text-jira-navy transition-colors"
@@ -344,7 +344,7 @@ export default function Navbar({
         <div className="relative">
           {!currentUser ? (
             // Anonymous visitor on a project published for read-only access.
-            <Link
+            <Link prefetch={false}
               href={`/login?next=${encodeURIComponent(pathname || "/projects")}`}
               className="flex items-center gap-2 px-3 py-1.5 rounded text-xs font-semibold text-white bg-jira-blue hover:bg-jira-blue-hover transition-colors"
             >
@@ -403,7 +403,7 @@ export default function Navbar({
                 </div>
                 <div className="max-h-48 overflow-y-auto">
                   {accessibleProjects.map((proj) => (
-                    <Link
+                    <Link prefetch={false}
                       key={proj.id}
                       href={`/projects/${proj.key}/board`}
                       onClick={() => setShowUserMenu(false)}
@@ -429,7 +429,7 @@ export default function Navbar({
                   ))}
                 </div>
                 <div className="pt-1 mt-1 border-t border-jira-gray-200 px-1">
-                  <Link
+                  <Link prefetch={false}
                     href="/projects"
                     onClick={() => setShowUserMenu(false)}
                     className="flex items-center gap-2 px-2 py-1.5 text-xs font-medium text-jira-gray-700 hover:bg-jira-gray-100 hover:text-jira-navy rounded transition-colors"
@@ -492,7 +492,7 @@ export default function Navbar({
               {/* System Settings (Desktop only) */}
               {isInstanceAdmin && (
                 <div className="hidden md:block py-1 border-b border-jira-gray-200">
-                  <Link
+                  <Link prefetch={false}
                     href="/settings"
                     onClick={() => setShowUserMenu(false)}
                     className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-jira-navy hover:bg-jira-gray-100 transition-colors"

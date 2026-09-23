@@ -66,6 +66,25 @@ function revalidateProjectRoutes(projectKey: string) {
   } catch {}
 }
 
+/**
+ * A project's open sprints as picker options: no issues, just what a sprint
+ * dropdown shows. The project layout loads this on every page, so it must stay
+ * light -- getProjectSprints carries every sprint's issues.
+ */
+export async function getSprintOptions(projectId: string) {
+  try {
+    await requireProjectAccess(projectId);
+    return await prisma.sprint.findMany({
+      where: { projectId, status: { not: "COMPLETED" } },
+      select: { id: true, name: true, status: true, projectId: true, startDate: true, endDate: true },
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (error) {
+    console.error("Failed to fetch sprint options:", error);
+    return [];
+  }
+}
+
 export async function getProjectSprints(projectId: string) {
   try {
     await requireProjectAccess(projectId);

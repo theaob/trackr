@@ -1,6 +1,6 @@
 import React from "react";
 import { getProjects, getProjectByKey, getProjectUsers } from "@/lib/actions/projects";
-import { getProjectSprints } from "@/lib/actions/sprints";
+import { getSprintOptions } from "@/lib/actions/sprints";
 import { getProjectEpics } from "@/lib/actions/issues";
 import { getProjectWorkflow } from "@/lib/actions/workflows";
 import ProjectLayoutClient from "@/components/layout/ProjectLayoutClient";
@@ -23,7 +23,9 @@ export default async function ProjectLayout({
   const [projects, users, sprints, epics, workflow] = await Promise.all([
     getProjects(),
     getProjectUsers(currentProject.id),
-    getProjectSprints(currentProject.id),
+    // Open sprints only, without issues: the create-issue dialog just needs
+    // a dropdown, and this runs on every page in the project.
+    getSprintOptions(currentProject.id),
     // Epics only: the layout used to load 200 issues with their comment and
     // activity threads just to filter this list out of them.
     getProjectEpics(currentProject.id),

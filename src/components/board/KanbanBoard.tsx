@@ -745,7 +745,7 @@ export default function KanbanBoard({
               </button>
             )}
             {!activeSprint && !isKanban && (
-              <Link
+              <Link prefetch={false}
                 href={`/projects/${project.key}/backlog`}
                 className="text-xs bg-jira-blue-light text-jira-blue font-semibold px-3 py-1.5 rounded hover:bg-jira-blue hover:text-white transition-colors"
               >

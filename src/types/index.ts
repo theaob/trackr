@@ -130,6 +130,8 @@ export interface Issue {
   children?: any[];
   comments?: any[];
   activityLogs?: any[];
+  /** How many exist in total; the arrays above hold only the latest page. */
+  _count?: { comments: number; activityLogs: number };
   customFieldValues?: CustomFieldValue[];
   linksAsSource?: IssueLink[];
   linksAsTarget?: IssueLink[];

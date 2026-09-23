@@ -20,9 +20,19 @@ import {
   deleteIssue,
   getPaginatedIssues,
   getIssueByKeyOrId,
+  getOlderIssueHistory,
   bulkUpdateIssues,
   bulkDeleteIssues,
 } from "@/lib/actions/issues";
+import {
+  HistoryKind,
+  historyRemaining,
+  historyTotal,
+  oldestLoadedId,
+  withCommentCountChange,
+  withOlderHistory,
+} from "@/lib/issueHistory";
+import ShowOlderButton from "@/components/issues/ShowOlderButton";
 import { bulkAddLabel } from "@/lib/actions/labels";
 import { addComment, deleteComment } from "@/lib/actions/comments";
 import { uploadAttachment } from "@/lib/actions/attachments";
@@ -738,6 +748,18 @@ export default function IssuesListView({
     };
   }, [selectedId, selectedNeedsDetails]);
 
+  const [loadingOlder, setLoadingOlder] = useState<HistoryKind | null>(null);
+  const loadOlderHistory = async (kind: HistoryKind) => {
+    if (!selectedIssue) return;
+    const beforeId = oldestLoadedId(selectedIssue, kind);
+    if (!beforeId) return;
+    const targetId = selectedIssue.id;
+    setLoadingOlder(kind);
+    const older = await getOlderIssueHistory(targetId, kind, beforeId);
+    setLoadingOlder(null);
+    setIssues((prev) => prev.map((i) => (i.id === targetId ? withOlderHistory(i, kind, older) : i)));
+  };
+
   // Sync description draft when selected issue changes
   useEffect(() => {
     setDescriptionDraft(selectedIssue?.description || "");
@@ -818,7 +840,7 @@ export default function IssuesListView({
 
     const previousIssues = issues;
     const updatedComments = [optimisticComment, ...(selectedIssue.comments || [])];
-    const optimisticSelected = { ...selectedIssue, comments: updatedComments };
+    const optimisticSelected = withCommentCountChange({ ...selectedIssue, comments: updatedComments }, 1);
 
     setIssues((prev) => prev.map((i) => (i.id === selectedIssue.id ? optimisticSelected : i)));
     setNewComment("");
@@ -1546,7 +1568,7 @@ export default function IssuesListView({
                             }`}
                           >
                             <MessageSquare className="w-3.5 h-3.5" />
-                            <span>Comments ({selectedIssue.comments?.length || 0})</span>
+                            <span>Comments ({historyTotal(selectedIssue, "comments")})</span>
                           </button>
                           <button
                             onClick={() => setActiveTab("history")}
@@ -1620,6 +1642,12 @@ export default function IssuesListView({
                                   </div>
                                 </div>
                               ))}
+                              <ShowOlderButton
+                                remaining={historyRemaining(selectedIssue, "comments")}
+                                noun="comments"
+                                loading={loadingOlder === "comments"}
+                                onClick={() => loadOlderHistory("comments")}
+                              />
                             </div>
                           </div>
                         )}
@@ -1656,6 +1684,12 @@ export default function IssuesListView({
                             ) : (
                               <div className="text-jira-gray-400 italic">No activity recorded</div>
                             )}
+                            <ShowOlderButton
+                              remaining={historyRemaining(selectedIssue, "activity")}
+                              noun="entries"
+                              loading={loadingOlder === "activity"}
+                              onClick={() => loadOlderHistory("activity")}
+                            />
                           </div>
                         )}
                       </div>

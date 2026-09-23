@@ -129,7 +129,7 @@ export default function ProjectsDirectoryView({
                         {project.key.slice(0, 2)}
                       </div>
                       <div>
-                        <Link
+                        <Link prefetch={false}
                           href={`/projects/${project.key}/board`}
                           className="text-base font-bold text-jira-navy group-hover:text-jira-blue transition-colors"
                         >
@@ -199,7 +199,7 @@ export default function ProjectsDirectoryView({
 
                 {/* Bottom Quick Launch Actions */}
                 <div className="px-5 py-3 bg-jira-gray-50 border-t border-jira-gray-200 flex items-center justify-between text-xs font-semibold text-jira-navy">
-                  <Link
+                  <Link prefetch={false}
                     href={`/projects/${project.key}/board`}
                     className="flex items-center gap-1 hover:text-jira-blue transition-colors"
                   >
@@ -207,7 +207,7 @@ export default function ProjectsDirectoryView({
                     <span>Board</span>
                   </Link>
 
-                  <Link
+                  <Link prefetch={false}
                     href={`/projects/${project.key}/backlog`}
                     className="flex items-center gap-1 hover:text-jira-blue transition-colors"
                   >
@@ -215,7 +215,7 @@ export default function ProjectsDirectoryView({
                     <span>Backlog</span>
                   </Link>
 
-                  <Link
+                  <Link prefetch={false}
                     href={`/projects/${project.key}/issues`}
                     className="flex items-center gap-1 hover:text-jira-blue transition-colors"
                   >
@@ -223,7 +223,7 @@ export default function ProjectsDirectoryView({
                     <span>Issues</span>
                   </Link>
 
-                  <Link
+                  <Link prefetch={false}
                     href={`/projects/${project.key}/settings`}
                     className="hidden md:flex items-center gap-1 hover:text-jira-blue transition-colors"
                     title="Project Settings"

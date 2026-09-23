@@ -9,6 +9,7 @@ import { deleteIssueAttachmentDir } from "@/lib/attachmentStorage";
 import { DISPLAY_USER_SELECT } from "@/lib/auth/publicUser";
 import {
   accessibleProjectIds,
+  AuthError,
   projectIdForIssue,
   requireProjectAccess,
   requireProjectPermission,
@@ -53,58 +54,19 @@ const LINKED_ISSUE_SELECT = {
   project: { select: { key: true, name: true } },
 } as const;
 
+// An issue carries only its latest comments and activity; "Show older" pages
+// through the rest with getOlderIssueHistory. The counts say how many exist.
+const HISTORY_PAGE_SIZE = 50;
+const HISTORY_ORDER = [{ createdAt: "desc" as const }, { id: "desc" as const }];
+const RECENT_HISTORY_INCLUDE = {
+  comments: { include: { author: USER_SELECT }, orderBy: HISTORY_ORDER, take: HISTORY_PAGE_SIZE },
+  activityLogs: { include: { user: USER_SELECT }, orderBy: HISTORY_ORDER, take: HISTORY_PAGE_SIZE },
+  _count: { select: { comments: true, activityLogs: true } },
+} as const;
+
 const LABELS_INCLUDE = {
   labels: { include: { label: true }, orderBy: { label: { name: "asc" } } },
 } as const;
-
-
-export async function getProjectIssues(projectId: string) {
-  try {
-    await requireProjectAccess(projectId);
-
-    const issues = await prisma.issue.findMany({
-      where: { projectId },
-      include: {
-        project: true,
-        assignee: USER_SELECT,
-        reporter: USER_SELECT,
-        parent: {
-          select: {
-            id: true,
-            key: true,
-            title: true,
-            type: true,
-          },
-        },
-        children: {
-          include: {
-            assignee: USER_SELECT,
-          },
-          orderBy: { createdAt: "asc" },
-        },
-        comments: {
-          include: {
-            author: USER_SELECT,
-          },
-          orderBy: { createdAt: "desc" },
-        },
-        activityLogs: {
-          include: {
-            user: USER_SELECT,
-          },
-          orderBy: { createdAt: "desc" },
-        },
-        ...LABELS_INCLUDE,
-      },
-      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
-      take: 200,
-    });
-    return issues;
-  } catch (error) {
-    console.error("Failed to fetch project issues:", error);
-    return [];
-  }
-}
 
 /**
  * Epics only, for the parent pickers in the project chrome. Kept separate so
@@ -259,18 +221,7 @@ export async function getIssueByKeyOrId(keyOrId: string) {
           },
           orderBy: { createdAt: "asc" },
         },
-        comments: {
-          include: {
-            author: USER_SELECT,
-          },
-          orderBy: { createdAt: "desc" },
-        },
-        activityLogs: {
-          include: {
-            user: USER_SELECT,
-          },
-          orderBy: { createdAt: "desc" },
-        },
+        ...RECENT_HISTORY_INCLUDE,
         linksAsSource: {
           include: { target: { select: LINKED_ISSUE_SELECT } },
           orderBy: { createdAt: "asc" },
@@ -302,6 +253,26 @@ export async function getIssueByKeyOrId(keyOrId: string) {
   } catch (error) {
     console.error("Failed to fetch issue by key or id:", error);
     return null;
+  }
+}
+
+/** The next page of an issue's comments or activity, older than `beforeId`. */
+export async function getOlderIssueHistory(
+  issueId: string,
+  kind: "comments" | "activity",
+  beforeId: string
+) {
+  try {
+    const projectId = await projectIdForIssue(issueId);
+    await requireProjectAccess(projectId);
+    const page = { orderBy: HISTORY_ORDER, cursor: { id: beforeId }, skip: 1, take: HISTORY_PAGE_SIZE };
+    if (kind === "comments") {
+      return await prisma.comment.findMany({ where: { issueId }, include: { author: USER_SELECT }, ...page });
+    }
+    return await prisma.activityLog.findMany({ where: { issueId }, include: { user: USER_SELECT }, ...page });
+  } catch (error) {
+    if (!(error instanceof AuthError)) console.error("Failed to fetch older issue history:", error);
+    return [];
   }
 }
 
@@ -359,67 +330,6 @@ export async function getBacklogIssues(projectId: string) {
     return [...sprintIssues, ...backlogIssues];
   } catch (error) {
     console.error("Failed to fetch backlog issues:", error);
-    return [];
-  }
-}
-
-export async function getAllCrossProjectIssues(projectId?: string) {
-  try {
-    // Readable without a session, but only ever within the projects the caller
-    // can see -- for a visitor that is the published ones alone.
-    const user = await getCurrentUser();
-
-    let where: any;
-    if (projectId) {
-      await requireProjectAccess(projectId);
-      where = { projectId };
-    } else {
-      const ids = await accessibleProjectIds(user?.id ?? null);
-      if (ids.length === 0) return [];
-      where = { projectId: { in: ids } };
-    }
-
-    const issues = await prisma.issue.findMany({
-      where,
-      include: {
-        project: true,
-        assignee: USER_SELECT,
-        reporter: USER_SELECT,
-        version: true,
-        parent: {
-          select: {
-            id: true,
-            key: true,
-            title: true,
-            type: true,
-          },
-        },
-        children: {
-          include: {
-            assignee: USER_SELECT,
-          },
-          orderBy: { createdAt: "asc" },
-        },
-        comments: {
-          include: {
-            author: USER_SELECT,
-          },
-          orderBy: { createdAt: "desc" },
-        },
-        activityLogs: {
-          include: {
-            user: USER_SELECT,
-          },
-          orderBy: { createdAt: "desc" },
-        },
-        ...LABELS_INCLUDE,
-      },
-      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
-      take: 100,
-    });
-    return issues;
-  } catch (error) {
-    console.error("Failed to fetch cross-project issues:", error);
     return [];
   }
 }
@@ -1026,18 +936,7 @@ export async function updateIssue(
             assignee: USER_SELECT,
           },
         },
-        comments: {
-          include: {
-            author: USER_SELECT,
-          },
-          orderBy: { createdAt: "desc" },
-        },
-        activityLogs: {
-          include: {
-            user: USER_SELECT,
-          },
-          orderBy: { createdAt: "desc" },
-        },
+        ...RECENT_HISTORY_INCLUDE,
       },
     });
 
