@@ -18,6 +18,9 @@ model User {
   ssoSubjectId   String?
   canCreateProjects Boolean    @default(false)
   isInstanceAdmin   Boolean    @default(false)
+  // Part of every session cookie. Bumping it (password change, "sign out
+  // everywhere") invalidates every cookie issued before.
+  sessionVersion    Int        @default(0)
   assignedIssues Issue[]       @relation("Assignee")
   reportedIssues Issue[]       @relation("Reporter")
   comments       Comment[]
@@ -491,6 +494,10 @@ model SsoConfig {
   // Deprecated: previously disabled TLS verification process-wide. Unused.
   allowSelfSignedCerts Boolean  @default(false)
   autoProvisionUsers   Boolean  @default(true) // Auto-create user on first SSO login
+  // Linking an SSO login to an existing account needs the provider to mark the
+  // email verified. Some (Microsoft Entra ID) never send the claim; an admin
+  // who trusts theirs can turn this on.
+  trustUnverifiedEmails Boolean @default(false)
   defaultRole          String   @default("Developer")
   updatedAt            DateTime @updatedAt
 }

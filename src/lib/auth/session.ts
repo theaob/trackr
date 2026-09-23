@@ -68,16 +68,16 @@ function sign(payload: string): string {
   return crypto.createHmac("sha256", getSecret()).update(payload).digest("base64url");
 }
 
-function createToken(userId: string): string {
+function createToken(userId: string, sessionVersion: number): string {
   const now = Math.floor(Date.now() / 1000);
   const payload = b64url(
-    JSON.stringify({ uid: userId, iat: now, exp: now + SESSION_MAX_AGE_SECONDS })
+    JSON.stringify({ uid: userId, sv: sessionVersion, iat: now, exp: now + SESSION_MAX_AGE_SECONDS })
   );
   return `v1.${payload}.${sign(payload)}`;
 }
 
-/** Verify the signature and expiry, returning the user id it carries. */
-function readToken(token: string | undefined): string | null {
+/** Verify the signature and expiry, returning the user id and session version it carries. */
+function readToken(token: string | undefined): { userId: string; sessionVersion: number } | null {
   if (!token) return null;
   const parts = token.split(".");
   if (parts.length !== 3 || parts[0] !== "v1") return null;
@@ -92,7 +92,8 @@ function readToken(token: string | undefined): string | null {
     const decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
     if (typeof decoded?.uid !== "string" || typeof decoded?.exp !== "number") return null;
     if (decoded.exp * 1000 <= Date.now()) return null;
-    return decoded.uid;
+    // Cookies from before session versions existed count as version 0.
+    return { userId: decoded.uid, sessionVersion: typeof decoded.sv === "number" ? decoded.sv : 0 };
   } catch {
     return null;
   }
@@ -106,17 +107,21 @@ function readToken(token: string | undefined): string | null {
  * access immediately rather than at cookie expiry.
  */
 export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
-  const userId = readToken(cookies().get(SESSION_COOKIE)?.value);
-  if (!userId) return null;
+  const token = readToken(cookies().get(SESSION_COOKIE)?.value);
+  if (!token) return null;
 
   try {
     await ensureInstanceAdminExists();
-    return await prisma.user.findUnique({
-      where: { id: userId },
+    const user = await prisma.user.findUnique({
+      where: { id: token.userId },
       // isInstanceAdmin is read for the session only, not added to
       // PUBLIC_USER_SELECT: user lists shouldn't advertise who the admins are.
-      select: { ...PUBLIC_USER_SELECT, isInstanceAdmin: true },
+      select: { ...PUBLIC_USER_SELECT, isInstanceAdmin: true, sessionVersion: true },
     });
+    // A cookie from before the last password change or "sign out everywhere".
+    if (!user || user.sessionVersion !== token.sessionVersion) return null;
+    const { sessionVersion: _version, ...sessionUser } = user;
+    return sessionUser;
   } catch (error) {
     console.error("Failed to resolve session user:", error);
     return null;
@@ -145,8 +150,12 @@ function isSecureRequest(): boolean {
 }
 
 /** Issue a session cookie. Only valid inside a server action or route handler. */
-export function startSession(userId: string) {
-  cookies().set(SESSION_COOKIE, createToken(userId), {
+export async function startSession(userId: string) {
+  const { sessionVersion } = await prisma.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { sessionVersion: true },
+  });
+  cookies().set(SESSION_COOKIE, createToken(userId, sessionVersion), {
     httpOnly: true,
     sameSite: "lax",
     secure: isSecureRequest(),

@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
       return fail(request, result.error, result.status, wantsHtmlRedirect);
     }
 
-    startSession(result.user.id);
+    await startSession(result.user.id);
 
     const response = wantsHtmlRedirect
       ? NextResponse.redirect(new URL("/projects", request.nextUrl.origin), 303)

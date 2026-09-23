@@ -24,6 +24,7 @@ interface SsoConfigState {
   hasClientSecret?: boolean;
   certificate: string;
   autoProvisionUsers: boolean;
+  trustUnverifiedEmails: boolean;
   defaultRole: string;
   configured?: boolean;
 }
@@ -38,6 +39,7 @@ export default function SsoSettingsTab() {
     hasClientSecret: false,
     certificate: "",
     autoProvisionUsers: true,
+    trustUnverifiedEmails: false,
     defaultRole: "Developer",
     configured: false,
   });
@@ -59,6 +61,7 @@ export default function SsoSettingsTab() {
           hasClientSecret: !!cfg.hasClientSecret,
           certificate: cfg.certificate || "",
           autoProvisionUsers: cfg.autoProvisionUsers ?? true,
+          trustUnverifiedEmails: cfg.trustUnverifiedEmails ?? false,
           defaultRole: cfg.defaultRole || "Developer",
           configured: !!cfg.configured,
         });
@@ -86,6 +89,7 @@ export default function SsoSettingsTab() {
         clientSecret: config.clientSecret || undefined,
         certificate: config.certificate,
         autoProvisionUsers: config.autoProvisionUsers,
+        trustUnverifiedEmails: config.trustUnverifiedEmails,
         defaultRole: config.defaultRole,
       });
 
@@ -99,6 +103,7 @@ export default function SsoSettingsTab() {
           hasClientSecret: !!res.config.hasClientSecret,
           certificate: res.config.certificate || "",
           autoProvisionUsers: res.config.autoProvisionUsers ?? true,
+          trustUnverifiedEmails: res.config.trustUnverifiedEmails ?? false,
           defaultRole: res.config.defaultRole || "Developer",
           configured: !!res.config.configured,
         });
@@ -318,6 +323,23 @@ export default function SsoSettingsTab() {
               type="checkbox"
               checked={config.autoProvisionUsers}
               onChange={(e) => setConfig({ ...config, autoProvisionUsers: e.target.checked })}
+              className="w-4 h-4 accent-jira-blue"
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-bold text-jira-navy">Trust unverified email addresses</div>
+              <div className="text-[10px] text-jira-gray-600">
+                Let an SSO login take over an existing account with the same email even when the provider
+                doesn&apos;t mark the address verified. Only for providers that don&apos;t send the claim
+                (Microsoft Entra ID) and whose addresses you trust.
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={config.trustUnverifiedEmails}
+              onChange={(e) => setConfig({ ...config, trustUnverifiedEmails: e.target.checked })}
               className="w-4 h-4 accent-jira-blue"
             />
           </div>

@@ -19,6 +19,7 @@ import {
   Check,
   FolderGit2,
   KeyRound,
+  ShieldCheck,
   Shield,
   Camera,
   Trash2,
@@ -28,6 +29,7 @@ import {
   Settings,
 } from "lucide-react";
 import PersonalAccessTokensModal from "@/components/auth/PersonalAccessTokensModal";
+import AccountSecurityModal from "@/components/auth/AccountSecurityModal";
 import { TrackrLogo } from "@/components/common/TrackrLogo";
 import UserAvatar from "@/components/common/UserAvatar";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
@@ -65,6 +67,7 @@ export default function Navbar({
   const [showProjectMenu, setShowProjectMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showTokensModal, setShowTokensModal] = useState(false);
+  const [showSecurityModal, setShowSecurityModal] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -487,6 +490,16 @@ export default function Navbar({
                   <KeyRound className="w-3.5 h-3.5 text-jira-blue" />
                   <span>Personal Access Tokens</span>
                 </button>
+                <button
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    setShowSecurityModal(true);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-jira-navy hover:bg-jira-gray-100 transition-colors"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-jira-blue" />
+                  <span>Password &amp; sessions</span>
+                </button>
               </div>
 
               {/* System Settings (Desktop only) */}
@@ -527,6 +540,7 @@ export default function Navbar({
         isOpen={showTokensModal}
         onClose={() => setShowTokensModal(false)}
       />
+      <AccountSecurityModal isOpen={showSecurityModal} onClose={() => setShowSecurityModal(false)} />
 
     </header>
   );

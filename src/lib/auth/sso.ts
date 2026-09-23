@@ -12,6 +12,7 @@ export interface SsoConfigRecord {
   certificate: string | null;
   allowSelfSignedCerts: boolean;
   autoProvisionUsers: boolean;
+  trustUnverifiedEmails: boolean;
   defaultRole: string;
 }
 
@@ -114,6 +115,20 @@ async function provisionFromClaims(
   });
 
   if (existing) {
+    // Linking a login to an account that exists already hands that account
+    // over, so the provider has to vouch for the address. Without the claim
+    // anyone who can register that email at the provider would get in.
+    const alreadyLinked = existing.ssoSubjectId === subject;
+    if (!alreadyLinked && claims.email_verified !== true && !config.trustUnverifiedEmails) {
+      return {
+        success: false,
+        error:
+          "An account with this email already exists, and the identity provider didn't confirm the " +
+          "address is verified. An administrator can allow this under System Settings -> SSO.",
+        status: 403,
+      };
+    }
+
     // Refuse to bind an established account to a different IdP subject: that
     // would let a re-registered identity take over the original account.
     if (existing.ssoSubjectId && existing.ssoSubjectId !== subject) {

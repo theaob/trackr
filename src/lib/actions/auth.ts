@@ -10,7 +10,7 @@ import {
   getCurrentUser,
   startSession,
 } from "@/lib/auth/session";
-import { AuthError, requireInstanceAdmin, toActionError } from "@/lib/auth/guards";
+import { AuthError, requireInstanceAdmin, requireUser, toActionError } from "@/lib/auth/guards";
 import { loadSsoConfig, ssoHasVerificationKey } from "@/lib/auth/sso";
 import {
   clientAddressFrom,
@@ -102,7 +102,7 @@ export async function registerUser(data: {
       select: PUBLIC_USER_SELECT,
     });
 
-    startSession(user.id);
+    await startSession(user.id);
 
     try {
       revalidatePath("/projects");
@@ -184,7 +184,7 @@ export async function loginWithCredentials(email: string, password?: string) {
       select: { ...PUBLIC_USER_SELECT, isInstanceAdmin: true },
     });
 
-    startSession(safeUser.id);
+    await startSession(safeUser.id);
 
     try {
       revalidatePath("/projects");
@@ -239,6 +239,69 @@ export async function changeOwnPassword(currentPassword: string, newPassword: st
     return { success: true as const };
   } catch (error) {
     return toActionError(error, "Failed to change password");
+  }
+}
+
+/**
+ * Change the signed-in user's password. Every other session ends; this one is
+ * re-issued so the person making the change stays signed in. Wrong current
+ * passwords count toward the same lockout as failed sign-ins, so a stolen
+ * session can't be used to guess the password.
+ */
+export async function changePassword(currentPassword: string, newPassword: string) {
+  try {
+    const sessionUser = await requireUser();
+    const account = await prisma.user.findUniqueOrThrow({
+      where: { id: sessionUser.id },
+      select: { id: true, email: true, passwordHash: true },
+    });
+    if (!account.passwordHash) {
+      return {
+        success: false as const,
+        error: "Your account signs in through SSO, so its password is managed by your identity provider.",
+      };
+    }
+    if (!newPassword || newPassword.length < MIN_PASSWORD_LENGTH) {
+      return {
+        success: false as const,
+        error: `The new password must be at least ${MIN_PASSWORD_LENGTH} characters long.`,
+      };
+    }
+
+    const lockKey = account.email.toLowerCase();
+    const wait = signInByAccount.retryAfterMs(lockKey);
+    if (wait > 0) return { success: false as const, error: tooManyAttemptsMessage(wait) };
+
+    const { valid } = await verifyPassword(currentPassword || "", account.passwordHash);
+    if (!valid) {
+      signInByAccount.recordFailure(lockKey);
+      return { success: false as const, error: "Your current password is incorrect." };
+    }
+    signInByAccount.reset(lockKey);
+
+    await prisma.user.update({
+      where: { id: account.id },
+      data: { passwordHash: await hashPassword(newPassword), sessionVersion: { increment: 1 } },
+    });
+    await startSession(account.id);
+    return { success: true as const };
+  } catch (error) {
+    return toActionError(error, "Failed to change password");
+  }
+}
+
+/** End every session of the signed-in user except this one. */
+export async function signOutOtherSessions() {
+  try {
+    const user = await requireUser();
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { sessionVersion: { increment: 1 } },
+    });
+    await startSession(user.id);
+    return { success: true as const };
+  } catch (error) {
+    return toActionError(error, "Failed to sign out other sessions");
   }
 }
 
@@ -297,6 +360,7 @@ export async function updateSsoConfig(data: {
   clientSecret?: string | null;
   certificate?: string | null;
   autoProvisionUsers?: boolean;
+  trustUnverifiedEmails?: boolean;
   defaultRole?: string;
 }) {
   try {
@@ -318,6 +382,9 @@ export async function updateSsoConfig(data: {
     if (data.certificate !== undefined) update.certificate = certificate;
     if (data.autoProvisionUsers !== undefined) {
       update.autoProvisionUsers = data.autoProvisionUsers;
+    }
+    if (data.trustUnverifiedEmails !== undefined) {
+      update.trustUnverifiedEmails = data.trustUnverifiedEmails;
     }
     if (data.defaultRole !== undefined) update.defaultRole = data.defaultRole;
 

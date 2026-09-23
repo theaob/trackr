@@ -83,6 +83,8 @@ A modern, full-stack agile project management and issue tracking platform built 
   - PBKDF2-SHA512 password hashing (210k iterations) with transparent upgrades.
   - Repeated wrong passwords lock that account's sign-in for 15 minutes, and
     instance administrators can turn off account creation from the sign-in page.
+  - Anyone can change their password or sign out their other sessions from the
+    account menu (**Password & sessions**); either ends every other session.
   - Per-project roles (**Administrator**, **Member**, **Viewer**) enforced on the
     server, not just in the UI.
   - Optional **public projects**: a project can grant read-only access to
@@ -245,7 +247,7 @@ Set one from the project directory:
 
 ```bash
 npm run set-password -- --list                  # which accounts have a password
-npm run set-password -- alex.chen@acme.dev      # generate one, printed once
+npm run set-password -- alex.chen@acme.dev      # generate one, printed once; ends their sessions
 npm run set-password -- alex.chen@acme.dev 'a good password'
 ```
 
@@ -293,6 +295,12 @@ from an ID token whose signature, issuer, audience, expiry and nonce all verify.
 
 The callback rejects any assertion that does not carry back the state and nonce
 from a login attempt started on this instance.
+
+An SSO login links to an existing account with the same email only when the
+provider marks the address verified (`email_verified: true`). Providers that
+never send the claim, such as Microsoft Entra ID, can be trusted with **Trust
+unverified email addresses** in the SSO settings. New accounts are created
+either way when automatic provisioning is on.
 
 ## 🧪 Tests & Checks
 

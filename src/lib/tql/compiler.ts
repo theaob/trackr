@@ -11,6 +11,13 @@ export interface TQLCompilerContext {
   accessibleProjectIds?: string[];
   activeSprintIds?: string[];
   unreleasedVersionIds?: string[];
+  /**
+   * Projects in which assignee/reporter may be matched by email. Anywhere
+   * else only id and name match, so a query can't test whether someone in a
+   * published project has a given email. Leave undefined for server-side
+   * filters that aren't run on a user's behalf (webhooks).
+   */
+  emailMatchProjectIds?: string[];
 }
 
 export interface TQLCompiledQuery {
@@ -25,6 +32,13 @@ export class TQLCompiler {
 
   constructor(context: TQLCompilerContext = {}) {
     this.context = context;
+  }
+
+  /** An email condition, confined to the projects where matching by email is allowed. */
+  private whereEmailMayMatch(condition: Record<string, any>): Record<string, any> {
+    const ids = this.context.emailMatchProjectIds;
+    if (ids === undefined) return condition;
+    return { AND: [{ projectId: { in: ids } }, condition] };
   }
 
   public compile(query: TQLQuery): TQLCompiledQuery {
@@ -234,18 +248,18 @@ export class TQLCompiler {
         if (strValues.length === 1) {
           const v = strValues[0];
           return {
-            assignee: {
-              OR: [{ id: v }, { email: v }, { name: { contains: v } }],
-            },
+            OR: [
+              { assignee: { id: v } },
+              { assignee: { name: { contains: v } } },
+              this.whereEmailMayMatch({ assignee: { email: v } }),
+            ],
           };
         }
         return {
-          assignee: {
-            OR: [
-              { id: { in: strValues } },
-              { email: { in: strValues } },
-            ],
-          },
+          OR: [
+            { assignee: { id: { in: strValues } } },
+            this.whereEmailMayMatch({ assignee: { email: { in: strValues } } }),
+          ],
         };
       }
       if (op === "!=" || op === "NOT IN") {
@@ -277,15 +291,18 @@ export class TQLCompiler {
         if (strValues.length === 1) {
           const v = strValues[0];
           return {
-            reporter: {
-              OR: [{ id: v }, { email: v }, { name: { contains: v } }],
-            },
+            OR: [
+              { reporter: { id: v } },
+              { reporter: { name: { contains: v } } },
+              this.whereEmailMayMatch({ reporter: { email: v } }),
+            ],
           };
         }
         return {
-          reporter: {
-            OR: [{ id: { in: strValues } }, { email: { in: strValues } }],
-          },
+          OR: [
+            { reporter: { id: { in: strValues } } },
+            this.whereEmailMayMatch({ reporter: { email: { in: strValues } } }),
+          ],
         };
       }
       if (op === "!=" || op === "NOT IN") {

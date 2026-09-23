@@ -11,6 +11,7 @@ import {
   accessibleProjectIds,
   AuthError,
   projectIdForIssue,
+  teamProjectIds,
   requireProjectAccess,
   requireProjectPermission,
   toActionError,
@@ -393,6 +394,7 @@ export async function getPaginatedIssues(params: PaginatedIssuesParams) {
       const compiler = new TQLCompiler({
         currentUserId: user?.id,
         accessibleProjectIds: accessibleIds,
+        emailMatchProjectIds: Array.from(await teamProjectIds(user?.id)),
         activeSprintIds: activeSprints.map((s) => s.id),
         unreleasedVersionIds: unreleasedVersions.map((v) => v.id),
       });

@@ -108,7 +108,7 @@ export async function completeSetup(data: {
       return { user, project };
     });
 
-    startSession(user.id);
+    await startSession(user.id);
 
     try {
       revalidatePath("/");

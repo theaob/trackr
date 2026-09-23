@@ -87,6 +87,7 @@ export async function GET(request: NextRequest) {
     const compiler = new TQLCompiler({
       currentUserId: auth.user.id,
       accessibleProjectIds: allowedProjectIds,
+      emailMatchProjectIds: Array.from(await teamProjectIds(auth.user.id)),
       activeSprintIds: activeSprints.map((s) => s.id),
       unreleasedVersionIds: unreleasedVersions.map((v) => v.id),
     });

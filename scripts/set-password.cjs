@@ -98,10 +98,12 @@ async function setPassword(email, provided) {
 
   await prisma.user.update({
     where: { id: user.id },
-    data: { passwordHash: hashPassword(password) },
+    // Ends every existing session for this account, so a reset locks out
+    // whoever may have been using it.
+    data: { passwordHash: hashPassword(password), sessionVersion: { increment: 1 } },
   });
 
-  console.log(`Password updated for ${user.name} <${user.email}>.`);
+  console.log(`Password updated for ${user.name} <${user.email}>; their existing sessions have ended.`);
   if (generated) {
     console.log("");
     console.log(`  ${password}`);
