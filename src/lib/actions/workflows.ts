@@ -2,7 +2,6 @@
 
 import { defaultStatusColor, isDefaultStatusColor } from "@/lib/statusColors";
 import prisma from "@/lib/db";
-import { revalidatePath } from "next/cache";
 import {
   projectIdForWorkflowStatus,
   requireProjectAccess,
@@ -11,12 +10,11 @@ import {
 } from "@/lib/auth/guards";
 import { getWorkflowStatuses, WorkflowStatusCategory, WORKFLOW_STATUS_CATEGORIES } from "@/lib/workflow";
 
-async function revalidateProject(projectId: string) {
-  try {
-    const project = await prisma.project.findUnique({ where: { id: projectId }, select: { key: true } });
-    if (project) revalidatePath(`/projects/${project.key}`);
-  } catch {}
-}
+// These actions deliberately don't call revalidatePath. From a server action it
+// makes the response carry a fresh render of the whole current page -- here the
+// settings page and project layout, with every user, member and sprint -- so
+// each edit waited for that before the settings tab could move on. The tab
+// applies each result itself and refreshes the router in the background.
 
 export async function getProjectWorkflow(projectId: string) {
   try {
@@ -76,7 +74,6 @@ export async function createWorkflowStatus(
       },
     });
 
-    await revalidateProject(projectId);
     return { success: true as const, status };
   } catch (error) {
     return toActionError(error, "Failed to create status");
@@ -164,7 +161,6 @@ export async function updateWorkflowStatus(
       return updated;
     });
 
-    await revalidateProject(projectId);
     return { success: true as const, status };
   } catch (error) {
     return toActionError(error, "Failed to update status");
@@ -194,7 +190,6 @@ export async function deleteWorkflowStatus(statusId: string) {
 
     await prisma.workflowStatus.delete({ where: { id: statusId } });
 
-    await revalidateProject(projectId);
     return { success: true as const };
   } catch (error) {
     return toActionError(error, "Failed to delete status");
@@ -216,7 +211,6 @@ export async function reorderWorkflowStatuses(projectId: string, orderedIds: str
       cleaned.map((id, order) => prisma.workflowStatus.update({ where: { id }, data: { order } }))
     );
 
-    await revalidateProject(projectId);
     return { success: true as const };
   } catch (error) {
     return toActionError(error, "Failed to reorder statuses");
@@ -252,7 +246,6 @@ export async function setWorkflowTransition(
       await prisma.workflowTransition.deleteMany({ where: { fromId, toId } });
     }
 
-    await revalidateProject(projectId);
     return { success: true as const };
   } catch (error) {
     return toActionError(error, "Failed to update transition");
@@ -287,7 +280,6 @@ export async function allowAllIncomingTransitions(projectId: string, toId: strin
       )
     );
 
-    await revalidateProject(projectId);
     return { success: true as const };
   } catch (error) {
     return toActionError(error, "Failed to allow incoming transitions");
@@ -313,7 +305,6 @@ export async function clearStatusTransitions(
       });
     }
 
-    await revalidateProject(projectId);
     return { success: true as const };
   } catch (error) {
     return toActionError(error, "Failed to clear transitions");

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Project, WorkflowStatus, WorkflowStatusCategory, WorkflowTransition } from "@/types";
 import {
   createWorkflowStatus,
@@ -61,11 +62,55 @@ export default function WorkflowSettingsTab({
     [transitions]
   );
 
+  // The workflow actions return as soon as they've saved, without re-rendering
+  // the page. Other views (board, backlog, reports) keep their data in the
+  // router cache, so refresh it once in the background after edits settle.
+  const router = useRouter();
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleRefresh = useCallback(() => {
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    refreshTimer.current = setTimeout(() => {
+      refreshTimer.current = null;
+      router.refresh();
+    }, 800);
+  }, [router]);
+
+  // A color picker reports every step of a drag; save only where it stops.
+  const pendingColors = useRef(new Map<string, { timer: ReturnType<typeof setTimeout>; color: string }>());
+
+  // Leaving the tab mid-edit still saves the color and refreshes the cache.
+  useEffect(() => {
+    const colors = pendingColors.current;
+    return () => {
+      colors.forEach(({ timer, color }, statusId) => {
+        clearTimeout(timer);
+        updateWorkflowStatus(statusId, { color });
+      });
+      if (refreshTimer.current || colors.size > 0) {
+        if (refreshTimer.current) clearTimeout(refreshTimer.current);
+        router.refresh();
+      }
+    };
+  }, [router]);
+
   const withError = async <T,>(fn: () => Promise<{ success: boolean; error?: string } & T>) => {
     setError(null);
     const res = await fn();
     if (!res.success && res.error) setError(res.error);
+    if (res.success) scheduleRefresh();
     return res;
+  };
+
+  const handleColorChange = (status: WorkflowStatus, color: string) => {
+    setStatuses((prev) => prev.map((s) => (s.id === status.id ? { ...s, color } : s)));
+    const pending = pendingColors.current;
+    const existing = pending.get(status.id);
+    if (existing) clearTimeout(existing.timer);
+    const timer = setTimeout(() => {
+      pending.delete(status.id);
+      withError(() => updateWorkflowStatus(status.id, { color }));
+    }, 300);
+    pending.set(status.id, { timer, color });
   };
 
   const handleAddStatus = async (e: React.FormEvent) => {
@@ -123,9 +168,11 @@ export default function WorkflowSettingsTab({
     const next = [...statuses];
     [next[index], next[target]] = [next[target], next[index]];
     setStatuses(next);
-    await reorderWorkflowStatuses(
-      project.id,
-      next.map((s) => s.id)
+    await withError(() =>
+      reorderWorkflowStatuses(
+        project.id,
+        next.map((s) => s.id)
+      )
     );
   };
 
@@ -137,6 +184,7 @@ export default function WorkflowSettingsTab({
         : prev.filter((t) => !(t.fromId === fromId && t.toId === toId))
     );
     const res = await setWorkflowTransition(project.id, fromId, toId, allowed);
+    if (res.success) scheduleRefresh();
     if (!res.success) {
       // Revert the optimistic toggle.
       setTransitions((prev) =>
@@ -165,6 +213,7 @@ export default function WorkflowSettingsTab({
     });
 
     const res = await allowAllIncomingTransitions(project.id, toId);
+    if (res.success) scheduleRefresh();
     if (!res.success && res.error) {
       setError(res.error);
     }
@@ -183,6 +232,7 @@ export default function WorkflowSettingsTab({
       })
     );
     const res = await clearStatusTransitions(project.id, statusId, direction);
+    if (res.success) scheduleRefresh();
     if (!res.success && res.error) {
       setError(res.error);
     }
@@ -239,7 +289,7 @@ export default function WorkflowSettingsTab({
                 type="color"
                 value={status.color}
                 disabled={!canManage}
-                onChange={(e) => handleFieldChange(status, { color: e.target.value })}
+                onChange={(e) => handleColorChange(status, e.target.value)}
                 className="w-6 h-6 rounded border border-jira-gray-300 shrink-0 disabled:opacity-60"
                 title="Column color"
               />
@@ -338,9 +388,10 @@ export default function WorkflowSettingsTab({
             <button
               type="submit"
               disabled={isCreating || !newName.trim()}
-              className="px-3 py-1.5 bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold rounded disabled:opacity-50"
+              className="px-3 py-1.5 bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold rounded disabled:opacity-50 flex items-center gap-1.5"
             >
-              Add
+              {isCreating && <Loader2 className="w-3 h-3 animate-spin" />}
+              {isCreating ? "Adding…" : "Add"}
             </button>
             <button
               type="button"
