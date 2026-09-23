@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
-import { Project, Version, VersionStatus, IssueType } from "@/types";
+import { Project, Version, VersionStatus } from "@/types";
 import {
   archiveVersion,
   deleteVersion,
@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { formatCalendarDate } from "@/lib/calendarDate";
-import { StatusBadge } from "@/components/common/IssueIcons";
+import { IssueTypeIcon, StatusBadge } from "@/components/common/IssueIcons";
 
 interface ReleasesViewProps {
   project: Project;
@@ -101,21 +101,6 @@ export default function ReleasesView({
       }
     } finally {
       setRemovingIssueId(null);
-    }
-  };
-
-  const getTypeColor = (type: IssueType) => {
-    switch (type) {
-      case "BUG":
-        return "bg-rose-500 text-white";
-      case "TASK":
-        return "bg-blue-500 text-white";
-      case "STORY":
-        return "bg-emerald-500 text-white";
-      case "EPIC":
-        return "bg-purple-600 text-white";
-      default:
-        return "bg-jira-gray-500 text-white";
     }
   };
 
@@ -537,13 +522,7 @@ export default function ReleasesView({
                               >
                                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                   {/* Fixed-width columns so rows line up whatever their content. */}
-                                  <span
-                                    className={`w-12 text-center text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${getTypeColor(
-                                      issue.type
-                                    )}`}
-                                  >
-                                    {issue.type}
-                                  </span>
+                                  <IssueTypeIcon type={issue.type} className="w-3.5 h-3.5 shrink-0" />
                                   <Link
                                     href={`/projects/${project.key}/issues?selectedIssue=${issue.key}`}
                                     className="min-w-[5.5rem] font-mono font-semibold text-jira-blue hover:underline shrink-0 flex items-center gap-1"
