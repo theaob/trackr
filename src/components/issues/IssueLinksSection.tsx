@@ -210,7 +210,7 @@ export default function IssueLinksSection({
                   {row.issue.title}
                 </span>
               </button>
-              <StatusBadge status={row.issue.status} className="shrink-0" />
+              <StatusBadge status={row.issue.status} color={row.issue.statusColor} className="shrink-0" />
               {canEdit && (
                 <button
                   onClick={() => handleRemove(row.linkId)}

@@ -5,6 +5,8 @@ import { compareIssueKeys, createIssueWithKey } from "@/lib/issueKeys";
 const findMany = vi.fn();
 const count = vi.fn();
 const queryRaw = vi.fn();
+const projectFindUnique = vi.fn();
+const projectUpdateMany = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   default: {
@@ -14,6 +16,14 @@ vi.mock("@/lib/db", () => ({
       },
       get count() {
         return count;
+      },
+    },
+    project: {
+      get findUnique() {
+        return projectFindUnique;
+      },
+      get updateMany() {
+        return projectUpdateMany;
       },
     },
     get $queryRaw() {
@@ -32,9 +42,25 @@ function duplicateKeyError() {
 beforeEach(() => {
   vi.clearAllMocks();
   count.mockResolvedValue(0);
+  projectFindUnique.mockResolvedValue({ issueCounter: 0 });
+  projectUpdateMany.mockResolvedValue({ count: 1 });
 });
 
 describe("createIssueWithKey", () => {
+  it("never reuses a number, even after the newest issue is deleted", async () => {
+    // APOLLO-12 was created and then deleted: the highest remaining key is 11.
+    queryRaw.mockResolvedValue([{ maxNum: 11 }]);
+    projectFindUnique.mockResolvedValue({ issueCounter: 12 });
+
+    const key = await createIssueWithKey("p0", "APOLLO", (k) => Promise.resolve(k) as any);
+
+    expect(key).toBe("APOLLO-13");
+    expect(projectUpdateMany).toHaveBeenCalledWith({
+      where: { id: "p0", issueCounter: { lt: 13 } },
+      data: { issueCounter: 13 },
+    });
+  });
+
   it("uses the highest existing number plus one", async () => {
     queryRaw.mockResolvedValue([{ maxNum: 41 }]);
 

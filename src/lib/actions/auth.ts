@@ -206,42 +206,6 @@ async function instanceHasNoPasswords(): Promise<boolean> {
   return withPassword === 0;
 }
 
-/** Change the signed-in user's own password. */
-export async function changeOwnPassword(currentPassword: string, newPassword: string) {
-  try {
-    const session = await getCurrentUser();
-    if (!session) throw new AuthError("You must be signed in to change your password.", 401);
-
-    if (!newPassword || newPassword.length < MIN_PASSWORD_LENGTH) {
-      return {
-        success: false,
-        error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters long.`,
-      };
-    }
-
-    const user = await prisma.user.findUniqueOrThrow({
-      where: { id: session.id },
-      select: { passwordHash: true },
-    });
-
-    // An account with no password yet (SSO-provisioned) can set one; an account
-    // that has one must prove it knows the current value.
-    if (user.passwordHash) {
-      const { valid } = await verifyPassword(currentPassword, user.passwordHash);
-      if (!valid) return { success: false, error: "Current password is incorrect." };
-    }
-
-    await prisma.user.update({
-      where: { id: session.id },
-      data: { passwordHash: await hashPassword(newPassword) },
-    });
-
-    return { success: true as const };
-  } catch (error) {
-    return toActionError(error, "Failed to change password");
-  }
-}
-
 /**
  * Change the signed-in user's password. Every other session ends; this one is
  * re-issued so the person making the change stays signed in. Wrong current

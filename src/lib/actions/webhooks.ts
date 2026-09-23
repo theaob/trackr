@@ -220,6 +220,26 @@ export async function getWebhookDeliveries(webhookId: string): Promise<WebhookDe
   }
 }
 
+// Each delivery stores its full payload; keep enough history to debug a
+// receiver without letting the table grow with every issue change forever.
+const DELIVERIES_KEPT_PER_WEBHOOK = 100;
+
+async function pruneDeliveries(webhookId: string) {
+  try {
+    const stale = await prisma.webhookDelivery.findMany({
+      where: { webhookId },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: DELIVERIES_KEPT_PER_WEBHOOK,
+      select: { id: true },
+    });
+    if (stale.length > 0) {
+      await prisma.webhookDelivery.deleteMany({ where: { id: { in: stale.map((d) => d.id) } } });
+    }
+  } catch (error) {
+    console.error("Failed to prune webhook deliveries:", error);
+  }
+}
+
 /**
  * Internal worker to deliver a single webhook request and record the delivery log
  */
@@ -284,6 +304,8 @@ async function deliverWebhook(
         error: errorMsg,
       },
     });
+
+    await pruneDeliveries(webhook.id);
 
     return {
       success: isSuccess,

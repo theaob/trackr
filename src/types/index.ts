@@ -153,6 +153,8 @@ export interface LinkedIssueSummary {
   status: IssueStatus;
   projectId: string;
   project?: { key: string; name: string } | null;
+  /** The color of `status` in this issue's own project, which may not be the one being viewed. */
+  statusColor?: string;
 }
 
 /** Stored once from the source's perspective; each side derives its own label from `type`. */

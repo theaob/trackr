@@ -40,6 +40,9 @@ model Project {
   id          String   @id @default(cuid())
   name        String
   key         String   @unique
+  // The highest issue number ever handed out, so deleting the newest issue
+  // never lets its key be reused.
+  issueCounter Int      @default(0)
   description String?
   // "SCRUM" (sprints, a board scoped to the active one) or "KANBAN" (no
   // sprints, the board is every non-backlog issue in continuous flow).

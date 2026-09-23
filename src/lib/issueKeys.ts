@@ -46,9 +46,10 @@ function serializePerProject<T>(projectId: string, task: () => Promise<T>): Prom
 /**
  * Create an issue with the next free key for its project.
  *
- * The key is derived from the highest existing number rather than a row count,
- * so deletions do not cause collisions, and a unique-constraint violation from
- * a concurrent create is retried instead of surfacing as a failed save.
+ * The number is one more than both the highest existing key and the highest
+ * ever handed out, so numbers only go up: deleting an issue never frees its
+ * key for reuse. A unique-constraint violation from a concurrent create is
+ * retried instead of surfacing as a failed save.
  */
 export function createIssueWithKey<T>(
   projectId: string,
@@ -64,11 +65,14 @@ async function allocateAndCreate<T>(
   build: (key: string) => Prisma.PrismaPromise<T>
 ): Promise<T> {
   let attempt = 0;
-  let nextNumber = (await highestIssueNumber(projectId, projectKey)) + 1;
+  let nextNumber =
+    Math.max(await highestIssueNumber(projectId, projectKey), await highestAllocated(projectId)) + 1;
 
   for (;;) {
     try {
-      return await build(`${projectKey}-${nextNumber}`);
+      const created = await build(`${projectKey}-${nextNumber}`);
+      await recordAllocated(projectId, nextNumber);
+      return created;
     } catch (error) {
       const isDuplicateKey =
         error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
@@ -82,6 +86,26 @@ async function allocateAndCreate<T>(
       );
     }
   }
+}
+
+/**
+ * The highest number this project has ever handed out. Existing issues alone
+ * aren't enough: delete the newest one and its number would come round again,
+ * pointing old links and references at a different issue.
+ */
+async function highestAllocated(projectId: string): Promise<number> {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { issueCounter: true },
+  });
+  return project?.issueCounter ?? 0;
+}
+
+async function recordAllocated(projectId: string, number: number) {
+  await prisma.project.updateMany({
+    where: { id: projectId, issueCounter: { lt: number } },
+    data: { issueCounter: number },
+  });
 }
 
 async function highestIssueNumber(projectId: string, projectKey: string): Promise<number> {

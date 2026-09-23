@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/db";
+import { attachStatusColors } from "@/lib/statusColorLookup";
 import { revalidatePath } from "next/cache";
 import { triggerWebhooks } from "./webhooks";
 import {
@@ -150,7 +151,8 @@ export async function createIssueLink(data: {
       issueId: source.id,
     });
 
-    return { success: true as const, link: { ...link, source, target } };
+    const [coloredSource, coloredTarget] = await attachStatusColors([source, target]);
+    return { success: true as const, link: { ...link, source: coloredSource, target: coloredTarget } };
   } catch (error) {
     return toActionError(error, "Failed to link issue");
   }

@@ -16,6 +16,29 @@ export interface NotificationContent {
 
 type MaybeId = string | null | undefined;
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Notifications are never deleted by anyone, so trim as new ones arrive: read
+ * ones after 90 days, and anything after a year.
+ */
+async function pruneNotifications(userIds: string[]) {
+  const now = Date.now();
+  try {
+    await prisma.notification.deleteMany({
+      where: {
+        userId: { in: userIds },
+        OR: [
+          { read: true, createdAt: { lt: new Date(now - 90 * DAY_MS) } },
+          { createdAt: { lt: new Date(now - 365 * DAY_MS) } },
+        ],
+      },
+    });
+  } catch (error) {
+    console.error("Failed to prune notifications:", error);
+  }
+}
+
 /** Of these users, the ones who can currently see the project. */
 async function withProjectAccess(projectId: string, userIds: string[]): Promise<string[]> {
   if (userIds.length === 0) return [];
@@ -55,6 +78,7 @@ export async function notifyUsers(
     await prisma.notification.createMany({
       data: userIds.map((userId) => ({ userId, ...content })),
     });
+    await pruneNotifications(userIds);
   }
   return userIds;
 }

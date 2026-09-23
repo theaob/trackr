@@ -20,6 +20,7 @@ import {
 import { getCurrentUser } from "@/lib/auth/session";
 import { findMentionedUsers } from "@/lib/mentions";
 import { createIssueWithKey } from "@/lib/issueKeys";
+import { attachStatusColors } from "@/lib/statusColorLookup";
 import { planColumnOrder } from "@/lib/boardOrder";
 import {
   getBacklogStatusNames,
@@ -250,7 +251,16 @@ export async function getIssueByKeyOrId(keyOrId: string) {
     if (!issue) return null;
     await requireProjectAccess(issue.projectId);
 
-    return issue;
+    // Linked issues can live in other projects; color their statuses by their own workflow.
+    const [targets, sources] = await Promise.all([
+      attachStatusColors(issue.linksAsSource.map((l) => l.target)),
+      attachStatusColors(issue.linksAsTarget.map((l) => l.source)),
+    ]);
+    return {
+      ...issue,
+      linksAsSource: issue.linksAsSource.map((l, i) => ({ ...l, target: targets[i] })),
+      linksAsTarget: issue.linksAsTarget.map((l, i) => ({ ...l, source: sources[i] })),
+    };
   } catch (error) {
     console.error("Failed to fetch issue by key or id:", error);
     return null;

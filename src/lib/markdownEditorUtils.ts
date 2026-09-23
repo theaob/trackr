@@ -296,6 +296,28 @@ export function shouldIndentOnTab(text: string, selectionStart: number, selectio
   return LIST_ITEM.test(text.slice(lineStart, lineEnd));
 }
 
+/**
+ * Whether the editor should take this Tab (or Shift+Tab) instead of letting
+ * focus move. Shift+Tab only outdents when there's indentation to remove, so
+ * from an unindented list line it still moves focus back.
+ */
+export function shouldHandleTab(
+  text: string,
+  selectionStart: number,
+  selectionEnd: number,
+  shift: boolean
+): boolean {
+  if (!shouldIndentOnTab(text, selectionStart, selectionEnd)) return false;
+  if (!shift) return true;
+  const lineStart = text.lastIndexOf("\n", selectionStart - 1) + 1;
+  let lineEnd = text.indexOf("\n", selectionEnd);
+  if (lineEnd === -1) lineEnd = text.length;
+  return text
+    .slice(lineStart, lineEnd)
+    .split("\n")
+    .some((line) => /^[ \t]/.test(line));
+}
+
 export function handleTabIndent(
   text: string,
   selectionStart: number,

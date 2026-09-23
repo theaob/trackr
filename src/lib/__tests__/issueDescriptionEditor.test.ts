@@ -7,6 +7,7 @@ import {
   insertCodeBlock,
   handleTabIndent,
   shouldIndentOnTab,
+  shouldHandleTab,
 } from "../markdownEditorUtils";
 
 describe("markdownEditorUtils", () => {
@@ -146,6 +147,23 @@ describe("markdownEditorUtils", () => {
       const text = "- item\nplain";
       expect(shouldIndentOnTab(text, text.length, text.length)).toBe(false);
       expect(shouldIndentOnTab(text, 3, 3)).toBe(true);
+    });
+  });
+
+  describe("shouldHandleTab", () => {
+    it("lets Shift+Tab move focus from an unindented list line", () => {
+      expect(shouldHandleTab("- item", 6, 6, true)).toBe(false);
+      expect(shouldHandleTab("- item", 6, 6, false)).toBe(true);
+    });
+
+    it("takes Shift+Tab when there's indentation to remove", () => {
+      expect(shouldHandleTab("  - nested", 10, 10, true)).toBe(true);
+      const text = "- one\n  - two";
+      expect(shouldHandleTab(text, 0, text.length, true)).toBe(true);
+    });
+
+    it("never takes Tab on plain text", () => {
+      expect(shouldHandleTab("  indented prose", 5, 5, true)).toBe(false);
     });
   });
 

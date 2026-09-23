@@ -12,7 +12,7 @@ import {
   insertMarkdownLink,
   insertCodeBlock,
   handleTabIndent,
-  shouldIndentOnTab,
+  shouldHandleTab,
 } from "@/lib/markdownEditorUtils";
 import {
   Bold,
@@ -330,7 +330,15 @@ export default function IssueDescriptionEditor({
 
     // Tab / Shift+Tab: Indent / Outdent list items. Anywhere else Tab moves
     // focus as usual, so the editor never traps the keyboard.
-    if (e.key === "Tab" && shouldIndentOnTab(e.currentTarget.value, e.currentTarget.selectionStart ?? 0, e.currentTarget.selectionEnd ?? 0)) {
+    if (
+      e.key === "Tab" &&
+      shouldHandleTab(
+        e.currentTarget.value,
+        e.currentTarget.selectionStart ?? 0,
+        e.currentTarget.selectionEnd ?? 0,
+        e.shiftKey
+      )
+    ) {
       e.preventDefault();
       applyTransform((text, s, end) => handleTabIndent(text, s, end, e.shiftKey));
       return;
