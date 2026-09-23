@@ -4,7 +4,8 @@ import prisma from "@/lib/db";
 import { requireProjectAccess, projectIdForSprint } from "@/lib/auth/guards";
 import { getDoneStatusNames, getWorkflowStatuses } from "@/lib/workflow";
 import { computeBurndown } from "@/lib/burndown";
-import { computeCumulativeFlow, CFDCategory } from "@/lib/cfd";
+import { computeCumulativeFlow, CFDCategory, CFDStatus } from "@/lib/cfd";
+import { CATEGORY_COLORS, UNKNOWN_STATUS_COLOR, stackingOrder } from "@/lib/statusColors";
 
 /** Sprints worth showing in the report selector: no data exists for one that hasn't started. */
 export async function getReportableSprints(projectId: string) {
@@ -221,24 +222,42 @@ export async function getCumulativeFlowReport(projectId: string, days = 30) {
       {
         key: "DONE",
         label: "Done",
-        color: "#36B37E",
+        color: CATEGORY_COLORS.DONE,
         statuses: workflowStatuses.filter((s) => s.category === "DONE").map((s) => s.name),
       },
       {
         key: "IN_PROGRESS",
         label: "In Progress",
-        color: "#0052CC",
+        color: CATEGORY_COLORS.IN_PROGRESS,
         statuses: workflowStatuses.filter((s) => s.category === "IN_PROGRESS").map((s) => s.name),
       },
       {
         key: "TODO",
         label: "To Do / Backlog",
-        color: "#8993A4",
+        color: CATEGORY_COLORS.TODO,
         statuses: workflowStatuses.filter((s) => s.category === "TODO").map((s) => s.name),
       },
     ];
 
-    return computeCumulativeFlow(issues, statusChanges, categories, startDate, endDate);
+    const flow = computeCumulativeFlow(issues, statusChanges, categories, startDate, endDate);
+
+    // One band per status, in its workflow color. An issue can still carry a
+    // status that has since been removed; those go on top in neutral gray.
+    const statuses: CFDStatus[] = stackingOrder(workflowStatuses).map((s) => ({
+      name: s.name,
+      color: s.color,
+      category: s.category as CFDStatus["category"],
+    }));
+    const known = new Set(statuses.map((s) => s.name));
+    for (const point of flow.points) {
+      for (const name of Object.keys(point.byStatus)) {
+        if (known.has(name)) continue;
+        known.add(name);
+        statuses.push({ name, color: UNKNOWN_STATUS_COLOR, category: "TODO" });
+      }
+    }
+
+    return { ...flow, statuses };
   } catch (error) {
     console.error("Failed to build cumulative flow report:", error);
     return null;
@@ -440,6 +459,8 @@ export interface EpicProgressItem {
   inProgressIssues: number;
   todoIssues: number;
   completionPct: number;
+  /** Child issues per status, in workflow colors and stacking order; empty statuses omitted. */
+  segments: { name: string; color: string; issues: number; points: number }[];
 }
 
 /** Epic progress tracking report showing child issue status breakdown. */
@@ -502,6 +523,18 @@ export async function getEpicProgressReport(projectId: string): Promise<EpicProg
           ? Math.round((completedIssues / totalIssues) * 100)
           : 0;
 
+      const ordered = stackingOrder(workflowStatuses);
+      const segments = ordered.map((s) => ({ name: s.name, color: s.color, issues: 0, points: 0 }));
+      for (const child of children) {
+        let segment = segments.find((seg) => seg.name === child.status);
+        if (!segment) {
+          segment = { name: child.status, color: UNKNOWN_STATUS_COLOR, issues: 0, points: 0 };
+          segments.push(segment);
+        }
+        segment.issues++;
+        segment.points += child.storyPoints ?? 0;
+      }
+
       return {
         id: epic.id,
         key: epic.key,
@@ -509,6 +542,7 @@ export async function getEpicProgressReport(projectId: string): Promise<EpicProg
         status: epic.status,
         priority: epic.priority,
         dueDate: epic.dueDate,
+        segments: segments.filter((seg) => seg.issues > 0),
         totalPoints,
         completedPoints,
         inProgressPoints,

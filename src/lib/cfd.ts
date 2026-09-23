@@ -20,6 +20,8 @@ export interface CFDDataPoint {
   dateStr: string;
   counts: Record<"DONE" | "IN_PROGRESS" | "TODO", number>;
   points: Record<"DONE" | "IN_PROGRESS" | "TODO", number>;
+  /** The same totals split by status name, for a band per status. */
+  byStatus: Record<string, { count: number; points: number }>;
   totalIssues: number;
   totalPoints: number;
 }
@@ -32,10 +34,19 @@ export interface CFDMetrics {
   totalCompletedInWindow: number;
 }
 
+/** A status band, listed bottom-to-top in the order the chart stacks them. */
+export interface CFDStatus {
+  name: string;
+  color: string;
+  category: "DONE" | "IN_PROGRESS" | "TODO";
+}
+
 export interface CFDResult {
   points: CFDDataPoint[];
   categories: CFDCategory[];
   metrics: CFDMetrics;
+  /** Filled in by the report action, which knows each status's color. */
+  statuses?: CFDStatus[];
 }
 
 export function computeCumulativeFlow(
@@ -80,6 +91,7 @@ export function computeCumulativeFlow(
     const dayEnd = endOfDay(day);
     const counts = { DONE: 0, IN_PROGRESS: 0, TODO: 0 };
     const pointsMap = { DONE: 0, IN_PROGRESS: 0, TODO: 0 };
+    const byStatus: CFDDataPoint["byStatus"] = {};
 
     for (const issue of issues) {
       // If the issue was created after this day, it's not yet in the flow
@@ -93,6 +105,9 @@ export function computeCumulativeFlow(
 
       counts[cat]++;
       pointsMap[cat] += pts;
+      const statusTotals = (byStatus[st] ??= { count: 0, points: 0 });
+      statusTotals.count++;
+      statusTotals.points += pts;
     }
 
     const totalIssues = counts.DONE + counts.IN_PROGRESS + counts.TODO;
@@ -103,6 +118,7 @@ export function computeCumulativeFlow(
       dateStr: day.toISOString().slice(0, 10),
       counts,
       points: pointsMap,
+      byStatus,
       totalIssues,
       totalPoints,
     };

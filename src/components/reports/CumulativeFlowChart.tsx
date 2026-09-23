@@ -4,7 +4,8 @@ import React, { useState, useMemo, useCallback } from "react";
 import { useChartWidth } from "@/hooks/useChartWidth";
 import { format } from "date-fns";
 import { Layers, Clock, Activity, Zap, CheckCircle2 } from "lucide-react";
-import type { CFDResult, CFDDataPoint, CFDCategory } from "@/lib/cfd";
+import type { CFDResult, CFDDataPoint } from "@/lib/cfd";
+import { prettifyStatusName } from "@/lib/workflowDisplay";
 import { niceAxis } from "./chartScale";
 
 interface CumulativeFlowChartProps {
@@ -58,44 +59,33 @@ export default function CumulativeFlowChart({
     [yMax]
   );
 
-  // Build stacked areas
-  // Stack from bottom to top: DONE -> IN_PROGRESS -> TODO
-  // Baseline = 0
-  // Area 1: DONE (from 0 to DONE)
-  // Area 2: IN_PROGRESS (from DONE to DONE + IN_PROGRESS)
-  // Area 3: TODO (from DONE + IN_PROGRESS to TOTAL)
+  // One series per workflow status, in its configured color, listed
+  // bottom-to-top as stacked. Older data without per-status totals falls back
+  // to the three categories.
+  const series = useMemo(() => {
+    const all: { key: string; label: string; color: string; value: (p: CFDDataPoint) => number }[] =
+      initialData?.statuses && initialData.statuses.length > 0
+        ? initialData.statuses.map((st) => ({
+            key: st.name,
+            label: prettifyStatusName(st.name),
+            color: st.color,
+            value: (p: CFDDataPoint) => {
+              const totals = p.byStatus?.[st.name];
+              return totals ? (isIssueUnit ? totals.count : totals.points) : 0;
+            },
+          }))
+        : (initialData?.categories ?? []).map((cat) => ({
+            key: cat.key,
+            label: cat.label,
+            color: cat.color,
+            value: (p: CFDDataPoint) => (isIssueUnit ? p.counts[cat.key] : p.points[cat.key]),
+          }));
+    // Leave out statuses that hold nothing in this window.
+    return all.filter((s) => points.some((p) => s.value(p) > 0));
+  }, [initialData?.statuses, initialData?.categories, points, isIssueUnit]);
+
   const stackedBands = useMemo(() => {
     if (points.length < 2) return [];
-
-    const getVal = (p: CFDDataPoint, cat: "DONE" | "IN_PROGRESS" | "TODO") =>
-      isIssueUnit ? p.counts[cat] : p.points[cat];
-
-    const doneCoords = points.map((p, i) => ({
-      x: xAt(i),
-      y0: yAt(0),
-      y1: yAt(getVal(p, "DONE")),
-    }));
-
-    const inProgressCoords = points.map((p, i) => {
-      const doneVal = getVal(p, "DONE");
-      const inProgVal = getVal(p, "IN_PROGRESS");
-      return {
-        x: xAt(i),
-        y0: yAt(doneVal),
-        y1: yAt(doneVal + inProgVal),
-      };
-    });
-
-    const todoCoords = points.map((p, i) => {
-      const doneVal = getVal(p, "DONE");
-      const inProgVal = getVal(p, "IN_PROGRESS");
-      const todoVal = getVal(p, "TODO");
-      return {
-        x: xAt(i),
-        y0: yAt(doneVal + inProgVal),
-        y1: yAt(doneVal + inProgVal + todoVal),
-      };
-    });
 
     const makeAreaPath = (coords: { x: number; y0: number; y1: number }[]) => {
       const topPath = coords.map((c, i) => `${i === 0 ? "M" : "L"} ${c.x} ${c.y1}`).join(" ");
@@ -111,33 +101,22 @@ export default function CumulativeFlowChart({
       return coords.map((c, i) => `${i === 0 ? "M" : "L"} ${c.x} ${c.y1}`).join(" ");
     };
 
-    return [
-      {
-        key: "DONE",
-        label: "Done",
-        fill: "#36B37E",
-        stroke: "#00875A",
-        areaPath: makeAreaPath(doneCoords),
-        strokePath: makeTopStrokePath(doneCoords),
-      },
-      {
-        key: "IN_PROGRESS",
-        label: "In Progress",
-        fill: "#0052CC",
-        stroke: "#0747A6",
-        areaPath: makeAreaPath(inProgressCoords),
-        strokePath: makeTopStrokePath(inProgressCoords),
-      },
-      {
-        key: "TODO",
-        label: "To Do",
-        fill: "#8993A4",
-        stroke: "#5E6C84",
-        areaPath: makeAreaPath(todoCoords),
-        strokePath: makeTopStrokePath(todoCoords),
-      },
-    ];
-  }, [points, isIssueUnit, xAt, yAt]);
+    const base = points.map(() => 0);
+    return series.map((s) => {
+      const coords = points.map((p, i) => {
+        const y0 = base[i];
+        base[i] += s.value(p);
+        return { x: xAt(i), y0: yAt(y0), y1: yAt(base[i]) };
+      });
+      return {
+        key: s.key,
+        fill: s.color,
+        stroke: s.color,
+        areaPath: makeAreaPath(coords),
+        strokePath: makeTopStrokePath(coords),
+      };
+    });
+  }, [points, series, xAt, yAt]);
 
   const handleMove = (e: React.MouseEvent<SVGRectElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -195,20 +174,17 @@ export default function CumulativeFlowChart({
           ))}
         </div>
 
-        {/* Legend */}
-        <div className="flex items-center gap-4 text-[11px] text-jira-gray-600">
-          <span className="flex items-center gap-1.5 font-medium text-emerald-700">
-            <span className="w-3 h-3 rounded-xs bg-[#36B37E]" />
-            Done
-          </span>
-          <span className="flex items-center gap-1.5 font-medium text-jira-blue">
-            <span className="w-3 h-3 rounded-xs bg-[#0052CC]" />
-            In Progress (WIP)
-          </span>
-          <span className="flex items-center gap-1.5 font-medium text-jira-gray-700">
-            <span className="w-3 h-3 rounded-xs bg-[#8993A4]" />
-            To Do
-          </span>
+        {/* Legend: workflow order, matching the stack from the top down */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-jira-gray-600">
+          {series
+            .slice()
+            .reverse()
+            .map((s) => (
+              <span key={s.key} className="flex items-center gap-1.5 font-medium">
+                <span className="w-3 h-3 rounded-xs" style={{ backgroundColor: s.color }} />
+                {s.label}
+              </span>
+            ))}
         </div>
 
         {/* Unit Selector */}
@@ -377,33 +353,20 @@ export default function CumulativeFlowChart({
               {format(hovered.date, "EEEE, MMM d, yyyy")}
             </div>
             <div className="space-y-1">
-              <div className="flex items-center justify-between gap-4">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#8993A4]" />
-                  To Do:
-                </span>
-                <span className="font-bold text-white">
-                  {isIssueUnit ? hovered.counts.TODO : hovered.points.TODO} {unitLabel}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#0052CC]" />
-                  In Progress (WIP):
-                </span>
-                <span className="font-bold text-jira-blue-light">
-                  {isIssueUnit ? hovered.counts.IN_PROGRESS : hovered.points.IN_PROGRESS} {unitLabel}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#36B37E]" />
-                  Done:
-                </span>
-                <span className="font-bold text-emerald-400">
-                  {isIssueUnit ? hovered.counts.DONE : hovered.points.DONE} {unitLabel}
-                </span>
-              </div>
+              {series
+                .slice()
+                .reverse()
+                .map((s) => (
+                  <div key={s.key} className="flex items-center justify-between gap-4">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                      {s.label}:
+                    </span>
+                    <span className="font-bold text-white">
+                      {s.value(hovered)} {unitLabel}
+                    </span>
+                  </div>
+                ))}
               <div className="flex items-center justify-between gap-4 pt-1 border-t border-white/10 text-jira-gray-300">
                 <span>Total Work:</span>
                 <span className="font-bold text-white">

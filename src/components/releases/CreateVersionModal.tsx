@@ -1,5 +1,6 @@
 "use client";
 
+import { StatusBadge } from "@/components/common/IssueIcons";
 import React, { useState, useEffect, useMemo } from "react";
 import { Version, IssueType } from "@/types";
 import {
@@ -472,17 +473,7 @@ export default function CreateVersionModal({
                           )}
 
                           {/* Status Badge */}
-                          <span
-                            className={`px-1.5 py-0.5 rounded font-semibold uppercase ${
-                              issue.category === "DONE"
-                                ? "bg-emerald-100 text-emerald-800"
-                                : issue.category === "IN_PROGRESS"
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-jira-gray-200 text-jira-gray-700"
-                            }`}
-                          >
-                            {issue.status}
-                          </span>
+                          <StatusBadge status={issue.status} className="text-[10px]" />
 
                           {issue.storyPoints != null && (
                             <span className="w-4 h-4 rounded-full bg-jira-gray-200 text-jira-gray-700 flex items-center justify-center font-bold text-[9px]">

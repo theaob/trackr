@@ -1,4 +1,5 @@
 import prisma from "@/lib/db";
+import { CATEGORY_COLORS, UNSET_STATUS_COLOR } from "@/lib/statusColors";
 
 export type WorkflowStatusCategory = "TODO" | "IN_PROGRESS" | "DONE";
 
@@ -102,9 +103,30 @@ export async function ensureProjectWorkflowSeeded(projectId: string): Promise<vo
   }
 }
 
+let unsetColorBackfill: Promise<void> | null = null;
+
+/**
+ * Statuses used to be created gray whatever their category. Give the ones
+ * nobody recolored their category's color, once per process; a color someone
+ * picked is never touched (see UNSET_STATUS_COLOR).
+ */
+function backfillUnsetStatusColors(): Promise<void> {
+  unsetColorBackfill ??= Promise.all(
+    Object.entries(CATEGORY_COLORS).map(([category, color]) =>
+      prisma.workflowStatus.updateMany({ where: { color: UNSET_STATUS_COLOR, category }, data: { color } })
+    )
+  )
+    .then(() => undefined)
+    .catch((error) => {
+      unsetColorBackfill = null;
+      console.error("Failed to backfill status colors:", error);
+    });
+  return unsetColorBackfill;
+}
+
 /** A project's statuses, ordered for display, seeding the defaults first if needed. */
 export async function getWorkflowStatuses(projectId: string) {
-  await ensureProjectWorkflowSeeded(projectId);
+  await Promise.all([ensureProjectWorkflowSeeded(projectId), backfillUnsetStatusColors()]);
   return prisma.workflowStatus.findMany({
     where: { projectId },
     orderBy: { order: "asc" },

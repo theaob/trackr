@@ -34,6 +34,22 @@ describe("computeCumulativeFlow", () => {
     expect(day1.totalPoints).toBe(10);
   });
 
+  it("also totals each status separately, so every status can get its own band", () => {
+    const issues: CFDIssue[] = [
+      { id: "1", createdAt: new Date("2025-12-30T00:00:00Z"), status: "IN_PROGRESS", storyPoints: 5 },
+      { id: "2", createdAt: new Date("2025-12-30T00:00:00Z"), status: "IN_REVIEW", storyPoints: 3 },
+      { id: "3", createdAt: new Date("2025-12-30T00:00:00Z"), status: "IN_REVIEW", storyPoints: 1 },
+    ];
+
+    const day1 = computeCumulativeFlow(issues, [], categories, start, end, end).points[0];
+
+    expect(day1.counts.IN_PROGRESS).toBe(3);
+    expect(day1.byStatus).toEqual({
+      IN_PROGRESS: { count: 1, points: 5 },
+      IN_REVIEW: { count: 2, points: 4 },
+    });
+  });
+
   it("reconstructs status movements across time", () => {
     const issues: CFDIssue[] = [
       { id: "1", createdAt: new Date("2025-12-30T00:00:00Z"), status: "DONE", storyPoints: 4 },

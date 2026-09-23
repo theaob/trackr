@@ -7,6 +7,7 @@ import Sidebar from "./Sidebar";
 import CreateIssueModal from "@/components/issues/CreateIssueModal";
 import CreateProjectModal from "@/components/projects/CreateProjectModal";
 import { SearchProvider } from "@/context/SearchContext";
+import { StatusColorsProvider } from "@/context/StatusColorsContext";
 import { useCurrentUser } from "@/context/UserContext";
 import { useKeyboardShortcutsContext } from "@/context/KeyboardShortcutsContext";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
@@ -18,6 +19,8 @@ interface ProjectLayoutClientProps {
   users: User[];
   sprints: Sprint[];
   epics: Issue[];
+  /** Workflow status colors, for status lozenges anywhere in the project. */
+  statuses?: { name: string; color: string }[];
   children: React.ReactNode;
 }
 
@@ -27,6 +30,7 @@ export default function ProjectLayoutClient({
   users,
   sprints,
   epics,
+  statuses = [],
   children,
 }: ProjectLayoutClientProps) {
   const router = useRouter();
@@ -54,59 +58,61 @@ export default function ProjectLayoutClient({
 
   return (
     <SearchProvider>
-      <div className="flex flex-col h-screen w-screen overflow-hidden bg-white text-jira-navy font-sans antialiased">
-        {/* Top Navbar */}
-        <Navbar
-          projects={projects}
-          currentProject={currentProject}
-          onCreateIssueClick={
-            permissions.canCreateIssue
-              ? () => setIsCreateModalOpen(true)
-              : undefined
-          }
-          onCreateProjectClick={
-            currentUser?.canCreateProjects
-              ? () => setIsCreateProjectModalOpen(true)
-              : undefined
-          }
-          onToggleMobileMenu={() => setIsMobileDrawerOpen((prev) => !prev)}
-        />
-
-        {/* Main Workspace Body: Sidebar + Content */}
-        <div className="flex-1 flex overflow-hidden">
-          <Sidebar
-            project={currentProject}
-            collapsed={isSidebarCollapsed}
-            onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
-            isMobileOpen={isMobileDrawerOpen}
-            onCloseMobile={() => setIsMobileDrawerOpen(false)}
+      <StatusColorsProvider statuses={statuses}>
+        <div className="flex flex-col h-screen w-screen overflow-hidden bg-white text-jira-navy font-sans antialiased">
+          {/* Top Navbar */}
+          <Navbar
+            projects={projects}
+            currentProject={currentProject}
+            onCreateIssueClick={
+              permissions.canCreateIssue
+                ? () => setIsCreateModalOpen(true)
+                : undefined
+            }
+            onCreateProjectClick={
+              currentUser?.canCreateProjects
+                ? () => setIsCreateProjectModalOpen(true)
+                : undefined
+            }
+            onToggleMobileMenu={() => setIsMobileDrawerOpen((prev) => !prev)}
           />
-          <main className="flex-1 flex flex-col overflow-hidden bg-white">{children}</main>
+
+          {/* Main Workspace Body: Sidebar + Content */}
+          <div className="flex-1 flex overflow-hidden">
+            <Sidebar
+              project={currentProject}
+              collapsed={isSidebarCollapsed}
+              onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+              isMobileOpen={isMobileDrawerOpen}
+              onCloseMobile={() => setIsMobileDrawerOpen(false)}
+            />
+            <main className="flex-1 flex flex-col overflow-hidden bg-white">{children}</main>
+          </div>
+
+          {/* Global Create Issue Modal */}
+          {isCreateModalOpen && permissions.canCreateIssue && (
+            <CreateIssueModal
+              project={currentProject}
+              allProjects={projects}
+              users={users}
+              sprints={sprints}
+              epics={epics}
+              onClose={() => setIsCreateModalOpen(false)}
+              onIssueCreated={() => {
+                router.refresh();
+              }}
+            />
+          )}
+
+          {/* Global Create Project Modal */}
+          {isCreateProjectModalOpen && currentUser?.canCreateProjects && (
+            <CreateProjectModal
+              users={users}
+              onClose={() => setIsCreateProjectModalOpen(false)}
+            />
+          )}
         </div>
-
-        {/* Global Create Issue Modal */}
-        {isCreateModalOpen && permissions.canCreateIssue && (
-          <CreateIssueModal
-            project={currentProject}
-            allProjects={projects}
-            users={users}
-            sprints={sprints}
-            epics={epics}
-            onClose={() => setIsCreateModalOpen(false)}
-            onIssueCreated={() => {
-              router.refresh();
-            }}
-          />
-        )}
-
-        {/* Global Create Project Modal */}
-        {isCreateProjectModalOpen && currentUser?.canCreateProjects && (
-          <CreateProjectModal
-            users={users}
-            onClose={() => setIsCreateProjectModalOpen(false)}
-          />
-        )}
-      </div>
+      </StatusColorsProvider>
     </SearchProvider>
   );
 }

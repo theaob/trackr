@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { formatCalendarDate } from "@/lib/calendarDate";
+import { StatusBadge } from "@/components/common/IssueIcons";
 
 interface ReleasesViewProps {
   project: Project;
@@ -115,17 +116,6 @@ export default function ReleasesView({
         return "bg-purple-600 text-white";
       default:
         return "bg-jira-gray-500 text-white";
-    }
-  };
-
-  const getCategoryBadge = (category: string) => {
-    switch (category) {
-      case "DONE":
-        return "bg-emerald-100 text-emerald-800 border-emerald-200";
-      case "IN_PROGRESS":
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      default:
-        return "bg-jira-gray-100 text-jira-gray-700 border-jira-gray-200";
     }
   };
 
@@ -576,13 +566,7 @@ export default function ReleasesView({
                                     </span>
                                   )}
 
-                                  <span
-                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getCategoryBadge(
-                                      issue.category
-                                    )}`}
-                                  >
-                                    {issue.status}
-                                  </span>
+                                  <StatusBadge status={issue.status} className="text-[10px]" />
 
                                   {issue.assignee ? (
                                     <div className="flex items-center gap-1.5" title={`Assignee: ${issue.assignee.name}`}>

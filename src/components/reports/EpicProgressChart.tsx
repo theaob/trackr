@@ -8,6 +8,7 @@ import type { EpicProgressItem } from "@/lib/actions/reports";
 import { PriorityIcon } from "@/components/common/IssueIcons";
 import { PriorityLevel } from "@/types";
 import { formatCalendarDate, isCalendarDateBeforeToday } from "@/lib/calendarDate";
+import { prettifyStatusName } from "@/lib/workflowDisplay";
 
 interface EpicProgressChartProps {
   epics: EpicProgressItem[];
@@ -16,6 +17,11 @@ interface EpicProgressChartProps {
 
 export default function EpicProgressChart({ epics, projectKey }: EpicProgressChartProps) {
   const [filter, setFilter] = useState<"ALL" | "IN_PROGRESS" | "DONE">("ALL");
+
+  // Every status some epic's children are in, in workflow colors, for the legend.
+  const legend = Array.from(
+    new Map(epics.flatMap((e) => e.segments).map((seg) => [seg.name, seg.color])).entries()
+  );
 
   const filteredEpics = epics.filter((e) => {
     if (filter === "DONE") return e.completionPct === 100;
@@ -63,19 +69,13 @@ export default function EpicProgressChart({ epics, projectKey }: EpicProgressCha
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-4 text-[11px] text-jira-gray-600">
-          <span className="flex items-center gap-1.5 font-medium text-emerald-700">
-            <span className="w-3 h-3 rounded-xs bg-[#36B37E]" />
-            Done
-          </span>
-          <span className="flex items-center gap-1.5 font-medium text-jira-blue">
-            <span className="w-3 h-3 rounded-xs bg-[#0052CC]" />
-            In Progress
-          </span>
-          <span className="flex items-center gap-1.5 font-medium text-jira-gray-600">
-            <span className="w-3 h-3 rounded-xs bg-[#DFE1E6]" />
-            To Do
-          </span>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-jira-gray-600">
+          {legend.map(([name, color]) => (
+            <span key={name} className="flex items-center gap-1.5 font-medium">
+              <span className="w-3 h-3 rounded-xs" style={{ backgroundColor: color }} />
+              {prettifyStatusName(name)}
+            </span>
+          ))}
         </div>
       </div>
 
@@ -104,20 +104,6 @@ export default function EpicProgressChart({ epics, projectKey }: EpicProgressCha
       {/* Epic Cards List */}
       <div className="space-y-3">
         {filteredEpics.map((epic) => {
-          const donePct = epic.totalPoints > 0
-            ? (epic.completedPoints / epic.totalPoints) * 100
-            : epic.totalIssues > 0
-            ? (epic.completedIssues / epic.totalIssues) * 100
-            : 0;
-
-          const inProgPct = epic.totalPoints > 0
-            ? (epic.inProgressPoints / epic.totalPoints) * 100
-            : epic.totalIssues > 0
-            ? (epic.inProgressIssues / epic.totalIssues) * 100
-            : 0;
-
-          const todoPct = Math.max(0, 100 - donePct - inProgPct);
-
           const isOverdue = isCalendarDateBeforeToday(epic.dueDate) && epic.completionPct < 100;
 
           return (
@@ -168,27 +154,25 @@ export default function EpicProgressChart({ epics, projectKey }: EpicProgressCha
               {/* Stacked Progress Bar */}
               <div className="space-y-1">
                 <div className="h-3 rounded-full overflow-hidden bg-jira-gray-200 flex">
-                  {donePct > 0 && (
-                    <div
-                      style={{ width: `${donePct}%` }}
-                      className="h-full bg-[#36B37E] transition-all"
-                      title={`Completed: ${epic.completedPoints} pts (${epic.completedIssues} issues)`}
-                    />
-                  )}
-                  {inProgPct > 0 && (
-                    <div
-                      style={{ width: `${inProgPct}%` }}
-                      className="h-full bg-[#0052CC] transition-all"
-                      title={`In Progress: ${epic.inProgressPoints} pts (${epic.inProgressIssues} issues)`}
-                    />
-                  )}
-                  {todoPct > 0 && (
-                    <div
-                      style={{ width: `${todoPct}%` }}
-                      className="h-full bg-[#DFE1E6] transition-all"
-                      title={`To Do: ${epic.todoPoints} pts (${epic.todoIssues} issues)`}
-                    />
-                  )}
+                  {epic.segments.map((seg) => {
+                    // Sized by points when the epic has estimates, else by issue count,
+                    // matching how its completion percentage is worked out.
+                    const share =
+                      epic.totalPoints > 0
+                        ? seg.points / epic.totalPoints
+                        : epic.totalIssues > 0
+                        ? seg.issues / epic.totalIssues
+                        : 0;
+                    if (share <= 0) return null;
+                    return (
+                      <div
+                        key={seg.name}
+                        style={{ width: `${share * 100}%`, backgroundColor: seg.color }}
+                        className="h-full transition-all"
+                        title={`${prettifyStatusName(seg.name)}: ${seg.points} pts (${seg.issues} issues)`}
+                      />
+                    );
+                  })}
                 </div>
 
                 {/* Sub-bar numbers */}

@@ -2,6 +2,7 @@ import React from "react";
 import { getProjects, getProjectByKey, getProjectUsers } from "@/lib/actions/projects";
 import { getProjectSprints } from "@/lib/actions/sprints";
 import { getProjectEpics } from "@/lib/actions/issues";
+import { getProjectWorkflow } from "@/lib/actions/workflows";
 import ProjectLayoutClient from "@/components/layout/ProjectLayoutClient";
 import { denyPageAccess } from "@/lib/auth/page";
 
@@ -19,13 +20,14 @@ export default async function ProjectLayout({
   const currentProject = await getProjectByKey(params.projectKey);
   if (!currentProject) return denyPageAccess(`/projects/${params.projectKey}/board`);
 
-  const [projects, users, sprints, epics] = await Promise.all([
+  const [projects, users, sprints, epics, workflow] = await Promise.all([
     getProjects(),
     getProjectUsers(currentProject.id),
     getProjectSprints(currentProject.id),
     // Epics only: the layout used to load 200 issues with their comment and
     // activity threads just to filter this list out of them.
     getProjectEpics(currentProject.id),
+    getProjectWorkflow(currentProject.id),
   ]);
 
   return (
@@ -35,6 +37,7 @@ export default async function ProjectLayout({
       users={users as any}
       sprints={sprints as any}
       epics={epics as any}
+      statuses={workflow.statuses.map((s) => ({ name: s.name, color: s.color }))}
     >
       {children}
     </ProjectLayoutClient>

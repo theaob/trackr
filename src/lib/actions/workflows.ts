@@ -1,5 +1,6 @@
 "use server";
 
+import { defaultStatusColor, isDefaultStatusColor } from "@/lib/statusColors";
 import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import {
@@ -69,7 +70,7 @@ export async function createWorkflowStatus(
         name,
         category: data.category,
         isBacklog: !!data.isBacklog,
-        color: data.color || "#6B7280",
+        color: data.color || defaultStatusColor(data.category),
         wipLimit: data.wipLimit ?? null,
         order: (maxOrder._max.order ?? -1) + 1,
       },
@@ -115,6 +116,17 @@ export async function updateWorkflowStatus(
       if (clash) return { success: false as const, error: `A status named "${newName}" already exists.` };
     }
 
+    // A status nobody recolored follows its category, so moving "QA" into In
+    // Progress also makes it look like In Progress.
+    const color =
+      data.color !== undefined
+        ? data.color
+        : data.category !== undefined &&
+            data.category !== existing.category &&
+            isDefaultStatusColor(existing.color, existing.category)
+          ? defaultStatusColor(data.category)
+          : undefined;
+
     const status = await prisma.$transaction(async (tx) => {
       const updated = await tx.workflowStatus.update({
         where: { id: statusId },
@@ -122,7 +134,7 @@ export async function updateWorkflowStatus(
           ...(newName !== undefined && { name: newName }),
           ...(data.category !== undefined && { category: data.category }),
           ...(data.isBacklog !== undefined && { isBacklog: data.isBacklog }),
-          ...(data.color !== undefined && { color: data.color }),
+          ...(color !== undefined && { color }),
           ...(data.wipLimit !== undefined && { wipLimit: data.wipLimit }),
         },
       });

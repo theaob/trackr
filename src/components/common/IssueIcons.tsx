@@ -1,6 +1,7 @@
 import React from "react";
 import { IssueType, PriorityLevel, IssueStatus } from "@/types";
 import { prettifyStatusName } from "@/lib/workflowDisplay";
+import { useStatusColor } from "@/context/StatusColorsContext";
 import {
   Bookmark,
   CheckSquare,
@@ -213,6 +214,9 @@ export function StatusBadge({
   className?: string;
 }) {
   const safeStatus = status || "";
+  // The project's workflow color, so a lozenge matches the board and reports.
+  const workflowColor = useStatusColor(safeStatus);
+  const effectiveColor = color ?? workflowColor;
   const getBadgeStyle = () => {
     switch (safeStatus) {
       case "BACKLOG":
@@ -252,8 +256,8 @@ export function StatusBadge({
 
   // A workflow color overrides the built-in palette (used for custom
   // statuses, and for the original five once someone recolors them).
-  const customStyle = color
-    ? { backgroundColor: `${color}1A`, color, borderColor: `${color}66` }
+  const customStyle = effectiveColor
+    ? { backgroundColor: `${effectiveColor}1A`, color: effectiveColor, borderColor: `${effectiveColor}66` }
     : undefined;
 
   return (
