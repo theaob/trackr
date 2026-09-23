@@ -452,7 +452,7 @@ export default function CreateVersionModal({
                             className="rounded text-jira-blue focus:ring-jira-blue shrink-0 pointer-events-none"
                           />
 
-                          <span className="font-bold text-jira-navy text-[11px] shrink-0 font-mono">
+                          <span className="min-w-[4.5rem] font-bold text-jira-navy text-[11px] shrink-0 font-mono">
                             {issue.key}
                           </span>
 
@@ -472,14 +472,18 @@ export default function CreateVersionModal({
                             </span>
                           )}
 
-                          {/* Status Badge */}
-                          <StatusBadge status={issue.status} className="text-[10px]" />
+                          {/* Fixed-width status and points columns so rows line up. */}
+                          <div className="w-28 flex justify-end">
+                            <StatusBadge status={issue.status} className="text-[10px] max-w-full" />
+                          </div>
 
-                          {issue.storyPoints != null && (
-                            <span className="w-4 h-4 rounded-full bg-jira-gray-200 text-jira-gray-700 flex items-center justify-center font-bold text-[9px]">
-                              {issue.storyPoints}
-                            </span>
-                          )}
+                          <div className="w-4">
+                            {issue.storyPoints != null && (
+                              <span className="w-4 h-4 rounded-full bg-jira-gray-200 text-jira-gray-700 flex items-center justify-center font-bold text-[9px]">
+                                {issue.storyPoints}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );

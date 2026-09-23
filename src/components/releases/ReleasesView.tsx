@@ -536,8 +536,9 @@ export default function ReleasesView({
                                 className="px-3 py-2 flex items-center justify-between gap-3 text-xs hover:bg-jira-gray-50/70 transition-colors"
                               >
                                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                  {/* Fixed-width columns so rows line up whatever their content. */}
                                   <span
-                                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${getTypeColor(
+                                    className={`w-12 text-center text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${getTypeColor(
                                       issue.type
                                     )}`}
                                   >
@@ -545,7 +546,7 @@ export default function ReleasesView({
                                   </span>
                                   <Link
                                     href={`/projects/${project.key}/issues?selectedIssue=${issue.key}`}
-                                    className="font-mono font-semibold text-jira-blue hover:underline shrink-0 flex items-center gap-1"
+                                    className="min-w-[5.5rem] font-mono font-semibold text-jira-blue hover:underline shrink-0 flex items-center gap-1"
                                     title="View issue"
                                   >
                                     <span>{issue.key}</span>
@@ -557,26 +558,30 @@ export default function ReleasesView({
                                 </div>
 
                                 <div className="flex items-center gap-2.5 shrink-0">
-                                  {issue.storyPoints !== undefined && issue.storyPoints !== null && (
-                                    <span
-                                      className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-jira-gray-100 text-jira-gray-700"
-                                      title="Story Points"
-                                    >
-                                      {issue.storyPoints} pts
-                                    </span>
-                                  )}
+                                  <div className="w-12 flex justify-end">
+                                    {issue.storyPoints !== undefined && issue.storyPoints !== null && (
+                                      <span
+                                        className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-jira-gray-100 text-jira-gray-700"
+                                        title="Story Points"
+                                      >
+                                        {issue.storyPoints} pts
+                                      </span>
+                                    )}
+                                  </div>
 
-                                  <StatusBadge status={issue.status} className="text-[10px]" />
+                                  <div className="w-28 flex">
+                                    <StatusBadge status={issue.status} className="text-[10px] max-w-full" />
+                                  </div>
 
                                   {issue.assignee ? (
-                                    <div className="flex items-center gap-1.5" title={`Assignee: ${issue.assignee.name}`}>
+                                    <div className="w-6 md:w-32 flex items-center gap-1.5" title={`Assignee: ${issue.assignee.name}`}>
                                       <UserAvatar user={issue.assignee} size="sm" />
                                       <span className="text-[11px] text-jira-gray-600 hidden md:inline max-w-[90px] truncate">
                                         {issue.assignee.name}
                                       </span>
                                     </div>
                                   ) : (
-                                    <span className="text-[11px] text-jira-gray-400 italic">
+                                    <span className="w-6 md:w-32 text-[11px] text-jira-gray-400 italic truncate">
                                       Unassigned
                                     </span>
                                   )}
