@@ -4,7 +4,7 @@ import prisma from "@/lib/db";
 import { IssueStatus, IssueType, PriorityLevel, WebhookActor, WebhookChangelogItem } from "@/types";
 import { revalidatePath } from "next/cache";
 import { triggerWebhooks } from "./webhooks";
-import { notifyWatchers } from "@/lib/watcherNotify";
+import { issueLink, notifyStatusChange, notifyUsers } from "@/lib/notify";
 import { deleteIssueAttachmentDir } from "@/lib/attachmentStorage";
 import { DISPLAY_USER_SELECT } from "@/lib/auth/publicUser";
 import {
@@ -775,16 +775,16 @@ export async function createIssue(data: {
       },
     });
 
-    if (data.assigneeId && data.assigneeId !== reporterId) {
-      await prisma.notification.create({
-        data: {
-          userId: data.assigneeId,
-          title: `You were assigned to ${newIssue.key}`,
-          message: newIssue.title,
-          link: `/projects/${project.key}/board?selectedIssue=${newIssue.key}`,
-        },
-      });
-    }
+    await notifyUsers(
+      data.projectId,
+      [data.assigneeId],
+      {
+        title: `You were assigned to ${newIssue.key}`,
+        message: newIssue.title,
+        link: issueLink(project.key, newIssue.key),
+      },
+      [reporterId]
+    );
 
     const mentioned = await findMentionedUsers(data.projectId, data.description || "", {
       exclude: [reporterId, data.assigneeId],
@@ -1055,24 +1055,13 @@ export async function updateIssue(
           },
         });
 
-        if (existing.assigneeId && existing.assigneeId !== actorId) {
-          await prisma.notification.create({
-            data: {
-              userId: existing.assigneeId,
-              title: `${existing.key} moved to ${data.status}`,
-              message: `Status was updated from ${existing.status} to ${data.status}`,
-              link: `/projects/${existing.project.key}/board?selectedIssue=${existing.key}`,
-            },
-          });
-        }
-
-        await notifyWatchers(
-          id,
-          [actorId, existing.assigneeId],
-          `${existing.key} moved to ${data.status}`,
-          `Status was updated from ${existing.status} to ${data.status}`,
-          `/projects/${existing.project.key}/board?selectedIssue=${existing.key}`
-        );
+        await notifyStatusChange({
+          issue: existing,
+          projectKey: existing.project.key,
+          from: existing.status,
+          to: data.status,
+          actorId,
+        });
       }
 
       if (data.priority && data.priority !== existing.priority) {
@@ -1100,16 +1089,16 @@ export async function updateIssue(
           },
         });
 
-        if (data.assigneeId && data.assigneeId !== actorId) {
-          await prisma.notification.create({
-            data: {
-              userId: data.assigneeId,
-              title: `You were assigned to ${existing.key}`,
-              message: existing.title,
-              link: `/projects/${existing.project.key}/board?selectedIssue=${existing.key}`,
-            },
-          });
-        }
+        await notifyUsers(
+          projectId,
+          [data.assigneeId],
+          {
+            title: `You were assigned to ${existing.key}`,
+            message: existing.title,
+            link: issueLink(existing.project.key, existing.key),
+          },
+          [actorId]
+        );
       }
 
       // Notify project members newly mentioned in the description.
@@ -1407,16 +1396,13 @@ export async function updateIssueStatusAndOrder(
         },
       });
 
-      if (existing.assigneeId && existing.assigneeId !== actorId) {
-        await prisma.notification.create({
-          data: {
-            userId: existing.assigneeId,
-            title: `${existing.key} moved to ${newStatus}`,
-            message: `Moved from ${existing.status} to ${newStatus}`,
-            link: `/projects/${existing.project.key}/board?selectedIssue=${existing.key}`,
-          },
-        });
-      }
+      await notifyStatusChange({
+        issue: existing,
+        projectKey: existing.project.key,
+        from: existing.status,
+        to: newStatus,
+        actorId,
+      });
     }
 
     revalidateProjectRoutes(existing.project.key);

@@ -272,14 +272,19 @@ export async function removeProjectMember(projectId: string, userId: string) {
     const ceiling = await loadRoleCeiling(projectId, callerRole);
     ceiling.assertCanManage(ceiling.authorityOf(target?.role));
 
-    await prisma.projectMember.delete({
-      where: {
-        projectId_userId: {
-          projectId,
-          userId,
+    // Their watches go with the membership: notifications are also filtered
+    // by access when sent, but there's no reason to keep the rows.
+    await prisma.$transaction([
+      prisma.projectMember.delete({
+        where: {
+          projectId_userId: {
+            projectId,
+            userId,
+          },
         },
-      },
-    });
+      }),
+      prisma.watcher.deleteMany({ where: { userId, issue: { projectId } } }),
+    ]);
 
     if (project) {
       try {

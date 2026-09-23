@@ -12,7 +12,7 @@ import {
   canModerateProject,
 } from "@/lib/auth/guards";
 import { findMentionedUsers } from "@/lib/mentions";
-import { notifyWatchers } from "@/lib/watcherNotify";
+import { issueLink, notifyUsers, notifyWatchers } from "@/lib/notify";
 
 
 export async function addComment(
@@ -56,29 +56,14 @@ export async function addComment(
       },
     });
 
-    // Notify Assignee if not the author
-    if (issue.assigneeId && issue.assigneeId !== actorId) {
-      await prisma.notification.create({
-        data: {
-          userId: issue.assigneeId,
-          title: `New comment on ${issue.key}`,
-          message: `${comment.author.name}: ${content.slice(0, 60)}${content.length > 60 ? "..." : ""}`,
-          link: `/projects/${issue.project.key}/board?selectedIssue=${issue.key}`,
-        },
-      });
-    }
+    const commentNotice = {
+      title: `New comment on ${issue.key}`,
+      message: `${comment.author.name}: ${content.slice(0, 60)}${content.length > 60 ? "..." : ""}`,
+      link: issueLink(issue.project.key, issue.key),
+    };
 
-    // Notify Reporter if not author and not assignee
-    if (issue.reporterId && issue.reporterId !== actorId && issue.reporterId !== issue.assigneeId) {
-      await prisma.notification.create({
-        data: {
-          userId: issue.reporterId,
-          title: `New comment on ${issue.key}`,
-          message: `${comment.author.name}: ${content.slice(0, 60)}${content.length > 60 ? "..." : ""}`,
-          link: `/projects/${issue.project.key}/board?selectedIssue=${issue.key}`,
-        },
-      });
-    }
+    // The assignee and reporter hear about every comment but their own.
+    await notifyUsers(projectId, [issue.assigneeId, issue.reporterId], commentNotice, [actorId]);
 
     // Notify project members mentioned in the comment.
     const mentioned = await findMentionedUsers(projectId, content, {
@@ -112,9 +97,9 @@ export async function addComment(
     await notifyWatchers(
       issueId,
       [actorId, issue.assigneeId, issue.reporterId, ...mentioned.map((m) => m.id)],
-      `New comment on ${issue.key}`,
-      `${comment.author.name}: ${content.slice(0, 60)}${content.length > 60 ? "..." : ""}`,
-      `/projects/${issue.project.key}/board?selectedIssue=${issue.key}`
+      commentNotice.title,
+      commentNotice.message,
+      commentNotice.link
     );
 
     try {

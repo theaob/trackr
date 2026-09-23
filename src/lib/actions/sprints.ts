@@ -17,6 +17,7 @@ import {
   getPrimaryBacklogStatusName,
 } from "@/lib/workflow";
 import { planColumnOrder } from "@/lib/boardOrder";
+import { notifyStatusChange } from "@/lib/notify";
 
 
 /** Sprint issues per sprint, bounded so a large backlog cannot be loaded whole. */
@@ -27,6 +28,17 @@ const SPRINT_ISSUE_LIMIT = 200;
  * flow reports rebuild the past from these, so a status change made by a
  * sprint operation must be recorded just like one made on the issue itself.
  */
+type MovedIssue = { id: string; key: string; projectId: string; assigneeId: string | null; status: string };
+const MOVED_ISSUE_SELECT = { id: true, key: true, projectId: true, assigneeId: true, status: true } as const;
+
+/** Tell assignees and watchers about issues a sprint operation moved to a new status. */
+async function notifyMoved(moved: MovedIssue[], newStatus: string, projectKey: string, actorId: string) {
+  for (const issue of moved) {
+    if (issue.status === newStatus) continue;
+    await notifyStatusChange({ issue, projectKey, from: issue.status, to: newStatus, actorId });
+  }
+}
+
 function statusChangeEntries(
   issues: { id: string; status: string }[],
   newStatus: string,
@@ -221,7 +233,7 @@ export async function completeSprint(sprintId: string, moveToSprintId?: string |
     // Closing the sprint and rolling its issues over is one unit of work: a
     // failure partway through must not leave a closed sprint holding open
     // issues.
-    await prisma.$transaction(async (tx) => {
+    const moved = await prisma.$transaction(async (tx): Promise<MovedIssue[]> => {
       await tx.sprint.update({
         where: { id: sprintId },
         data: { status: "COMPLETED" },
@@ -230,12 +242,12 @@ export async function completeSprint(sprintId: string, moveToSprintId?: string |
       const unfinished = { sprintId, status: { notIn: doneNames } };
       if (moveToSprintId) {
         await tx.issue.updateMany({ where: unfinished, data: { sprintId: moveToSprintId } });
-        return;
+        return [];
       }
 
       // Back to the backlog, which means the backlog status too -- otherwise
       // the issues reappear on the board with no sprint.
-      const moving = await tx.issue.findMany({ where: unfinished, select: { id: true, status: true } });
+      const moving = await tx.issue.findMany({ where: unfinished, select: MOVED_ISSUE_SELECT });
       await tx.issue.updateMany({
         where: { id: { in: moving.map((i) => i.id) } },
         data: { sprintId: null, status: backlogStatusName! },
@@ -243,7 +255,10 @@ export async function completeSprint(sprintId: string, moveToSprintId?: string |
       await tx.activityLog.createMany({
         data: statusChangeEntries(moving, backlogStatusName!, user.id),
       });
+      return moving;
     });
+
+    if (backlogStatusName) await notifyMoved(moved, backlogStatusName, sprint.project.key, user.id);
 
     revalidateProjectRoutes(sprint.project.key);
     triggerWebhooks(
@@ -359,6 +374,7 @@ export async function moveIssueToSprint(
       await prisma.activityLog.createMany({
         data: statusChangeEntries([issue], newStatus, user.id),
       });
+      await notifyMoved([issue], newStatus, issue.project.key, user.id);
     }
 
     revalidateProjectRoutes(issue.project.key);
@@ -478,10 +494,10 @@ export async function deleteSprint(sprintId: string) {
 
     // Return the sprint's issues to the backlog, then remove it, as one unit.
     // Finished issues keep their status: leaving a sprint doesn't undo work.
-    await prisma.$transaction(async (tx) => {
+    const moved = await prisma.$transaction(async (tx) => {
       const unfinished = await tx.issue.findMany({
         where: { sprintId, status: { notIn: doneNames } },
-        select: { id: true, status: true },
+        select: MOVED_ISSUE_SELECT,
       });
       await tx.issue.updateMany({
         where: { id: { in: unfinished.map((i) => i.id) } },
@@ -492,7 +508,10 @@ export async function deleteSprint(sprintId: string) {
       });
       await tx.issue.updateMany({ where: { sprintId }, data: { sprintId: null } });
       await tx.sprint.delete({ where: { id: sprintId } });
+      return unfinished;
     });
+
+    await notifyMoved(moved, backlogStatusName, sprint.project.key, user.id);
 
     revalidateProjectRoutes(sprint.project.key);
     triggerWebhooks(
