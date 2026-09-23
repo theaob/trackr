@@ -14,12 +14,13 @@ import { denyPageAccess } from "@/lib/auth/page";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  params: { projectKey: string };
+  params: Promise<{ projectKey: string }>;
 }
 
 export default async function ReportsPage({ params }: PageProps) {
-  const project = await getProjectByKey(params.projectKey);
-  if (!project) return denyPageAccess(`/projects/${params.projectKey}/reports`);
+  const { projectKey } = await params;
+  const project = await getProjectByKey(projectKey);
+  if (!project) return denyPageAccess(`/projects/${projectKey}/reports`);
 
   const [sprints, velocity, cfd, epics] = await Promise.all([
     getReportableSprints(project.id),

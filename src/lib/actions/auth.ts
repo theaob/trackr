@@ -19,9 +19,9 @@ import {
   tooManyAttemptsMessage,
 } from "@/lib/auth/attemptLimiter";
 
-function requestClientAddress(): string | null {
+async function requestClientAddress(): Promise<string | null> {
   try {
-    return clientAddressFrom(headers());
+    return clientAddressFrom(await headers());
   } catch {
     return null;
   }
@@ -129,7 +129,7 @@ export async function loginWithCredentials(email: string, password?: string) {
 
     // Unknown emails are throttled exactly like real ones, so the lockout
     // message can't be used to find out which accounts exist.
-    const client = requestClientAddress();
+    const client = await requestClientAddress();
     const wait = Math.max(
       signInByAccount.retryAfterMs(trimmedEmail),
       client ? signInByClient.retryAfterMs(client) : 0
@@ -270,7 +270,7 @@ export async function signOutOtherSessions() {
 }
 
 export async function logout() {
-  endSession();
+  await endSession();
   try {
     revalidatePath("/", "layout");
   } catch {}

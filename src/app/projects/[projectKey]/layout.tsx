@@ -13,12 +13,13 @@ export default async function ProjectLayout({
   params,
 }: {
   children: React.ReactNode;
-  params: { projectKey: string };
+  params: Promise<{ projectKey: string }>;
 }) {
+  const { projectKey } = await params;
   // getProjectByKey returns null when the caller has no membership, so an
   // inaccessible project is indistinguishable from one that does not exist.
-  const currentProject = await getProjectByKey(params.projectKey);
-  if (!currentProject) return denyPageAccess(`/projects/${params.projectKey}/board`);
+  const currentProject = await getProjectByKey(projectKey);
+  if (!currentProject) return denyPageAccess(`/projects/${projectKey}/board`);
 
   const [projects, users, sprints, epics, workflow] = await Promise.all([
     getProjects(),

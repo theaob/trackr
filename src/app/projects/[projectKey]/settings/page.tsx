@@ -12,13 +12,14 @@ import { requirePageUser } from "@/lib/auth/page";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  params: { projectKey: string };
+  params: Promise<{ projectKey: string }>;
 }
 
 export default async function SettingsPage({ params }: PageProps) {
-  await requirePageUser(`/projects/${params.projectKey}/settings`);
+  const { projectKey } = await params;
+  await requirePageUser(`/projects/${projectKey}/settings`);
 
-  const project = await getProjectByKey(params.projectKey);
+  const project = await getProjectByKey(projectKey);
   if (!project) notFound();
 
   const [users, customFields, components, webhooks, members, workflow, customRoles] = await Promise.all([

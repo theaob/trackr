@@ -10,13 +10,15 @@ import { denyPageAccess } from "@/lib/auth/page";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  params: { projectKey: string };
-  searchParams?: { selectedIssue?: string; issue?: string };
+  params: Promise<{ projectKey: string }>;
+  searchParams: Promise<{ selectedIssue?: string; issue?: string }>;
 }
 
 export default async function BoardPage({ params, searchParams }: PageProps) {
-  const project = await getProjectByKey(params.projectKey);
-  if (!project) return denyPageAccess(`/projects/${params.projectKey}/board`);
+  const { projectKey } = await params;
+  const query = await searchParams;
+  const project = await getProjectByKey(projectKey);
+  if (!project) return denyPageAccess(`/projects/${projectKey}/board`);
 
   const [users, sprints, workflow, epics, versions] = await Promise.all([
     getProjectUsers(project.id),
@@ -44,7 +46,7 @@ export default async function BoardPage({ params, searchParams }: PageProps) {
         versions={versions as any}
         statuses={boardStatuses as any}
         transitions={workflow.transitions as any}
-        initialSelectedIssueKey={searchParams?.selectedIssue || searchParams?.issue}
+        initialSelectedIssueKey={query.selectedIssue || query.issue}
         initialEpics={epics as any}
       />
     </Suspense>

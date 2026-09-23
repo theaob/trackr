@@ -10,13 +10,15 @@ import { denyPageAccess } from "@/lib/auth/page";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  params: { projectKey: string };
-  searchParams?: { selectedIssue?: string; issue?: string };
+  params: Promise<{ projectKey: string }>;
+  searchParams: Promise<{ selectedIssue?: string; issue?: string }>;
 }
 
 export default async function BacklogPage({ params, searchParams }: PageProps) {
-  const project = await getProjectByKey(params.projectKey);
-  if (!project) return denyPageAccess(`/projects/${params.projectKey}/backlog`);
+  const { projectKey } = await params;
+  const query = await searchParams;
+  const project = await getProjectByKey(projectKey);
+  if (!project) return denyPageAccess(`/projects/${projectKey}/backlog`);
 
   const [issues, users, sprints, workflow, epics, versions] = await Promise.all([
     getBacklogIssues(project.id),
@@ -36,7 +38,7 @@ export default async function BacklogPage({ params, searchParams }: PageProps) {
         initialSprints={sprints as any}
         versions={versions as any}
         statuses={workflow.statuses as any}
-        initialSelectedIssueKey={searchParams?.selectedIssue || searchParams?.issue}
+        initialSelectedIssueKey={query.selectedIssue || query.issue}
         initialEpics={epics as any}
       />
     </Suspense>

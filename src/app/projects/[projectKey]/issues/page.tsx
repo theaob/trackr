@@ -11,19 +11,21 @@ import { denyPageAccess } from "@/lib/auth/page";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  params: { projectKey: string };
-  searchParams?: { selectedIssue?: string; issue?: string; tql?: string; mode?: string };
+  params: Promise<{ projectKey: string }>;
+  searchParams: Promise<{ selectedIssue?: string; issue?: string; tql?: string; mode?: string }>;
 }
 
 export default async function IssuesPage({ params, searchParams }: PageProps) {
-  const project = await getProjectByKey(params.projectKey);
-  if (!project) return denyPageAccess(`/projects/${params.projectKey}/issues`);
+  const { projectKey } = await params;
+  const query = await searchParams;
+  const project = await getProjectByKey(projectKey);
+  if (!project) return denyPageAccess(`/projects/${projectKey}/issues`);
 
   const [allProjects, paginatedData, users, sprints, versions, workflow, labels] = await Promise.all([
     getProjects(),
     getPaginatedIssues(
-      searchParams?.tql
-        ? { projectId: project.id, tql: searchParams.tql, page: 1, pageSize: 50 }
+      query.tql
+        ? { projectId: project.id, tql: query.tql, page: 1, pageSize: 50 }
         : { projectId: project.id, page: 1, pageSize: 50, sortField: "createdAt", sortOrder: "desc" }
     ),
     getProjectUsers(project.id),
@@ -48,9 +50,9 @@ export default async function IssuesPage({ params, searchParams }: PageProps) {
         versions={versions as any}
         statuses={workflow.statuses as any}
         labels={labels as any}
-        initialSelectedIssueKey={searchParams?.selectedIssue || searchParams?.issue}
-        initialFilterMode={searchParams?.mode === "tql" || searchParams?.tql ? "tql" : "basic"}
-        initialTqlQuery={searchParams?.tql || ""}
+        initialSelectedIssueKey={query.selectedIssue || query.issue}
+        initialFilterMode={query.mode === "tql" || query.tql ? "tql" : "basic"}
+        initialTqlQuery={query.tql || ""}
       />
     </Suspense>
   );

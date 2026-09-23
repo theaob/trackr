@@ -17,14 +17,15 @@ function safeNext(next?: string): string {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams?: { sso_error?: string; next?: string };
+  searchParams: Promise<{ sso_error?: string; next?: string }>;
 }) {
-  const destination = safeNext(searchParams?.next);
+  const query = await searchParams;
+  const destination = safeNext(query.next);
 
   if (await isSetupNeeded()) redirect("/setup");
 
   const user = await getCurrentUser();
   if (user) redirect(destination);
 
-  return <LoginView ssoError={searchParams?.sso_error} next={destination} />;
+  return <LoginView ssoError={query.sso_error} next={destination} />;
 }

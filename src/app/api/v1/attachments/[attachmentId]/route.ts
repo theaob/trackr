@@ -20,14 +20,15 @@ function contentDisposition(disposition: "inline" | "attachment", fileName: stri
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { attachmentId: string } }
+  { params }: { params: Promise<{ attachmentId: string }> }
 ) {
   try {
-    const projectId = await projectIdForAttachment(params.attachmentId);
+    const { attachmentId } = await params;
+    const projectId = await projectIdForAttachment(attachmentId);
     await requireProjectAccess(projectId);
 
     const attachment = await prisma.attachment.findUnique({
-      where: { id: params.attachmentId },
+      where: { id: attachmentId },
     });
     if (!attachment) {
       return NextResponse.json({ error: "Attachment not found" }, { status: 404 });

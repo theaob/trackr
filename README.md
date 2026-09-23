@@ -1,6 +1,6 @@
 # Trackr
 
-A modern, full-stack agile project management and issue tracking platform built with **Next.js 14**, **TypeScript**, **Tailwind CSS**, and **SQLite with Prisma ORM**.
+A modern, full-stack agile project management and issue tracking platform built with **Next.js 15**, **React 19**, **TypeScript**, **Tailwind CSS**, and **SQLite with Prisma ORM**.
 
 ---
 
@@ -321,7 +321,7 @@ Bump the version with `npm version patch --no-git-tag-version` so
 
 ## 🛠 Tech Stack
 
-- **Framework**: Next.js 14 (App Router)
+- **Framework**: Next.js 15 (App Router) on React 19
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
 - **Icons**: Lucide React

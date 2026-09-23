@@ -55,7 +55,7 @@ function buildComponents(users: User[]): Components {
           loading="lazy"
           className="max-w-full max-h-[480px] h-auto rounded-md border border-jira-gray-200 my-2 object-contain bg-white shadow-xs cursor-pointer hover:border-jira-blue transition-colors"
           onClick={() => {
-            if (src) window.open(src, "_blank", "noopener,noreferrer");
+            if (typeof src === "string") window.open(src, "_blank", "noopener,noreferrer");
           }}
           title={alt ? `${alt} (Click to open full size)` : "Click to open full size"}
         />

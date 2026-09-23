@@ -107,7 +107,7 @@ function readToken(token: string | undefined): { userId: string; sessionVersion:
  * access immediately rather than at cookie expiry.
  */
 export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
-  const token = readToken(cookies().get(SESSION_COOKIE)?.value);
+  const token = readToken((await cookies()).get(SESSION_COOKIE)?.value);
   if (!token) return null;
 
   try {
@@ -140,10 +140,10 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
  * every request after it comes back anonymous. TRACKR_TRUST_PROXY opts into
  * trusting X-Forwarded-Proto from a reverse proxy that terminates TLS.
  */
-function isSecureRequest(): boolean {
+async function isSecureRequest(): Promise<boolean> {
   if (process.env.TRACKR_TRUST_PROXY !== "1") return false;
   try {
-    return headers().get("x-forwarded-proto") === "https";
+    return (await headers()).get("x-forwarded-proto") === "https";
   } catch {
     return false;
   }
@@ -155,21 +155,21 @@ export async function startSession(userId: string) {
     where: { id: userId },
     select: { sessionVersion: true },
   });
-  cookies().set(SESSION_COOKIE, createToken(userId, sessionVersion), {
+  (await cookies()).set(SESSION_COOKIE, createToken(userId, sessionVersion), {
     httpOnly: true,
     sameSite: "lax",
-    secure: isSecureRequest(),
+    secure: await isSecureRequest(),
     path: "/",
     maxAge: SESSION_MAX_AGE_SECONDS,
   });
 }
 
 /** Clear the session cookie. Only valid inside a server action or route handler. */
-export function endSession() {
-  cookies().set(SESSION_COOKIE, "", {
+export async function endSession() {
+  (await cookies()).set(SESSION_COOKIE, "", {
     httpOnly: true,
     sameSite: "lax",
-    secure: isSecureRequest(),
+    secure: await isSecureRequest(),
     path: "/",
     maxAge: 0,
   });

@@ -9,13 +9,15 @@ import { denyPageAccess } from "@/lib/auth/page";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  params: { projectKey: string };
-  searchParams?: { selectedIssue?: string; issue?: string };
+  params: Promise<{ projectKey: string }>;
+  searchParams: Promise<{ selectedIssue?: string; issue?: string }>;
 }
 
 export default async function RoadmapPage({ params, searchParams }: PageProps) {
-  const project = await getProjectByKey(params.projectKey);
-  if (!project) return denyPageAccess(`/projects/${params.projectKey}/roadmap`);
+  const { projectKey } = await params;
+  const query = await searchParams;
+  const project = await getProjectByKey(projectKey);
+  if (!project) return denyPageAccess(`/projects/${projectKey}/roadmap`);
 
   const [epics, users, sprints, versions] = await Promise.all([
     getEpicRoadmap(project.id),
@@ -31,7 +33,7 @@ export default async function RoadmapPage({ params, searchParams }: PageProps) {
       users={users as any}
       sprints={sprints as any}
       versions={versions as any}
-      initialSelectedIssueKey={searchParams?.selectedIssue || searchParams?.issue}
+      initialSelectedIssueKey={query.selectedIssue || query.issue}
     />
   );
 }

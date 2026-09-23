@@ -68,9 +68,9 @@ async function authorizeSelf(userId: string) {
 // GET - serve avatar image from disk
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
-  const { userId } = params;
+  const { userId } = await params;
 
   if (!isSafeUserId(userId)) {
     return NextResponse.json({ error: "Invalid user id" }, { status: 400 });
@@ -110,9 +110,9 @@ export async function GET(
 // POST - upload avatar image
 export async function POST(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
-  const { userId } = params;
+  const { userId } = await params;
 
   const denied = await authorizeSelf(userId);
   if (denied) return denied;
@@ -163,9 +163,9 @@ export async function POST(
 // DELETE - remove avatar, revert to initials
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
-  const { userId } = params;
+  const { userId } = await params;
 
   const denied = await authorizeSelf(userId);
   if (denied) return denied;

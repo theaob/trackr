@@ -7,12 +7,13 @@ import { denyPageAccess } from "@/lib/auth/page";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  params: { projectKey: string };
+  params: Promise<{ projectKey: string }>;
 }
 
 export default async function ReleasesPage({ params }: PageProps) {
-  const project = await getProjectByKey(params.projectKey);
-  if (!project) return denyPageAccess(`/projects/${params.projectKey}/releases`);
+  const { projectKey } = await params;
+  const project = await getProjectByKey(projectKey);
+  if (!project) return denyPageAccess(`/projects/${projectKey}/releases`);
 
   const versions = await getProjectVersions(project.id);
 
