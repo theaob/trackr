@@ -121,6 +121,66 @@ test.describe.serial("accessibility", () => {
     await expect(panel).toBeHidden();
   });
 
+  test("backlog and board: plan, start and move with menus", async () => {
+    await page.goto("/projects/APOLLO/backlog");
+    await expect(page.getByRole("heading", { level: 1, name: "Backlog" })).toBeVisible();
+    await expectNoSeriousViolations(page, "Backlog");
+
+    await page.getByRole("button", { name: "Create sprint" }).click();
+    const sprint = page.getByRole("region", { name: "Sprint 1" });
+    await expect(sprint).toBeVisible();
+
+    // Plan the issue with its row menu rather than by dragging.
+    await page.getByRole("button", { name: "Actions for APOLLO-1" }).click();
+    await page.getByRole("menuitem", { name: "Sprint 1" }).click();
+    await expect(sprint.getByText("Check the issue view")).toBeVisible();
+
+    await sprint.getByRole("button", { name: "Start sprint" }).click();
+    const start = page.getByRole("dialog", { name: "Start Sprint 1" });
+    await expect(start).toBeVisible();
+    await expectNoSeriousViolations(page, "Start sprint dialog", "[role=dialog]");
+    await start.getByRole("button", { name: "Start sprint" }).click();
+    await expect(start).toBeHidden();
+
+    await page.goto("/projects/APOLLO/board");
+    await expect(page.getByRole("heading", { level: 1, name: "Sprint 1" })).toBeVisible();
+    const card = (column: string) => page.getByRole("region", { name: column }).getByRole("button", { name: /^APOLLO-1:/ });
+    await expect(card("To Do")).toBeVisible();
+    await expectNoSeriousViolations(page, "Board");
+
+    // Moving a card never needs dragging: its menu offers the columns the workflow allows.
+    await page.getByRole("button", { name: "Actions for APOLLO-1" }).click();
+    await expect(page.getByRole("menu")).toBeVisible();
+    await expectNoSeriousViolations(page, "Board, card menu open");
+    await page.getByRole("menuitem", { name: "In Progress" }).click();
+    await expect(card("In Progress")).toBeVisible();
+    await page.reload();
+    await expect(card("In Progress")).toBeVisible();
+
+    // The keyboard: Space lifts the card, an arrow moves it, Space drops it.
+    await card("In Progress").focus();
+    await page.keyboard.press("Space");
+    await page.waitForTimeout(250);
+    await page.keyboard.press("ArrowRight");
+    await page.waitForTimeout(400);
+    await page.keyboard.press("Space");
+    await expect(card("In Review")).toBeVisible();
+
+    // And the mouse.
+    const from = await card("In Review").boundingBox();
+    const to = await page.getByRole("region", { name: "Done" }).boundingBox();
+    if (!from || !to) throw new Error("board not laid out");
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    for (let step = 1; step <= 12; step++) {
+      await page.mouse.move(from.x + ((to.x + to.width / 2 - from.x) * step) / 12, from.y + from.height / 2 + step, { steps: 2 });
+    }
+    await page.mouse.up();
+    await expect(card("Done")).toBeVisible();
+    await page.reload();
+    await expect(card("Done")).toBeVisible();
+  });
+
   test("sign-in", async ({ browser }, testInfo) => {
     const signedOutContext = await browser.newContext({ baseURL: testInfo.project.use.baseURL });
     const signedOut = await signedOutContext.newPage();

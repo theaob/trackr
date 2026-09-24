@@ -27,12 +27,12 @@ export function prettifyStatusName(name?: string | null): string {
   return name;
 }
 
-interface WorkflowStatusLike {
+export interface WorkflowStatusLike {
   id: string;
   name: string;
 }
 
-interface WorkflowTransitionLike {
+export interface WorkflowTransitionLike {
   fromId: string;
   toId: string;
 }

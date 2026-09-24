@@ -1,47 +1,40 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { Project, Issue, User, Sprint, IssueType, WorkflowStatus, Version } from "@/types";
-import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
+import { useRouter } from "next/navigation";
+import { Project, Issue, User, Sprint, IssueType, PriorityLevel, WorkflowStatus, Version } from "@/types";
+import { PriorityIcon } from "@/components/common/IssueIcons";
 import UserAvatar from "@/components/common/UserAvatar";
 
 import IssuePanel from "@/components/issue/IssuePanel";
-import CreateIssueModal from "@/components/issues/CreateIssueModal";
-import BacklogContextMenu from "@/components/backlog/BacklogContextMenu";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
 import { useRefetchOnFocus } from "@/hooks/useRefetchOnFocus";
-import { createSprint, startSprint, completeSprint, moveIssueToSprint, reorderBacklogIssue, renameSprint, deleteSprint, getProjectSprints } from "@/lib/actions/sprints";
-import { createIssue, getIssueByKeyOrId, getBacklogIssues, getProjectEpics } from "@/lib/actions/issues";
+import { createSprint, startSprint, completeSprint, reorderBacklogIssue, renameSprint, deleteSprint, getProjectSprints } from "@/lib/actions/sprints";
+import { createIssue, getIssueByKeyOrId, getBacklogIssues, getProjectEpics, bulkUpdateIssues } from "@/lib/actions/issues";
+import BacklogRow from "./BacklogRow";
+import BacklogSection from "./BacklogSection";
+import InlineCreateRow from "./InlineCreateRow";
+import { Button, IconButton } from "@/components/ui/Button";
+import { Combobox, Select } from "@/components/ui/Select";
+import { Field, Input, Textarea } from "@/components/ui/Field";
+import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/ui/Menu";
+import { useToast } from "@/components/ui/Toast";
+import { Dialog, DialogContent } from "@/components/ui/Dialog";
+import { backlogMoveTargets } from "@/lib/board";
+import { EMPTY_SELECTION, extendSelection, pruneSelection, toggleSelection, type SelectionState } from "@/lib/selection";
 import { useCurrentUser } from "@/context/UserContext";
 import { useSearch } from "@/context/SearchContext";
-import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
+import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import {
-  ChevronDown,
-  ChevronRight,
   Plus,
-  Play,
-  CheckCircle2,
-  Calendar,
   MoreHorizontal,
-  Layers,
-  ArrowRight,
-  GripVertical,
-  Clock,
-  AlertCircle,
   Pencil,
   Trash2,
-  X,
-  CalendarClock,
-  Bookmark,
   ExternalLink,
-  Target,
 } from "lucide-react";
 import EditSprintModal from "@/components/sprints/EditSprintModal";
-import { isOverdue } from "@/lib/dueDate";
 import { isDoneStatus, getDoneStatusNames } from "@/lib/workflowDisplay";
 import { format } from "date-fns";
-import { formatCalendarDate } from "@/lib/calendarDate";
 
 interface BacklogViewProps {
   project: Project;
@@ -65,7 +58,6 @@ export default function BacklogView({
   initialEpics,
 }: BacklogViewProps) {
   const router = useRouter();
-  const pathname = usePathname();
 
   const { currentUser } = useCurrentUser();
   const permissions = useProjectPermissions(project);
@@ -79,12 +71,6 @@ export default function BacklogView({
   });
   const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
   const [selectedEpicId, setSelectedEpicId] = useState<string>("ALL");
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [contextMenu, setContextMenu] = useState<{
-    x: number;
-    y: number;
-    issue: Issue;
-  } | null>(null);
 
   useEffect(() => {
     if (initialEpics) {
@@ -123,15 +109,7 @@ export default function BacklogView({
     }
   };
 
-  const handleContextMenu = (e: React.MouseEvent, issue: Issue) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setContextMenu({
-      x: e.clientX,
-      y: e.clientY,
-      issue,
-    });
-  };
+
 
   // Sync issues if initialIssues prop updates
   useEffect(() => {
@@ -174,10 +152,10 @@ export default function BacklogView({
   // Collapsed states
   const [collapsedSprints, setCollapsedSprints] = useState<Record<string, boolean>>({});
 
-  // Inline issue creation
-  const [inlineCreateTarget, setInlineCreateTarget] = useState<string | null>(null); // sprintId or 'backlog'
-  const [inlineTitle, setInlineTitle] = useState("");
-  const [inlineType, setInlineType] = useState<IssueType>("STORY");
+  // Selected rows, for moving or editing several at once.
+  const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const { toast } = useToast();
 
   // Start Sprint Modal
   const [startingSprint, setStartingSprint] = useState<Sprint | null>(null);
@@ -205,8 +183,6 @@ export default function BacklogView({
     );
   };
 
-  // Sprint dropdown menu
-  const [sprintMenuOpenId, setSprintMenuOpenId] = useState<string | null>(null);
 
   const openStartSprintModal = (sprint: Sprint) => {
     setStartingSprint(sprint);
@@ -739,19 +715,19 @@ export default function BacklogView({
     }
   };
 
-  // Inline Quick Create Issue
-  const handleInlineCreate = async (sprintId: string | null) => {
-    if (!inlineTitle.trim()) return;
+  // Inline Quick Create Issue: resolves true once it's saved, so the row can
+  // stay open for the next one.
+  const createInline = async (sprintId: string | null, titleText: string, inlineType: IssueType): Promise<boolean> => {
+    if (!titleText.trim()) return false;
 
     // Prevent creating in finished sprints
     if (sprintId) {
       const targetSprint = sprints.find((s) => s.id === sprintId);
       if (targetSprint && targetSprint.status === "COMPLETED") {
-        return;
+        return false;
       }
     }
 
-    const titleText = inlineTitle.trim();
     const tempId = `temp-${Date.now()}`;
     const initialStatus = sprintId ? initialStatusName : primaryBacklogStatusName;
 
@@ -803,10 +779,8 @@ export default function BacklogView({
       worklogs: [],
     };
 
-    // Show card immediately and clear input
+    // Show the row immediately
     setIssues((prev) => [...prev, optimisticIssue]);
-    setInlineTitle("");
-    setInlineCreateTarget(null);
 
     const res = await createIssue({
       projectId: project.id,
@@ -831,1216 +805,506 @@ export default function BacklogView({
           })
         );
       }
+      return true;
+    }
+    // Roll back; the row keeps what was typed.
+    setIssues((prev) => prev.filter((i) => i.id !== tempId));
+    toast({ title: "Couldn't create the issue", description: res.error, tone: "danger" });
+    return false;
+  };
+
+  // ---- Selecting several rows ------------------------------------------------
+  const visibleRowIds = useMemo(() => {
+    const ids: string[] = [];
+    if (!isKanban) for (const s of [...activeSprints, ...futureSprints]) ids.push(...getSprintIssues(s.id).map((i) => i.id));
+    ids.push(...backlogIssues.map((i) => i.id));
+    return ids;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getSprintIssues reads these
+  }, [issues, sprints, backlogIssues, isKanban, activeSprints, futureSprints, filteredIssues]);
+
+  useEffect(() => setSelection((prev) => pruneSelection(prev, visibleRowIds)), [visibleRowIds]);
+
+  const selectRow = (id: string, mode: "toggle" | "range", sectionOrder: string[]) =>
+    setSelection((prev) => (mode === "range" ? extendSelection(prev, id, sectionOrder) : toggleSelection(prev, id)));
+  const selectedIds = [...selection.ids];
+  const clearSelection = () => setSelection(EMPTY_SELECTION);
+
+  /**
+   * Moves the selected issues, in the order they're shown, to the end of a
+   * sprint or the backlog. Epics stay where they are: they can't be in a sprint.
+   */
+  const moveSelectedTo = async (targetSprintId: string | null) => {
+    const order = new Map(visibleRowIds.map((id, i) => [id, i]));
+    const moving = issues
+      .filter((i) => selection.ids.has(i.id) && !i.id.startsWith("temp-") && !(targetSprintId && i.type === "EPIC"))
+      .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+    if (!moving.length) return;
+    const movingIds = new Set(moving.map((i) => i.id));
+    const staying = (targetSprintId ? getSprintIssues(targetSprintId) : backlogIssues).filter((i) => !movingIds.has(i.id));
+    const finalOrder = [...staying, ...moving].map((i) => i.id);
+
+    const previous = issues;
+    setIssues((prev) =>
+      prev.map((i) => {
+        const at = finalOrder.indexOf(i.id);
+        if (!movingIds.has(i.id)) return at >= 0 ? { ...i, order: at } : i;
+        const fromBacklog = backlogStatusNames.some((b) => b.toLowerCase() === i.status.toLowerCase());
+        const status = targetSprintId ? (fromBacklog ? initialStatusName : i.status) : primaryBacklogStatusName;
+        return { ...i, sprintId: targetSprintId, status, order: at };
+      })
+    );
+    setBulkBusy(true);
+    let failed = 0;
+    for (const issue of moving) {
+      const res = await reorderBacklogIssue(issue.id, targetSprintId, finalOrder.indexOf(issue.id), finalOrder);
+      if (!res.success) failed++;
+    }
+    setBulkBusy(false);
+    const where = targetSprintId ? sprints.find((s) => s.id === targetSprintId)?.name ?? "the sprint" : "the backlog";
+    if (failed) {
+      setIssues(previous);
+      toast({ title: `Couldn't move ${failed} of ${moving.length} issues`, tone: "danger" });
+      router.refresh();
     } else {
-      // Rollback on failure and restore input
-      setIssues((prev) => prev.filter((i) => i.id !== tempId));
-      setInlineCreateTarget(sprintId);
-      setInlineTitle(titleText);
-      alert(res.error || "Failed to create issue.");
+      toast({ title: `Moved ${moving.length} ${moving.length === 1 ? "issue" : "issues"} to ${where}`, tone: "success" });
+      clearSelection();
     }
   };
 
+  const updateSelected = async (changes: { assigneeId?: string | null; priority?: PriorityLevel }, what: string) => {
+    const ids = selectedIds.filter((id) => !id.startsWith("temp-"));
+    if (!ids.length) return;
+    const previous = issues;
+    const assignee = changes.assigneeId !== undefined ? users.find((u) => u.id === changes.assigneeId) ?? null : undefined;
+    setIssues((prev) =>
+      prev.map((i) => (ids.includes(i.id) ? { ...i, ...changes, ...(assignee !== undefined ? { assignee } : {}) } : i))
+    );
+    setBulkBusy(true);
+    const res = await bulkUpdateIssues(ids, changes);
+    setBulkBusy(false);
+    if (!res.success || res.failed.length) {
+      setIssues(previous);
+      toast({ title: `Couldn't change the ${what} of every issue`, description: !res.success ? res.error : res.failed[0]?.error, tone: "danger" });
+      router.refresh();
+      return;
+    }
+    toast({ title: `Changed the ${what} of ${ids.length} ${ids.length === 1 ? "issue" : "issues"}`, tone: "success" });
+  };
+
+  const statusColor = (name: string) => statuses.find((st) => st.name === name)?.color;
+  const dragBlockedReason = !permissions.canMoveIssue ? null : isFiltered ? "Reordering is paused while the list is filtered" : null;
+  const selectable = permissions.canMoveIssue || permissions.canEditIssue;
+
+  const renderRows = (list: Issue[]) => {
+    const order = list.map((i) => i.id);
+    return list.map((issue, index) => (
+      <BacklogRow
+        key={issue.id}
+        issue={issue}
+        index={index}
+        statusColor={statusColor(issue.status)}
+        doneStatusNames={doneStatusNames}
+        canDrag={permissions.canMoveIssue && !isFiltered && !issue.id.startsWith("temp-")}
+        dragBlockedReason={dragBlockedReason}
+        selectable={selectable}
+        selected={selection.ids.has(issue.id)}
+        onSelect={(mode) => selectRow(issue.id, mode, order)}
+        onOpen={() => setActiveIssue(issue)}
+        canMove={permissions.canMoveIssue}
+        moveTargets={backlogMoveTargets(issue, sprints, isKanban)}
+        onMove={(sprintId) => handleMoveIssue(issue.id, sprintId)}
+        onReorder={isFiltered ? undefined : (edge) => handleReorderEdge(issue.id, edge)}
+        canMoveUp={index > 0}
+        canMoveDown={index < list.length - 1}
+      />
+    ));
+  };
+
+  const sprintDates = (sprint: Sprint) =>
+    sprint.startDate && sprint.endDate ? (
+      permissions.canManageSprints ? (
+        <button type="button" onClick={() => setEditingSprint(sprint)} className="rounded-control px-1 hover:bg-surface hover:text-ink">
+          {format(new Date(sprint.startDate), "MMM d")} – {format(new Date(sprint.endDate), "MMM d")}
+        </button>
+      ) : (
+        <>
+          {format(new Date(sprint.startDate), "MMM d")} – {format(new Date(sprint.endDate), "MMM d")}
+        </>
+      )
+    ) : permissions.canManageSprints ? (
+      <button type="button" onClick={() => setEditingSprint(sprint)} className="rounded-control px-1 font-medium text-accent hover:bg-accent-soft">
+        Add dates
+      </button>
+    ) : null;
+
+  const moveTargets = [
+    ...(!isKanban ? [...activeSprints, ...futureSprints].map((sp) => ({ id: sp.id as string | null, name: sp.name })) : []),
+    { id: null as string | null, name: "Backlog" },
+  ];
+
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto px-3 sm:px-6 py-3 sm:py-5 bg-white">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 sm:pb-4 border-b border-jira-gray-200 gap-3 shrink-0">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-lg sm:text-xl font-bold text-jira-navy tracking-tight">Backlog</h1>
-            <span
-              className={`text-[10px] font-bold px-2 py-0.5 rounded border ${permissions.roleConfig.badgeBg} ${permissions.roleConfig.badgeText} ${permissions.roleConfig.border}`}
-            >
-              {permissions.roleConfig.name}
-            </span>
-          </div>
-          <p className="text-xs text-jira-gray-600 mt-0.5">
-            {isKanban
-              ? "Groom and prioritize work before it's pulled onto the board."
-              : "Plan sprints, groom user stories, and estimate points."}
+    <div className="flex h-full flex-1 flex-col overflow-y-auto bg-page px-3 py-3 sm:px-6 sm:py-4">
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 pb-3">
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold tracking-tight text-ink">Backlog</h1>
+          <p className="text-xs text-ink-2">
+            {isKanban ? "Groom and prioritize work before it's pulled onto the board." : "Plan sprints, groom stories and estimate points."}
           </p>
         </div>
-
-        <div className="flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-2">
           {epics.length > 0 && (
-            <div className="flex items-center gap-1.5 text-xs">
-              <span className="text-jira-gray-500 font-medium">Epic:</span>
-              <select
-                value={selectedEpicId}
-                onChange={(e) => setSelectedEpicId(e.target.value)}
-                className="bg-jira-gray-100 hover:bg-jira-gray-200 border border-jira-gray-300 rounded px-2.5 py-1 text-xs text-jira-navy font-semibold focus:border-jira-blue transition-colors max-w-[160px] truncate"
-              >
-                <option value="ALL">All Epics</option>
-                {epics.map((epic) => (
-                  <option key={epic.id} value={epic.id}>
-                    {epic.key}: {epic.title}
-                  </option>
-                ))}
-              </select>
+            <div className="flex items-center gap-1">
+              <div className="w-48">
+                <Combobox
+                  aria-label="Epic"
+                  options={[
+                    { value: "ALL", label: "All epics" },
+                    ...epics.map((epic) => ({ value: epic.id, label: epic.title, description: epic.key, keywords: epic.key })),
+                  ]}
+                  value={selectedEpicId}
+                  onChange={setSelectedEpicId}
+                  searchPlaceholder="Find an epic…"
+                />
+              </div>
               {selectedEpicId !== "ALL" && (
-                <button
-                  type="button"
-                  onClick={() => handleOpenEpic(selectedEpicId)}
-                  className="text-xs text-purple-700 hover:text-purple-900 font-semibold hover:underline flex items-center gap-1"
-                  title="View epic details and linked issues"
-                >
-                  <span>View</span>
-                  <ExternalLink className="w-3 h-3" />
-                </button>
+                <IconButton label="Open the epic" icon={<ExternalLink />} size="sm" onClick={() => handleOpenEpic(selectedEpicId)} />
               )}
             </div>
           )}
-
           {!isKanban && permissions.canManageSprints && (
-            <button
-              onClick={handleCreateSprint}
-              className="bg-jira-gray-100 hover:bg-jira-gray-200 text-jira-navy text-xs font-semibold px-3 py-1.5 rounded border border-jira-gray-300 flex items-center gap-1.5 transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Create Sprint</span>
-            </button>
+            <Button size="sm" onClick={handleCreateSprint}>
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              Create sprint
+            </Button>
           )}
         </div>
       </div>
 
-      {/* Sprints & Backlog Drag-and-Drop Container */}
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="py-5 space-y-6">
-          {/* Active and Future Sprints */}
-          {!isKanban && [...activeSprints, ...futureSprints].map((sprint) => {
-            const sprintIssues = getSprintIssues(sprint.id);
-            const totalPoints = sprintIssues.reduce((sum, i) => sum + (Number(i.storyPoints) || 0), 0);
-            const donePoints = sprintIssues
-              .filter((i) => isDoneStatus(i.status, statuses))
-              .reduce((sum, i) => sum + (Number(i.storyPoints) || 0), 0);
-            const isCollapsed = collapsedSprints[sprint.id];
+        <div className="flex flex-col gap-4 pb-6">
+          {!isKanban &&
+            [...activeSprints, ...futureSprints].map((sprint) => {
+              const sprintIssues = getSprintIssues(sprint.id);
+              const totalPoints = sprintIssues.reduce((sum, i) => sum + (Number(i.storyPoints) || 0), 0);
+              const donePoints = sprintIssues
+                .filter((i) => isDoneStatus(i.status, statuses))
+                .reduce((sum, i) => sum + (Number(i.storyPoints) || 0), 0);
+              const isActive = sprint.status === "ACTIVE";
 
-            return (
-              <div
-                key={sprint.id}
-                className="bg-jira-gray-50/70 border border-jira-gray-300 rounded-lg overflow-hidden shadow-xs"
-              >
-                {/* Sprint Header */}
-                <div className="px-4 py-3 bg-jira-gray-100 border-b border-jira-gray-200 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => toggleSprintCollapse(sprint.id)}
-                      className="p-1 hover:bg-jira-gray-200 rounded text-jira-gray-600"
-                    >
-                      {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </button>
-
-                    {renamingSprintId === sprint.id ? (
+              return (
+                <BacklogSection
+                  key={sprint.id}
+                  droppableId={sprint.id}
+                  name={sprint.name}
+                  title={
+                    renamingSprintId === sprint.id ? (
                       <form
                         onSubmit={(e) => {
                           e.preventDefault();
                           handleRenameSprint(sprint.id);
                         }}
-                        className="flex items-center gap-1.5"
                       >
                         <input
                           autoFocus
+                          aria-label="Sprint name"
                           value={renameValue}
                           onChange={(e) => setRenameValue(e.target.value)}
                           onBlur={() => handleRenameSprint(sprint.id)}
                           onKeyDown={(e) => {
                             if (e.key === "Escape") setRenamingSprintId(null);
                           }}
-                          className="text-sm font-bold text-jira-navy bg-white border border-jira-blue rounded px-2 py-0.5 focus:ring-2 focus:ring-jira-blue/30 w-48"
+                          className="h-7 w-48 rounded-control border border-accent bg-surface px-2 text-[13px] font-semibold text-ink"
                         />
                       </form>
                     ) : (
-                      <h3 className="text-sm font-bold text-jira-navy">{sprint.name}</h3>
-                    )}
-
-                    {sprint.status === "ACTIVE" && (
-                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                        Active
-                      </span>
-                    )}
-
-                    <span className="text-xs text-jira-gray-500 font-medium">
-                      ({sprintIssues.length} issues)
-                    </span>
-
-                    {isFiltered && (
-                      <span
-                        className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200"
-                        title="Manual reordering is disabled while search or filters are active"
-                      >
-                        Filtered (Reorder paused)
-                      </span>
-                    )}
-
-                    {sprint.startDate && sprint.endDate ? (
-                      <button
-                        type="button"
-                        disabled={!permissions.canManageSprints}
-                        onClick={() => permissions.canManageSprints && setEditingSprint(sprint)}
-                        className={`text-xs text-jira-gray-500 flex items-center gap-1 ml-2 px-1.5 py-0.5 rounded transition-colors ${
-                          permissions.canManageSprints ? "hover:bg-jira-gray-200 hover:text-jira-navy cursor-pointer" : ""
-                        }`}
-                        title={permissions.canManageSprints ? "Edit sprint dates" : undefined}
-                      >
-                        <Calendar className="w-3.5 h-3.5 text-jira-gray-400" />
-                        <span>
-                          {format(new Date(sprint.startDate), "MMM d")} - {format(new Date(sprint.endDate), "MMM d")}
-                        </span>
-                      </button>
-                    ) : permissions.canManageSprints ? (
-                      <button
-                        type="button"
-                        onClick={() => setEditingSprint(sprint)}
-                        className="text-[11px] text-jira-blue hover:underline flex items-center gap-1 ml-2 font-medium"
-                        title="Add dates to sprint"
-                      >
-                        <Calendar className="w-3.5 h-3.5" />
-                        <span>Add dates</span>
-                      </button>
-                    ) : null}
-                  </div>
-
-                  {/* Right side: Story Points, Actions */}
-                  <div className="flex items-center gap-3">
-                    {/* Story Points Badges */}
-                    <div className="flex items-center gap-1 text-xs">
-                      <span
-                        title="Estimated points"
-                        className="px-2 py-0.5 rounded-full bg-jira-gray-200 text-jira-gray-800 font-bold text-[11px]"
-                      >
-                        {totalPoints} pts
-                      </span>
-                      {(sprint.status === "ACTIVE" || donePoints > 0) && (
-                        <span
-                          title="Completed points"
-                          className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px]"
-                        >
-                          {donePoints} done
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Actions */}
-                    {permissions.canManageSprints && sprint.status === "FUTURE" && (
-                      <button
-                        onClick={() => openStartSprintModal(sprint)}
-                        className="bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold px-3 py-1 rounded flex items-center gap-1 transition-colors"
-                      >
-                        <Play className="w-3 h-3" />
-                        <span>Start Sprint</span>
-                      </button>
-                    )}
-
-                    {permissions.canManageSprints && sprint.status === "ACTIVE" && (
-                      <button
-                        onClick={() => setCompletingSprint(sprint)}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-1 rounded flex items-center gap-1 transition-colors"
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Complete Sprint</span>
-                      </button>
-                    )}
-
-                    {/* Sprint Actions Menu */}
-                    {permissions.canManageSprints && (
-                      <div className="relative">
-                        <button
-                          onClick={() => setSprintMenuOpenId(sprintMenuOpenId === sprint.id ? null : sprint.id)}
-                          className="p-1.5 hover:bg-jira-gray-200 rounded text-jira-gray-500 hover:text-jira-gray-700 transition-colors"
-                          title="Sprint actions"
-                        >
-                          <MoreHorizontal className="w-4 h-4" />
-                        </button>
-
-                        {sprintMenuOpenId === sprint.id && (
-                          <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-jira-gray-300 rounded-md shadow-lg py-1 z-50 animate-in fade-in">
-                            <button
-                              onClick={() => {
-                                setEditingSprint(sprint);
-                                setSprintMenuOpenId(null);
-                              }}
-                              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-jira-navy hover:bg-jira-gray-100 transition-colors"
-                            >
-                              <Pencil className="w-3.5 h-3.5 text-jira-gray-500" />
-                              <span>Edit Sprint</span>
-                            </button>
-                            {sprint.status !== "ACTIVE" && (
-                              <button
-                                onClick={() => {
-                                  setDeletingSprintId(sprint.id);
-                                  setSprintMenuOpenId(null);
-                                }}
-                                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                <span>Delete Sprint</span>
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Sprint Goal / Target Subheader */}
-                {sprint.goal && (
-                  <div className="px-4 py-1.5 bg-jira-gray-50 border-b border-jira-gray-200 flex items-center justify-between gap-2 text-xs">
-                    <div
-                      onClick={() => permissions.canManageSprints && setEditingSprint(sprint)}
-                      className={`flex items-center gap-2 text-jira-gray-600 overflow-hidden ${
-                        permissions.canManageSprints ? "hover:text-jira-navy cursor-pointer group/goal" : ""
-                      }`}
-                      title={permissions.canManageSprints ? "Click to edit sprint goal" : undefined}
-                    >
-                      <Target className="w-3.5 h-3.5 text-jira-blue shrink-0" />
-                      <span className="font-semibold text-jira-gray-700 shrink-0">Goal:</span>
-                      <span className="truncate italic text-jira-gray-700">{sprint.goal}</span>
-                      {permissions.canManageSprints && (
-                        <Pencil className="w-3 h-3 text-jira-gray-400 opacity-0 group-hover/goal:opacity-100 transition-opacity shrink-0" />
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Sprint Content */}
-                {!isCollapsed && (
-                  <Droppable droppableId={sprint.id}>
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.droppableProps}
-                        className={`divide-y divide-jira-gray-200 transition-colors ${
-                          snapshot.isDraggingOver ? "bg-blue-50/60 ring-2 ring-jira-blue/40 ring-inset" : ""
-                        }`}
-                      >
-                        {sprintIssues.map((issue, index) => (
-                          <Draggable
-                            key={issue.id}
-                            draggableId={issue.id}
-                            index={index}
-                            isDragDisabled={!permissions.canMoveIssue || isFiltered || issue.id.startsWith("temp-")}
-                          >
-                            {(dragProvided, dragSnapshot) => (
-                              <div
-                                ref={dragProvided.innerRef}
-                                {...dragProvided.draggableProps}
-                                onClick={() => setActiveIssue(issue)}
-                                onContextMenu={(e) => handleContextMenu(e, issue)}
-                                className={`px-3 sm:px-4 py-2.5 bg-white hover:bg-jira-gray-50 flex items-center justify-between gap-4 cursor-pointer transition-colors group ${
-                                  dragSnapshot.isDragging ? "shadow-lg ring-2 ring-jira-blue bg-white z-50 opacity-95" : ""
-                                }`}
-                              >
-                                {/* Mobile Issue Row (< sm) */}
-                                <div className="w-full sm:hidden flex flex-col gap-1.5">
-                                  <div className="flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2 min-w-0">
-                                      <div
-                                        {...dragProvided.dragHandleProps}
-                                        className={`p-0.5 text-jira-gray-400 shrink-0 ${
-                                          permissions.canMoveIssue && !isFiltered && !issue.id.startsWith("temp-")
-                                            ? "hover:text-jira-gray-700 cursor-grab active:cursor-grabbing"
-                                            : "cursor-default opacity-40"
-                                        }`}
-                                        onClick={(e) => e.stopPropagation()}
-                                        title={
-                                          !permissions.canMoveIssue
-                                            ? undefined
-                                            : isFiltered
-                                            ? "Reordering is disabled while search or filters are active"
-                                            : "Drag to reorder"
-                                        }
-                                      >
-                                        <GripVertical className="w-3.5 h-3.5" />
-                                      </div>
-                                      <IssueTypeBadge type={issue.type} size="xs" />
-                                      <span className="text-xs font-bold text-jira-gray-600 group-hover:text-jira-blue shrink-0">
-                                        {issue.key}
-                                      </span>
-                                      {issue.parent && (
-                                        <span className="text-[10px] bg-purple-100 text-purple-800 font-semibold px-1.5 py-px rounded truncate max-w-[100px]">
-                                          {issue.parent.title}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-2 shrink-0">
-                                      <StatusBadge status={issue.status} className="text-[10px]" />
-                                      {issue.assignee ? (
-                                        <UserAvatar user={issue.assignee} size="xs" />
-                                      ) : (
-                                        <div className="w-5 h-5 rounded-full border border-dashed border-jira-gray-300" />
-                                      )}
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleContextMenu(e, issue);
-                                        }}
-                                        className="p-1 text-jira-gray-400 hover:text-jira-gray-700 hover:bg-jira-gray-100 rounded transition-colors"
-                                        title="More actions"
-                                      >
-                                        <MoreHorizontal className="w-3.5 h-3.5" />
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex items-center justify-between gap-2 pl-5">
-                                    <span className="text-xs font-medium text-jira-navy truncate flex-1">
-                                      {issue.title}
-                                    </span>
-                                    <div className="flex items-center gap-2 shrink-0">
-                                      <PriorityIcon priority={issue.priority} className="w-3.5 h-3.5" />
-                                      {issue.storyPoints !== null && (
-                                        <span className="px-1.5 py-px rounded-full bg-jira-gray-200 text-jira-gray-800 text-[10px] font-bold">
-                                          {issue.storyPoints}
-                                        </span>
-                                      )}
-                                      {issue.dueDate && (
-                                        <span
-                                          className={`text-[10px] font-semibold ${
-                                            isOverdue(issue.dueDate, issue.status, doneStatusNames)
-                                              ? "text-rose-600"
-                                              : "text-jira-gray-500"
-                                          }`}
-                                        >
-                                          {formatCalendarDate(issue.dueDate, "MMM d")}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Desktop Issue Row (>= sm) */}
-                                <div className="hidden sm:flex items-center justify-between gap-4 w-full">
-                                  <div className="flex items-center gap-2.5 min-w-0">
-                                    <div
-                                      {...dragProvided.dragHandleProps}
-                                      className={`p-0.5 text-jira-gray-400 shrink-0 ${
-                                        permissions.canMoveIssue && !isFiltered && !issue.id.startsWith("temp-")
-                                          ? "hover:text-jira-gray-700 cursor-grab active:cursor-grabbing"
-                                          : "cursor-default opacity-40"
-                                      }`}
-                                      onClick={(e) => e.stopPropagation()}
-                                      title={
-                                        !permissions.canMoveIssue
-                                          ? undefined
-                                          : isFiltered
-                                          ? "Reordering is disabled while search or filters are active"
-                                          : "Drag to reorder or move between sprints/backlog"
-                                      }
-                                    >
-                                      <GripVertical className="w-3.5 h-3.5" />
-                                    </div>
-
-                                    {/* The icon-only badge is a fixed size, so the key
-                                        column starts at the same x on every row. */}
-                                    <IssueTypeBadge type={issue.type} size="xs" />
-                                    <span className="min-w-[88px] shrink-0 text-xs font-bold text-jira-gray-600 group-hover:text-jira-blue">
-                                      {issue.key}
-                                    </span>
-
-                                    <span className="text-sm font-medium text-jira-navy truncate">
-                                      {issue.title}
-                                    </span>
-                                    {issue.parent && (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleOpenEpic(issue.parent!.id);
-                                        }}
-                                        className="text-[10px] bg-purple-100 text-purple-800 hover:bg-purple-200 font-semibold px-1.5 py-0.5 rounded shrink-0 max-w-[150px] truncate transition-colors text-left"
-                                        title={`Epic: ${issue.parent.title} (${issue.parent.key})`}
-                                      >
-                                        {issue.parent.title}
-                                      </button>
-                                    )}
-                                    {issue.version && (
-                                      <span
-                                        className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 font-medium px-1.5 py-0.5 rounded shrink-0 max-w-[120px] truncate"
-                                        title={`Fix Version: ${issue.version.name}`}
-                                      >
-                                        {issue.version.name}
-                                      </span>
-                                    )}
-                                    {issue.labels && issue.labels.length > 0 && (
-                                      <div className="flex items-center gap-1 shrink-0">
-                                        {issue.labels.slice(0, 2).map((il) => (
-                                          <span
-                                            key={il.id}
-                                            className="text-[10px] bg-jira-gray-100 border border-jira-gray-300 text-jira-gray-700 font-medium px-1.5 py-0.5 rounded-full"
-                                          >
-                                            {il.label.name}
-                                          </span>
-                                        ))}
-                                        {issue.labels.length > 2 && (
-                                          <span className="text-[10px] text-jira-gray-400">
-                                            +{issue.labels.length - 2}
-                                          </span>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  <div className="flex items-center gap-3 shrink-0">
-                                    {issue.dueDate && (
-                                      <span
-                                        className={`inline-flex items-center gap-1 text-[11px] font-semibold shrink-0 ${
-                                          isOverdue(issue.dueDate, issue.status, doneStatusNames)
-                                            ? "text-rose-600"
-                                            : "text-jira-gray-500"
-                                        }`}
-                                        title={`Due ${formatCalendarDate(issue.dueDate, "MMM d, yyyy")}`}
-                                      >
-                                        <CalendarClock className="w-3.5 h-3.5" />
-                                        {formatCalendarDate(issue.dueDate, "MMM d")}
-                                      </span>
-                                    )}
-
-                                    {/* Status Column */}
-                                    <div className="w-28 flex items-center justify-center shrink-0">
-                                      <StatusBadge status={issue.status} className="w-full text-center" />
-                                    </div>
-
-                                    {/* Priority Column */}
-                                    <div className="w-6 flex items-center justify-center shrink-0">
-                                      <PriorityIcon priority={issue.priority} className="w-4 h-4" />
-                                    </div>
-
-                                    {/* Story Points Column */}
-                                    <div className="w-7 flex items-center justify-center shrink-0">
-                                      {issue.storyPoints !== null ? (
-                                        <span className="w-6 h-5 rounded-full bg-jira-gray-200 text-jira-gray-800 text-[11px] font-bold flex items-center justify-center">
-                                          {issue.storyPoints}
-                                        </span>
-                                      ) : (
-                                        <span className="w-6 h-5 rounded-full bg-jira-gray-100 text-jira-gray-400 text-[11px] font-medium flex items-center justify-center select-none">
-                                          -
-                                        </span>
-                                      )}
-                                    </div>
-
-                                    {/* Assignee Avatar Column */}
-                                    <div className="w-7 flex items-center justify-center shrink-0">
-                                      {issue.assignee ? (
-                                        <UserAvatar
-                                          user={issue.assignee}
-                                          size="sm"
-                                          showTooltip
-                                          tooltipPrefix="Assignee"
-                                        />
-                                      ) : (
-                                        <div className="w-6 h-6 rounded-full border border-dashed border-jira-gray-300" />
-                                      )}
-                                    </div>
-
-                                    {/* Row actions menu trigger */}
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleContextMenu(e, issue);
-                                      }}
-                                      className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 hover:bg-jira-gray-200 rounded text-jira-gray-400 hover:text-jira-gray-700 transition-opacity shrink-0"
-                                      title="More actions"
-                                    >
-                                      <MoreHorizontal className="w-4 h-4" />
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </Draggable>
-                        ))}
-                        {provided.placeholder}
-
-                        {sprintIssues.length === 0 && !snapshot.isDraggingOver && (
-                          <div className="px-4 py-5 text-center text-xs text-jira-gray-400 italic">
-                            Sprint is empty. Drag issues here or create an issue below.
-                          </div>
-                        )}
-
-                        {/* Inline Create Row */}
-                        {permissions.canCreateIssue && (
-                          inlineCreateTarget === sprint.id ? (
-                            <div className="p-3 bg-white flex items-center gap-2">
-                              <select
-                                value={inlineType}
-                                onChange={(e) => setInlineType(e.target.value as IssueType)}
-                                className="text-xs border border-jira-gray-300 rounded px-2 py-1.5"
-                              >
-                                <option value="STORY">Story</option>
-                                <option value="TASK">Task</option>
-                                <option value="BUG">Bug</option>
-                              </select>
-                              <input
-                                type="text"
-                                placeholder="What needs to be done?"
-                                value={inlineTitle}
-                                onChange={(e) => setInlineTitle(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") handleInlineCreate(sprint.id);
-                                  if (e.key === "Escape") setInlineCreateTarget(null);
-                                }}
-                                autoFocus
-                                className="flex-1 text-sm border border-jira-gray-300 rounded px-3 py-1.5 focus:border-jira-blue"
-                              />
-                              <button
-                                onClick={() => handleInlineCreate(sprint.id)}
-                                className="bg-jira-blue text-white text-xs font-semibold px-3 py-1.5 rounded hover:bg-jira-blue-hover"
-                              >
-                                Create
-                              </button>
-                              <button
-                                onClick={() => setInlineCreateTarget(null)}
-                                className="text-xs text-jira-gray-600 hover:bg-jira-gray-100 px-2 py-1.5 rounded"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                setInlineCreateTarget(sprint.id);
-                                setInlineTitle("");
-                              }}
-                              className="w-full text-left px-4 py-2 text-xs font-medium text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-50 flex items-center gap-2 transition-colors"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                              <span>Create issue</span>
-                            </button>
-                          )
-                        )}
-                      </div>
-                    )}
-                  </Droppable>
-                )}
-              </div>
-            );
-          })}
-
-          {/* Backlog Section */}
-          <div className="bg-jira-gray-50/70 border border-jira-gray-300 rounded-lg overflow-hidden shadow-xs">
-            <div className="px-4 py-3 bg-jira-gray-100 border-b border-jira-gray-200 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-jira-navy">Backlog</h3>
-                <span className="text-xs text-jira-gray-500 font-medium">
-                  ({backlogIssues.length} issues)
-                </span>
-                {isFiltered && (
-                  <span
-                    className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200"
-                    title="Manual reordering is disabled while search or filters are active"
-                  >
-                    Filtered (Reorder paused)
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <Droppable droppableId="backlog">
-              {(provided, snapshot) => (
-                <div
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  className={`divide-y divide-jira-gray-200 transition-colors ${
-                    snapshot.isDraggingOver ? "bg-blue-50/60 ring-2 ring-jira-blue/40 ring-inset" : ""
-                  }`}
-                >
-                  {backlogIssues.map((issue, index) => (
-                    <Draggable
-                      key={issue.id}
-                      draggableId={issue.id}
-                      index={index}
-                      isDragDisabled={!permissions.canMoveIssue || isFiltered || issue.id.startsWith("temp-")}
-                    >
-                      {(dragProvided, dragSnapshot) => (
-                        <div
-                          ref={dragProvided.innerRef}
-                          {...dragProvided.draggableProps}
-                          onClick={() => setActiveIssue(issue)}
-                          onContextMenu={(e) => handleContextMenu(e, issue)}
-                          className={`px-3 sm:px-4 py-2.5 bg-white hover:bg-jira-gray-50 flex items-center justify-between gap-4 cursor-pointer transition-colors group ${
-                            dragSnapshot.isDragging ? "shadow-lg ring-2 ring-jira-blue bg-white z-50 opacity-95" : ""
-                          }`}
-                        >
-                          {/* Mobile Issue Row (< sm) */}
-                          <div className="w-full sm:hidden flex flex-col gap-1.5">
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <div
-                                  {...dragProvided.dragHandleProps}
-                                  className={`p-0.5 text-jira-gray-400 shrink-0 ${
-                                    permissions.canMoveIssue && !isFiltered && !issue.id.startsWith("temp-")
-                                      ? "hover:text-jira-gray-700 cursor-grab active:cursor-grabbing"
-                                      : "cursor-default opacity-40"
-                                  }`}
-                                  onClick={(e) => e.stopPropagation()}
-                                  title={
-                                    !permissions.canMoveIssue
-                                      ? undefined
-                                      : isFiltered
-                                      ? "Reordering is disabled while search or filters are active"
-                                      : "Drag to reorder"
-                                  }
-                                >
-                                  <GripVertical className="w-3.5 h-3.5" />
-                                </div>
-                                <IssueTypeBadge type={issue.type} size="xs" />
-                                <span className="text-xs font-bold text-jira-gray-600 group-hover:text-jira-blue shrink-0">
-                                  {issue.key}
-                                </span>
-                                {issue.parent && (
-                                  <span className="text-[10px] bg-purple-100 text-purple-800 font-semibold px-1.5 py-px rounded truncate max-w-[100px]">
-                                    {issue.parent.title}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <StatusBadge status={issue.status} className="text-[10px]" />
-                                {issue.assignee ? (
-                                  <UserAvatar user={issue.assignee} size="xs" />
-                                ) : (
-                                  <div className="w-5 h-5 rounded-full border border-dashed border-jira-gray-300" />
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleContextMenu(e, issue);
-                                  }}
-                                  className="p-1 text-jira-gray-400 hover:text-jira-gray-700 hover:bg-jira-gray-100 rounded transition-colors"
-                                  title="More actions"
-                                >
-                                  <MoreHorizontal className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center justify-between gap-2 pl-5">
-                              <span className="text-xs font-medium text-jira-navy truncate flex-1">
-                                {issue.title}
-                              </span>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <PriorityIcon priority={issue.priority} className="w-3.5 h-3.5" />
-                                {issue.storyPoints !== null && (
-                                  <span className="px-1.5 py-px rounded-full bg-jira-gray-200 text-jira-gray-800 text-[10px] font-bold">
-                                    {issue.storyPoints}
-                                  </span>
-                                )}
-                                {issue.dueDate && (
-                                  <span
-                                    className={`text-[10px] font-semibold ${
-                                      isOverdue(issue.dueDate, issue.status, doneStatusNames)
-                                        ? "text-rose-600"
-                                        : "text-jira-gray-500"
-                                    }`}
-                                  >
-                                    {formatCalendarDate(issue.dueDate, "MMM d")}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Desktop Issue Row (>= sm) */}
-                          <div className="hidden sm:flex items-center justify-between gap-4 w-full">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div
-                                {...dragProvided.dragHandleProps}
-                                className={`p-0.5 text-jira-gray-400 shrink-0 ${
-                                  permissions.canMoveIssue && !isFiltered && !issue.id.startsWith("temp-")
-                                    ? "hover:text-jira-gray-700 cursor-grab active:cursor-grabbing"
-                                    : "cursor-default opacity-40"
-                                }`}
-                                onClick={(e) => e.stopPropagation()}
-                                title={
-                                  !permissions.canMoveIssue
-                                    ? undefined
-                                    : isFiltered
-                                    ? "Reordering is disabled while search or filters are active"
-                                    : "Drag to sprint or reorder"
-                                }
-                              >
-                                <GripVertical className="w-3.5 h-3.5" />
-                              </div>
-
-                              <IssueTypeBadge type={issue.type} size="xs" />
-                              <span className="min-w-[88px] shrink-0 text-xs font-bold text-jira-gray-600 group-hover:text-jira-blue">
-                                {issue.key}
-                              </span>
-
-                              <span className="text-sm font-medium text-jira-navy truncate">
-                                {issue.title}
-                              </span>
-                              {issue.parent && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOpenEpic(issue.parent!.id);
-                                  }}
-                                  className="text-[10px] bg-purple-100 text-purple-800 hover:bg-purple-200 font-semibold px-1.5 py-0.5 rounded shrink-0 max-w-[150px] truncate transition-colors text-left"
-                                  title={`Epic: ${issue.parent.title} (${issue.parent.key})`}
-                                >
-                                  {issue.parent.title}
-                                </button>
-                              )}
-                              {issue.version && (
-                                <span
-                                  className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 font-medium px-1.5 py-0.5 rounded shrink-0 max-w-[120px] truncate"
-                                  title={`Fix Version: ${issue.version.name}`}
-                                >
-                                  {issue.version.name}
-                                </span>
-                              )}
-                              {issue.labels && issue.labels.length > 0 && (
-                                <div className="flex items-center gap-1 shrink-0">
-                                  {issue.labels.slice(0, 2).map((il) => (
-                                    <span
-                                      key={il.id}
-                                      className="text-[10px] bg-jira-gray-100 border border-jira-gray-300 text-jira-gray-700 font-medium px-1.5 py-0.5 rounded-full"
-                                    >
-                                      {il.label.name}
-                                    </span>
-                                  ))}
-                                  {issue.labels.length > 2 && (
-                                    <span className="text-[10px] text-jira-gray-400">
-                                      +{issue.labels.length - 2}
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="flex items-center gap-3 shrink-0">
-                              {issue.dueDate && (
-                                <span
-                                  className={`inline-flex items-center gap-1 text-[11px] font-semibold shrink-0 ${
-                                    isOverdue(issue.dueDate, issue.status, doneStatusNames)
-                                      ? "text-rose-600"
-                                      : "text-jira-gray-500"
-                                  }`}
-                                  title={`Due ${formatCalendarDate(issue.dueDate, "MMM d, yyyy")}`}
-                                >
-                                  <CalendarClock className="w-3.5 h-3.5" />
-                                  {formatCalendarDate(issue.dueDate, "MMM d")}
-                                </span>
-                              )}
-
-                              {/* Status Column */}
-                              <div className="w-28 flex items-center justify-center shrink-0">
-                                <StatusBadge status={issue.status} className="w-full text-center" />
-                              </div>
-
-                              {/* Priority Column */}
-                              <div className="w-6 flex items-center justify-center shrink-0">
-                                <PriorityIcon priority={issue.priority} className="w-4 h-4" />
-                              </div>
-
-                              {/* Story Points Column */}
-                              <div className="w-7 flex items-center justify-center shrink-0">
-                                {issue.storyPoints !== null ? (
-                                  <span className="w-6 h-5 rounded-full bg-jira-gray-200 text-jira-gray-800 text-[11px] font-bold flex items-center justify-center">
-                                    {issue.storyPoints}
-                                  </span>
-                                ) : (
-                                  <span className="w-6 h-5 rounded-full bg-jira-gray-100 text-jira-gray-400 text-[11px] font-medium flex items-center justify-center select-none">
-                                    -
-                                  </span>
-                                )}
-                              </div>
-
-                              {/* Assignee Avatar Column */}
-                              <div className="w-7 flex items-center justify-center shrink-0">
-                                {issue.assignee ? (
-                                  <UserAvatar
-                                    user={issue.assignee}
-                                    size="sm"
-                                    showTooltip
-                                    tooltipPrefix="Assignee"
-                                  />
-                                ) : (
-                                  <div className="w-6 h-6 rounded-full border border-dashed border-jira-gray-300" />
-                                )}
-                              </div>
-
-                              {/* Row actions menu trigger */}
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleContextMenu(e, issue);
-                                }}
-                                className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 hover:bg-jira-gray-200 rounded text-jira-gray-400 hover:text-jira-gray-700 transition-opacity shrink-0"
-                                title="More actions"
-                              >
-                                <MoreHorizontal className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-
-                  {backlogIssues.length === 0 && !snapshot.isDraggingOver && (
-                    <div className="px-4 py-5 text-center text-xs text-jira-gray-400 italic">
-                      Backlog is empty. Drag issues here or create an issue below.
-                    </div>
-                  )}
-
-                  {/* Inline Create Row for Backlog */}
-                  {permissions.canCreateIssue && (
-                    inlineCreateTarget === "backlog" ? (
-                      <div className="p-3 bg-white flex items-center gap-2">
-                        <select
-                          value={inlineType}
-                          onChange={(e) => setInlineType(e.target.value as IssueType)}
-                          className="text-xs border border-jira-gray-300 rounded px-2 py-1.5"
-                        >
-                          <option value="STORY">Story</option>
-                          <option value="TASK">Task</option>
-                          <option value="BUG">Bug</option>
-                        </select>
-                        <input
-                          type="text"
-                          placeholder="What needs to be done?"
-                          value={inlineTitle}
-                          onChange={(e) => setInlineTitle(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleInlineCreate(null);
-                            if (e.key === "Escape") setInlineCreateTarget(null);
-                          }}
-                          autoFocus
-                          className="flex-1 text-sm border border-jira-gray-300 rounded px-3 py-1.5 focus:border-jira-blue"
-                        />
-                        <button
-                          onClick={() => handleInlineCreate(null)}
-                          className="bg-jira-blue text-white text-xs font-semibold px-3 py-1.5 rounded hover:bg-jira-blue-hover"
-                        >
-                          Create
-                        </button>
-                        <button
-                          onClick={() => setInlineCreateTarget(null)}
-                          className="text-xs text-jira-gray-600 hover:bg-jira-gray-100 px-2 py-1.5 rounded"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          setInlineCreateTarget("backlog");
-                          setInlineTitle("");
-                        }}
-                        className="w-full text-left px-4 py-2 text-xs font-medium text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-50 flex items-center gap-2 transition-colors"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Create issue in backlog</span>
-                      </button>
+                      sprint.name
                     )
-                  )}
-                </div>
-              )}
-            </Droppable>
-          </div>
+                  }
+                  active={isActive}
+                  dates={sprintDates(sprint)}
+                  issueCount={sprintIssues.length}
+                  points={{ total: totalPoints, done: isActive || donePoints > 0 ? donePoints : undefined }}
+                  goal={sprint.goal}
+                  reorderPaused={isFiltered}
+                  collapsed={!!collapsedSprints[sprint.id]}
+                  onToggleCollapsed={() => toggleSprintCollapse(sprint.id)}
+                  emptyText="Nothing planned yet. Drag issues here, or create one below."
+                  primaryAction={
+                    permissions.canManageSprints ? (
+                      isActive ? (
+                        <Button size="sm" onClick={() => setCompletingSprint(sprint)}>
+                          Complete sprint
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="primary" onClick={() => openStartSprintModal(sprint)}>
+                          Start sprint
+                        </Button>
+                      )
+                    ) : undefined
+                  }
+                  menu={
+                    permissions.canManageSprints ? (
+                      <Menu>
+                        <MenuTrigger asChild>
+                          <IconButton label={`Actions for ${sprint.name}`} icon={<MoreHorizontal />} size="sm" />
+                        </MenuTrigger>
+                        <MenuContent align="end">
+                          <MenuItem icon={<Pencil aria-hidden="true" />} onSelect={() => setEditingSprint(sprint)}>
+                            Edit sprint
+                          </MenuItem>
+                          <MenuItem
+                            onSelect={() => {
+                              setRenamingSprintId(sprint.id);
+                              setRenameValue(sprint.name);
+                            }}
+                          >
+                            Rename
+                          </MenuItem>
+                          {!isActive && (
+                            <>
+                              <MenuSeparator />
+                              <MenuItem danger icon={<Trash2 aria-hidden="true" />} onSelect={() => setDeletingSprintId(sprint.id)}>
+                                Delete sprint
+                              </MenuItem>
+                            </>
+                          )}
+                        </MenuContent>
+                      </Menu>
+                    ) : undefined
+                  }
+                  footer={
+                    permissions.canCreateIssue ? (
+                      <InlineCreateRow label={`Create an issue in ${sprint.name}`} onCreate={(title, type) => createInline(sprint.id, title, type)} />
+                    ) : undefined
+                  }
+                >
+                  {renderRows(sprintIssues)}
+                </BacklogSection>
+              );
+            })}
+
+          <BacklogSection
+            droppableId="backlog"
+            name="Backlog"
+            title="Backlog"
+            issueCount={backlogIssues.length}
+            points={{ total: backlogIssues.reduce((sum, i) => sum + (Number(i.storyPoints) || 0), 0) }}
+            reorderPaused={isFiltered}
+            collapsed={!!collapsedSprints.backlog}
+            onToggleCollapsed={() => toggleSprintCollapse("backlog")}
+            emptyText="The backlog is empty."
+            footer={
+              permissions.canCreateIssue ? (
+                <InlineCreateRow label="Create an issue in the backlog" onCreate={(title, type) => createInline(null, title, type)} />
+              ) : undefined
+            }
+          >
+            {renderRows(backlogIssues)}
+          </BacklogSection>
         </div>
       </DragDropContext>
 
+      {selection.ids.size > 0 && (
+        <div
+          role="toolbar"
+          aria-label="Selected issues"
+          className="sticky bottom-3 z-20 mx-auto flex w-fit max-w-full flex-wrap items-center gap-1.5 rounded-card border border-subtle bg-surface px-3 py-2 shadow-overlay"
+        >
+          <span className="px-1 text-[13px] font-medium text-ink">{selection.ids.size} selected</span>
+          {permissions.canMoveIssue && (
+            <Menu>
+              <MenuTrigger asChild>
+                <Button size="sm" disabled={bulkBusy}>
+                  Move to…
+                </Button>
+              </MenuTrigger>
+              <MenuContent>
+                {moveTargets.map((t) => (
+                  <MenuItem key={t.id ?? "backlog"} onSelect={() => moveSelectedTo(t.id)}>
+                    {t.name}
+                  </MenuItem>
+                ))}
+              </MenuContent>
+            </Menu>
+          )}
+          {permissions.canEditIssue && (
+            <Menu>
+              <MenuTrigger asChild>
+                <Button size="sm" disabled={bulkBusy}>
+                  Assignee…
+                </Button>
+              </MenuTrigger>
+              <MenuContent className="max-h-80 overflow-y-auto">
+                <MenuItem onSelect={() => updateSelected({ assigneeId: null }, "assignee")}>Unassigned</MenuItem>
+                {users.map((u) => (
+                  <MenuItem key={u.id} icon={<UserAvatar user={u} size="xs" />} onSelect={() => updateSelected({ assigneeId: u.id }, "assignee")}>
+                    {u.name}
+                  </MenuItem>
+                ))}
+              </MenuContent>
+            </Menu>
+          )}
+          {permissions.canEditIssue && (
+            <Menu>
+              <MenuTrigger asChild>
+                <Button size="sm" disabled={bulkBusy}>
+                  Priority…
+                </Button>
+              </MenuTrigger>
+              <MenuContent>
+                {(["HIGHEST", "HIGH", "MEDIUM", "LOW", "LOWEST"] as PriorityLevel[]).map((p) => (
+                  <MenuItem key={p} icon={<PriorityIcon priority={p} className="h-4 w-4" />} onSelect={() => updateSelected({ priority: p }, "priority")}>
+                    {p.charAt(0) + p.slice(1).toLowerCase()}
+                  </MenuItem>
+                ))}
+              </MenuContent>
+            </Menu>
+          )}
+          <Button size="sm" variant="ghost" onClick={clearSelection}>
+            Clear
+          </Button>
+        </div>
+      )}
+
       {/* Delete Sprint Confirmation */}
-      {deletingSprintId && (() => {
-        const sprintToDelete = sprints.find((s) => s.id === deletingSprintId);
-        const issueCount = sprintToDelete ? getSprintIssues(sprintToDelete.id).length : 0;
+      {(() => {
+        const sprintToDelete = sprints.find((sp) => sp.id === deletingSprintId);
+        const count = sprintToDelete ? getSprintIssues(sprintToDelete.id).length : 0;
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in">
-            <div className="bg-white w-full max-w-sm rounded-xl shadow-2xl border border-jira-gray-300 p-6 space-y-4">
-              <div className="flex items-center gap-2 text-red-600">
-                <Trash2 className="w-5 h-5" />
-                <h3 className="text-base font-bold">Delete Sprint</h3>
-              </div>
-              <p className="text-sm text-jira-gray-700">
-                Are you sure you want to delete <strong>{sprintToDelete?.name}</strong>?
-                {issueCount > 0 && (
-                  <span className="block mt-1 text-jira-gray-500">
-                    {issueCount} issue{issueCount > 1 ? "s" : ""} will be moved to the backlog.
-                  </span>
-                )}
-              </p>
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  onClick={() => setDeletingSprintId(null)}
-                  className="px-3 py-1.5 text-xs font-semibold text-jira-gray-700 hover:bg-jira-gray-100 rounded transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleDeleteSprint(deletingSprintId)}
-                  className="px-3 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded transition-colors"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
+          <Dialog open={!!deletingSprintId} onOpenChange={(open) => !open && setDeletingSprintId(null)}>
+            <DialogContent
+              size="sm"
+              title={`Delete ${sprintToDelete?.name ?? "the sprint"}?`}
+              description={count > 0 ? `Its ${count} ${count === 1 ? "issue moves" : "issues move"} to the backlog.` : "It has no issues."}
+              footer={
+                <>
+                  <Button onClick={() => setDeletingSprintId(null)}>Cancel</Button>
+                  <Button variant="danger" onClick={() => deletingSprintId && handleDeleteSprint(deletingSprintId)}>
+                    Delete sprint
+                  </Button>
+                </>
+              }
+            >
+              {null}
+            </DialogContent>
+          </Dialog>
         );
       })()}
 
-      {/* Start Sprint Modal */}
-      {startingSprint && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl border border-jira-gray-300 p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-jira-gray-200">
-              <h2 className="text-lg font-bold text-jira-navy flex items-center gap-2">
-                <Play className="w-5 h-5 text-jira-blue fill-jira-blue/10" />
-                Start Sprint
-              </h2>
-              <span className="text-xs text-jira-gray-500 font-medium bg-jira-gray-100 px-2 py-0.5 rounded">
-                {getSprintIssues(startingSprint.id).length} issues
-              </span>
-            </div>
-
-            <form onSubmit={handleStartSprintSubmit} className="space-y-4 text-sm">
-              {/* Sprint Name */}
-              <div>
-                <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
-                  Sprint Name <span className="text-jira-red">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={sprintName}
-                  onChange={(e) => setSprintName(e.target.value)}
-                  placeholder="Sprint Name"
-                  className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy focus:border-jira-blue font-medium"
-                />
-              </div>
-
-              {/* Duration with Custom Option */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider">
-                    Duration
-                  </label>
-                  {durationMode === "custom" && (
-                    <span className="text-xs font-bold text-jira-blue">
-                      Custom: {customDays} {customDays === 1 ? "day" : "days"}
-                    </span>
-                  )}
-                </div>
-                <select
+      {/* Start Sprint */}
+      <Dialog open={!!startingSprint} onOpenChange={(open) => !open && setStartingSprint(null)}>
+        {startingSprint && (
+          <DialogContent
+            size="md"
+            title={`Start ${startingSprint.name}`}
+            description={`${getSprintIssues(startingSprint.id).length} issues planned.`}
+            footer={
+              <>
+                <Button onClick={() => setStartingSprint(null)}>Cancel</Button>
+                <Button type="submit" form="start-sprint-form" variant="primary">
+                  Start sprint
+                </Button>
+              </>
+            }
+          >
+            <form id="start-sprint-form" onSubmit={handleStartSprintSubmit} className="flex flex-col gap-4">
+              <Field label="Sprint name" required>
+                <Input value={sprintName} onChange={(e) => setSprintName(e.target.value)} />
+              </Field>
+              <Field label="Duration">
+                <Select
+                  options={[
+                    { value: "7", label: "1 week" },
+                    { value: "14", label: "2 weeks", description: "Recommended" },
+                    { value: "21", label: "3 weeks" },
+                    { value: "28", label: "4 weeks" },
+                    { value: "custom", label: "Custom" },
+                  ]}
                   value={durationMode}
-                  onChange={(e) => handleDurationChange(e.target.value)}
-                  className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy focus:border-jira-blue bg-white"
-                >
-                  <option value="7">1 week (7 days)</option>
-                  <option value="14">2 weeks (14 days - Recommended)</option>
-                  <option value="21">3 weeks (21 days)</option>
-                  <option value="28">4 weeks (28 days)</option>
-                  <option value="custom">Custom time span</option>
-                </select>
-              </div>
-
-              {/* Custom Duration Stepper & Quick Pills */}
+                  onChange={handleDurationChange}
+                />
+              </Field>
               {durationMode === "custom" && (
-                <div className="p-3 bg-jira-blue-light/40 border border-jira-blue/20 rounded-lg space-y-2.5 animate-in fade-in">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-jira-navy flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-jira-blue" />
-                      Set Custom Number of Days
-                    </span>
-                    <span className="text-jira-gray-600">
-                      Calculates end date automatically
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="relative flex items-center">
-                      <input
-                        type="number"
-                        min={1}
-                        max={180}
-                        value={customDays}
-                        onChange={(e) => handleCustomDaysChange(parseInt(e.target.value, 10) || 1)}
-                        className="w-24 border border-jira-gray-300 rounded px-3 py-1.5 text-sm font-semibold text-jira-navy focus:border-jira-blue"
-                      />
-                      <span className="ml-2 text-xs font-medium text-jira-gray-600">
-                        {customDays === 1 ? "day" : "days"}
-                      </span>
-                    </div>
-
-                    {/* Quick Presets */}
-                    <div className="flex items-center gap-1 flex-wrap">
-                      {[3, 5, 10, 15, 30, 45].map((d) => (
-                        <button
-                          key={d}
-                          type="button"
-                          onClick={() => handleCustomDaysChange(d)}
-                          className={`px-2 py-1 text-xs rounded border transition-colors ${
-                            customDays === d
-                              ? "bg-jira-blue text-white border-jira-blue font-semibold shadow-xs"
-                              : "bg-white text-jira-gray-700 border-jira-gray-300 hover:bg-jira-gray-100"
-                          }`}
-                        >
-                          {d}d
-                        </button>
-                      ))}
-                    </div>
+                <div className="flex flex-wrap items-end gap-3">
+                  <Field label="Days" className="w-24">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={180}
+                      value={customDays}
+                      onChange={(e) => handleCustomDaysChange(parseInt(e.target.value, 10) || 1)}
+                    />
+                  </Field>
+                  <div role="group" aria-label="Common lengths" className="flex flex-wrap gap-1 pb-0.5">
+                    {[3, 5, 10, 15, 30, 45].map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        aria-pressed={customDays === d}
+                        onClick={() => handleCustomDaysChange(d)}
+                        className="h-7 rounded-control border border-subtle px-2 text-xs text-ink-2 hover:border-strong aria-pressed:border-accent aria-pressed:bg-accent-soft aria-pressed:text-accent"
+                      >
+                        {d} days
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}
-
-              {/* Start Date & End Date Grid */}
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-jira-gray-500" />
-                    Start Date
-                  </label>
-                  <input
-                    type="date"
-                    value={startDateStr}
-                    onChange={(e) => handleStartDateChange(e.target.value)}
-                    className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy focus:border-jira-blue"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-jira-gray-500" />
-                    End Date
-                  </label>
-                  <input
-                    type="date"
-                    value={endDateStr}
-                    min={startDateStr}
-                    onChange={(e) => handleEndDateChange(e.target.value)}
-                    className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy focus:border-jira-blue"
-                    required
-                  />
-                </div>
+                <Field label="Start date" required>
+                  <Input type="date" value={startDateStr} onChange={(e) => handleStartDateChange(e.target.value)} />
+                </Field>
+                <Field label="End date" required error={dateError ?? undefined}>
+                  <Input type="date" value={endDateStr} min={startDateStr} onChange={(e) => handleEndDateChange(e.target.value)} />
+                </Field>
               </div>
-
-              {/* Date Error */}
-              {dateError && (
-                <div className="p-2.5 bg-red-50 border border-red-200 rounded text-xs text-jira-red font-medium flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{dateError}</span>
-                </div>
-              )}
-
-              {/* Calculated Duration Summary Preview */}
               {startDateStr && endDateStr && !dateError && (
-                <div className="px-3 py-2 bg-jira-gray-50 border border-jira-gray-200 rounded-md text-xs text-jira-gray-600 flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-jira-gray-500" />
-                    Sprint Timeline:
-                  </span>
-                  <span className="font-semibold text-jira-navy">
-                    {customDays} {customDays === 1 ? "day" : "days"} (
-                    {format(new Date(startDateStr + "T00:00:00"), "MMM d, yyyy")} – {format(new Date(endDateStr + "T00:00:00"), "MMM d, yyyy")})
-                  </span>
-                </div>
+                <p className="text-xs text-ink-2">
+                  {customDays} {customDays === 1 ? "day" : "days"}:{" "}
+                  {format(new Date(startDateStr + "T00:00:00"), "MMM d, yyyy")} – {format(new Date(endDateStr + "T00:00:00"), "MMM d, yyyy")}
+                </p>
               )}
-
-              {/* Sprint Goal */}
-              <div>
-                <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
-                  Sprint Goal
-                </label>
-                <textarea
+              <Field label="Sprint goal">
+                <Textarea
                   rows={2}
                   value={sprintGoal}
                   onChange={(e) => setSprintGoal(e.target.value)}
                   placeholder="What does the team aim to achieve in this sprint?"
-                  className="w-full border border-jira-gray-300 rounded p-2.5 text-sm text-jira-navy focus:border-jira-blue placeholder:text-jira-gray-400"
                 />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2 border-t border-jira-gray-200">
-                <button
-                  type="button"
-                  onClick={() => setStartingSprint(null)}
-                  className="px-4 py-2 text-jira-gray-700 hover:bg-jira-gray-100 rounded text-xs font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="bg-jira-blue text-white px-4 py-2 rounded text-xs font-semibold hover:bg-jira-blue-hover shadow-xs flex items-center gap-1.5"
-                >
-                  <Play className="w-3.5 h-3.5 fill-white/20" />
-                  <span>Start Sprint</span>
-                </button>
-              </div>
+              </Field>
             </form>
-          </div>
-        </div>
-      )}
+          </DialogContent>
+        )}
+      </Dialog>
 
-      {/* Complete Sprint Modal */}
-      {completingSprint && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="bg-white w-full max-w-md rounded-lg shadow-2xl border border-jira-gray-300 p-6 space-y-4">
-            <h2 className="text-lg font-bold text-jira-navy">Complete {completingSprint.name}</h2>
-            <p className="text-xs text-jira-gray-600">
-              Completed issues will be archived with this sprint. Where should incomplete issues go?
-            </p>
-
-            <form onSubmit={handleCompleteSprintSubmit} className="space-y-4 text-sm">
-              <div>
-                <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
-                  Move incomplete issues to:
-                </label>
-                <select
+      {/* Complete Sprint */}
+      <Dialog open={!!completingSprint} onOpenChange={(open) => !open && setCompletingSprint(null)}>
+        {completingSprint && (
+          <DialogContent
+            size="sm"
+            title={`Complete ${completingSprint.name}`}
+            description="Done issues close with the sprint. Choose where the rest go."
+            footer={
+              <>
+                <Button onClick={() => setCompletingSprint(null)}>Cancel</Button>
+                <Button type="submit" form="complete-sprint-form" variant="primary">
+                  Complete sprint
+                </Button>
+              </>
+            }
+          >
+            <form id="complete-sprint-form" onSubmit={handleCompleteSprintSubmit}>
+              <Field label="Move open issues to">
+                <Select
+                  options={[{ value: "", label: "Backlog" }, ...futureSprints.map((sp) => ({ value: sp.id, label: sp.name }))]}
                   value={incompleteMoveTarget}
-                  onChange={(e) => setIncompleteMoveTarget(e.target.value)}
-                  className="w-full border border-jira-gray-300 rounded px-3 py-2 text-jira-navy"
-                >
-                  <option value="">Backlog</option>
-                  {futureSprints.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setCompletingSprint(null)}
-                  className="px-4 py-2 text-jira-gray-700 hover:bg-jira-gray-100 rounded text-xs font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="bg-emerald-600 text-white px-4 py-2 rounded text-xs font-semibold hover:bg-emerald-700"
-                >
-                  Complete Sprint
-                </button>
-              </div>
+                  onChange={setIncompleteMoveTarget}
+                />
+              </Field>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Custom Right-Click Context Menu */}
-      {contextMenu && (
-        <BacklogContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          issue={contextMenu.issue}
-          sprints={sprints}
-          isKanban={isKanban}
-          canMove={permissions.canMoveIssue && !contextMenu.issue.id.startsWith("temp-")}
-          onClose={() => setContextMenu(null)}
-          onMoveToSprint={handleMoveIssue}
-          onOpenIssue={(issue) => setActiveIssue(issue)}
-          onReorder={isFiltered ? undefined : handleReorderEdge}
-        />
-      )}
+          </DialogContent>
+        )}
+      </Dialog>
 
       {/* Issue Details Modal */}
       <IssuePanel

@@ -6,10 +6,20 @@ A modern, full-stack agile project management and issue tracking platform built 
 
 ## ✨ Features
 
-- 📋 **Active Kanban Board**:
-  - Drag-and-drop issues across columns (`To Do`, `In Progress`, `In Review`, `Done` by default).
-  - Real-time column WIP limits & warning badges.
-  - Immediate optimistic drag updates with persistent server synchronization.
+- 📋 **Board**:
+  - One column per workflow status, sharing the width equally: four fit on a
+    1280-pixel screen, and only boards with more statuses scroll. On a phone,
+    one column at a time with a switcher.
+  - A one-line sprint header: name, dates, days left and a progress bar split
+    into done, in progress and to do, with the goal underneath.
+  - Move a card by dragging it, with the keyboard (Space to lift, arrows,
+    Space to drop), or from its **…** menu, which lists the columns the
+    workflow allows plus top and bottom of its own column.
+  - Filter chips for people, type and priority, each removable, and
+    **+ Filter** to carry on in the Issues page with TQL. Group rows by
+    assignee, epic or priority.
+  - Kanban WIP limits show in the column header as `3 / 4`, amber at the
+    limit and red over it.
 - 🔎 **Search everything with ⌘K** (Ctrl+K on Windows and Linux):
   - A Spotlight-style panel that finds issues by key or title across every project
     you can see, any page of any project ("orion backlog", "burndown"), and the
@@ -43,11 +53,18 @@ A modern, full-stack agile project management and issue tracking platform built 
   - **Scrum**: plan sprints in the Backlog; the board shows only the active sprint.
   - **Kanban**: no sprints; the board is every issue pulled out of the Backlog, in
     continuous flow. Switch anytime from **Project Settings → General**.
-- 🏃 **Agile Backlog & Sprint Management**:
-  - Collapsible Sprints (Active, Future, and Backlog).
-  - Sprint life-cycle: **Start Sprint** (with custom goal & duration) and **Complete Sprint** (with automatic rollover of open tasks).
-  - Story point estimation tracking (total vs. completed points).
-  - Inline quick-create directly in sprints or backlog.
+- 🏃 **Backlog & sprints**:
+  - Each sprint is a section with a one-line header (dates, issues, points)
+    and one action, **Start sprint** or **Complete sprint**; editing,
+    renaming and deleting are in its menu. Open issues roll over when a
+    sprint completes.
+  - Rows line up like the Issues table, with status lozenges.
+  - Select several with the checkboxes, ⌘/Ctrl-click or Shift-click for a
+    range, then move them to a sprint or the backlog, or change their
+    assignee or priority, all at once.
+  - Each row's **…** menu (or a right-click) moves it without dragging.
+  - **Create issue** at the foot of a section: type a title, press Enter,
+    and the row is ready for the next one.
 - 📊 **Reports** (Scrum projects):
   - **Sprint Burndown**: story points remaining per day against an ideal guideline,
     reconstructed from each issue's actual status-change history.
@@ -355,8 +372,9 @@ CI runs all five on every push and pull request, and the release workflow will
 not publish an image unless they pass. The accessibility checks start the
 production build on a fresh database, walk through setup, and run
 [axe](https://github.com/dequelabs/axe-core) on the setup, sign-in and Projects
-pages, Home and Inbox, and an issue's page and panel; any serious or critical
-finding fails the build. The tests include a check that every
+pages, Home and Inbox, an issue's page and panel, the backlog and the board
+(where a card is also moved with its menu, the keyboard and the mouse); any
+serious or critical finding fails the build. The tests include a check that every
 Tailwind class used under `src/` actually generates CSS, since Tailwind skips
 unknown classes silently.
 

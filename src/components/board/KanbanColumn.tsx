@@ -2,14 +2,16 @@
 
 import React from "react";
 import { Droppable } from "@hello-pangea/dnd";
-import { Issue, IssueStatus } from "@/types";
-import IssueCard from "./IssueCard";
-import { AlertCircle } from "lucide-react";
+import type { Issue, IssueStatus } from "@/types";
+import { cn } from "@/components/ui/cn";
+import { wipState } from "@/lib/board";
+import IssueCard, { type CardMoveOptions } from "./IssueCard";
 
 interface KanbanColumnProps {
   id: IssueStatus;
   droppableId?: string;
   title: string;
+  color?: string | null;
   issues: Issue[];
   wipLimit?: number;
   onIssueClick: (issue: Issue) => void;
@@ -19,12 +21,54 @@ interface KanbanColumnProps {
   onSelectEpic?: (epicIdOrKey: string) => void;
   columnRef?: (el: HTMLDivElement | null) => void;
   canMove?: boolean;
+  /** The card menu's move options for each card. */
+  moveOptions?: (issue: Issue, index: number, cellSize: number) => CardMoveOptions;
 }
 
+/** The count in a column header: "3", or "3 / 4" against a WIP limit, amber at it and red over it. */
+export function ColumnCount({ count, limit }: { count: number; limit?: number | null }) {
+  const state = wipState(count, limit);
+  const description =
+    state === "none"
+      ? `${count} ${count === 1 ? "issue" : "issues"}`
+      : `${count} of a work-in-progress limit of ${limit}${state === "at" ? ", at the limit" : state === "over" ? ", over the limit" : ""}`;
+  return (
+    <span
+      title={description}
+      className={cn(
+        "rounded-full px-1.5 font-mono text-[11px] leading-5",
+        state === "over"
+          ? "bg-danger-soft font-semibold text-danger"
+          : state === "at"
+            ? "bg-warning-soft font-semibold text-warning"
+            : "text-ink-2"
+      )}
+    >
+      <span aria-hidden="true">{limit ? `${count} / ${limit}` : count}</span>
+      <span className="sr-only">{description}</span>
+    </span>
+  );
+}
+
+export function ColumnTitle({ title, color }: { title: string; color?: string | null }) {
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-strong" style={color ? { backgroundColor: color } : undefined} />
+      <span className="truncate text-[13px] font-semibold text-ink">{title}</span>
+    </span>
+  );
+}
+
+/**
+ * One status on the board. On a phone each column is most of the screen
+ * wide and snaps into place; from md up the board lays them out in equal
+ * shares of the width.
+ */
 export default function KanbanColumn({
   id,
   droppableId,
   title,
+  color,
   issues,
   wipLimit,
   onIssueClick,
@@ -34,93 +78,33 @@ export default function KanbanColumn({
   onSelectEpic,
   columnRef,
   canMove = true,
+  moveOptions,
 }: KanbanColumnProps) {
-  const isOverLimit = !!(wipLimit && issues.length > wipLimit);
-  const targetDroppableId = droppableId || id;
-  const tooltipText = wipLimit
-    ? isOverLimit
-      ? `Work in progress (WIP) limit exceeded: ${issues.length} of ${wipLimit} max issues`
-      : `Work in progress (WIP) limit: ${issues.length} of ${wipLimit} issues`
-    : `${issues.length} ${issues.length === 1 ? "issue" : "issues"}`;
-
   return (
-    <div
+    <section
       ref={columnRef}
-      className="flex flex-col w-[85vw] max-w-[340px] sm:w-72 shrink-0 snap-center bg-jira-gray-100 rounded-lg p-2.5 max-h-full border border-jira-gray-200"
+      aria-label={showHeader ? title : undefined}
+      className="flex max-h-full w-[85vw] max-w-[340px] shrink-0 snap-center flex-col rounded-card bg-surface-sunk p-2 md:w-auto md:max-w-none md:shrink md:min-w-0"
     >
-      {/* Column Header */}
       {showHeader && (
-        <div className="flex items-center justify-between pb-2 mb-1 px-1">
-          <div className="flex items-center gap-2">
-            <h3 className="text-xs font-bold text-jira-gray-700 tracking-wider uppercase">
-              {title}
-            </h3>
-            <div className="relative group/wip inline-flex items-center">
-              <span
-                title={tooltipText}
-                className={`inline-flex items-center justify-center text-xs font-semibold px-2 py-0.5 rounded-full cursor-help transition-colors ${
-                  isOverLimit
-                    ? "bg-rose-100 text-rose-700 font-bold hover:bg-rose-200"
-                    : wipLimit
-                    ? "bg-jira-gray-200 text-jira-gray-700 hover:bg-jira-gray-300"
-                    : "bg-jira-gray-200 text-jira-gray-700 hover:bg-jira-gray-300"
-                }`}
-              >
-                {issues.length}
-                {wipLimit ? ` / ${wipLimit}` : ""}
-              </span>
-
-              {/* Styled Floating Tooltip */}
-              <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/wip:flex flex-col items-center z-30 whitespace-nowrap">
-                <div
-                  className={`text-[11px] font-medium px-2.5 py-1 rounded shadow-lg ${
-                    isOverLimit
-                      ? "bg-rose-900 text-rose-100 border border-rose-700"
-                      : "bg-jira-navy text-white"
-                  }`}
-                >
-                  {wipLimit ? (
-                    <span>
-                      {isOverLimit ? "WIP limit exceeded: " : "WIP limit: "}
-                      <strong>{issues.length}</strong> / {wipLimit} max issues
-                    </span>
-                  ) : (
-                    <span>
-                      {issues.length} {issues.length === 1 ? "issue" : "issues"}
-                    </span>
-                  )}
-                </div>
-                <div
-                  className={`w-2 h-2 -mt-1 rotate-45 ${
-                    isOverLimit
-                      ? "bg-rose-900 border-r border-b border-rose-700"
-                      : "bg-jira-navy"
-                  }`}
-                />
-              </div>
-            </div>
-          </div>
-
-          {isOverLimit && (
-            <span
-              title={`WIP Limit Exceeded (${issues.length} / ${wipLimit} max)`}
-              className="text-rose-600 cursor-help"
-            >
-              <AlertCircle className="w-4 h-4" />
-            </span>
-          )}
+        <div className="flex h-8 items-center justify-between gap-2 px-1.5">
+          <h3 className="min-w-0">
+            <ColumnTitle title={title} color={color} />
+          </h3>
+          <ColumnCount count={issues.length} limit={wipLimit} />
         </div>
       )}
 
-      {/* Droppable Issue List */}
-      <Droppable droppableId={targetDroppableId}>
+      <Droppable droppableId={droppableId || id}>
         {(provided, snapshot) => (
           <div
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className={`flex-1 overflow-y-auto px-0.5 py-1 ${minHeightClass} rounded transition-colors ${
-              snapshot.isDraggingOver ? "bg-jira-blue-light/30 ring-2 ring-jira-blue/30 ring-inset" : ""
-            }`}
+            className={cn(
+              "flex-1 overflow-y-auto rounded-control px-0.5 py-1 transition-colors",
+              minHeightClass,
+              snapshot.isDraggingOver && "bg-accent-soft"
+            )}
           >
             {issues.map((issue, index) => (
               <IssueCard
@@ -131,18 +115,19 @@ export default function KanbanColumn({
                 doneStatusNames={doneStatusNames}
                 onSelectEpic={onSelectEpic}
                 canMove={canMove}
+                move={moveOptions?.(issue, index, issues.length)}
               />
             ))}
             {provided.placeholder}
 
             {issues.length === 0 && !snapshot.isDraggingOver && (
-              <div className="h-28 border-2 border-dashed border-jira-gray-300 rounded-md flex flex-col items-center justify-center text-jira-gray-500 text-xs select-none">
-                <span>No issues in this status</span>
-              </div>
+              <p className="flex h-20 select-none items-center justify-center rounded-control border border-dashed border-strong text-xs text-ink-2">
+                No issues
+              </p>
             )}
           </div>
         )}
       </Droppable>
-    </div>
+    </section>
   );
 }

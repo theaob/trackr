@@ -3,9 +3,12 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
-import { Project, Issue, User, IssueStatus, IssueType, PriorityLevel, Sprint, WorkflowStatus, WorkflowTransition, Version } from "@/types";
+import { Project, Issue, User, IssueStatus, PriorityLevel, Sprint, WorkflowStatus, WorkflowTransition, Version } from "@/types";
 import KanbanColumn from "./KanbanColumn";
 import BoardFilters, { SwimlaneGroupBy } from "./BoardFilters";
+import SprintHeader from "./SprintHeader";
+import { ColumnCount, ColumnTitle } from "./KanbanColumn";
+import type { CardMoveOptions } from "./IssueCard";
 import IssuePanel from "@/components/issue/IssuePanel";
 import CreateIssueModal from "@/components/issues/CreateIssueModal";
 import UserAvatar from "@/components/common/UserAvatar";
@@ -14,8 +17,13 @@ import { useCurrentUser } from "@/context/UserContext";
 import { useSearch } from "@/context/SearchContext";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
 import { prettifyStatusName, isDoneStatus, getDoneStatusNames } from "@/lib/workflowDisplay";
-import { ChevronDown, ChevronRight, Layers, User as UserIcon, Bookmark, Pencil, Calendar, Target, Rocket } from "lucide-react";
-import { format } from "date-fns";
+import { ChevronDown, ChevronRight, MoreHorizontal, Pencil, Rocket, ListTodo } from "lucide-react";
+import { boardFiltersToTQL, matchesBoardFilters, moveTargets, NO_BOARD_FILTERS, sprintProgress, type BoardFilterState } from "@/lib/board";
+import { IconButton } from "@/components/ui/Button";
+import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/ui/Menu";
+import { useToast } from "@/components/ui/Toast";
+import { cn } from "@/components/ui/cn";
+import { IssueTypeIcon } from "@/components/common/IssueIcons";
 import EditSprintModal from "@/components/sprints/EditSprintModal";
 import CreateVersionModal from "@/components/releases/CreateVersionModal";
 import Link from "next/link";
@@ -258,33 +266,9 @@ export default function KanbanBoard({
 
   const handleCloseDetailModal = () => setActiveIssue(null);
 
-  // Filters State
-  const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<string[]>([]);
-  const [selectedType, setSelectedType] = useState<IssueType | "ALL">("ALL");
-  const [selectedPriority, setSelectedPriority] = useState<PriorityLevel | "ALL">("ALL");
-  const [onlyMyIssues, setOnlyMyIssues] = useState(false);
-
-  // Toggle Assignee Filter
-  const handleToggleAssignee = (userId: string) => {
-    setSelectedAssigneeIds((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
-    );
-  };
-
-  // Clear Filters
-  const handleClearFilters = () => {
-    setSelectedAssigneeIds([]);
-    setSelectedType("ALL");
-    setSelectedPriority("ALL");
-    setOnlyMyIssues(false);
-  };
-
-  const hasActiveFilters =
-    selectedAssigneeIds.length > 0 ||
-    selectedType !== "ALL" ||
-    selectedPriority !== "ALL" ||
-    onlyMyIssues ||
-    searchQuery.trim().length > 0;
+  // Filters: chips for people, type and priority, plus "only mine".
+  const [filters, setFilters] = useState<BoardFilterState>(NO_BOARD_FILTERS);
+  const { toast } = useToast();
 
   const boardStatusNames = useMemo(() => new Set(COLUMNS.map((c) => c.id)), [COLUMNS]);
   const doneStatusNames = useMemo(() => {
@@ -299,18 +283,7 @@ export default function KanbanBoard({
     );
   }, [issues, activeSprint, isKanban]);
 
-  const sprintTotalPoints = useMemo(
-    () => sprintIssues.reduce((sum, i) => sum + (Number(i.storyPoints) || 0), 0),
-    [sprintIssues]
-  );
-
-  const sprintDonePoints = useMemo(
-    () =>
-      sprintIssues
-        .filter((i) => isDoneStatus(i.status, statuses))
-        .reduce((sum, i) => sum + (Number(i.storyPoints) || 0), 0),
-    [sprintIssues, statuses]
-  );
+  const progress = useMemo(() => sprintProgress(sprintIssues, statuses), [sprintIssues, statuses]);
 
   // Filter Issues
   const filteredIssues = useMemo(() => {
@@ -331,42 +304,16 @@ export default function KanbanBoard({
         if (!matchesKey && !matchesTitle) return false;
       }
 
-      // Only My Issues
-      if (onlyMyIssues && currentUser) {
-        if (issue.assigneeId !== currentUser.id) return false;
-      }
-
-      // Assignee Avatars
-      if (selectedAssigneeIds.length > 0) {
-        if (!issue.assigneeId || !selectedAssigneeIds.includes(issue.assigneeId)) {
-          return false;
-        }
-      }
-
-      // Type Filter
-      if (selectedType !== "ALL" && issue.type !== selectedType) {
-        return false;
-      }
-
-      // Priority Filter
-      if (selectedPriority !== "ALL" && issue.priority !== selectedPriority) {
-        return false;
-      }
-
-      return true;
+      return matchesBoardFilters(issue, filters, currentUser?.id);
     });
   }, [
     issues,
     activeSprint,
     searchQuery,
-    onlyMyIssues,
+    filters,
     currentUser,
-    selectedAssigneeIds,
-    selectedType,
-    selectedPriority,
     boardStatusNames,
   ]);
-
   // Epics list for parent selectors and swimlanes
   const epics = useMemo(() => {
     if (initialEpics && initialEpics.length > 0) return initialEpics;
@@ -461,20 +408,22 @@ export default function KanbanBoard({
     return { laneId: "ALL", status: droppableId as IssueStatus };
   };
 
-  // Handle Drag & Drop with proper ordering & swimlane attribute updates
-  const handleDragEnd = async (result: DropResult) => {
+  // The lane an issue sits in under the current grouping.
+  const laneOf = (issue: Issue): string => {
+    if (groupBy === "ASSIGNEE") return issue.assigneeId ?? "UNASSIGNED";
+    if (groupBy === "EPIC") return issue.parentId ?? "NO_EPIC";
+    if (groupBy === "PRIORITY") return issue.priority;
+    return "ALL";
+  };
+
+  /**
+   * Moves a card to a cell (lane and status) at a position: what a drop, the
+   * keyboard drag and the card's menu all come down to. Moving between lanes
+   * changes the field the lanes group by.
+   */
+  const moveIssue = async (issueId: string, srcLaneId: string, dest: { laneId: string; status: IssueStatus }, destIndex: number) => {
     if (!permissions.canMoveIssue) return;
-
-    const { source, destination, draggableId } = result;
-    if (!destination) return;
-    if (source.droppableId === destination.droppableId && source.index === destination.index) {
-      return;
-    }
-
-    const src = parseDroppableId(source.droppableId);
-    const dest = parseDroppableId(destination.droppableId);
-
-    const targetIssue = issues.find((i) => i.id === draggableId);
+    const targetIssue = issues.find((i) => i.id === issueId);
     if (!targetIssue) return;
 
     // Snapshot current issues for rollback on failure
@@ -497,22 +446,23 @@ export default function KanbanBoard({
       updatedSprintId = activeSprint.id;
     }
 
-    if (groupBy === "ASSIGNEE" && dest.laneId !== src.laneId) {
+    if (groupBy === "ASSIGNEE" && dest.laneId !== srcLaneId) {
       const newAssigneeId = dest.laneId === "UNASSIGNED" ? null : dest.laneId;
       extraData.assigneeId = newAssigneeId;
       updatedAssignee = newAssigneeId ? users.find((u) => u.id === newAssigneeId) || null : null;
-    } else if (groupBy === "EPIC" && dest.laneId !== src.laneId) {
+    } else if (groupBy === "EPIC" && dest.laneId !== srcLaneId) {
       const newParentId = dest.laneId === "NO_EPIC" ? null : dest.laneId;
       extraData.parentId = newParentId;
       updatedParent = newParentId ? epics.find((e) => e.id === newParentId) || null : null;
-    } else if (groupBy === "PRIORITY" && dest.laneId !== src.laneId) {
+    } else if (groupBy === "PRIORITY" && dest.laneId !== srcLaneId) {
       const newPriority = dest.laneId as PriorityLevel;
       extraData.priority = newPriority;
       updatedPriority = newPriority;
     }
 
     // Target cell items (excluding moved issue)
-    const targetCellIssues = getCellIssues(dest.laneId, dest.status).filter((i) => i.id !== draggableId);
+    const targetCellIssues = getCellIssues(dest.laneId, dest.status).filter((i) => i.id !== issueId);
+    const index = Math.max(0, Math.min(destIndex, targetCellIssues.length));
 
     const updatedTargetIssue: Issue = {
       ...targetIssue,
@@ -526,7 +476,7 @@ export default function KanbanBoard({
     };
 
     // Insert at destination index
-    targetCellIssues.splice(destination.index, 0, updatedTargetIssue);
+    targetCellIssues.splice(index, 0, updatedTargetIssue);
 
     // Reassign contiguous order indexes to target cell items
     const orderMap = new Map<string, number>();
@@ -538,7 +488,7 @@ export default function KanbanBoard({
     setIssues((prevIssues) =>
       prevIssues.map((item) => {
         if (orderMap.has(item.id)) {
-          if (item.id === draggableId) {
+          if (item.id === issueId) {
             return { ...updatedTargetIssue, order: orderMap.get(item.id)! };
           }
           return { ...item, order: orderMap.get(item.id)! };
@@ -551,9 +501,9 @@ export default function KanbanBoard({
     // the neighbours' positions are stored too and the board looks the same
     // after a reload as it did after the drop.
     const res = await updateIssueStatusAndOrder(
-      draggableId,
+      issueId,
       dest.status,
-      destination.index,
+      index,
       currentUser?.id,
       extraData,
       targetCellIssues.map((item) => item.id)
@@ -564,10 +514,36 @@ export default function KanbanBoard({
       setIssues((prev) => prev.map((i) => (i.id === serverIssue.id ? { ...i, ...serverIssue } : i)));
     } else if (!res.success) {
       setIssues(previousIssues);
-      if (res.error) {
-        alert(res.error);
-      }
+      toast({ title: `Couldn't move ${targetIssue.key}`, description: res.error, tone: "danger" });
     }
+    return res.success;
+  };
+
+  const handleDragEnd = async (result: DropResult) => {
+    const { source, destination, draggableId } = result;
+    if (!destination) return;
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
+    const src = parseDroppableId(source.droppableId);
+    const dest = parseDroppableId(destination.droppableId);
+    await moveIssue(draggableId, src.laneId, dest, destination.index);
+  };
+
+  const columnTitle = (statusId: string) => COLUMNS.find((c) => c.id === statusId)?.title ?? prettifyStatusName(statusId);
+
+  // What a card's menu offers: the columns the workflow allows, and the top or
+  // bottom of its own column.
+  const moveOptions = (issue: Issue, index: number, cellSize: number): CardMoveOptions => {
+    const lane = laneOf(issue);
+    return {
+      targets: moveTargets(issue.status, COLUMNS, statuses, transitions),
+      onMove: async (statusId) => {
+        const ok = await moveIssue(issue.id, lane, { laneId: lane, status: statusId }, getCellIssues(lane, statusId).length);
+        if (ok) toast({ title: `Moved ${issue.key} to ${columnTitle(statusId)}`, tone: "success", duration: 2500 });
+      },
+      onMoveToEdge: (edge) => moveIssue(issue.id, lane, { laneId: lane, status: issue.status }, edge === "top" ? 0 : cellSize - 1),
+      canMoveUp: index > 0,
+      canMoveDown: index < cellSize - 1,
+    };
   };
 
   // Update handlers
@@ -608,129 +584,102 @@ export default function KanbanBoard({
     }
   };
 
+  // Columns share the width equally from md up, never narrower than a
+  // readable card: four fit at 1280 px, and only boards with more scroll.
+  const gridStyle = { gridTemplateColumns: `repeat(${COLUMNS.length}, minmax(220px, 1fr))` };
+  const tql = boardFiltersToTQL(project.key, filters, { sprintOnly: !!activeSprint });
+  const moreFiltersHref = `/projects/${encodeURIComponent(project.key)}/issues?mode=tql&tql=${encodeURIComponent(tql)}`;
+
+  const headerActions =
+    (activeSprint && permissions.canManageSprints) || permissions.canManageVersions || !isKanban ? (
+      <Menu>
+        <MenuTrigger asChild>
+          <IconButton label={activeSprint ? "Sprint actions" : "Board actions"} icon={<MoreHorizontal />} size="sm" />
+        </MenuTrigger>
+        <MenuContent align="end">
+          {activeSprint && permissions.canManageSprints && (
+            <MenuItem icon={<Pencil aria-hidden="true" />} onSelect={() => setEditingSprint(activeSprint)}>
+              Edit sprint
+            </MenuItem>
+          )}
+          {permissions.canManageVersions && (
+            <MenuItem icon={<Rocket aria-hidden="true" />} onSelect={() => setIsReleaseModalOpen(true)}>
+              Create a release…
+            </MenuItem>
+          )}
+          {!isKanban && (
+            <MenuItem icon={<ListTodo aria-hidden="true" />} onSelect={() => router.push(`/projects/${project.key}/backlog`)}>
+              Go to the backlog
+            </MenuItem>
+          )}
+        </MenuContent>
+      </Menu>
+    ) : null;
+
+  const laneIdentity = (lane: Swimlane) => {
+    if (groupBy === "ASSIGNEE") {
+      return (
+        <>
+          {lane.user ? (
+            <UserAvatar user={lane.user} size="xs" />
+          ) : (
+            <span aria-hidden="true" className="h-5 w-5 rounded-full border border-dashed border-strong" />
+          )}
+          <span className="truncate">{lane.title}</span>
+        </>
+      );
+    }
+    if (groupBy === "EPIC") {
+      return (
+        <>
+          {lane.id !== "NO_EPIC" && <IssueTypeIcon type="EPIC" className="h-4 w-4 shrink-0" />}
+          <span className="truncate">{lane.title}</span>
+        </>
+      );
+    }
+    return (
+      <>
+        {lane.priority && <PriorityIcon priority={lane.priority as PriorityLevel} className="h-4 w-4 shrink-0" />}
+        <span className="truncate">{lane.title}</span>
+      </>
+    );
+  };
+
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden px-3 sm:px-6 pt-3 sm:pt-5 bg-white">
-      {/* Board Header & Sprint Info */}
-      <div className="flex flex-col gap-2 shrink-0">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-lg sm:text-xl font-bold text-jira-navy tracking-tight">
-              {activeSprint ? activeSprint.name : isKanban ? "Kanban Board" : "Scrum Board"}
-            </h1>
-            <span
-              className="text-[10px] font-bold px-2 py-0.5 rounded border bg-jira-gray-100 text-jira-gray-700 border-jira-gray-200"
-            >
-              {isKanban ? "Kanban" : "Scrum"}
-            </span>
-            <span
-              className={`text-[10px] font-bold px-2 py-0.5 rounded border ${permissions.roleConfig.badgeBg} ${permissions.roleConfig.badgeText} ${permissions.roleConfig.border}`}
-            >
-              {permissions.roleConfig.name}
-            </span>
-            {activeSprint && (
-              <>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                  Active Sprint
-                </span>
-                {activeSprint.startDate && activeSprint.endDate && (
-                  <span className="text-xs text-jira-gray-500 flex items-center gap-1 font-medium">
-                    <Calendar className="w-3.5 h-3.5 text-jira-gray-400" />
-                    {format(new Date(activeSprint.startDate), "MMM d")} - {format(new Date(activeSprint.endDate), "MMM d")}
-                  </span>
-                )}
-                <div className="flex items-center gap-1 text-xs">
-                  <span
-                    title="Total estimated story points"
-                    className="px-2 py-0.5 rounded-full bg-jira-gray-200 text-jira-gray-800 font-bold text-[11px]"
-                  >
-                    {sprintTotalPoints} pts
-                  </span>
-                  <span
-                    title="Completed story points"
-                    className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px]"
-                  >
-                    {sprintDonePoints} done
-                  </span>
-                </div>
-              </>
+    <div className="flex h-full flex-1 flex-col overflow-hidden bg-page px-3 pt-3 sm:px-6 sm:pt-4">
+      <div className="flex shrink-0 flex-col">
+        {activeSprint ? (
+          <SprintHeader sprint={activeSprint} progress={progress} actions={headerActions} />
+        ) : (
+          <div className="flex min-h-9 flex-wrap items-center gap-x-3 gap-y-1">
+            <h1 className="text-lg font-semibold tracking-tight text-ink">Board</h1>
+            {isKanban ? (
+              <span className="text-xs text-ink-2">
+                {filteredIssues.length} {filteredIssues.length === 1 ? "issue" : "issues"}
+              </span>
+            ) : (
+              <span className="text-xs text-ink-2">
+                No active sprint.{" "}
+                <Link prefetch={false} href={`/projects/${project.key}/backlog`} className="font-medium text-accent hover:underline">
+                  Start one from the backlog
+                </Link>
+              </span>
             )}
-          </div>
-
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            {activeSprint && permissions.canManageSprints && (
-              <button
-                onClick={() => setEditingSprint(activeSprint)}
-                className="text-xs border border-jira-gray-300 text-jira-navy font-semibold px-2.5 py-1.5 rounded hover:bg-jira-gray-100 flex items-center gap-1.5 transition-colors"
-                title="Edit sprint dates, name, or goal"
-              >
-                <Pencil className="w-3.5 h-3.5 text-jira-gray-500" />
-                <span>Edit Sprint</span>
-              </button>
-            )}
-            {permissions.canManageVersions && (
-              <button
-                onClick={() => setIsReleaseModalOpen(true)}
-                className="text-xs border border-jira-gray-300 text-jira-navy font-semibold px-2.5 py-1.5 rounded hover:bg-jira-gray-100 flex items-center gap-1.5 transition-colors"
-                title="Create a release with completed issues from this board"
-              >
-                <Rocket className="w-3.5 h-3.5 text-jira-blue" />
-                <span>Release...</span>
-              </button>
-            )}
-            {!activeSprint && !isKanban && (
-              <Link prefetch={false}
-                href={`/projects/${project.key}/backlog`}
-                className="text-xs bg-jira-blue-light text-jira-blue font-semibold px-3 py-1.5 rounded hover:bg-jira-blue hover:text-white transition-colors"
-              >
-                Go to Backlog to start a sprint
-              </Link>
-            )}
-          </div>
-        </div>
-
-        {!activeSprint && !isKanban && (
-          <p className="text-xs text-jira-gray-500 mt-0.5">
-            No active sprint. Issues assigned to the active sprint in the backlog will appear here.
-          </p>
-        )}
-
-        {activeSprint?.goal && (
-          <div
-            onClick={() => permissions.canManageSprints && setEditingSprint(activeSprint)}
-            className={`flex items-center gap-1.5 text-xs text-jira-gray-600 mt-0.5 ${
-              permissions.canManageSprints ? "hover:text-jira-navy cursor-pointer group/goal" : ""
-            }`}
-            title={permissions.canManageSprints ? "Click to edit sprint goal" : undefined}
-          >
-            <Target className="w-3.5 h-3.5 text-jira-blue shrink-0" />
-            <span className="font-semibold text-jira-gray-700">Goal:</span>
-            <span className="italic">{activeSprint.goal}</span>
-            {permissions.canManageSprints && (
-              <Pencil className="w-3 h-3 text-jira-gray-400 opacity-0 group-hover/goal:opacity-100 transition-opacity shrink-0" />
-            )}
+            {headerActions && <div className="ml-auto">{headerActions}</div>}
           </div>
         )}
 
-        {/* Filters Bar */}
         <BoardFilters
           users={users}
-          selectedAssigneeIds={selectedAssigneeIds}
-          onToggleAssignee={handleToggleAssignee}
-          selectedType={selectedType}
-          onSelectType={setSelectedType}
-          selectedPriority={selectedPriority}
-          onSelectPriority={setSelectedPriority}
+          filters={filters}
+          onChange={setFilters}
           groupBy={groupBy}
           onSelectGroupBy={setGroupBy}
-          onlyMyIssues={onlyMyIssues}
-          onToggleOnlyMyIssues={() => setOnlyMyIssues(!onlyMyIssues)}
-          onClearFilters={handleClearFilters}
-          hasActiveFilters={hasActiveFilters}
+          moreFiltersHref={moreFiltersHref}
         />
 
-        {/* Mobile Column Switcher Tab Pills */}
-        <div className="md:hidden flex items-center gap-1.5 overflow-x-auto py-1.5 no-scrollbar">
+        {/* Phones: one column at a time, with a switcher */}
+        <div className="md:hidden flex items-center gap-1.5 overflow-x-auto pb-1.5 no-scrollbar" role="group" aria-label="Columns">
           {COLUMNS.map((col) => {
             const count = filteredIssues.filter((i) => i.status === col.id).length;
             const isActive = activeMobileColumn === col.id;
@@ -741,40 +690,32 @@ export default function KanbanBoard({
                   tabRefs.current[col.id] = el;
                 }}
                 type="button"
+                aria-pressed={isActive}
                 onClick={() => scrollToColumn(col.id)}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
-                  isActive
-                    ? "bg-jira-blue text-white shadow-xs"
-                    : "bg-jira-gray-100 text-jira-gray-700 hover:bg-jira-gray-200"
-                }`}
+                className={cn(
+                  "flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-xs font-medium transition-colors",
+                  isActive ? "border-accent/40 bg-accent-soft text-accent" : "border-subtle bg-surface text-ink-2"
+                )}
               >
                 <span>{col.title}</span>
-                <span
-                  className={`text-[10px] px-1.5 py-px rounded-full font-bold ${
-                    isActive ? "bg-white/25 text-white" : "bg-jira-gray-200 text-jira-gray-800"
-                  }`}
-                >
-                  {count}
-                </span>
+                <span className="font-mono text-[11px]">{count}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Kanban Board Columns Container */}
       <div
         ref={boardContainerRef}
         onScroll={handleBoardScroll}
         onTouchStart={handleUserInteraction}
         onMouseDown={handleUserInteraction}
         onWheel={handleUserInteraction}
-        className="flex-1 overflow-x-auto overflow-y-auto py-3 sm:py-4 snap-x snap-mandatory scroll-smooth relative"
+        className="relative flex-1 snap-x snap-mandatory overflow-auto scroll-smooth pb-3 md:snap-none"
       >
         <DragDropContext onDragEnd={handleDragEnd}>
           {groupBy === "NONE" ? (
-            /* Default Single Grid Board */
-            <div className="flex items-start gap-4 h-full min-w-max pb-2">
+            <div className="flex h-full min-w-max items-start gap-3 md:grid md:min-w-0" style={gridStyle}>
               {COLUMNS.map((col) => (
                 <KanbanColumn
                   key={col.id}
@@ -783,181 +724,64 @@ export default function KanbanBoard({
                     columnRefs.current[col.id] = el;
                   }}
                   title={col.title}
+                  color={col.color}
                   wipLimit={col.wipLimit}
                   issues={getCellIssues("ALL", col.id)}
                   onIssueClick={(issue) => setActiveIssue(issue)}
                   doneStatusNames={doneStatusNames}
                   onSelectEpic={handleOpenEpic}
                   canMove={permissions.canMoveIssue}
+                  moveOptions={moveOptions}
                 />
               ))}
             </div>
           ) : (
-            /* Swimlane / Lane Grouped Board */
-            <div className="flex flex-col gap-6 min-w-max pb-6">
-              {/* Column Headers Sticky Row */}
-              <div className="flex items-center gap-4 sticky top-0 bg-white z-20 pb-2 border-b border-jira-gray-200">
+            <div className="flex min-w-max flex-col gap-3 md:min-w-0">
+              {/* Column headings, once, above every lane */}
+              <div className="sticky top-0 z-10 flex gap-3 bg-page pb-1 md:grid" style={gridStyle}>
                 {COLUMNS.map((col) => {
-                  const totalInCol = swimlanes.reduce(
-                    (acc, lane) => acc + getCellIssues(lane.id, col.id).length,
-                    0
-                  );
-                  const isOverLimit = !!(col.wipLimit && totalInCol > col.wipLimit);
-                  const tooltipText = col.wipLimit
-                    ? isOverLimit
-                      ? `Work in progress (WIP) limit exceeded: ${totalInCol} of ${col.wipLimit} max issues`
-                      : `Work in progress (WIP) limit: ${totalInCol} of ${col.wipLimit} issues`
-                    : `${totalInCol} ${totalInCol === 1 ? "issue" : "issues"}`;
-
+                  const total = swimlanes.reduce((acc, lane) => acc + getCellIssues(lane.id, col.id).length, 0);
                   return (
                     <div
                       key={col.id}
                       ref={(el) => {
                         columnRefs.current[col.id] = el;
                       }}
-                      className="w-[85vw] max-w-[340px] sm:w-72 shrink-0 snap-center flex items-center justify-between px-3 py-2 bg-jira-gray-100 rounded-md border border-jira-gray-200"
+                      className="flex h-9 w-[85vw] max-w-[340px] shrink-0 snap-center items-center justify-between gap-2 rounded-card bg-surface-sunk px-3 md:w-auto md:max-w-none md:min-w-0"
                     >
-                      <h3 className="text-xs font-bold text-jira-navy uppercase tracking-wider">
-                        {col.title}
+                      <h3 className="min-w-0">
+                        <ColumnTitle title={col.title} color={col.color} />
                       </h3>
-                      <div className="relative group/wip inline-flex items-center">
-                        <span
-                          title={tooltipText}
-                          className={`text-xs font-semibold px-2 py-0.5 rounded-full cursor-help transition-colors ${
-                            isOverLimit
-                              ? "bg-rose-100 text-rose-700 font-bold hover:bg-rose-200"
-                              : "bg-jira-gray-200 text-jira-gray-700 hover:bg-jira-gray-300"
-                          }`}
-                        >
-                          {totalInCol}
-                          {col.wipLimit ? ` / ${col.wipLimit}` : ""}
-                        </span>
-
-                        {/* Styled Floating Tooltip */}
-                        <div className="pointer-events-none absolute bottom-full right-0 mb-1.5 hidden group-hover/wip:flex flex-col items-center z-30 whitespace-nowrap">
-                          <div
-                            className={`text-[11px] font-medium px-2.5 py-1 rounded shadow-lg ${
-                              isOverLimit
-                                ? "bg-rose-900 text-rose-100 border border-rose-700"
-                                : "bg-jira-navy text-white"
-                            }`}
-                          >
-                            {col.wipLimit ? (
-                              <span>
-                                {isOverLimit ? "WIP limit exceeded: " : "WIP limit: "}
-                                <strong>{totalInCol}</strong> / {col.wipLimit} max issues
-                              </span>
-                            ) : (
-                              <span>
-                                {totalInCol} {totalInCol === 1 ? "issue" : "issues"}
-                              </span>
-                            )}
-                          </div>
-                          <div
-                            className={`w-2 h-2 -mt-1 rotate-45 ${
-                              isOverLimit
-                                ? "bg-rose-900 border-r border-b border-rose-700"
-                                : "bg-jira-navy"
-                            }`}
-                          />
-                        </div>
-                      </div>
+                      <ColumnCount count={total} limit={col.wipLimit} />
                     </div>
                   );
                 })}
               </div>
 
-              {/* Swimlane Rows */}
               {swimlanes.map((lane) => {
                 const isCollapsed = collapsedLanes[lane.id];
-                const laneIssueCount = COLUMNS.reduce(
-                  (acc, col) => acc + getCellIssues(lane.id, col.id).length,
-                  0
-                );
-
+                const laneIssueCount = COLUMNS.reduce((acc, col) => acc + getCellIssues(lane.id, col.id).length, 0);
                 return (
-                  <div
-                    key={lane.id}
-                    className="flex flex-col rounded-lg border border-jira-gray-200 bg-jira-gray-50/50 overflow-hidden shadow-2xs"
-                  >
-                    {/* Swimlane Header Bar */}
-                    <div
-                      onClick={() => toggleLaneCollapse(lane.id)}
-                      className="flex items-center justify-between px-4 py-2.5 bg-jira-gray-100/80 hover:bg-jira-gray-200/80 border-b border-jira-gray-200 cursor-pointer select-none transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <button className="text-jira-gray-600 hover:text-jira-navy transition-colors">
-                          {isCollapsed ? (
-                            <ChevronRight className="w-4 h-4" />
-                          ) : (
-                            <ChevronDown className="w-4 h-4" />
-                          )}
+                  <section key={lane.id} aria-label={lane.title} className="rounded-card border border-subtle bg-surface">
+                    <div className="flex h-10 items-center gap-2 px-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleLaneCollapse(lane.id)}
+                        aria-expanded={!isCollapsed}
+                        className="flex min-w-0 items-center gap-2 rounded-control px-1.5 py-1 text-[13px] font-medium text-ink hover:bg-surface-sunk"
+                      >
+                        {isCollapsed ? <ChevronRight className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" /> : <ChevronDown className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />}
+                        {laneIdentity(lane)}
+                        <span className="font-mono text-[11px] font-normal text-ink-2">{laneIssueCount}</span>
+                      </button>
+                      {groupBy === "EPIC" && lane.id !== "NO_EPIC" && (
+                        <button type="button" onClick={() => handleOpenEpic(lane.id)} className="ml-auto rounded-control px-2 py-1 text-xs font-medium text-accent hover:bg-accent-soft">
+                          Open epic
                         </button>
-
-                        {/* Swimlane Identity Rendering */}
-                        {groupBy === "ASSIGNEE" && (
-                          <div className="flex items-center gap-2">
-                            {lane.user ? (
-                              <UserAvatar user={lane.user} size="sm" />
-                            ) : (
-                              <div className="w-6 h-6 rounded-full bg-jira-gray-300 flex items-center justify-center text-jira-gray-600">
-                                <UserIcon className="w-3.5 h-3.5" />
-                              </div>
-                            )}
-                            <span className="text-xs font-bold text-jira-navy">
-                              {lane.title}
-                            </span>
-                            {lane.user?.role && (
-                              <span className="text-[10px] bg-jira-gray-200 text-jira-gray-700 px-1.5 py-0.5 rounded font-medium">
-                                {lane.user.role}
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {groupBy === "EPIC" && (
-                          <div
-                            onClick={(e) => {
-                              if (lane.id !== "NO_EPIC") {
-                                e.stopPropagation();
-                                handleOpenEpic(lane.id);
-                              }
-                            }}
-                            className={`flex items-center gap-2 ${
-                              lane.id !== "NO_EPIC" ? "cursor-pointer hover:underline" : ""
-                            }`}
-                            title={lane.id !== "NO_EPIC" ? "Click to view Epic details" : undefined}
-                          >
-                            <Bookmark className="w-4 h-4 text-purple-600 fill-purple-100" />
-                            <span className="text-xs font-bold text-jira-navy">
-                              {lane.title}
-                            </span>
-                          </div>
-                        )}
-
-                        {groupBy === "PRIORITY" && (
-                          <div className="flex items-center gap-2">
-                            {lane.priority && (
-                              <PriorityIcon
-                                priority={lane.priority as PriorityLevel}
-                                className="w-4 h-4"
-                              />
-                            )}
-                            <span className="text-xs font-bold text-jira-navy">
-                              {lane.title}
-                            </span>
-                          </div>
-                        )}
-
-                        <span className="text-xs text-jira-gray-500 font-medium ml-1">
-                          ({laneIssueCount} issue{laneIssueCount !== 1 ? "s" : ""})
-                        </span>
-                      </div>
+                      )}
                     </div>
-
-                    {/* Swimlane Columns Content */}
                     {!isCollapsed && (
-                      <div className="flex items-start gap-4 p-3 bg-white">
+                      <div className="flex items-start gap-3 px-2 pb-2 md:grid" style={gridStyle}>
                         {COLUMNS.map((col) => (
                           <KanbanColumn
                             key={`${lane.id}::${col.id}`}
@@ -966,17 +790,18 @@ export default function KanbanBoard({
                             title={col.title}
                             wipLimit={col.wipLimit}
                             showHeader={false}
-                            minHeightClass="min-h-[110px]"
+                            minHeightClass="min-h-[88px]"
                             issues={getCellIssues(lane.id, col.id)}
                             onIssueClick={(issue) => setActiveIssue(issue)}
                             doneStatusNames={doneStatusNames}
                             onSelectEpic={handleOpenEpic}
                             canMove={permissions.canMoveIssue}
+                            moveOptions={moveOptions}
                           />
                         ))}
                       </div>
                     )}
-                  </div>
+                  </section>
                 );
               })}
             </div>

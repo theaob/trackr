@@ -5,7 +5,7 @@ import IssueView from "@/components/issue/IssueView";
 import { ToastProvider } from "@/components/ui/Toast";
 import CreateIssueModal from "@/components/issues/CreateIssueModal";
 import IssuesListView from "@/components/issues/IssuesListView";
-import BacklogContextMenu from "@/components/backlog/BacklogContextMenu";
+import { backlogMoveTargets } from "@/lib/board";
 import { Project, Issue, Sprint, WorkflowStatus } from "@/types";
 
 vi.mock("next/navigation", () => ({
@@ -376,44 +376,27 @@ describe("Kanban Project Sprint Guardrails", () => {
     });
   });
 
-  describe("BacklogContextMenu", () => {
-    it("does not render Move to Sprint section when isKanban is true", () => {
-      const html = renderToStaticMarkup(
-        React.createElement(BacklogContextMenu, {
-          x: 100,
-          y: 100,
-          issue: kanbanIssue,
-          sprints: [mockSprint],
-          isKanban: true,
-          canMove: true,
-          onClose: vi.fn(),
-          onMoveToSprint: vi.fn(),
-          onOpenIssue: vi.fn(),
-        })
-      );
-
-      expect(html).not.toContain("Move to Sprint");
-      expect(html).not.toContain("Sprint 1");
-      expect(html).not.toContain("Send to Backlog");
+  describe("backlog row menu", () => {
+    it("offers no sprints to move to in a Kanban project", () => {
+      expect(backlogMoveTargets(kanbanIssue, [mockSprint], true)).toEqual([]);
+      expect(backlogMoveTargets({ ...kanbanIssue, sprintId: "sprint-1" }, [mockSprint], true)).toEqual([]);
     });
 
-    it("renders Move to Sprint section when isKanban is false", () => {
-      const html = renderToStaticMarkup(
-        React.createElement(BacklogContextMenu, {
-          x: 100,
-          y: 100,
-          issue: scrumIssue,
-          sprints: [mockSprint],
-          isKanban: false,
-          canMove: true,
-          onClose: vi.fn(),
-          onMoveToSprint: vi.fn(),
-          onOpenIssue: vi.fn(),
-        })
-      );
+    it("offers open sprints, active first, and the backlog for a planned issue in Scrum", () => {
+      const future = { ...mockSprint, id: "sprint-2", name: "Sprint 2", status: "FUTURE" as const };
+      const done = { ...mockSprint, id: "sprint-0", name: "Sprint 0", status: "COMPLETED" as const };
+      expect(backlogMoveTargets({ ...scrumIssue, sprintId: null }, [future, mockSprint, done], false).map((t) => t.label)).toEqual([
+        "Sprint 1",
+        "Sprint 2",
+      ]);
+      expect(backlogMoveTargets({ ...scrumIssue, sprintId: "sprint-1" }, [future, mockSprint], false).map((t) => t.label)).toEqual([
+        "Sprint 2",
+        "Backlog",
+      ]);
+    });
 
-      expect(html).toContain("Move to Sprint");
-      expect(html).toContain("Sprint 1");
+    it("never offers a sprint for an epic", () => {
+      expect(backlogMoveTargets({ ...scrumIssue, type: "EPIC", sprintId: null }, [mockSprint], false)).toEqual([]);
     });
   });
 });

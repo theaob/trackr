@@ -241,16 +241,17 @@ describe("Mobile Viewport & Navigation", () => {
       }))
     );
 
-    // Mobile tabs wrapper
-    expect(html).toContain("md:hidden flex items-center gap-1.5 overflow-x-auto py-1.5 no-scrollbar");
+    // Mobile column switcher, hidden from md up
+    expect(html).toMatch(/class="md:hidden flex[^"]*overflow-x-auto[^"]*"[^>]*role="group"[^>]*aria-label="Columns"/);
     // Column tab pills with titles
     expect(html).toContain("To Do");
     expect(html).toContain("In Progress");
     expect(html).toContain("Done");
-    // Active pill styling
-    expect(html).toContain("bg-jira-blue text-white shadow-xs");
-    // Board container with scroll-snapping and relative positioning
-    expect(html).toContain("snap-x snap-mandatory scroll-smooth relative");
+    // The first column's pill is the pressed one
+    expect(html).toMatch(/aria-pressed="true"[^>]*><span>To Do<\/span>/);
+    // Board container snaps columns into place on phones only
+    expect(html).toContain("snap-x snap-mandatory");
+    expect(html).toContain("md:snap-none");
     // Column snap-center styling
     expect(html).toContain("snap-center");
   });

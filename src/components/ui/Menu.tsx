@@ -10,7 +10,14 @@ import { floatingClassName } from "./Popover";
  * Action menus (card, sprint and user menus). Arrow keys move, typing jumps to
  * an item, Escape closes and focus returns to the trigger.
  */
-export const Menu = RadixMenu.Root;
+/**
+ * Not modal: a modal menu hides the rest of the page from screen readers
+ * while it stays focusable, which axe rightly flags. Escape, a click outside
+ * and choosing an item still close it and return focus to the trigger.
+ */
+export function Menu({ modal = false, ...props }: React.ComponentProps<typeof RadixMenu.Root>) {
+  return <RadixMenu.Root modal={modal} {...props} />;
+}
 export const MenuTrigger = RadixMenu.Trigger;
 export const MenuGroup = RadixMenu.Group;
 
