@@ -5,6 +5,7 @@ import ReactMarkdown, { Components, defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { User } from "@/types";
 import { preprocessMentions } from "@/lib/markdownMentions";
+import { Tooltip } from "@/components/ui/Popover";
 
 interface MarkdownContentProps {
   text: string | null | undefined;
@@ -15,13 +16,14 @@ interface MarkdownContentProps {
 function MentionPill({ target, children, users }: { target: string; children?: React.ReactNode; users: User[] }) {
   const matchedUser = users.find((u) => u.id === target);
   return (
-    <span
-      className="inline-flex items-center gap-0.5 px-1.5 py-px mx-0.5 rounded-sm bg-accent-soft text-accent font-semibold text-xs border border-accent/20 hover:bg-accent/10 transition-colors select-none"
-      title={matchedUser ? `${matchedUser.name} (${matchedUser.role || matchedUser.email})` : undefined}
-    >
-      <span className="text-accent/70 text-[11px]">@</span>
-      <span>{children}</span>
-    </span>
+    <Tooltip content={matchedUser ? `${matchedUser.name} (${matchedUser.role || matchedUser.email})` : undefined}>
+      <span
+        className="inline-flex items-center gap-0.5 px-1.5 py-px mx-0.5 rounded-sm bg-accent-soft text-accent font-semibold text-xs border border-accent/20 hover:bg-accent/10 transition-colors select-none"
+      >
+        <span className="text-accent/70 text-[11px]">@</span>
+        <span>{children}</span>
+      </span>
+    </Tooltip>
   );
 }
 
@@ -48,17 +50,18 @@ function buildComponents(users: User[]): Components {
     },
     img({ src, alt }) {
       return (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={src}
-          alt={alt || "Image"}
-          loading="lazy"
-          className="max-w-full max-h-[480px] h-auto rounded-md border border-subtle my-2 object-contain bg-surface shadow-xs cursor-pointer hover:border-accent transition-colors"
-          onClick={() => {
-            if (typeof src === "string") window.open(src, "_blank", "noopener,noreferrer");
-          }}
-          title={alt ? `${alt} (Click to open full size)` : "Click to open full size"}
-        />
+        <Tooltip content={alt ? `${alt} (Click to open full size)` : "Click to open full size"}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={src}
+            alt={alt || "Image"}
+            loading="lazy"
+            className="max-w-full max-h-[480px] h-auto rounded-md border border-subtle my-2 object-contain bg-surface shadow-xs cursor-pointer hover:border-accent transition-colors"
+            onClick={() => {
+              if (typeof src === "string") window.open(src, "_blank", "noopener,noreferrer");
+            }}
+          />
+        </Tooltip>
       );
     },
     h1: ({ children }) => <h1 className="text-lg font-bold text-ink mt-3 mb-1.5 first:mt-0">{children}</h1>,

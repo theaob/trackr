@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { activityPage, describeActivity, type ActivityEntry, type ActivityFilter } from "@/lib/issueActivity";
 import { historyTotal } from "@/lib/issueHistory";
 import type { IssueData } from "./useIssueData";
+import { Tooltip } from "@/components/ui/Popover";
 
 const FILTERS: { value: ActivityFilter; label: string; icon?: React.ReactNode }[] = [
   { value: "all", label: "All" },
@@ -21,9 +22,11 @@ const FILTERS: { value: ActivityFilter; label: string; icon?: React.ReactNode }[
 function When({ at }: { at: string | Date }) {
   const date = new Date(at);
   return (
-    <time dateTime={date.toISOString()} title={format(date, "MMM d, yyyy, h:mm a")} className="shrink-0 text-xs text-ink-2">
-      {formatDistanceToNow(date, { addSuffix: true })}
-    </time>
+    <Tooltip content={format(date, "MMM d, yyyy, h:mm a")}>
+      <time dateTime={date.toISOString()} className="shrink-0 text-xs text-ink-2">
+        {formatDistanceToNow(date, { addSuffix: true })}
+      </time>
+    </Tooltip>
   );
 }
 

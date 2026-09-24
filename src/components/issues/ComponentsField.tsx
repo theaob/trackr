@@ -5,6 +5,7 @@ import { Component, IssueComponent } from "@/types";
 import { addIssueComponent, getProjectComponents, removeIssueComponent } from "@/lib/actions/components";
 import { Plus, X } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
+import { Tooltip } from "@/components/ui/Popover";
 
 interface ComponentsFieldProps {
   issueId: string;
@@ -81,26 +82,27 @@ export default function ComponentsField({
     <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-1.5">
         {components.map((issueComponent) => (
-          <span
+          <Tooltip
             key={issueComponent.id}
-            className="inline-flex h-6 items-center gap-1 rounded-full border border-subtle bg-surface-sunk px-2 text-xs text-ink"
-            title={
+            content={
               issueComponent.component.description ||
               (issueComponent.component.lead ? `Lead: ${issueComponent.component.lead.name}` : undefined)
             }
           >
-            {issueComponent.component.name}
-            {canEdit && (
-              <button
-                type="button"
-                onClick={() => handleRemove(issueComponent.componentId)}
-                aria-label={`Remove component ${issueComponent.component.name}`}
-                className="-mr-1 inline-flex h-4 w-4 items-center justify-center rounded-full text-muted hover:text-danger"
-              >
-                <X className="h-3 w-3" aria-hidden="true" />
-              </button>
-            )}
-          </span>
+            <span className="inline-flex h-6 items-center gap-1 rounded-full border border-subtle bg-surface-sunk px-2 text-xs text-ink">
+              {issueComponent.component.name}
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => handleRemove(issueComponent.componentId)}
+                  aria-label={`Remove component ${issueComponent.component.name}`}
+                  className="-mr-1 inline-flex h-4 w-4 items-center justify-center rounded-full text-muted hover:text-danger"
+                >
+                  <X className="h-3 w-3" aria-hidden="true" />
+                </button>
+              )}
+            </span>
+          </Tooltip>
         ))}
 
         {components.length === 0 && !canEdit && <span className="text-[13px] text-muted">None</span>}

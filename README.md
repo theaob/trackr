@@ -53,6 +53,15 @@ A modern, full-stack agile project management and issue tracking platform built 
     backlog rows, board cards, Home and the Inbox; text stays the same size.
     The Issues table's density button changes the same setting.
   - Both are remembered per browser.
+- ♿ **Keyboard and screen readers**:
+  - Every dialog is labelled, keeps focus inside, closes with Escape and gives
+    focus back to whatever opened it. Deleting or revoking something asks in a
+    dialog, not a browser pop-up, and failures show as a notice.
+  - Icon buttons have names, and their hints appear on keyboard focus as well
+    as on hover. Pickers are keyboard-driven lists with search where lists are
+    long.
+  - With reduced motion turned on in the system, dialogs, menus and pop-overs
+    appear without animating.
 - 🔁 **Custom Workflows, per project**:
   - Add, rename, reorder, recolor, or delete statuses; the board shows one column per
     non-backlog status, in the order you set.
@@ -428,16 +437,18 @@ Issues page (its split view, table, views menu and TQL editor, while choosing
 a view, adding a chip, running TQL and saving a view), the reports (each tab,
 and a chart as a table), the roadmap, releases (creating a version, its issues
 and its menu), every project and system settings section, including the
-unsaved-changes bar, the status colour swatches and the dialogs they open,
-the create-issue, password, access-token, keyboard-shortcut and permissions
-dialogs, and a public project seen by someone who isn't signed in. Every page
-must have exactly one `h1`, and every check runs in the light theme and again
-in the dark one. A 390-pixel phone check confirms the tab bar, that the first board card shows
+unsaved-changes bar, the status colour swatches and the dialogs they open
+(including adding a member, after a second person signs up), the create-issue,
+password, access-token, keyboard-shortcut and permissions dialogs, and a public
+project seen by someone who isn't signed in. Every page must have exactly one
+`h1`, dialogs opened with reduced motion must not animate, and every check runs
+in the light theme and again in the dark one. A 390-pixel phone check confirms the tab bar, that the first board card shows
 without scrolling, that nothing runs off the side of Home, and the issue's
 property chips; any
 serious or critical finding fails the build. The tests include a check that every
 Tailwind class used under `src/` actually generates CSS, since Tailwind skips
-unknown classes silently.
+unknown classes silently, and one that no HTML element uses a `title` attribute:
+hints use the Tooltip component, which also shows on keyboard focus.
 
 The favicon, home-screen and install icons are all drawn from `src/lib/logo.ts`.
 After changing the logo, regenerate them with `npx tsx scripts/generate-icons.ts`;

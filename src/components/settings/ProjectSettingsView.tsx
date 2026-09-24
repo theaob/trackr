@@ -40,12 +40,14 @@ import UserAvatar from "@/components/common/UserAvatar";
 import SaveBar from "./SaveBar";
 import { Field, Input, Textarea } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { cn } from "@/components/ui/cn";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
 import {
   CustomFieldIcon,
   parseFieldOptions,
 } from "@/components/common/CustomFieldRenderer";
+import { Tooltip } from "@/components/ui/Popover";
 
 interface ProjectSettingsViewProps {
   project: Project;
@@ -109,6 +111,7 @@ export default function ProjectSettingsView({
     window.history.replaceState(window.history.state, "", url);
   };
   const { toast } = useToast();
+  const [confirmAction, confirmDialog] = useConfirm();
   const router = useRouter();
   const [members, setMembers] = useState<ProjectMember[]>(initialMembers);
   const permissions = useProjectPermissions(project, members, initialCustomRoles);
@@ -185,13 +188,12 @@ export default function ProjectSettingsView({
   };
 
   const handleDeleteField = async (fieldId: string, fieldName: string) => {
-    if (
-      !confirm(
-        `Are you sure you want to delete "${fieldName}"? All issue values for this custom field will be permanently removed.`
-      )
-    ) {
-      return;
-    }
+    const ok = await confirmAction({
+      title: `Delete ${fieldName}?`,
+      description: "Every issue loses its value for this field, for good.",
+      confirmLabel: "Delete field",
+    });
+    if (!ok) return;
 
     setDeletingFieldId(fieldId);
     try {
@@ -199,11 +201,11 @@ export default function ProjectSettingsView({
       if (res.success) {
         setCustomFields((prev) => prev.filter((f) => f.id !== fieldId));
       } else {
-        alert("Failed to delete custom field.");
+        toast({ title: "The field couldn't be deleted.", tone: "danger" });
       }
     } catch (err) {
       console.error(err);
-      alert("An error occurred while deleting the custom field.");
+      toast({ title: "The field couldn't be deleted.", tone: "danger" });
     } finally {
       setDeletingFieldId(null);
     }
@@ -214,9 +216,12 @@ export default function ProjectSettingsView({
   };
 
   const handleDeleteComponent = async (componentId: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}"? It will be removed from every issue that has it.`)) {
-      return;
-    }
+    const ok = await confirmAction({
+      title: `Delete ${name}?`,
+      description: "It's removed from every issue that has it.",
+      confirmLabel: "Delete component",
+    });
+    if (!ok) return;
 
     setDeletingComponentId(componentId);
     try {
@@ -224,11 +229,11 @@ export default function ProjectSettingsView({
       if (res.success) {
         setComponents((prev) => prev.filter((c) => c.id !== componentId));
       } else {
-        alert(res.error || "Failed to delete component.");
+        toast({ title: res.error || "The component couldn't be deleted.", tone: "danger" });
       }
     } catch (err) {
       console.error(err);
-      alert("An error occurred while deleting the component.");
+      toast({ title: "The component couldn't be deleted.", tone: "danger" });
     } finally {
       setDeletingComponentId(null);
     }
@@ -248,18 +253,17 @@ export default function ProjectSettingsView({
   };
 
   const handleDeleteWebhook = async (webhookId: string, name: string) => {
-    if (
-      !confirm(
-        `Are you sure you want to delete webhook "${name}"? Delivery history will be lost.`
-      )
-    ) {
-      return;
-    }
+    const ok = await confirmAction({
+      title: `Delete ${name}?`,
+      description: "The webhook stops, and its delivery history is lost.",
+      confirmLabel: "Delete webhook",
+    });
+    if (!ok) return;
     const res = await deleteWebhook(webhookId);
     if (res.success) {
       setWebhooks((prev) => prev.filter((wh) => wh.id !== webhookId));
     } else {
-      alert("Failed to delete webhook.");
+      toast({ title: "The webhook couldn't be deleted.", tone: "danger" });
     }
   };
 
@@ -297,6 +301,7 @@ export default function ProjectSettingsView({
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-y-auto px-4 sm:px-8 py-4 sm:py-6 bg-surface">
+      {confirmDialog}
       {/* Mobile Notice: Administrative features are desktop-only */}
       <div className="md:hidden flex-1 flex flex-col items-center justify-center py-12 px-4 text-center">
         <div className="w-14 h-14 rounded-2xl bg-warning-soft border border-warning/30 flex items-center justify-center text-warning shadow-2xs mb-4">
@@ -569,15 +574,17 @@ export default function ProjectSettingsView({
                           )}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <button
-                            type="button"
-                            disabled={deletingFieldId === f.id}
-                            onClick={() => handleDeleteField(f.id, f.name)}
-                            className="text-muted hover:text-danger p-1 rounded hover:bg-danger/10 transition-colors disabled:opacity-50"
-                            title="Delete custom field"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          <Tooltip content="Delete custom field">
+                            <button
+                              type="button"
+                              disabled={deletingFieldId === f.id}
+                              onClick={() => handleDeleteField(f.id, f.name)}
+                              className="text-muted hover:text-danger p-1 rounded hover:bg-danger/10 transition-colors disabled:opacity-50"
+                              aria-label="Delete custom field"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </Tooltip>
                         </td>
                       </tr>
                     );
@@ -668,15 +675,17 @@ export default function ProjectSettingsView({
                       <td className="px-4 py-3">{c._count?.issues ?? 0}</td>
                       <td className="px-4 py-3 text-right">
                         {permissions.canManageProject && (
-                          <button
-                            type="button"
-                            disabled={deletingComponentId === c.id}
-                            onClick={() => handleDeleteComponent(c.id, c.name)}
-                            className="text-muted hover:text-danger p-1 rounded hover:bg-danger/10 transition-colors disabled:opacity-50"
-                            title="Delete component"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          <Tooltip content="Delete component">
+                            <button
+                              type="button"
+                              disabled={deletingComponentId === c.id}
+                              onClick={() => handleDeleteComponent(c.id, c.name)}
+                              className="text-muted hover:text-danger p-1 rounded hover:bg-danger/10 transition-colors disabled:opacity-50"
+                              aria-label="Delete component"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </Tooltip>
                         )}
                       </td>
                     </tr>
@@ -759,12 +768,13 @@ export default function ProjectSettingsView({
                               </span>
                             )}
                             {wh.jqlFilter && (
-                              <span
-                                className="text-[10px] text-accent font-mono px-1.5 py-px bg-accent-soft/60 rounded border border-accent/30 max-w-[220px] truncate"
-                                title={`TQL filter: ${wh.jqlFilter}`}
-                              >
-                                TQL: {wh.jqlFilter}
-                              </span>
+                              <Tooltip content={`TQL filter: ${wh.jqlFilter}`}>
+                                <span
+                                  className="text-[10px] text-accent font-mono px-1.5 py-px bg-accent-soft/60 rounded border border-accent/30 max-w-[220px] truncate"
+                                >
+                                  TQL: {wh.jqlFilter}
+                                </span>
+                              </Tooltip>
                             )}
                           </div>
                           <div className="text-[11px] font-mono text-muted mt-0.5 max-w-sm truncate">
@@ -816,39 +826,43 @@ export default function ProjectSettingsView({
                               </span>
                             )}
 
-                            <button
-                              type="button"
-                              disabled={isTesting}
-                              onClick={() => handleTestPing(wh)}
-                              className="text-xs px-2.5 py-1 rounded bg-surface-sunk text-ink hover:bg-subtle font-semibold inline-flex items-center gap-1 transition-colors disabled:opacity-50"
-                              title="Send test ping"
-                            >
-                              {isTesting ? (
-                                <Loader2 className="w-3 h-3 animate-spin text-accent" />
-                              ) : (
-                                <Send className="w-3 h-3 text-accent" />
-                              )}
-                              <span>Test Ping</span>
-                            </button>
+                            <Tooltip content="Send test ping">
+                              <button
+                                type="button"
+                                disabled={isTesting}
+                                onClick={() => handleTestPing(wh)}
+                                className="text-xs px-2.5 py-1 rounded bg-surface-sunk text-ink hover:bg-subtle font-semibold inline-flex items-center gap-1 transition-colors disabled:opacity-50"
+                              >
+                                {isTesting ? (
+                                  <Loader2 className="w-3 h-3 animate-spin text-accent" />
+                                ) : (
+                                  <Send className="w-3 h-3 text-accent" />
+                                )}
+                                <span>Test Ping</span>
+                              </button>
+                            </Tooltip>
 
-                            <button
-                              type="button"
-                              onClick={() => setSelectedWebhookForDeliveries(wh)}
-                              className="text-xs px-2.5 py-1 rounded bg-surface-sunk text-ink hover:bg-subtle font-semibold inline-flex items-center gap-1 transition-colors"
-                              title="View delivery history"
-                            >
-                              <History className="w-3 h-3 text-ink-2" />
-                              <span>Deliveries</span>
-                            </button>
+                            <Tooltip content="View delivery history">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedWebhookForDeliveries(wh)}
+                                className="text-xs px-2.5 py-1 rounded bg-surface-sunk text-ink hover:bg-subtle font-semibold inline-flex items-center gap-1 transition-colors"
+                              >
+                                <History className="w-3 h-3 text-ink-2" />
+                                <span>Deliveries</span>
+                              </button>
+                            </Tooltip>
 
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteWebhook(wh.id, wh.name)}
-                              className="text-muted hover:text-danger p-1 rounded hover:bg-danger/10 transition-colors"
-                              title="Delete webhook"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            <Tooltip content="Delete webhook">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteWebhook(wh.id, wh.name)}
+                                className="text-muted hover:text-danger p-1 rounded hover:bg-danger/10 transition-colors"
+                                aria-label="Delete webhook"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </Tooltip>
                           </div>
                         </td>
                       </tr>

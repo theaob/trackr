@@ -61,6 +61,8 @@ import type { TQLAutocompleteContext } from "@/lib/tql/autocomplete";
 import { formatCalendarDate } from "@/lib/calendarDate";
 import { isOverdue } from "@/lib/dueDate";
 import { prettifyStatusName } from "@/lib/workflowDisplay";
+import { Select } from "@/components/ui/Select";
+import { Tooltip } from "@/components/ui/Popover";
 
 interface IssuesListViewProps {
   project: Project;
@@ -458,28 +460,30 @@ export default function IssuesListView({
           />
           <div className="ml-auto flex items-center gap-1">
             <div role="group" aria-label="Layout" className="flex items-center rounded-control border border-subtle p-0.5">
-              <button
-                type="button"
-                aria-pressed={viewMode === "split"}
-                onClick={() => setViewMode("split")}
-                title="List and issue side by side"
-                className="inline-flex h-6 items-center gap-1 rounded-[4px] px-2 text-xs text-ink-2 hover:text-ink aria-pressed:bg-surface-sunk aria-pressed:text-ink"
-              >
-                <Columns2 className="h-3.5 w-3.5" aria-hidden="true" />
-                <span className="hidden sm:inline">Split</span>
-                <span className="sr-only sm:hidden">Split</span>
-              </button>
-              <button
-                type="button"
-                aria-pressed={viewMode === "table"}
-                onClick={() => setViewMode("table")}
-                title="Table"
-                className="inline-flex h-6 items-center gap-1 rounded-[4px] px-2 text-xs text-ink-2 hover:text-ink aria-pressed:bg-surface-sunk aria-pressed:text-ink"
-              >
-                <TableIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                <span className="hidden sm:inline">Table</span>
-                <span className="sr-only sm:hidden">Table</span>
-              </button>
+              <Tooltip content="List and issue side by side">
+                <button
+                  type="button"
+                  aria-pressed={viewMode === "split"}
+                  onClick={() => setViewMode("split")}
+                  className="inline-flex h-6 items-center gap-1 rounded-[4px] px-2 text-xs text-ink-2 hover:text-ink aria-pressed:bg-surface-sunk aria-pressed:text-ink"
+                >
+                  <Columns2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span className="hidden sm:inline">Split</span>
+                  <span className="sr-only sm:hidden">Split</span>
+                </button>
+              </Tooltip>
+              <Tooltip content="Table">
+                <button
+                  type="button"
+                  aria-pressed={viewMode === "table"}
+                  onClick={() => setViewMode("table")}
+                  className="inline-flex h-6 items-center gap-1 rounded-[4px] px-2 text-xs text-ink-2 hover:text-ink aria-pressed:bg-surface-sunk aria-pressed:text-ink"
+                >
+                  <TableIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span className="hidden sm:inline">Table</span>
+                  <span className="sr-only sm:hidden">Table</span>
+                </button>
+              </Tooltip>
             </div>
             {viewMode === "table" && (
               <>
@@ -737,21 +741,19 @@ export default function IssuesListView({
           {isLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-accent" aria-label="Loading" />}
         </span>
         <span className="flex items-center gap-3">
-          <label className="flex items-center gap-1.5">
-            Per page
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
+          <span className="flex items-center gap-1.5">
+            <span aria-hidden="true">Per page</span>
+            <Select
+              aria-label="Issues per page"
+              className="h-7 w-auto min-w-0 text-xs"
+              value={String(pageSize)}
+              onChange={(v) => {
+                setPageSize(Number(v));
                 setPage(1);
               }}
-              className="h-7 rounded-control border border-subtle bg-surface px-1.5 text-xs text-ink"
-            >
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
-          </label>
+              options={["25", "50", "100"].map((n) => ({ value: n, label: n }))}
+            />
+          </span>
           <span className="flex items-center gap-0.5">
             <button type="button" onClick={() => setPage(1)} disabled={page <= 1 || isLoading} aria-label="First page" className={pageButton}>
               <ChevronsLeft className="h-3.5 w-3.5" aria-hidden="true" />

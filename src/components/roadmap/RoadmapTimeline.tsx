@@ -11,6 +11,7 @@ import { IssueType, User } from "@/types";
 import { calendarDateToLocal } from "@/lib/calendarDate";
 import { prettifyStatusName } from "@/lib/workflowDisplay";
 import { EmptyChart, HoverCard, Legend, series } from "@/components/reports/kit";
+import { Tooltip } from "@/components/ui/Popover";
 
 export interface RoadmapChildIssue {
   id: string;
@@ -264,12 +265,13 @@ export default function RoadmapTimeline({ epics, onSelectIssue }: RoadmapTimelin
                                   style={{ left: `${cl}%`, width: `${cw}%`, backgroundColor: child.isDone ? done : track }}
                                 />
                               ) : (
-                                <span
-                                  aria-hidden="true"
-                                  className="absolute top-4 h-1 rounded-full border-t border-dashed border-strong"
-                                  style={{ left: `${cl}%`, width: `${cw}%` }}
-                                  title={`${child.key} has no dates of its own`}
-                                />
+                                <Tooltip content={`${child.key} has no dates of its own`}>
+                                  <span
+                                    aria-hidden="true"
+                                    className="absolute top-4 h-1 rounded-full border-t border-dashed border-strong"
+                                    style={{ left: `${cl}%`, width: `${cw}%` }}
+                                  />
+                                </Tooltip>
                               )}
                               {hover?.id === child.id && cs && ce && (
                                 <HoverCard

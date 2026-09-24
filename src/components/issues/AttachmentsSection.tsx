@@ -8,6 +8,7 @@ import { MAX_ATTACHMENT_SIZE, formatFileSize, isPreviewableImageMime } from "@/l
 import UserAvatar from "@/components/common/UserAvatar";
 import { Upload, Download, Trash2, FileText, Loader2 } from "lucide-react";
 import SectionHeader, { SectionAction } from "./SectionHeader";
+import { Tooltip } from "@/components/ui/Popover";
 
 interface AttachmentsSectionProps {
   issueId: string;
@@ -43,20 +44,20 @@ function AttachmentTile({
         target="_blank"
         rel="noopener noreferrer"
         className="flex items-center justify-center h-20 bg-page border-b border-subtle overflow-hidden"
-        title={attachment.fileName}
+        aria-label={`Open ${attachment.fileName}`}
       >
         {previewable ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={url} alt={attachment.fileName} className="w-full h-full object-cover" />
         ) : (
-          <FileText className="w-7 h-7 text-muted" />
+          <FileText className="w-7 h-7 text-muted" aria-hidden="true" />
         )}
       </a>
 
       <div className="p-2 flex flex-col gap-1 min-w-0">
-        <span className="text-[11px] font-medium text-ink truncate" title={attachment.fileName}>
-          {attachment.fileName}
-        </span>
+        <Tooltip content={attachment.fileName}>
+          <span className="text-[11px] font-medium text-ink truncate">{attachment.fileName}</span>
+        </Tooltip>
         <span className="text-[10px] text-muted">{formatFileSize(attachment.size)}</span>
         <div className="flex items-center gap-1 text-[10px] text-muted">
           <UserAvatar user={attachment.uploadedBy} size="xs" />
@@ -67,25 +68,29 @@ function AttachmentTile({
         </span>
       </div>
 
-      <div className="absolute top-1 right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <a
-          href={url}
-          download={attachment.fileName}
-          title="Download"
-          className="p-1 rounded bg-surface/90 text-ink-2 hover:text-accent border border-subtle shadow-xs"
-        >
-          <Download className="w-3 h-3" />
-        </a>
-        {canRemove && (
-          <button
-            type="button"
-            onClick={() => onDelete(attachment.id)}
-            disabled={deleting}
-            title="Delete"
-            className="p-1 rounded bg-surface/90 text-ink-2 hover:text-danger border border-subtle shadow-xs disabled:opacity-50"
+      <div className="absolute top-1 right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+        <Tooltip content="Download">
+          <a
+            href={url}
+            download={attachment.fileName}
+            aria-label={`Download ${attachment.fileName}`}
+            className="p-1 rounded bg-surface/90 text-ink-2 hover:text-accent border border-subtle shadow-xs"
           >
-            {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-          </button>
+            <Download className="w-3 h-3" aria-hidden="true" />
+          </a>
+        </Tooltip>
+        {canRemove && (
+          <Tooltip content="Delete">
+            <button
+              type="button"
+              onClick={() => onDelete(attachment.id)}
+              disabled={deleting}
+              aria-label={`Delete ${attachment.fileName}`}
+              className="p-1 rounded bg-surface/90 text-ink-2 hover:text-danger border border-subtle shadow-xs disabled:opacity-50"
+            >
+              {deleting ? <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" /> : <Trash2 className="w-3 h-3" aria-hidden="true" />}
+            </button>
+          </Tooltip>
         )}
       </div>
     </div>

@@ -18,6 +18,7 @@ import {
   Lock,
   Unlock,
 } from "lucide-react";
+import { Tooltip } from "@/components/ui/Popover";
 
 export default function UsersSettingsTab() {
   const { currentUser } = useCurrentUser();
@@ -147,27 +148,28 @@ export default function UsersSettingsTab() {
     label: string;
     onClick: () => void;
   }) => (
-    <button
-      type="button"
-      disabled={busy}
-      onClick={onClick}
-      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:ring-2 focus:ring-accent focus:ring-offset-1 disabled:opacity-50 ${
-        on ? onColor : "bg-strong"
-      }`}
-      role="switch"
-      aria-checked={on}
-      aria-label={label}
-      title={label}
-    >
-      <span
-        aria-hidden="true"
-        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-surface shadow-sm ring-0 transition duration-200 ease-in-out ${
-          on ? "translate-x-4" : "translate-x-0"
-        } flex items-center justify-center`}
+    <Tooltip content={label}>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={onClick}
+        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:ring-2 focus:ring-accent focus:ring-offset-1 disabled:opacity-50 ${
+          on ? onColor : "bg-strong"
+        }`}
+        role="switch"
+        aria-checked={on}
+        aria-label={label}
       >
-        {busy && <Loader2 className="w-2.5 h-2.5 animate-spin text-accent" />}
-      </span>
-    </button>
+        <span
+          aria-hidden="true"
+          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-surface shadow-sm ring-0 transition duration-200 ease-in-out ${
+            on ? "translate-x-4" : "translate-x-0"
+          } flex items-center justify-center`}
+        >
+          {busy && <Loader2 className="w-2.5 h-2.5 animate-spin text-accent" />}
+        </span>
+      </button>
+    </Tooltip>
   );
 
   const filteredUsers = users.filter((u) => {

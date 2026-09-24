@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Tooltip } from "@/components/ui/Popover";
 
 type AvatarSize = "xs" | "sm" | "md" | "lg" | "xl";
 
@@ -68,30 +69,33 @@ export default function UserAvatar({
   const tooltipText = tooltipPrefix ? `${tooltipPrefix}: ${name}` : name;
 
   if (user?.avatarUrl) {
-    return (
+    const image = (
       // Avatars come from arbitrary SSO/Gravatar hosts, which next/image would
       // need allow-listed one by one; a plain <img> is the right tool here.
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={user.avatarUrl}
-        alt={name}
-        title={showTooltip ? tooltipText : undefined}
+        alt={showTooltip ? tooltipText : name}
         className={`${sizeConfig.container} rounded-full object-cover shrink-0 ${className}`}
       />
     );
+    return showTooltip ? <Tooltip content={tooltipText}>{image}</Tooltip> : image;
   }
 
   const colorIndex = hashName(name) % AVATAR_COLORS.length;
   const color = AVATAR_COLORS[colorIndex];
   const initials = getInitials(name);
 
-  return (
+  const avatar = (
     <div
-      title={showTooltip ? tooltipText : undefined}
+      role={showTooltip ? "img" : undefined}
+      aria-label={showTooltip ? tooltipText : undefined}
       className={`${sizeConfig.container} rounded-full ${sizeConfig.text} font-bold flex items-center justify-center shrink-0 select-none ${className}`}
       style={{ backgroundColor: color.bg, color: color.text }}
     >
       {initials}
     </div>
   );
+  // The name shows on hover; a title attribute would reach neither keyboard nor touch users.
+  return showTooltip ? <Tooltip content={tooltipText}>{avatar}</Tooltip> : avatar;
 }

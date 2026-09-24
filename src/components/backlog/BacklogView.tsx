@@ -272,7 +272,7 @@ export default function BacklogView({
     const res = await renameSprint(sprintId, newName);
     if (!res.success) {
       setSprints(previous);
-      alert(res.error || "Failed to rename sprint.");
+      toast({ title: res.error || "The sprint couldn't be renamed.", tone: "danger" });
     }
   };
 
@@ -293,7 +293,7 @@ export default function BacklogView({
         )
       );
     } else if (res.error) {
-      alert(res.error);
+      toast({ title: res.error, tone: "danger" });
     }
     setDeletingSprintId(null);
   };
@@ -520,7 +520,7 @@ export default function BacklogView({
     );
     if (!res.success) {
       setIssues(previousIssues);
-      if (res.error) alert(res.error);
+      if (res.error) toast({ title: res.error, tone: "danger" });
     }
   };
 
@@ -566,7 +566,7 @@ export default function BacklogView({
 
     if (!res.success) {
       setIssues(previousIssues);
-      if (res.error) alert(res.error);
+      if (res.error) toast({ title: res.error, tone: "danger" });
     }
   };
 
@@ -640,7 +640,7 @@ export default function BacklogView({
 
       if (!res.success) {
         setIssues(previousIssues);
-        if (res.error) alert(res.error);
+        if (res.error) toast({ title: res.error, tone: "danger" });
       }
       return;
     }
@@ -711,7 +711,7 @@ export default function BacklogView({
 
     if (!res.success) {
       setIssues(previousIssues);
-      if (res.error) alert(res.error);
+      if (res.error) toast({ title: res.error, tone: "danger" });
     }
   };
 

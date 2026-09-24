@@ -1,6 +1,7 @@
 import React from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "./cn";
+import { Tooltip } from "./Popover";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md";
@@ -63,7 +64,7 @@ export interface IconButtonProps extends Omit<React.ComponentProps<"button">, "c
   size?: ButtonSize;
 }
 
-/** A square button that shows only an icon. At least 28 px, above the 24 px target minimum. */
+/** A square button that shows only an icon, with its label as a tooltip. At least 28 px, above the 24 px target minimum. */
 export function IconButton({
   label,
   icon,
@@ -74,11 +75,13 @@ export function IconButton({
   title,
   ...props
 }: IconButtonProps) {
+  // The label shows as a tooltip on hover and keyboard focus (a title attribute
+  // would reach neither keyboard nor touch users).
   return (
+    <Tooltip content={title ?? label}>
     <button
       type={type}
       aria-label={label}
-      title={title ?? label}
       className={cn(
         "inline-flex shrink-0 items-center justify-center rounded-control transition-colors duration-150",
         "disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:h-4 [&_svg]:w-4",
@@ -90,5 +93,6 @@ export function IconButton({
     >
       {icon}
     </button>
+    </Tooltip>
   );
 }

@@ -19,6 +19,7 @@ import {
   CheckCircle2,
   Layers,
 } from "lucide-react";
+import { Tooltip } from "@/components/ui/Popover";
 
 interface ProjectStats {
   id: string;
@@ -223,13 +224,15 @@ export default function ProjectsDirectoryView({
                     <span>Issues</span>
                   </Link>
 
-                  <Link prefetch={false}
-                    href={`/projects/${project.key}/settings`}
-                    className="hidden md:flex items-center gap-1 hover:text-accent transition-colors"
-                    title="Project Settings"
-                  >
-                    <Settings className="w-3.5 h-3.5 text-ink-2" />
-                  </Link>
+                  <Tooltip content="Project settings">
+                    <Link prefetch={false}
+                      href={`/projects/${project.key}/settings`}
+                      aria-label={`${project.name} settings`}
+                      className="hidden md:flex items-center gap-1 hover:text-accent transition-colors"
+                    >
+                      <Settings className="w-3.5 h-3.5 text-ink-2" aria-hidden="true" />
+                    </Link>
+                  </Tooltip>
                 </div>
               </div>
             ))}

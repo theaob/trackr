@@ -228,7 +228,7 @@ describe("IssueView", () => {
     const issue = { ...baseIssue(), parentId: "e1", parent: { id: "e1", key: "APOLLO-1", title: "Accounts", type: "EPIC" } } as Issue;
     renderView({ issue, onOpenIssue, variant: "panel" });
     await settle();
-    await user.click(screen.getByRole("button", { name: "Accounts" }));
+    await user.click(screen.getByRole("button", { name: "Epic Accounts" }));
     expect(onOpenIssue).toHaveBeenCalledWith("APOLLO-1");
   });
 

@@ -39,6 +39,7 @@ import {
   ChevronDown,
   FileText,
 } from "lucide-react";
+import { Tooltip } from "@/components/ui/Popover";
 
 interface IssueDescriptionEditorProps {
   value: string;
@@ -447,15 +448,17 @@ export default function IssueDescriptionEditor({
         {/* Fullscreen + Cheatsheet */}
         <div className="flex items-center gap-0.5">
           <div className="relative" ref={cheatsheetRef}>
-            <button
-              type="button"
-              tabIndex={-1}
-              onClick={() => setShowCheatsheet(!showCheatsheet)}
-              className="p-1.5 text-muted hover:text-ink-2 hover:bg-surface-sunk rounded transition-colors"
-              title="Markdown cheatsheet"
-            >
-              <HelpCircle className="w-3.5 h-3.5" />
-            </button>
+            <Tooltip content="Markdown cheatsheet">
+              <button
+                type="button"
+                tabIndex={-1}
+                onClick={() => setShowCheatsheet(!showCheatsheet)}
+                className="p-1.5 text-muted hover:text-ink-2 hover:bg-surface-sunk rounded transition-colors"
+                aria-label="Markdown cheatsheet"
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+              </button>
+            </Tooltip>
             {showCheatsheet && (
               <div className="absolute right-0 top-full mt-1 w-72 bg-surface border border-subtle rounded-lg shadow-xl z-50 py-2 animate-in fade-in zoom-in-95">
                 <div className="px-3 py-1.5 border-b border-subtle text-[11px] font-bold text-muted uppercase tracking-wider">
@@ -483,20 +486,21 @@ export default function IssueDescriptionEditor({
               </div>
             )}
           </div>
-          <button
-            type="button"
-            tabIndex={-1}
-            onClick={() => setIsFullscreen(!isFullscreen)}
-            className="p-1.5 text-muted hover:text-ink-2 hover:bg-surface-sunk rounded transition-colors"
-            title={isFullscreen ? "Exit full screen" : "Full screen"}
-            aria-label={isFullscreen ? "Exit full screen" : "Full screen"}
-          >
-            {isFullscreen ? (
-              <Minimize2 className="w-3.5 h-3.5" />
-            ) : (
-              <Maximize2 className="w-3.5 h-3.5" />
-            )}
-          </button>
+          <Tooltip content={isFullscreen ? "Exit full screen" : "Full screen"}>
+            <button
+              type="button"
+              tabIndex={-1}
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="p-1.5 text-muted hover:text-ink-2 hover:bg-surface-sunk rounded transition-colors"
+              aria-label={isFullscreen ? "Exit full screen" : "Full screen"}
+            >
+              {isFullscreen ? (
+                <Minimize2 className="w-3.5 h-3.5" />
+              ) : (
+                <Maximize2 className="w-3.5 h-3.5" />
+              )}
+            </button>
+          </Tooltip>
         </div>
       </div>
 
@@ -516,16 +520,17 @@ export default function IssueDescriptionEditor({
             if (item === "heading-dropdown") {
               return (
                 <div key="heading-dropdown" className="relative" ref={headingMenuRef}>
-                  <button
-                    type="button"
-                    tabIndex={-1}
-                    onClick={() => setShowHeadingMenu(!showHeadingMenu)}
-                    className="flex items-center gap-0.5 px-1.5 py-1 text-muted hover:text-ink-2 hover:bg-surface-sunk rounded transition-colors text-xs font-medium"
-                    title="Headings"
-                  >
-                    <span className="text-[11px]">Normal text</span>
-                    <ChevronDown className="w-3 h-3" />
-                  </button>
+                  <Tooltip content="Headings">
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onClick={() => setShowHeadingMenu(!showHeadingMenu)}
+                      className="flex items-center gap-0.5 px-1.5 py-1 text-muted hover:text-ink-2 hover:bg-surface-sunk rounded transition-colors text-xs font-medium"
+                    >
+                      <span className="text-[11px]">Normal text</span>
+                      <ChevronDown className="w-3 h-3" />
+                    </button>
+                  </Tooltip>
                   {showHeadingMenu && (
                     <div className="absolute left-0 top-full mt-1 w-48 bg-surface border border-subtle rounded-lg shadow-xl z-50 py-1 animate-in fade-in zoom-in-95">
                       <button
@@ -569,20 +574,18 @@ export default function IssueDescriptionEditor({
 
             const toolbarItem = item as ToolbarAction;
             return (
-              <button
-                key={toolbarItem.id}
-                type="button"
-                tabIndex={-1}
-                onClick={() => handleToolbarAction(toolbarItem)}
-                className="p-1.5 text-muted hover:text-ink-2 hover:bg-surface-sunk rounded transition-colors"
-                title={
-                  toolbarItem.shortcut
-                    ? `${toolbarItem.label} (${toolbarItem.shortcut})`
-                    : toolbarItem.label
-                }
-              >
-                {toolbarItem.icon}
-              </button>
+              <Tooltip key={toolbarItem.id} content={toolbarItem.shortcut ? `${toolbarItem.label} (${toolbarItem.shortcut})` : toolbarItem.label}>
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  onClick={() => handleToolbarAction(toolbarItem)}
+                  className="p-1.5 text-muted hover:text-ink-2 hover:bg-surface-sunk rounded transition-colors"
+                  aria-label={toolbarItem.label}
+                  aria-keyshortcuts={toolbarItem.shortcut}
+                >
+                  {toolbarItem.icon}
+                </button>
+              </Tooltip>
             );
           })}
         </div>

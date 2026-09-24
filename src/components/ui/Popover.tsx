@@ -49,6 +49,7 @@ export interface TooltipProps {
  * which keyboard and touch users never see. Escape dismisses it.
  */
 export function Tooltip({ content, children, side = "top", delay = 400 }: TooltipProps) {
+  if (content === "" || content === null || content === undefined || content === false) return children;
   return (
     <RadixTooltip.Provider delayDuration={delay} skipDelayDuration={200}>
       <RadixTooltip.Root>

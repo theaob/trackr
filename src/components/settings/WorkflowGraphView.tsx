@@ -22,6 +22,7 @@ import {
   Layers,
   ChevronRight,
 } from "lucide-react";
+import { Tooltip } from "@/components/ui/Popover";
 
 interface WorkflowGraphViewProps {
   projectId: string;
@@ -491,14 +492,16 @@ export default function WorkflowGraphView({
           {connectingFromId && (
             <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-accent-soft border border-accent/40 text-accent text-xs font-semibold animate-pulse">
               <span>Connect to destination status...</span>
-              <button
-                type="button"
-                onClick={() => setConnectingFromId(null)}
-                className="p-0.5 hover:bg-accent/20 rounded"
-                title="Cancel (Esc)"
-              >
-                <X className="w-3 h-3" />
-              </button>
+              <Tooltip content="Cancel (Esc)">
+                <button
+                  type="button"
+                  onClick={() => setConnectingFromId(null)}
+                  className="p-0.5 hover:bg-accent/20 rounded"
+                  aria-label="Cancel (Esc)"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </Tooltip>
             </div>
           )}
         </div>
@@ -507,42 +510,48 @@ export default function WorkflowGraphView({
         <div className="flex items-center gap-2">
           {/* Zoom controls */}
           <div className="flex items-center border border-subtle rounded bg-surface overflow-hidden text-xs">
-            <button
-              type="button"
-              onClick={handleZoomOut}
-              className="p-1.5 hover:bg-surface-sunk text-ink-2 transition-colors"
-              title="Zoom Out"
-            >
-              <ZoomOut className="w-3.5 h-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={handleZoomReset}
-              className="px-2 py-1 hover:bg-surface-sunk text-ink-2 font-semibold border-x border-subtle text-[11px]"
-              title="Reset Zoom"
-            >
-              {Math.round(zoom * 100)}%
-            </button>
-            <button
-              type="button"
-              onClick={handleZoomIn}
-              className="p-1.5 hover:bg-surface-sunk text-ink-2 transition-colors"
-              title="Zoom In"
-            >
-              <ZoomIn className="w-3.5 h-3.5" />
-            </button>
+            <Tooltip content="Zoom Out">
+              <button
+                type="button"
+                onClick={handleZoomOut}
+                className="p-1.5 hover:bg-surface-sunk text-ink-2 transition-colors"
+                aria-label="Zoom Out"
+              >
+                <ZoomOut className="w-3.5 h-3.5" />
+              </button>
+            </Tooltip>
+            <Tooltip content="Reset Zoom">
+              <button
+                type="button"
+                onClick={handleZoomReset}
+                className="px-2 py-1 hover:bg-surface-sunk text-ink-2 font-semibold border-x border-subtle text-[11px]"
+              >
+                {Math.round(zoom * 100)}%
+              </button>
+            </Tooltip>
+            <Tooltip content="Zoom In">
+              <button
+                type="button"
+                onClick={handleZoomIn}
+                className="p-1.5 hover:bg-surface-sunk text-ink-2 transition-colors"
+                aria-label="Zoom In"
+              >
+                <ZoomIn className="w-3.5 h-3.5" />
+              </button>
+            </Tooltip>
           </div>
 
           {/* Auto Arrange */}
-          <button
-            type="button"
-            onClick={handleAutoArrange}
-            className="px-2.5 py-1 text-xs font-semibold text-ink-2 bg-surface border border-subtle hover:bg-surface-sunk rounded flex items-center gap-1.5 transition-colors shadow-2xs"
-            title="Auto-arrange status cards into columns"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-warning" />
-            <span className="hidden sm:inline">Auto-Arrange</span>
-          </button>
+          <Tooltip content="Auto-arrange status cards into columns">
+            <button
+              type="button"
+              onClick={handleAutoArrange}
+              className="px-2.5 py-1 text-xs font-semibold text-ink-2 bg-surface border border-subtle hover:bg-surface-sunk rounded flex items-center gap-1.5 transition-colors shadow-2xs"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-warning" />
+              <span className="hidden sm:inline">Auto-Arrange</span>
+            </button>
+          </Tooltip>
 
           {onAddStatusClick && canManage && (
             <button
@@ -921,13 +930,14 @@ export default function WorkflowGraphView({
                   </div>
 
                   {isAllIncoming ? (
-                    <span
-                      className="text-[9px] font-bold text-accent bg-accent-soft/90 border border-accent/30 px-1.5 py-px rounded flex items-center gap-0.5 shrink-0"
-                      title="Issues in any status can transition directly to this status (General Start)"
-                    >
-                      <Sparkles className="w-2.5 h-2.5 text-accent" />
-                      <span>General Start</span>
-                    </span>
+                    <Tooltip content="Issues in any status can transition directly to this status (General Start)">
+                      <span
+                        className="text-[9px] font-bold text-accent bg-accent-soft/90 border border-accent/30 px-1.5 py-px rounded flex items-center gap-0.5 shrink-0"
+                      >
+                        <Sparkles className="w-2.5 h-2.5 text-accent" />
+                        <span>General Start</span>
+                      </span>
+                    </Tooltip>
                   ) : status.isBacklog ? (
                     <span className="text-[9px] font-semibold text-muted bg-subtle/80 px-1.5 py-px rounded">
                       Backlog
@@ -938,9 +948,11 @@ export default function WorkflowGraphView({
                 {/* Node Card Body */}
                 <div className="p-2 flex flex-col justify-between h-[52px]">
                   <div className="flex items-center justify-between gap-1">
-                    <h4 className="text-xs font-bold text-ink truncate" title={status.name}>
-                      {prettifyStatusName(status.name)}
-                    </h4>
+                    <Tooltip content={status.name}>
+                      <h4 className="text-xs font-bold text-ink truncate" >
+                        {prettifyStatusName(status.name)}
+                      </h4>
+                    </Tooltip>
                     {status.wipLimit !== null && (
                       <span className="text-[10px] font-semibold text-muted bg-surface-sunk px-1 rounded">
                         WIP: {status.wipLimit}
@@ -951,9 +963,11 @@ export default function WorkflowGraphView({
                   <div className="flex items-center justify-between text-[10px] text-muted pt-0.5">
                     <span className="flex items-center gap-1">
                       {isAllIncoming ? (
-                        <span className="font-bold text-accent" title="Can be transitioned into from any status">
-                          ALL in
-                        </span>
+                        <Tooltip content="Can be transitioned into from any status">
+                          <span className="font-bold text-accent">
+                            ALL in
+                          </span>
+                        </Tooltip>
                       ) : (
                         <>
                           <span className="font-semibold text-ink">{incomingCount}</span> in
@@ -964,28 +978,30 @@ export default function WorkflowGraphView({
 
                     {/* Quick Connect Action */}
                     {canManage && (
-                      <button
-                        type="button"
-                        onClick={(e) => handleStartConnect(e, status.id)}
-                        className="text-accent hover:text-accent-hover hover:underline font-semibold flex items-center gap-0.5"
-                        title="Connect transition from this status"
-                      >
-                        <Plus className="w-2.5 h-2.5" />
-                        <span>Connect</span>
-                      </button>
+                      <Tooltip content="Connect transition from this status">
+                        <button
+                          type="button"
+                          onClick={(e) => handleStartConnect(e, status.id)}
+                          className="text-accent hover:text-accent-hover hover:underline font-semibold flex items-center gap-0.5"
+                        >
+                          <Plus className="w-2.5 h-2.5" />
+                          <span>Connect</span>
+                        </button>
+                      </Tooltip>
                     )}
                   </div>
                 </div>
 
                 {/* Right Output Connector Port (Click/Drag Handle) */}
                 {canManage && (
-                  <div
-                    onMouseDown={(e) => handleStartConnect(e, status.id)}
-                    className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-surface border-2 border-accent hover:bg-accent text-accent hover:text-accent-fg flex items-center justify-center cursor-crosshair shadow-sm transition-colors z-30 group"
-                    title="Drag or click to connect to another status"
-                  >
-                    <Plus className="w-3 h-3 transition-transform group-hover:scale-125" />
-                  </div>
+                  <Tooltip content="Drag or click to connect to another status">
+                    <div
+                      onMouseDown={(e) => handleStartConnect(e, status.id)}
+                      className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-surface border-2 border-accent hover:bg-accent text-accent hover:text-accent-fg flex items-center justify-center cursor-crosshair shadow-sm transition-colors z-30 group"
+                    >
+                      <Plus className="w-3 h-3 transition-transform group-hover:scale-125" />
+                    </div>
+                  </Tooltip>
                 )}
               </div>
             );
@@ -1027,39 +1043,43 @@ export default function WorkflowGraphView({
 
             <div className="flex items-center gap-2">
               {onAllowAllIncoming && canManage && (
-                <button
-                  type="button"
-                  onClick={() => onAllowAllIncoming(selectedStatus.id)}
-                  disabled={globalTransitionStatusIds.has(selectedStatus.id)}
-                  className={`px-3 py-1 text-xs font-semibold rounded border flex items-center gap-1.5 transition-colors ${
-                    globalTransitionStatusIds.has(selectedStatus.id)
-                      ? "text-success bg-success-soft border-success/30 cursor-default opacity-90"
-                      : "text-accent bg-accent/10 hover:bg-accent/20 border-accent/30 cursor-pointer"
-                  }`}
-                  title={
+                <Tooltip
+                  content={
                     globalTransitionStatusIds.has(selectedStatus.id)
                       ? "All other statuses can already transition to this status"
                       : "Allow all other statuses to transition to this status"
                   }
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5 text-success" />
-                  <span>
-                    {globalTransitionStatusIds.has(selectedStatus.id)
-                      ? "All can transition here (Active)"
-                      : "Allow all to transition here"}
-                  </span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => onAllowAllIncoming(selectedStatus.id)}
+                    disabled={globalTransitionStatusIds.has(selectedStatus.id)}
+                    className={`px-3 py-1 text-xs font-semibold rounded border flex items-center gap-1.5 transition-colors ${
+                      globalTransitionStatusIds.has(selectedStatus.id)
+                        ? "text-success bg-success-soft border-success/30 cursor-default opacity-90"
+                        : "text-accent bg-accent/10 hover:bg-accent/20 border-accent/30 cursor-pointer"
+                    }`}
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                    <span>
+                      {globalTransitionStatusIds.has(selectedStatus.id)
+                        ? "All can transition here (Active)"
+                        : "Allow all to transition here"}
+                    </span>
+                  </button>
+                </Tooltip>
               )}
 
               {onClearTransitions && canManage && (
-                <button
-                  type="button"
-                  onClick={() => onClearTransitions(selectedStatus.id)}
-                  className="px-2.5 py-1 text-xs font-medium text-danger hover:bg-danger-soft rounded border border-danger/30 transition-colors"
-                  title="Remove all transitions for this status"
-                >
-                  Clear Transitions
-                </button>
+                <Tooltip content="Remove all transitions for this status">
+                  <button
+                    type="button"
+                    onClick={() => onClearTransitions(selectedStatus.id)}
+                    className="px-2.5 py-1 text-xs font-medium text-danger hover:bg-danger-soft rounded border border-danger/30 transition-colors"
+                  >
+                    Clear Transitions
+                  </button>
+                </Tooltip>
               )}
 
               <button

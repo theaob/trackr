@@ -30,6 +30,7 @@ import { isProjectMember, projectInitials, projectPageTitle, shellLocation } fro
 import { TrackrLogoIcon } from "@/components/common/TrackrLogo";
 import { cn } from "@/components/ui/cn";
 import AccountMenu from "./AccountMenu";
+import { Tooltip } from "@/components/ui/Popover";
 
 const PAGE_ICONS: Record<SpotlightPageId, React.ComponentType<{ className?: string }>> = {
   board: Kanban,
@@ -77,24 +78,25 @@ interface RailLinkProps {
 
 function RailLink({ href, icon, label, active, collapsed, trailing, onNavigate, indent }: RailLinkProps) {
   return (
-    <Link
-      prefetch={false}
-      href={href}
-      onClick={onNavigate}
-      aria-current={active ? "page" : undefined}
-      aria-label={collapsed ? label : undefined}
-      title={collapsed ? label : undefined}
-      className={cn(
-        "flex h-8 items-center gap-2.5 rounded-control px-2 text-[13px] transition-colors [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0",
-        active ? "bg-surface font-medium text-ink shadow-raised" : "text-ink-2 hover:bg-surface/70 hover:text-ink",
-        indent && !collapsed && "pl-8",
-        collapsed && "justify-center px-0"
-      )}
-    >
-      {icon}
-      {!collapsed && <span className="min-w-0 flex-1 truncate">{label}</span>}
-      {!collapsed && trailing}
-    </Link>
+    <Tooltip content={collapsed ? label : undefined}>
+      <Link
+        prefetch={false}
+        href={href}
+        onClick={onNavigate}
+        aria-current={active ? "page" : undefined}
+        aria-label={collapsed ? label : undefined}
+        className={cn(
+          "flex h-8 items-center gap-2.5 rounded-control px-2 text-[13px] transition-colors [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0",
+          active ? "bg-surface font-medium text-ink shadow-raised" : "text-ink-2 hover:bg-surface/70 hover:text-ink",
+          indent && !collapsed && "pl-8",
+          collapsed && "justify-center px-0"
+        )}
+      >
+        {icon}
+        {!collapsed && <span className="min-w-0 flex-1 truncate">{label}</span>}
+        {!collapsed && trailing}
+      </Link>
+    </Tooltip>
   );
 }
 
@@ -146,42 +148,44 @@ export default function Rail({
           {!collapsed && <span className="truncate text-[15px] font-semibold tracking-tight text-ink">Trackr</span>}
         </Link>
         {!collapsed && onToggleCollapsed && (
-          <button
-            type="button"
-            onClick={onToggleCollapsed}
-            aria-label="Collapse sidebar"
-            title="Collapse sidebar ([)"
-            className="ml-auto inline-flex h-7 w-7 items-center justify-center rounded-control text-muted hover:bg-surface hover:text-ink"
-          >
-            <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
-          </button>
+          <Tooltip content="Collapse sidebar ([)">
+            <button
+              type="button"
+              onClick={onToggleCollapsed}
+              aria-label="Collapse sidebar"
+              className="ml-auto inline-flex h-7 w-7 items-center justify-center rounded-control text-muted hover:bg-surface hover:text-ink"
+            >
+              <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </Tooltip>
         )}
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-2 pb-3">
         <div className="flex flex-col gap-0.5">
-          <button
-            type="button"
-            onClick={() => {
-              onNavigate?.();
-              openSpotlight();
-            }}
-            aria-label="Search or jump to"
-            aria-keyshortcuts="Meta+K Control+K"
-            title={collapsed ? `Search (${modKey} K)` : undefined}
-            className={cn(
-              "mb-1.5 flex h-8 items-center gap-2 rounded-control border border-subtle bg-surface px-2 text-[13px] text-muted transition-colors hover:border-strong hover:text-ink-2",
-              collapsed && "justify-center px-0"
-            )}
-          >
-            <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
-            {!collapsed && (
-              <>
-                <span className="flex-1 truncate text-left">Search or jump to…</span>
-                <kbd className="font-mono text-[11px] text-muted">{modKey === "⌘" ? "⌘K" : `${modKey} K`}</kbd>
-              </>
-            )}
-          </button>
+          <Tooltip content={collapsed ? `Search (${modKey} K)` : undefined}>
+            <button
+              type="button"
+              onClick={() => {
+                onNavigate?.();
+                openSpotlight();
+              }}
+              aria-label="Search or jump to"
+              aria-keyshortcuts="Meta+K Control+K"
+              className={cn(
+                "mb-1.5 flex h-8 items-center gap-2 rounded-control border border-subtle bg-surface px-2 text-[13px] text-muted transition-colors hover:border-strong hover:text-ink-2",
+                collapsed && "justify-center px-0"
+              )}
+            >
+              <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {!collapsed && (
+                <>
+                  <span className="flex-1 truncate text-left">Search or jump to…</span>
+                  <kbd className="font-mono text-[11px] text-muted">{modKey === "⌘" ? "⌘K" : `${modKey} K`}</kbd>
+                </>
+              )}
+            </button>
+          </Tooltip>
           {currentUser && (
             <>
             <RailLink
@@ -211,15 +215,16 @@ export default function Rail({
             <div className="flex h-7 items-center justify-between px-2">
               <h2 className="text-[11px] font-semibold uppercase tracking-wide text-muted">Projects</h2>
               {onCreateProject && (
-                <button
-                  type="button"
-                  onClick={onCreateProject}
-                  aria-label="New project"
-                  title="New project"
-                  className="inline-flex h-6 w-6 items-center justify-center rounded-control text-muted hover:bg-surface hover:text-ink"
-                >
-                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-                </button>
+                <Tooltip content="New project">
+                  <button
+                    type="button"
+                    onClick={onCreateProject}
+                    aria-label="New project"
+                    className="inline-flex h-6 w-6 items-center justify-center rounded-control text-muted hover:bg-surface hover:text-ink"
+                  >
+                    <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                </Tooltip>
               )}
             </div>
           ) : (
@@ -296,15 +301,16 @@ export default function Rail({
 
       <div className={cn("shrink-0 border-t border-subtle p-2", collapsed && "flex flex-col items-center gap-1")}>
         {collapsed && onToggleCollapsed && (
-          <button
-            type="button"
-            onClick={onToggleCollapsed}
-            aria-label="Expand sidebar"
-            title="Expand sidebar ([)"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-control text-muted hover:bg-surface hover:text-ink"
-          >
-            <PanelLeftOpen className="h-4 w-4" aria-hidden="true" />
-          </button>
+          <Tooltip content="Expand sidebar ([)">
+            <button
+              type="button"
+              onClick={onToggleCollapsed}
+              aria-label="Expand sidebar"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-control text-muted hover:bg-surface hover:text-ink"
+            >
+              <PanelLeftOpen className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </Tooltip>
         )}
         {currentUser ? (
           <AccountMenu collapsed={collapsed} currentProject={currentProject} />

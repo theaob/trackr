@@ -152,7 +152,11 @@ export function Select({
           )}
           {...fieldProps}
         >
-          {selected?.icon}
+          {selected?.icon ? (
+            <span aria-hidden="true" className="inline-flex shrink-0">
+              {selected.icon}
+            </span>
+          ) : null}
           <span className={cn("min-w-0 flex-1 truncate", !selected && "text-muted")}>{selected ? selected.label : placeholder}</span>
           {variant === "field" || !disabled ? (
             <ChevronDown
@@ -222,7 +226,11 @@ export function Select({
                   option.disabled && "opacity-50"
                 )}
               >
-                {option.icon}
+                {option.icon ? (
+                  <span aria-hidden="true" className="inline-flex shrink-0">
+                    {option.icon}
+                  </span>
+                ) : null}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate">{option.label}</span>
                   {option.description ? <span className="block truncate text-xs text-muted">{option.description}</span> : null}

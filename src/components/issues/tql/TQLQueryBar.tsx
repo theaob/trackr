@@ -7,6 +7,7 @@ import { Dialog, DialogContent } from "@/components/ui/Dialog";
 import { cn } from "@/components/ui/cn";
 import { TQLParser } from "@/lib/tql/parser";
 import { getTQLCompletions, TQLSuggestion, TQLAutocompleteContext } from "@/lib/tql/autocomplete";
+import { Tooltip } from "@/components/ui/Popover";
 
 export interface TQLQueryBarProps {
   query: string;
@@ -212,10 +213,12 @@ export default function TQLQueryBar({
           Search
         </Button>
         {onSwitchToBasic && (
-          <Button size="sm" onClick={onSwitchToBasic} title="Show this query as filter chips">
-            <Filter className="h-3.5 w-3.5" aria-hidden="true" />
-            Filters
-          </Button>
+          <Tooltip content="Show this query as filter chips">
+            <Button size="sm" onClick={onSwitchToBasic}>
+              <Filter className="h-3.5 w-3.5" aria-hidden="true" />
+              Filters
+            </Button>
+          </Tooltip>
         )}
       </div>
 

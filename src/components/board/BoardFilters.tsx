@@ -10,6 +10,7 @@ import { IssueTypeIcon, PriorityIcon } from "@/components/common/IssueIcons";
 import { Menu, MenuCheckboxItem, MenuContent, MenuLabel, MenuTrigger } from "@/components/ui/Menu";
 import { cn } from "@/components/ui/cn";
 import { hasBoardFilters, type BoardFilterState } from "@/lib/board";
+import { Tooltip } from "@/components/ui/Popover";
 
 export type SwimlaneGroupBy = "NONE" | "ASSIGNEE" | "EPIC" | "PRIORITY";
 
@@ -182,16 +183,17 @@ export default function BoardFilters({ users, filters, onChange, groupBy, onSele
         ))}
       </FilterChip>
 
-      <Link
-        prefetch={false}
-        href={moreFiltersHref}
-        title="Filter by any field on the Issues page, with TQL"
-        className={cn(chip, chipIdle, "border-dashed")}
-      >
-        <Plus aria-hidden="true" />
-        Filter
-        <span className="sr-only"> by any field on the Issues page</span>
-      </Link>
+      <Tooltip content="Filter by any field on the Issues page, with TQL">
+        <Link
+          prefetch={false}
+          href={moreFiltersHref}
+          className={cn(chip, chipIdle, "border-dashed")}
+        >
+          <Plus aria-hidden="true" />
+          Filter
+          <span className="sr-only"> by any field on the Issues page</span>
+        </Link>
+      </Tooltip>
 
       {hasBoardFilters(filters) && (
         <button

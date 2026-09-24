@@ -9,6 +9,7 @@ import { Menu, MenuCheckboxItem, MenuContent, MenuItem, MenuLabel, MenuSeparator
 import { cn } from "@/components/ui/cn";
 import { activeFilterCount, describeExtra, emptyFilters, ME, NONE, OPEN_SPRINTS, type ChipField, type IssueFilters } from "@/lib/issueQuery";
 import { prettifyStatusName } from "@/lib/workflowDisplay";
+import { Tooltip } from "@/components/ui/Popover";
 
 export interface FilterOptions {
   statuses: { name: string; color?: string | null }[];
@@ -233,9 +234,11 @@ export default function FilterBar({
 
       {filters.extra.map((extra, i) => (
         <span key={`${extra}-${i}`} className={cn("inline-flex items-center rounded-full", "bg-accent-soft")}>
-          <span title={extra} className={cn(chip, chipActive, "max-w-[18rem] rounded-r-none border-r-0 pr-1.5")}>
-            <span className="truncate">{describeExtra(extra)}</span>
-          </span>
+          <Tooltip content={extra}>
+            <span className={cn(chip, chipActive, "max-w-[18rem] rounded-r-none border-r-0 pr-1.5")}>
+              <span className="truncate">{describeExtra(extra)}</span>
+            </span>
+          </Tooltip>
           <button
             type="button"
             onClick={() => set({ extra: filters.extra.filter((_, j) => j !== i) })}

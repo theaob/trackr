@@ -9,6 +9,8 @@ import { formatDuration, parseDuration } from "@/lib/duration";
 import UserAvatar from "@/components/common/UserAvatar";
 import { Clock, Plus, Trash2, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { formatCalendarDate } from "@/lib/calendarDate";
+import { useToast } from "@/components/ui/Toast";
+import { Tooltip } from "@/components/ui/Popover";
 
 interface TimeTrackingFieldProps {
   issueId: string;
@@ -130,6 +132,7 @@ export default function TimeTrackingField({
   onWorklogAdded,
   onWorklogRemoved,
 }: TimeTrackingFieldProps) {
+  const { toast } = useToast();
   const [logging, setLogging] = useState(false);
   const [timeSpentText, setTimeSpentText] = useState("");
   const [workDate, setWorkDate] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -225,7 +228,7 @@ export default function TimeTrackingField({
       if (targetWorklog) {
         onWorklogAdded(targetWorklog, prevRemaining);
       }
-      alert(res.error || "Failed to delete worklog.");
+      toast({ title: res.error || "The work log entry couldn't be deleted.", tone: "danger" });
     }
   };
 
@@ -364,19 +367,21 @@ export default function TimeTrackingField({
                 </span>
               </div>
               {(isAdmin || w.authorId === currentUserId) && (
-                <button
-                  type="button"
-                  onClick={() => handleDeleteWorklog(w.id)}
-                  disabled={deletingId === w.id}
-                  title="Delete worklog"
-                  className="text-muted hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
-                >
-                  {deletingId === w.id ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <Trash2 className="w-3 h-3" />
-                  )}
-                </button>
+                <Tooltip content="Delete">
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteWorklog(w.id)}
+                    disabled={deletingId === w.id}
+                    aria-label="Delete work log entry"
+                    className="text-muted hover:text-danger opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity disabled:opacity-50"
+                  >
+                    {deletingId === w.id ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3 h-3" />
+                    )}
+                  </button>
+                </Tooltip>
               )}
             </div>
           ))}

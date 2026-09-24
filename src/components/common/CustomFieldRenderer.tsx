@@ -4,6 +4,7 @@ import { calendarDateToLocal } from "@/lib/calendarDate";
 import React from "react";
 import { CustomField, CustomFieldType } from "@/types";
 import { ExternalLink, Check, Calendar, Hash, Type, List, CheckSquare, Link as LinkIcon } from "lucide-react";
+import { Select } from "@/components/ui/Select";
 
 interface CustomFieldRendererProps {
   field: CustomField;
@@ -149,18 +150,13 @@ export default function CustomFieldRenderer({
 
     case "SELECT":
       return (
-        <select
+        <Select
+          aria-label={field.name}
           value={value}
-          onChange={(e) => onChange?.(e.target.value)}
-          className="w-full bg-surface border border-subtle rounded px-2.5 py-1.5 text-xs text-ink focus:border-accent"
-        >
-          <option value="">None (Select an option)</option>
-          {options.map((opt, idx) => (
-            <option key={idx} value={opt}>
-              {opt}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => onChange?.(v)}
+          placeholder="None"
+          options={[{ value: "", label: "None" }, ...options.map((opt) => ({ value: opt, label: opt }))]}
+        />
       );
 
     case "MULTI_SELECT":

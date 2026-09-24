@@ -13,6 +13,7 @@ import { FILTER_PAGE_EVENT } from "@/components/common/SpotlightSearch";
 import NotificationsMenu from "@/components/layout/NotificationsMenu";
 import { Button, IconButton } from "@/components/ui/Button";
 import { cn } from "@/components/ui/cn";
+import { Tooltip } from "@/components/ui/Popover";
 
 export interface TopBarProps {
   currentProject?: Project | null;
@@ -126,14 +127,16 @@ export default function TopBar({ currentProject, onCreateIssue }: TopBarProps) {
         <IconButton label="Search" icon={<Search />} onClick={openSpotlight} className="md:hidden" />
 
         {onCreateIssue && (
-          <Button variant="primary" size="sm" onClick={onCreateIssue} aria-keyshortcuts="C" title="New issue (C)">
-            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-            <span className="hidden sm:inline">New issue</span>
-            <span className="sr-only sm:hidden">New issue</span>
-            <kbd aria-hidden="true" className="hidden rounded bg-accent-fg/20 px-1 font-mono text-[10px] sm:inline">
-              C
-            </kbd>
-          </Button>
+          <Tooltip content="New issue (C)">
+            <Button variant="primary" size="sm" onClick={onCreateIssue} aria-keyshortcuts="C">
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className="hidden sm:inline">New issue</span>
+              <span className="sr-only sm:hidden">New issue</span>
+              <kbd aria-hidden="true" className="hidden rounded bg-accent-fg/20 px-1 font-mono text-[10px] sm:inline">
+                C
+              </kbd>
+            </Button>
+          </Tooltip>
         )}
         <IconButton label="Keyboard shortcuts" icon={<HelpCircle />} onClick={openShortcutsModal} className="hidden sm:inline-flex" />
         <NotificationsMenu />

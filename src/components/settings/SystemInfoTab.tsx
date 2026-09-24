@@ -18,6 +18,7 @@ import {
   Users,
   Activity,
 } from "lucide-react";
+import { Tooltip } from "@/components/ui/Popover";
 
 interface SystemInfoTabProps {
   systemInfo: SystemInfo;
@@ -74,18 +75,20 @@ export default function SystemInfoTab({ systemInfo }: SystemInfoTabProps) {
                 <span className="font-mono text-sm font-bold text-ink bg-surface-sunk px-2 py-0.5 rounded border border-subtle">
                   {systemInfo.commitHash}
                 </span>
-                <button
-                  type="button"
-                  onClick={handleCopyCommit}
-                  title="Copy commit hash"
-                  className="p-1 text-muted hover:text-ink hover:bg-surface-sunk rounded transition-colors"
-                >
-                  {copiedCommit ? (
-                    <Check className="w-3.5 h-3.5 text-success" />
-                  ) : (
-                    <Copy className="w-3.5 h-3.5" />
-                  )}
-                </button>
+                <Tooltip content="Copy commit hash">
+                  <button
+                    type="button"
+                    onClick={handleCopyCommit}
+                    aria-label="Copy commit hash"
+                    className="p-1 text-muted hover:text-ink hover:bg-surface-sunk rounded transition-colors"
+                  >
+                    {copiedCommit ? (
+                      <Check className="w-3.5 h-3.5 text-success" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </Tooltip>
               </div>
             </div>
           </div>

@@ -15,6 +15,7 @@ import {
   Building2,
   Loader2,
 } from "lucide-react";
+import { Select } from "@/components/ui/Select";
 
 interface SignInCardProps {
   onSuccess?: (user: User) => void;
@@ -130,7 +131,7 @@ export default function SignInCard({ onSuccess }: SignInCardProps) {
             }`}
           >
             <LogIn className="w-3.5 h-3.5" />
-            <span>Sign In</span>
+            <span>Sign in</span>
           </button>
 
           {registrationOpen && (
@@ -143,7 +144,7 @@ export default function SignInCard({ onSuccess }: SignInCardProps) {
             }`}
           >
             <UserPlus className="w-3.5 h-3.5" />
-            <span>Create Account</span>
+            <span>Create account</span>
           </button>
           )}
         </div>
@@ -168,7 +169,7 @@ export default function SignInCard({ onSuccess }: SignInCardProps) {
           {activeTab === "login" && (
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               <div>
-                <label htmlFor="auth-login-email" className="block text-xs font-semibold text-ink mb-1">Email Address</label>
+                <label htmlFor="auth-login-email" className="block text-xs font-semibold text-ink mb-1">Email</label>
                 <div className="relative">
                   <Mail aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                   <input
@@ -207,7 +208,7 @@ export default function SignInCard({ onSuccess }: SignInCardProps) {
                 className="w-full py-2 bg-accent hover:bg-accent-hover text-accent-fg text-xs font-bold rounded-md flex items-center justify-center gap-2 shadow-xs transition-colors disabled:opacity-50"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-                <span>Sign In</span>
+                <span>Sign in</span>
               </button>
 
               {ssoConfig?.enabled && (
@@ -235,7 +236,7 @@ export default function SignInCard({ onSuccess }: SignInCardProps) {
           {activeTab === "register" && registrationOpen && (
             <form onSubmit={handleRegisterSubmit} className="space-y-4">
               <div>
-                <label htmlFor="auth-register-name" className="block text-xs font-semibold text-ink mb-1">Full Name</label>
+                <label htmlFor="auth-register-name" className="block text-xs font-semibold text-ink mb-1">Full name</label>
                 <div className="relative">
                   <UserIcon aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                   <input
@@ -252,7 +253,7 @@ export default function SignInCard({ onSuccess }: SignInCardProps) {
               </div>
 
               <div>
-                <label htmlFor="auth-register-email" className="block text-xs font-semibold text-ink mb-1">Email Address</label>
+                <label htmlFor="auth-register-email" className="block text-xs font-semibold text-ink mb-1">Email</label>
                 <div className="relative">
                   <Mail aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                   <input
@@ -287,19 +288,13 @@ export default function SignInCard({ onSuccess }: SignInCardProps) {
               </div>
 
               <div>
-                <label htmlFor="auth-register-role" className="block text-xs font-semibold text-ink mb-1">Organization Role</label>
-                <select
+                <label htmlFor="auth-register-role" className="block text-xs font-semibold text-ink mb-1">Role</label>
+                <Select
                   id="auth-register-role"
                   value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-subtle rounded-md focus:border-accent text-ink bg-surface"
-                >
-                  <option value="Developer">Developer</option>
-                  <option value="Senior Developer">Senior Developer</option>
-                  <option value="QA Lead">QA Lead</option>
-                  <option value="Product Owner">Product Owner</option>
-                  <option value="Project Lead">Project Lead</option>
-                </select>
+                  onChange={setRole}
+                  options={["Developer", "Senior Developer", "QA Lead", "Product Owner", "Project Lead"].map((r) => ({ value: r, label: r }))}
+                />
               </div>
 
               <button
@@ -308,7 +303,7 @@ export default function SignInCard({ onSuccess }: SignInCardProps) {
                 className="w-full py-2.5 bg-accent hover:bg-accent-hover text-accent-fg text-xs font-bold rounded-md flex items-center justify-center gap-2 shadow-xs transition-colors disabled:opacity-50"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                <span>Create Local User Account</span>
+                <span>Create account</span>
               </button>
             </form>
           )}

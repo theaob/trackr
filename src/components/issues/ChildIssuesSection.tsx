@@ -15,6 +15,9 @@ import {
 } from "lucide-react";
 import { isDoneStatus } from "@/lib/workflowDisplay";
 import SectionHeader, { SectionAction } from "./SectionHeader";
+import { useToast } from "@/components/ui/Toast";
+import { Select } from "@/components/ui/Select";
+import { Tooltip } from "@/components/ui/Popover";
 
 interface ChildIssuesSectionProps {
   parentIssue: Issue;
@@ -36,6 +39,7 @@ export default function ChildIssuesSection({
   onOpenChild,
 }: ChildIssuesSectionProps) {
   const isEpic = parentIssue.type === "EPIC";
+  const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
   const [isLinking, setIsLinking] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -149,7 +153,7 @@ export default function ChildIssuesSection({
       setSearchQuery("");
       setSearchResults([]);
     } else {
-      alert(res.error || "Failed to link issue.");
+      toast({ title: res.error || "The issue couldn't be linked.", tone: "danger" });
     }
   };
 
@@ -163,7 +167,7 @@ export default function ChildIssuesSection({
 
     if (!res.success) {
       if (targetChild) onChildAdded(targetChild);
-      alert(res.error || "Failed to unlink issue.");
+      toast({ title: res.error || "The issue couldn't be unlinked.", tone: "danger" });
     }
   };
 
@@ -230,26 +234,27 @@ export default function ChildIssuesSection({
           </div>
 
           {/* Segmented Progress Bar */}
-          <div className="w-full h-2 bg-subtle rounded-full overflow-hidden flex">
+          <div
+            role="img"
+            aria-label={`${doneCount} done, ${inProgressCount} in progress, ${todoCount} to do`}
+            className="w-full h-2 bg-subtle rounded-full overflow-hidden flex"
+          >
             {donePct > 0 && (
               <div
                 style={{ width: `${donePct}%` }}
                 className="bg-success h-full transition-all duration-300"
-                title={`${doneCount} Done (${donePct}%)`}
               />
             )}
             {inProgressPct > 0 && (
               <div
                 style={{ width: `${inProgressPct}%` }}
                 className="bg-accent h-full transition-all duration-300"
-                title={`${inProgressCount} In Progress (${inProgressPct}%)`}
               />
             )}
             {todoPct > 0 && (
               <div
                 style={{ width: `${todoPct}%` }}
                 className="bg-strong h-full transition-all duration-300"
-                title={`${todoCount} To Do (${todoPct}%)`}
               />
             )}
           </div>
@@ -350,16 +355,17 @@ export default function ChildIssuesSection({
 
           <div className="flex flex-wrap sm:flex-nowrap gap-2 min-w-0">
             {isEpic ? (
-              <select
+              <Select
+                aria-label="Type"
+                className="w-auto shrink-0"
                 value={newType}
-                onChange={(e) => setNewType(e.target.value as IssueType)}
-                className="bg-surface border border-subtle rounded px-2 py-1 text-xs text-ink focus:border-accent font-medium shrink-0"
-              >
-                <option value="STORY">Story</option>
-                <option value="TASK">Task</option>
-                <option value="BUG">Bug</option>
-                <option value="EPIC">Epic</option>
-              </select>
+                onChange={(v) => setNewType(v as IssueType)}
+                options={(["STORY", "TASK", "BUG", "EPIC"] as IssueType[]).map((t) => ({
+                  value: t,
+                  label: t.charAt(0) + t.slice(1).toLowerCase(),
+                  icon: <IssueTypeIcon type={t} className="h-4 w-4" />,
+                }))}
+              />
             ) : (
               <span className="inline-flex items-center gap-1 bg-surface-sunk text-ink-2 px-2 py-1 rounded text-xs font-medium shrink-0">
                 <IssueTypeIcon type="SUBTASK" className="w-3 h-3" />
@@ -416,14 +422,15 @@ export default function ChildIssuesSection({
                   >
                     {child.key}
                   </button>
-                  <span
-                    className={`text-xs text-ink font-medium truncate ${
-                      isDone ? "line-through text-muted" : ""
-                    }`}
-                    title={child.title}
-                  >
-                    {child.title}
-                  </span>
+                  <Tooltip content={child.title}>
+                    <span
+                      className={`text-xs text-ink font-medium truncate ${
+                        isDone ? "line-through text-muted" : ""
+                      }`}
+                    >
+                      {child.title}
+                    </span>
+                  </Tooltip>
                 </div>
 
                 {/* Right: Status, Priority, Points, Assignee, Actions */}
@@ -461,19 +468,21 @@ export default function ChildIssuesSection({
 
                   {canEdit && (
                     <div className="w-6 flex items-center justify-center shrink-0">
-                      <button
-                        type="button"
-                        disabled={unlinkingId === child.id}
-                        onClick={() => handleUnlink(child.id)}
-                        className="p-1 text-muted hover:text-danger rounded hover:bg-danger-soft opacity-0 group-hover:opacity-100 transition-all"
-                        title={isEpic ? "Unlink from epic" : "Unlink subtask"}
-                      >
-                        {unlinkingId === child.id ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Unlink className="w-3.5 h-3.5" />
-                        )}
-                      </button>
+                      <Tooltip content={isEpic ? "Remove from epic" : "Unlink subtask"}>
+                        <button
+                          type="button"
+                          disabled={unlinkingId === child.id}
+                          onClick={() => handleUnlink(child.id)}
+                          className="p-1 text-muted hover:text-danger rounded hover:bg-danger-soft opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all"
+                          aria-label={`${isEpic ? "Remove from epic" : "Unlink subtask"}: ${child.key}`}
+                        >
+                          {unlinkingId === child.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Unlink className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </Tooltip>
                     </div>
                   )}
                 </div>

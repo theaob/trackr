@@ -14,6 +14,7 @@ import { cn } from "@/components/ui/cn";
 import { formatCalendarDate } from "@/lib/calendarDate";
 import { isOverdue } from "@/lib/dueDate";
 import { prettifyStatusName } from "@/lib/workflowDisplay";
+import { Tooltip } from "@/components/ui/Popover";
 
 const PRIORITY_NAMES: Record<string, string> = { HIGHEST: "Highest", HIGH: "High", MEDIUM: "Medium", LOW: "Low", LOWEST: "Lowest" };
 
@@ -118,18 +119,19 @@ export default function BacklogRow({
               data-checked={selected}
             />
           )}
-          <span
-            {...(canDrag ? provided.dragHandleProps : {})}
-            aria-label={canDrag ? `Drag ${issue.key}` : undefined}
-            title={dragBlockedReason ?? (canDrag ? "Drag to reorder, or to move to another sprint" : undefined)}
-            onClick={(e) => e.stopPropagation()}
-            className={cn(
-              "hidden h-6 w-4 shrink-0 items-center justify-center text-muted sm:inline-flex",
-              canDrag ? "cursor-grab hover:text-ink active:cursor-grabbing" : "cursor-default opacity-40"
-            )}
-          >
-            <GripVertical className="h-3.5 w-3.5" aria-hidden="true" />
-          </span>
+          <Tooltip content={dragBlockedReason ?? (canDrag ? "Drag to reorder, or to move to another sprint" : "")}>
+            <span
+              {...(canDrag ? provided.dragHandleProps : {})}
+              aria-label={canDrag ? `Drag ${issue.key}` : undefined}
+              onClick={(e) => e.stopPropagation()}
+              className={cn(
+                "hidden h-6 w-4 shrink-0 items-center justify-center text-muted sm:inline-flex",
+                canDrag ? "cursor-grab hover:text-ink active:cursor-grabbing" : "cursor-default opacity-40"
+              )}
+            >
+              <GripVertical className="h-3.5 w-3.5" aria-hidden="true" />
+            </span>
+          </Tooltip>
 
           <IssueTypeIcon type={issue.type} className="h-4 w-4 shrink-0" />
           <span className="flex-1 truncate font-mono text-xs text-ink-2 sm:w-[84px] sm:flex-none sm:shrink-0">{issue.key}</span>
@@ -143,12 +145,12 @@ export default function BacklogRow({
           </button>
 
           {issue.parent && (
-            <span
-              className="hidden max-w-[160px] shrink-0 truncate rounded-[4px] bg-epic-soft px-1.5 py-0.5 text-[11px] font-medium text-epic md:inline"
-              title={`Epic: ${issue.parent.title}`}
-            >
-              {issue.parent.title}
-            </span>
+            <Tooltip content={`Epic: ${issue.parent.title}`}>
+              <span className="hidden max-w-[160px] shrink-0 truncate rounded-[4px] bg-epic-soft px-1.5 py-0.5 text-[11px] font-medium text-epic md:inline">
+                <span className="sr-only">Epic: </span>
+                {issue.parent.title}
+              </span>
+            </Tooltip>
           )}
           {issue.labels && issue.labels.length > 0 && (
             <span className="hidden shrink-0 items-center gap-1 lg:flex">
@@ -162,29 +164,31 @@ export default function BacklogRow({
           )}
 
           {issue.dueDate && (
-            <span
-              className={cn(
-                "hidden shrink-0 items-center gap-1 text-xs sm:inline-flex",
-                overdue ? "font-medium text-danger" : "text-ink-2"
-              )}
-              title={`Due ${formatCalendarDate(issue.dueDate, "MMM d, yyyy")}${overdue ? " (overdue)" : ""}`}
-            >
-              <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
-              <span className="sr-only">{overdue ? "Overdue, due" : "Due"}</span>
-              {formatCalendarDate(issue.dueDate, "MMM d")}
-            </span>
+            <Tooltip content={`Due ${formatCalendarDate(issue.dueDate, "MMM d, yyyy")}${overdue ? " (overdue)" : ""}`}>
+              <span
+                className={cn(
+                  "hidden shrink-0 items-center gap-1 text-xs sm:inline-flex",
+                  overdue ? "font-medium text-danger" : "text-ink-2"
+                )}
+              >
+                <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
+                <span className="sr-only">{overdue ? "Overdue, due" : "Due"}</span>
+                {formatCalendarDate(issue.dueDate, "MMM d")}
+              </span>
+            </Tooltip>
           )}
 
           <span className="flex w-[104px] shrink-0 justify-end">
             <StatusLozenge label={prettifyStatusName(issue.status)} color={statusColor ?? undefined} className="max-w-full" />
           </span>
-          <span
-            className="hidden w-5 shrink-0 justify-center sm:flex"
-            title={`Priority: ${PRIORITY_NAMES[issue.priority] ?? issue.priority}`}
-          >
-            <PriorityIcon priority={issue.priority} className="h-4 w-4" />
-            <span className="sr-only">Priority: {PRIORITY_NAMES[issue.priority] ?? issue.priority}</span>
-          </span>
+          <Tooltip content={`Priority: ${PRIORITY_NAMES[issue.priority] ?? issue.priority}`}>
+            <span className="hidden w-5 shrink-0 justify-center sm:flex">
+              <span aria-hidden="true" className="inline-flex">
+                <PriorityIcon priority={issue.priority} className="h-4 w-4" />
+              </span>
+              <span className="sr-only">Priority: {PRIORITY_NAMES[issue.priority] ?? issue.priority}</span>
+            </span>
+          </Tooltip>
           <span className="w-7 shrink-0 text-center font-mono text-xs text-ink-2">
             {issue.storyPoints ?? <span aria-hidden="true">–</span>}
             {issue.storyPoints !== null && issue.storyPoints !== undefined ? (
@@ -197,9 +201,11 @@ export default function BacklogRow({
             {issue.assignee ? (
               <UserAvatar user={issue.assignee} size="xs" showTooltip tooltipPrefix="Assignee" />
             ) : (
-              <span title="Unassigned" className="h-5 w-5 rounded-full border border-dashed border-strong">
-                <span className="sr-only">Unassigned</span>
-              </span>
+              <Tooltip content="Unassigned">
+                <span className="h-5 w-5 rounded-full border border-dashed border-strong">
+                  <span className="sr-only">Unassigned</span>
+                </span>
+              </Tooltip>
             )}
           </span>
           <Menu open={menuOpen} onOpenChange={setMenuOpen}>

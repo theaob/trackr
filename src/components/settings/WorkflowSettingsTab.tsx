@@ -25,6 +25,9 @@ import {
   Network,
 } from "lucide-react";
 import WorkflowGraphView from "./WorkflowGraphView";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
+import { Select } from "@/components/ui/Select";
+import { Tooltip } from "@/components/ui/Popover";
 
 interface WorkflowSettingsTabProps {
   project: Project;
@@ -33,11 +36,11 @@ interface WorkflowSettingsTabProps {
   canManage: boolean;
 }
 
-const CATEGORY_LABELS: Record<WorkflowStatusCategory, string> = {
-  TODO: "To Do",
-  IN_PROGRESS: "In Progress",
-  DONE: "Done",
-};
+const CATEGORY_OPTIONS: { value: WorkflowStatusCategory; label: string }[] = [
+  { value: "TODO", label: "To do" },
+  { value: "IN_PROGRESS", label: "In progress" },
+  { value: "DONE", label: "Done" },
+];
 
 export default function WorkflowSettingsTab({
   project,
@@ -45,6 +48,7 @@ export default function WorkflowSettingsTab({
   initialTransitions,
   canManage,
 }: WorkflowSettingsTabProps) {
+  const [confirmAction, confirmDialog] = useConfirm();
   const [statuses, setStatuses] = useState<WorkflowStatus[]>(
     [...initialStatuses].sort((a, b) => a.order - b.order)
   );
@@ -153,7 +157,12 @@ export default function WorkflowSettingsTab({
   };
 
   const handleDelete = async (status: WorkflowStatus) => {
-    if (!confirm(`Delete the "${prettifyStatusName(status.name)}" status?`)) return;
+    const ok = await confirmAction({
+      title: `Delete the ${prettifyStatusName(status.name)} status?`,
+      description: "Its column leaves the board, and the transitions to and from it go too.",
+      confirmLabel: "Delete status",
+    });
+    if (!ok) return;
     setBusyId(status.id);
     const res = await withError(() => deleteWorkflowStatus(status.id));
     setBusyId(null);
@@ -241,6 +250,7 @@ export default function WorkflowSettingsTab({
 
   return (
     <div className="space-y-8 w-full">
+      {confirmDialog}
       {error && (
         <div className="p-3 text-xs bg-danger-soft border border-danger/30 text-danger rounded-md font-medium">
           {error}
@@ -304,21 +314,14 @@ export default function WorkflowSettingsTab({
                 className="flex-1 min-w-0 px-2 py-1 text-xs font-semibold text-ink border border-transparent hover:border-subtle focus:border-accent rounded disabled:opacity-60"
               />
 
-              <select
+              <Select
                 value={status.category}
                 aria-label={`Category of ${status.name}`}
                 disabled={!canManage}
-                onChange={(e) =>
-                  handleFieldChange(status, { category: e.target.value as WorkflowStatusCategory })
-                }
-                className="text-[11px] bg-surface border border-subtle rounded px-1.5 py-1 text-ink disabled:opacity-60 shrink-0"
-              >
-                {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => handleFieldChange(status, { category: v as WorkflowStatusCategory })}
+                className="h-7 w-auto shrink-0 text-xs"
+                options={CATEGORY_OPTIONS}
+              />
 
               <label className="flex items-center gap-1 text-[11px] text-ink-2 shrink-0">
                 <input
@@ -331,35 +334,38 @@ export default function WorkflowSettingsTab({
                 Backlog
               </label>
 
-              <input
-                type="number"
-                min={0}
-                placeholder="WIP"
-                aria-label={`Work-in-progress limit for ${status.name}`}
-                value={status.wipLimit ?? ""}
-                disabled={!canManage}
-                onChange={(e) =>
-                  handleFieldChange(status, {
-                    wipLimit: e.target.value === "" ? null : parseInt(e.target.value, 10),
-                  })
-                }
-                className="w-14 px-1.5 py-1 text-[11px] border border-subtle rounded focus:border-accent disabled:opacity-60 shrink-0"
-                title="WIP limit"
-              />
+              <Tooltip content="WIP limit">
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="WIP"
+                  aria-label={`Work-in-progress limit for ${status.name}`}
+                  value={status.wipLimit ?? ""}
+                  disabled={!canManage}
+                  onChange={(e) =>
+                    handleFieldChange(status, {
+                      wipLimit: e.target.value === "" ? null : parseInt(e.target.value, 10),
+                    })
+                  }
+                  className="w-14 px-1.5 py-1 text-[11px] border border-subtle rounded focus:border-accent disabled:opacity-60 shrink-0"
+                />
+              </Tooltip>
 
               {canManage && (
-                <button
-                  onClick={() => handleDelete(status)}
-                  disabled={busyId === status.id}
-                  className="p-1 text-muted hover:text-danger hover:bg-danger-soft rounded shrink-0"
-                  title="Delete status"
-                >
-                  {busyId === status.id ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Trash2 className="w-3.5 h-3.5" />
-                  )}
-                </button>
+                <Tooltip content="Delete status">
+                  <button
+                    onClick={() => handleDelete(status)}
+                    disabled={busyId === status.id}
+                    className="p-1 text-muted hover:text-danger hover:bg-danger-soft rounded shrink-0"
+                    aria-label="Delete status"
+                  >
+                    {busyId === status.id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </Tooltip>
               )}
             </div>
           ))}
@@ -378,17 +384,13 @@ export default function WorkflowSettingsTab({
               placeholder="Status name, e.g. Code Review"
               className="flex-1 px-2.5 py-1.5 text-xs border border-subtle rounded focus:border-accent text-ink"
             />
-            <select
+            <Select
+              aria-label="Category"
               value={newCategory}
-              onChange={(e) => setNewCategory(e.target.value as WorkflowStatusCategory)}
-              className="text-xs bg-surface border border-subtle rounded px-2 py-1.5 text-ink"
-            >
-              {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setNewCategory(v as WorkflowStatusCategory)}
+              className="w-auto shrink-0"
+              options={CATEGORY_OPTIONS}
+            />
             <button
               type="submit"
               disabled={isCreating || !newName.trim()}

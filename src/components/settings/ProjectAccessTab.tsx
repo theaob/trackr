@@ -48,6 +48,7 @@ import {
   Lock,
 } from "lucide-react";
 import { format } from "date-fns";
+import { Tooltip } from "@/components/ui/Popover";
 
 interface ProjectAccessTabProps {
   project: Project;
@@ -355,9 +356,11 @@ export default function ProjectAccessTab({
                       {role.description || <span className="text-muted">No description</span>}
                       <span className="mt-1 flex flex-wrap gap-1">
                         {parsePermissions(role).map((p) => (
-                          <span key={p} title={PERMISSION_DESCRIPTIONS[p]?.description} className="rounded-full bg-surface-sunk px-1.5 text-[11px] text-ink-2">
-                            {PERMISSION_DESCRIPTIONS[p]?.label || p}
-                          </span>
+                          <Tooltip key={p} content={PERMISSION_DESCRIPTIONS[p]?.description}>
+                            <span className="rounded-full bg-surface-sunk px-1.5 text-[11px] text-ink-2">
+                              {PERMISSION_DESCRIPTIONS[p]?.label || p}
+                            </span>
+                          </Tooltip>
                         ))}
                       </span>
                     </td>

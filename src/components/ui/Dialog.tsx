@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 import * as RadixDialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { cn } from "./cn";
@@ -48,6 +48,33 @@ function CloseButton() {
   );
 }
 
+/**
+ * Focus goes back to whatever had it when the dialog opened. Radix only does
+ * that for a DialogTrigger; most dialogs here open from code (a menu item, a
+ * shortcut, a table button), which would otherwise leave focus on the page.
+ */
+function useReturnFocus(
+  onOpenAutoFocus?: (e: Event) => void,
+  onCloseAutoFocus?: (e: Event) => void
+): { onOpenAutoFocus: (e: Event) => void; onCloseAutoFocus: (e: Event) => void } {
+  const opener = useRef<HTMLElement | null>(null);
+  return {
+    onOpenAutoFocus: (e) => {
+      opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      onOpenAutoFocus?.(e);
+    },
+    onCloseAutoFocus: (e) => {
+      onCloseAutoFocus?.(e);
+      if (e.defaultPrevented) return;
+      const el = opener.current;
+      if (el && el.isConnected && el !== document.body) {
+        e.preventDefault();
+        el.focus();
+      }
+    },
+  };
+}
+
 const BACKDROP =
   "fixed inset-0 z-50 bg-ink/40 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0";
 
@@ -64,8 +91,11 @@ export function DialogContent({
   size = "md",
   className,
   children,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
   ...props
 }: DialogContentProps) {
+  const focus = useReturnFocus(onOpenAutoFocus, onCloseAutoFocus);
   return (
     <RadixDialog.Portal>
       <RadixDialog.Overlay className={BACKDROP} />
@@ -80,6 +110,7 @@ export function DialogContent({
           className
         )}
         {...props}
+        {...focus}
       >
         <div className="px-5 pb-2 pt-4">
           <Header title={title} description={description} showTitle={showTitle} />
@@ -117,8 +148,11 @@ export function SheetContent({
   bodyClassName,
   showClose = true,
   children,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
   ...props
 }: SheetContentProps) {
+  const focus = useReturnFocus(onOpenAutoFocus, onCloseAutoFocus);
   return (
     <RadixDialog.Portal>
       <RadixDialog.Overlay className={BACKDROP} />
@@ -131,6 +165,7 @@ export function SheetContent({
           className
         )}
         {...props}
+        {...focus}
       >
         {showTitle ? (
           <div className="border-b border-subtle px-5 py-4">

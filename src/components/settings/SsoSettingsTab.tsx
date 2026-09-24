@@ -15,6 +15,8 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
+import { Select } from "@/components/ui/Select";
+import { Tooltip } from "@/components/ui/Popover";
 
 interface SsoConfigState {
   enabled: boolean;
@@ -146,9 +148,7 @@ export default function SsoSettingsTab() {
             <Building2 className="w-6 h-6 text-accent" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-ink">
-              Single Sign-On (SSO) & Certificates
-            </h2>
+            <h3 className="text-base font-bold text-ink">Identity provider and signing keys</h3>
             <p className="text-xs text-ink-2 mt-0.5">
               Configure corporate IdP (Keycloak, Okta, SAML 2.0, OIDC) authentication and token verification keys.
             </p>
@@ -263,7 +263,7 @@ export default function SsoSettingsTab() {
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-accent shrink-0" />
               <div>
-                <h4 className="font-bold text-accent">Token Signature Verification Key</h4>
+                <h4 className="font-bold text-accent">Token signature verification key</h4>
                 <p className="text-[11px] text-accent mt-0.5">
                   The key used to verify incoming ID token signatures. Provide an X.509 PEM certificate for RS256, or a client secret for HS256. At least one key must be provided to enable SSO.
                 </p>
@@ -311,14 +311,16 @@ export default function SsoSettingsTab() {
                 }
                 className="w-full px-3 py-2 pr-9 border border-accent/30 rounded-md focus:border-accent text-accent font-mono text-[11px] bg-surface"
               />
-              <button
-                type="button"
-                onClick={() => setShowSecret(!showSecret)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-accent hover:text-accent"
-                title={showSecret ? "Hide secret" : "Show secret"}
-              >
-                {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+              <Tooltip content={showSecret ? "Hide secret" : "Show secret"}>
+                <button
+                  type="button"
+                  onClick={() => setShowSecret(!showSecret)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-accent hover:text-accent"
+                  aria-label={showSecret ? "Hide secret" : "Show secret"}
+                >
+                  {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </Tooltip>
             </div>
           </div>
         </div>
@@ -361,16 +363,12 @@ export default function SsoSettingsTab() {
 
           <div>
             <label htmlFor="sso-default-role" className="block font-semibold text-ink mb-1">Default User Role</label>
-            <select
+            <Select
               id="sso-default-role"
               value={config.defaultRole || "Developer"}
-              onChange={(e) => setConfig({ ...config, defaultRole: e.target.value })}
-              className="w-full px-3 py-1.5 border border-subtle rounded-md focus:border-accent text-ink bg-surface"
-            >
-              <option value="Developer">Developer</option>
-              <option value="QA Lead">QA Lead</option>
-              <option value="Product Owner">Product Owner</option>
-            </select>
+              onChange={(v) => setConfig({ ...config, defaultRole: v })}
+              options={["Developer", "QA Lead", "Product Owner"].map((r) => ({ value: r, label: r }))}
+            />
           </div>
         </div>
 

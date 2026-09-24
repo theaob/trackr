@@ -22,6 +22,7 @@ import IssueProperties, { type PickerName } from "./IssueProperties";
 import PropertyChips from "./PropertyChips";
 import IssueActivity from "./IssueActivity";
 import { useIssueData, type IssueContext } from "./useIssueData";
+import { Tooltip } from "@/components/ui/Popover";
 
 export type IssueViewVariant = "panel" | "split" | "page";
 
@@ -285,15 +286,16 @@ export default function IssueView({
         <nav aria-label="Issue" className="flex min-w-0 flex-1 items-center gap-1.5 text-[13px]">
           {issue.parent && (
             <>
-              <button
-                type="button"
-                onClick={() => openIssue(issue.parent!.key)}
-                title={`${issue.parent.key}: ${issue.parent.title}`}
-                className="flex min-w-0 max-w-[40%] items-center gap-1 rounded-control px-1 py-0.5 text-ink-2 hover:bg-surface-sunk hover:text-ink"
-              >
-                <IssueTypeIcon type="EPIC" className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{issue.parent.title}</span>
-              </button>
+              <Tooltip content={`${issue.parent.key}: ${issue.parent.title}`}>
+                <button
+                  type="button"
+                  onClick={() => openIssue(issue.parent!.key)}
+                  className="flex min-w-0 max-w-[40%] items-center gap-1 rounded-control px-1 py-0.5 text-ink-2 hover:bg-surface-sunk hover:text-ink"
+                >
+                  <IssueTypeIcon type="EPIC" className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{issue.parent.title}</span>
+                </button>
+              </Tooltip>
               <span aria-hidden="true" className="text-muted">
                 /
               </span>
@@ -336,22 +338,23 @@ export default function IssueView({
         )}
 
         {currentUser && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={actions.toggleWatching}
-            aria-pressed={data.watch.watching}
-            title={data.watch.watching ? "Stop watching" : "Watch for updates"}
-            className={cn(data.watch.watching && "text-accent")}
-          >
-            {data.watch.watching ? (
-              <Eye className="h-3.5 w-3.5" aria-hidden="true" />
-            ) : (
-              <EyeOff className="h-3.5 w-3.5" aria-hidden="true" />
-            )}
-            <span className="sr-only">{data.watch.watching ? "Watching" : "Watch"}</span>
-            {data.watch.count > 0 && <span aria-label={`${data.watch.count} watching`}>{data.watch.count}</span>}
-          </Button>
+          <Tooltip content={data.watch.watching ? "Stop watching" : "Watch for updates"}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={actions.toggleWatching}
+              aria-pressed={data.watch.watching}
+              className={cn(data.watch.watching && "text-accent")}
+            >
+              {data.watch.watching ? (
+                <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+              ) : (
+                <EyeOff className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              <span className="sr-only">{data.watch.watching ? "Watching" : "Watch"}</span>
+              {data.watch.count > 0 && <span aria-label={`${data.watch.count} watching`}>{data.watch.count}</span>}
+            </Button>
+          </Tooltip>
         )}
 
         <Menu>
@@ -379,15 +382,16 @@ export default function IssueView({
         </Menu>
 
         {variant !== "page" && (
-          <Link
-            prefetch={false}
-            href={href}
-            aria-label="Open as page"
-            title="Open as page"
-            className="hidden h-7 w-7 shrink-0 md:inline-flex items-center justify-center rounded-control text-ink-2 transition-colors hover:bg-surface-sunk hover:text-ink [&_svg]:h-4 [&_svg]:w-4"
-          >
-            <Maximize2 aria-hidden="true" />
-          </Link>
+          <Tooltip content="Open as page">
+            <Link
+              prefetch={false}
+              href={href}
+              aria-label="Open as page"
+              className="hidden h-7 w-7 shrink-0 md:inline-flex items-center justify-center rounded-control text-ink-2 transition-colors hover:bg-surface-sunk hover:text-ink [&_svg]:h-4 [&_svg]:w-4"
+            >
+              <Maximize2 aria-hidden="true" />
+            </Link>
+          </Tooltip>
         )}
         {onClose && <IconButton label="Close" title="Close (Esc)" icon={<X />} size="sm" onClick={onClose} />}
       </div>

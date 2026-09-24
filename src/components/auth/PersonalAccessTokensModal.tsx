@@ -14,6 +14,8 @@ import { Dialog, DialogContent } from "@/components/ui/Dialog";
 import { Button, IconButton } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Field";
 import { Select } from "@/components/ui/Select";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
+import { useToast } from "@/components/ui/Toast";
 import { formatDistanceToNow, format } from "date-fns";
 
 interface PersonalAccessTokensModalProps {
@@ -37,6 +39,8 @@ export default function PersonalAccessTokensModal({
   onClose,
 }: PersonalAccessTokensModalProps) {
   const { currentUser } = useCurrentUser();
+  const [confirmAction, confirmDialog] = useConfirm();
+  const { toast } = useToast();
   const [view, setView] = useState<ModalView>("list");
   const [tokens, setTokens] = useState<PersonalAccessToken[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -112,9 +116,12 @@ export default function PersonalAccessTokensModal({
 
   const handleRevoke = async (tokenId: string, name: string) => {
     if (!currentUser) return;
-    if (!confirm(`Are you sure you want to revoke the token "${name}"? Any applications using this token will lose access immediately.`)) {
-      return;
-    }
+    const ok = await confirmAction({
+      title: `Revoke ${name}?`,
+      description: "Anything using this token loses access straight away. The record stays, marked Revoked.",
+      confirmLabel: "Revoke token",
+    });
+    if (!ok) return;
 
     const res = await revokePersonalAccessToken(tokenId, currentUser.id);
     if (res.success) {
@@ -122,21 +129,24 @@ export default function PersonalAccessTokensModal({
         prev.map((t) => (t.id === tokenId ? { ...t, revokedAt: new Date() } : t))
       );
     } else {
-      alert("Failed to revoke token.");
+      toast({ title: "The token couldn't be revoked.", tone: "danger" });
     }
   };
 
   const handleDelete = async (tokenId: string, name: string) => {
     if (!currentUser) return;
-    if (!confirm(`Permanently delete record for token "${name}"?`)) {
-      return;
-    }
+    const ok = await confirmAction({
+      title: `Delete ${name}?`,
+      description: "The token and its record are removed for good. Anything still using it loses access.",
+      confirmLabel: "Delete token",
+    });
+    if (!ok) return;
 
     const res = await deletePersonalAccessToken(tokenId, currentUser.id);
     if (res.success) {
       setTokens((prev) => prev.filter((t) => t.id !== tokenId));
     } else {
-      alert("Failed to delete token.");
+      toast({ title: "The token couldn't be deleted.", tone: "danger" });
     }
   };
 
@@ -193,6 +203,7 @@ export default function PersonalAccessTokensModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      {confirmDialog}
       <DialogContent
         size={view === "list" ? "xl" : "md"}
         title={titles[view]}

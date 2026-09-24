@@ -65,7 +65,8 @@ export function IssueTypeIcon({
       case "EPIC":
         return (
           <span
-            title="Epic"
+            role="img"
+            aria-label="Epic"
             className="inline-flex items-center justify-center p-0.5 rounded bg-epic-soft text-epic shrink-0"
           >
             <Layers className={className} />
@@ -74,7 +75,8 @@ export function IssueTypeIcon({
       case "STORY":
         return (
           <span
-            title="Story"
+            role="img"
+            aria-label="Story"
             className="inline-flex items-center justify-center p-0.5 rounded bg-success-soft text-success shrink-0"
           >
             <Bookmark className={className} />
@@ -83,7 +85,8 @@ export function IssueTypeIcon({
       case "BUG":
         return (
           <span
-            title="Bug"
+            role="img"
+            aria-label="Bug"
             className="inline-flex items-center justify-center p-0.5 rounded bg-danger-soft text-danger shrink-0"
           >
             <CircleAlert className={className} />
@@ -92,7 +95,8 @@ export function IssueTypeIcon({
       case "SUBTASK":
         return (
           <span
-            title="Subtask"
+            role="img"
+            aria-label="Subtask"
             className="inline-flex items-center justify-center p-0.5 rounded bg-accent-soft text-accent shrink-0"
           >
             <GitCommit className={className} />
@@ -102,7 +106,8 @@ export function IssueTypeIcon({
       default:
         return (
           <span
-            title="Task"
+            role="img"
+            aria-label="Task"
             className="inline-flex items-center justify-center p-0.5 rounded bg-accent-soft text-accent shrink-0"
           >
             <CheckSquare className={className} />
@@ -116,7 +121,10 @@ export function IssueTypeIcon({
   const config = ISSUE_TYPE_CONFIG[type] || ISSUE_TYPE_CONFIG.TASK;
   return (
     <span className="inline-flex items-center gap-1.5 font-medium">
-      {icon}
+      {/* The word is right beside it, so the icon's own name would only repeat it. */}
+      <span aria-hidden="true" className="inline-flex">
+        {icon}
+      </span>
       <span>{config.label}</span>
     </span>
   );
@@ -151,11 +159,13 @@ export function IssueTypeBadge({
 
   return (
     <span
-      title={`Issue Type: ${config.label}`}
-      aria-label={showLabel ? undefined : `Issue Type: ${config.label}`}
+      role={showLabel ? undefined : "img"}
+      aria-label={showLabel ? undefined : `Type: ${config.label}`}
       className={`inline-flex items-center ${showLabel ? "gap-1" : ""} font-semibold rounded ${padding} ${config.bg} ${config.text} border ${config.border} shrink-0 select-none shadow-2xs ${className}`}
     >
-      <IssueTypeIcon type={type} className={iconSize} />
+      <span aria-hidden="true" className="inline-flex">
+        <IssueTypeIcon type={type} className={iconSize} />
+      </span>
       {showLabel && <span>{config.label}</span>}
     </span>
   );
@@ -172,32 +182,32 @@ export function PriorityIcon({
   switch (priority) {
     case "HIGHEST":
       return (
-        <span title="Highest Priority" className="text-danger inline-flex items-center">
+        <span role="img" aria-label="Highest priority" className="text-danger inline-flex items-center">
           <ChevronsUp className={className} />
         </span>
       );
     case "HIGH":
       return (
-        <span title="High Priority" className="text-warning inline-flex items-center">
+        <span role="img" aria-label="High priority" className="text-warning inline-flex items-center">
           <ChevronUp className={className} />
         </span>
       );
     case "MEDIUM":
       return (
-        <span title="Medium Priority" className="text-warning inline-flex items-center">
+        <span role="img" aria-label="Medium priority" className="text-warning inline-flex items-center">
           <Equal className={className} />
         </span>
       );
     case "LOW":
       return (
-        <span title="Low Priority" className="text-accent inline-flex items-center">
+        <span role="img" aria-label="Low priority" className="text-accent inline-flex items-center">
           <ChevronDown className={className} />
         </span>
       );
     case "LOWEST":
     default:
       return (
-        <span title="Lowest Priority" className="text-muted inline-flex items-center">
+        <span role="img" aria-label="Lowest priority" className="text-muted inline-flex items-center">
           <ChevronsDown className={className} />
         </span>
       );
@@ -263,7 +273,6 @@ export function StatusBadge({
   return (
     <span
       style={customStyle}
-      title={getLabel()}
       className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[11px] uppercase tracking-wider border truncate ${
         customStyle ? "" : getBadgeStyle()
       } ${className}`}

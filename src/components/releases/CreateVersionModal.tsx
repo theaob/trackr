@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Loader2, Search, Sparkles } from "lucide-react";
+import { ChevronDown, Loader2, Search, Sparkles } from "lucide-react";
 import { Version, IssueType } from "@/types";
 import { createVersion, updateVersion, getReleaseEligibleIssues } from "@/lib/actions/versions";
 import { prettifyStatusName } from "@/lib/workflowDisplay";
 import { IssueTypeIcon } from "@/components/common/IssueIcons";
 import { Button } from "@/components/ui/Button";
 import { Dialog, DialogContent } from "@/components/ui/Dialog";
+import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/ui/Menu";
 import { Field, Input, Textarea } from "@/components/ui/Field";
 import { StatusLozenge } from "@/components/ui/StatusLozenge";
 import { cn } from "@/components/ui/cn";
@@ -274,24 +275,21 @@ export default function CreateVersionModal({
                   </Button>
                 )}
                 {sprints.length > 0 && (
-                  <select
-                    aria-label="Add a sprint's issues"
-                    defaultValue=""
-                    onChange={(e) => {
-                      handleSelectSprintIssues(e.target.value);
-                      e.target.value = "";
-                    }}
-                    className="h-7 rounded-control border border-subtle bg-surface px-2 text-xs text-ink hover:border-strong"
-                  >
-                    <option value="" disabled>
-                      Add a sprint&rsquo;s issues…
-                    </option>
-                    {sprints.map((sp) => (
-                      <option key={sp.id} value={sp.id}>
-                        {sp.name}
-                      </option>
-                    ))}
-                  </select>
+<Menu>
+                    <MenuTrigger asChild>
+                      <Button size="sm">
+                        Add a sprint&rsquo;s issues
+                        <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+                      </Button>
+                    </MenuTrigger>
+                    <MenuContent>
+                      {sprints.map((sp) => (
+                        <MenuItem key={sp.id} onSelect={() => handleSelectSprintIssues(sp.id)}>
+                          {sp.name}
+                        </MenuItem>
+                      ))}
+                    </MenuContent>
+                  </Menu>
                 )}
                 <Button size="sm" variant="ghost" onClick={handleSelectAllFiltered}>
                   Choose all shown

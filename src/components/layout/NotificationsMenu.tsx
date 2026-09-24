@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { notifyShellCountsChanged } from "@/hooks/useShellCounts";
 import { notificationTarget } from "@/lib/notificationLinks";
+import { Tooltip } from "@/components/ui/Popover";
 
 export default function NotificationsMenu() {
   const router = useRouter();
@@ -102,23 +103,24 @@ export default function NotificationsMenu() {
   return (
     <div className="relative" ref={menuRef}>
       {/* Bell Trigger Button */}
-      <button
-        onClick={() => {
-          setIsOpen(!isOpen);
-          if (!isOpen) fetchNotifications();
-        }}
-        className="p-2 text-ink-2 hover:text-ink hover:bg-surface-sunk rounded-full transition-colors relative"
-        title="Notifications"
-        aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
-        aria-expanded={isOpen}
-      >
-        <Bell className="w-4 h-4" />
-        {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-danger text-accent-fg text-[10px] font-bold rounded-full flex items-center justify-center shadow-xs animate-in zoom-in-50">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
-        )}
-      </button>
+      <Tooltip content="Notifications">
+        <button
+          onClick={() => {
+            setIsOpen(!isOpen);
+            if (!isOpen) fetchNotifications();
+          }}
+          className="p-2 text-ink-2 hover:text-ink hover:bg-surface-sunk rounded-full transition-colors relative"
+          aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
+          aria-expanded={isOpen}
+        >
+          <Bell className="w-4 h-4" />
+          {unreadCount > 0 && (
+            <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-danger text-accent-fg text-[10px] font-bold rounded-full flex items-center justify-center shadow-xs animate-in zoom-in-50">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </button>
+      </Tooltip>
 
       {/* Notifications Dropdown Panel */}
       {isOpen && (
@@ -206,17 +208,19 @@ export default function NotificationsMenu() {
                       </p>
                       <div className="flex items-center gap-1.5 shrink-0">
                         {!notif.read && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMarkOnlyAsRead(notif);
-                            }}
-                            className="p-1 text-muted hover:text-accent hover:bg-subtle rounded opacity-0 group-hover:opacity-100 transition-all"
-                            title="Mark as read"
-                          >
-                            <Check className="w-3 h-3" />
-                          </button>
+                          <Tooltip content="Mark as read">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMarkOnlyAsRead(notif);
+                              }}
+                              className="p-1 text-muted hover:text-accent hover:bg-subtle rounded opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all"
+                              aria-label="Mark as read"
+                            >
+                              <Check className="w-3 h-3" />
+                            </button>
+                          </Tooltip>
                         )}
                         <span className="text-[10px] text-muted flex items-center gap-1">
                           <Clock className="w-3 h-3" />

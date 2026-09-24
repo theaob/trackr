@@ -361,7 +361,21 @@ test.describe.serial("accessibility", () => {
     await page.keyboard.press("Escape");
   });
 
-  test("settings: every section, and the save bar", async () => {
+  test("settings: every section, and the save bar", async ({ browser }, testInfo) => {
+    // About thirty axe runs (every section and dialog, in both themes): more than the default 30 s.
+    test.setTimeout(90_000);
+    // A second person signs up, so Add member has someone to add.
+    const otherContext = await browser.newContext({ baseURL: testInfo.project.use.baseURL, reducedMotion: "reduce" });
+    const other = await otherContext.newPage();
+    await other.goto("/login");
+    await other.getByRole("button", { name: "Create account" }).click();
+    await other.getByLabel("Full name").fill("Grace Hopper");
+    await other.getByLabel("Email").fill("grace@example.com");
+    await other.getByLabel("Password").fill("another long password");
+    await other.locator("form").getByRole("button", { name: "Create account" }).click();
+    await other.waitForURL((url) => !url.pathname.startsWith("/login"));
+    await otherContext.close();
+
     await page.goto("/projects/APOLLO/settings");
     await expect(page.getByRole("heading", { level: 1, name: "Project settings" })).toBeVisible();
     await expectNoSeriousViolations(page, "Settings, details");
@@ -374,10 +388,11 @@ test.describe.serial("accessibility", () => {
     await expect(page.getByLabel("Name")).toHaveValue("Apollo");
 
     const nav = page.getByRole("navigation", { name: "Project settings" });
-    // Each section, and the dialog it opens. (Add member is off: everyone here is already a member.)
+    // Each section, and the dialog it opens.
     const dialogs: Record<string, [string, string]> = {
       Components: ["Create component", "Create component"],
       "Custom fields": ["Create custom field", "Create custom field"],
+      Members: ["Add member", "Add a member"],
       Roles: ["Create role", "Create role"],
       Webhooks: ["Create webhook", "Create webhook"],
     };
@@ -412,7 +427,7 @@ test.describe.serial("accessibility", () => {
     const system = page.getByRole("navigation", { name: "System settings" });
     for (const section of ["Users", "Single sign-on", "About this install"]) {
       await system.getByRole("button", { name: section }).click();
-      await expect(page.getByRole("heading", { level: 2, name: section })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 2, name: section, exact: true })).toBeVisible();
       await expectNoSeriousViolations(page, `System settings, ${section.toLowerCase()}`);
     }
   });

@@ -9,6 +9,8 @@ import { IssueTypeBadge, StatusBadge } from "@/components/common/IssueIcons";
 import { createIssueLink, deleteIssueLink, searchLinkableIssues } from "@/lib/actions/issueLinks";
 import { describeIssueLink, ISSUE_LINK_TYPES, IssueLinkType } from "@/lib/issueLinks";
 import { Plus, X, Loader2, Search } from "lucide-react";
+import { Select } from "@/components/ui/Select";
+import { Tooltip } from "@/components/ui/Popover";
 
 interface LinkRow {
   linkId: string;
@@ -119,17 +121,13 @@ export default function IssueLinksSection({
         <div className="mb-3 p-3 border border-subtle rounded-md bg-page/70 space-y-2 min-w-0">
           {error && <div className="text-[11px] text-danger font-medium">{error}</div>}
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 min-w-0">
-            <select
+            <Select
+              aria-label="Link type"
+              className="w-auto shrink-0"
               value={linkType}
-              onChange={(e) => setLinkType(e.target.value as IssueLinkType)}
-              className="bg-surface border border-subtle rounded px-2 py-1.5 text-xs text-ink focus:border-accent shrink-0"
-            >
-              {ISSUE_LINK_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {describeIssueLink(t, "outward")}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setLinkType(v as IssueLinkType)}
+              options={ISSUE_LINK_TYPES.map((t) => ({ value: t, label: describeIssueLink(t, "outward") }))}
+            />
             <div className="relative flex-1 min-w-[140px]">
               <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
               <input
@@ -205,13 +203,16 @@ export default function IssueLinksSection({
               </button>
               <StatusBadge status={row.issue.status} color={row.issue.statusColor} className="shrink-0" />
               {canEdit && (
-                <button
-                  onClick={() => handleRemove(row.linkId)}
-                  className="opacity-0 group-hover:opacity-100 p-1 text-muted hover:text-danger hover:bg-danger-soft rounded transition-opacity shrink-0"
-                  title="Remove link"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
+                <Tooltip content="Remove link">
+                  <button
+                    type="button"
+                    onClick={() => handleRemove(row.linkId)}
+                    aria-label={`Remove link to ${row.issue.key}`}
+                    className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 p-1 text-muted hover:text-danger hover:bg-danger-soft rounded transition-opacity shrink-0"
+                  >
+                    <X className="w-3.5 h-3.5" aria-hidden="true" />
+                  </button>
+                </Tooltip>
               )}
             </div>
           ))}

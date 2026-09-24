@@ -49,10 +49,13 @@ describe("Button", () => {
 });
 
 describe("IconButton", () => {
-  it("is named by its label", () => {
+  it("is named by its label, which shows as a tooltip on keyboard focus", async () => {
     render(<IconButton label="Close panel" icon={<svg />} />);
     const button = screen.getByRole("button", { name: "Close panel" });
-    expect(button.getAttribute("title")).toBe("Close panel");
+    expect(button.getAttribute("title")).toBeNull();
+    await userEvent.setup().tab();
+    expect(document.activeElement).toBe(button);
+    expect((await screen.findByRole("tooltip")).textContent).toBe("Close panel");
   });
 });
 
@@ -231,7 +234,7 @@ describe("Popover and Tooltip", () => {
   it("shows a tooltip on keyboard focus", async () => {
     render(
       <Tooltip content="Watch this issue" delay={0}>
-        <IconButton label="Watch" icon={<svg />} />
+        <Button>Watch</Button>
       </Tooltip>
     );
     await userEvent.tab();

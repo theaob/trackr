@@ -12,6 +12,7 @@ import { cn } from "@/components/ui/cn";
 import { isOverdue } from "@/lib/dueDate";
 import { formatCalendarDate } from "@/lib/calendarDate";
 import { issueHref, projectKeyOfIssue } from "@/lib/issueUrls";
+import { Tooltip } from "@/components/ui/Popover";
 
 export interface CardMoveOptions {
   /** Columns the workflow lets this card move to. */
@@ -85,12 +86,12 @@ export default function IssueCard({
             )}
           >
             {issue.parent && (
-              <span
-                className="mb-1.5 inline-block max-w-full truncate rounded-[4px] bg-epic-soft px-1.5 py-0.5 text-[11px] font-medium text-epic"
-                title={`Epic: ${issue.parent.title || issue.parent.key}`}
-              >
-                {issue.parent.title || issue.parent.key}
-              </span>
+              <Tooltip content={`Epic: ${issue.parent.title || issue.parent.key}`}>
+                <span className="mb-1.5 inline-block max-w-full truncate rounded-[4px] bg-epic-soft px-1.5 py-0.5 text-[11px] font-medium text-epic">
+                  <span className="sr-only">Epic: </span>
+                  {issue.parent.title || issue.parent.key}
+                </span>
+              </Tooltip>
             )}
 
             <p className="line-clamp-3 text-[13px] leading-snug text-ink">{issue.title}</p>
@@ -121,19 +122,22 @@ export default function IssueCard({
             <div className="mt-2.5 flex items-center gap-2 text-xs">
               <IssueTypeIcon type={issue.type} className="h-4 w-4 shrink-0" />
               <span className="font-mono text-ink-2">{issue.key}</span>
-              <span className="inline-flex shrink-0" title={`Priority: ${PRIORITY_NAMES[issue.priority] ?? issue.priority}`}>
-                <PriorityIcon priority={issue.priority} className="h-4 w-4" />
-                <span className="sr-only">Priority: {PRIORITY_NAMES[issue.priority] ?? issue.priority}</span>
-              </span>
+              <Tooltip content={`Priority: ${PRIORITY_NAMES[issue.priority] ?? issue.priority}`}>
+                <span className="inline-flex shrink-0">
+                  <span aria-hidden="true" className="inline-flex">
+                    <PriorityIcon priority={issue.priority} className="h-4 w-4" />
+                  </span>
+                  <span className="sr-only">Priority: {PRIORITY_NAMES[issue.priority] ?? issue.priority}</span>
+                </span>
+              </Tooltip>
               {issue.dueDate && (
-                <span
-                  className={cn("inline-flex items-center gap-0.5", overdue ? "font-medium text-danger" : "text-ink-2")}
-                  title={`Due ${formatCalendarDate(issue.dueDate, "MMM d, yyyy")}${overdue ? " (overdue)" : ""}`}
-                >
+                <Tooltip content={`Due ${formatCalendarDate(issue.dueDate, "MMM d, yyyy")}${overdue ? " (overdue)" : ""}`}>
+                <span className={cn("inline-flex items-center gap-0.5", overdue ? "font-medium text-danger" : "text-ink-2")}>
                   <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
                   <span className="sr-only">{overdue ? "Overdue, due" : "Due"}</span>
                   {formatCalendarDate(issue.dueDate, "MMM d")}
                 </span>
+                </Tooltip>
               )}
               <span className="ml-auto flex items-center gap-2">
                 {issue.storyPoints !== null && issue.storyPoints !== undefined && (
@@ -145,9 +149,11 @@ export default function IssueCard({
                 {issue.assignee ? (
                   <UserAvatar user={issue.assignee} size="xs" showTooltip tooltipPrefix="Assignee" />
                 ) : (
-                  <span title="Unassigned" className="h-5 w-5 rounded-full border border-dashed border-strong">
-                    <span className="sr-only">Unassigned</span>
-                  </span>
+                  <Tooltip content="Unassigned">
+                    <span className="h-5 w-5 rounded-full border border-dashed border-strong">
+                      <span className="sr-only">Unassigned</span>
+                    </span>
+                  </Tooltip>
                 )}
               </span>
             </div>

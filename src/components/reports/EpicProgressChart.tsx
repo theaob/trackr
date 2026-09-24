@@ -9,6 +9,7 @@ import { prettifyStatusName } from "@/lib/workflowDisplay";
 import { issueHref } from "@/lib/issueUrls";
 import { IssueTypeIcon } from "@/components/common/IssueIcons";
 import { DataTable, EmptyChart, Headline, Legend, ReportCard, Segmented } from "./kit";
+import { Tooltip } from "@/components/ui/Popover";
 
 type Filter = "all" | "open" | "done";
 
@@ -71,12 +72,12 @@ export default function EpicProgressChart({ epics, projectKey }: { epics: EpicPr
                     epic.totalPoints > 0 ? seg.points / epic.totalPoints : epic.totalIssues > 0 ? seg.issues / epic.totalIssues : 0;
                   if (share <= 0) return null;
                   return (
-                    <span
-                      key={seg.name}
-                      className="h-full"
-                      style={{ width: `${share * 100}%`, backgroundColor: seg.color }}
-                      title={`${prettifyStatusName(seg.name)}: ${seg.points} pts, ${seg.issues} issues`}
-                    />
+                    <Tooltip key={seg.name} content={`${prettifyStatusName(seg.name)}: ${seg.points} pts, ${seg.issues} issues`}>
+                      <span
+                        className="h-full"
+                        style={{ width: `${share * 100}%`, backgroundColor: seg.color }}
+                      />
+                    </Tooltip>
                   );
                 })}
               </div>

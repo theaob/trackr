@@ -6,6 +6,7 @@ import type { Issue, IssueStatus } from "@/types";
 import { cn } from "@/components/ui/cn";
 import { wipState } from "@/lib/board";
 import IssueCard, { type CardMoveOptions } from "./IssueCard";
+import { Tooltip } from "@/components/ui/Popover";
 
 interface KanbanColumnProps {
   id: IssueStatus;
@@ -33,20 +34,21 @@ export function ColumnCount({ count, limit }: { count: number; limit?: number | 
       ? `${count} ${count === 1 ? "issue" : "issues"}`
       : `${count} of a work-in-progress limit of ${limit}${state === "at" ? ", at the limit" : state === "over" ? ", over the limit" : ""}`;
   return (
-    <span
-      title={description}
-      className={cn(
-        "rounded-full px-1.5 font-mono text-[11px] leading-5",
-        state === "over"
-          ? "bg-danger-soft font-semibold text-danger"
-          : state === "at"
-            ? "bg-warning-soft font-semibold text-warning"
-            : "text-ink-2"
-      )}
-    >
-      <span aria-hidden="true">{limit ? `${count} / ${limit}` : count}</span>
-      <span className="sr-only">{description}</span>
-    </span>
+    <Tooltip content={description}>
+      <span
+        className={cn(
+          "rounded-full px-1.5 font-mono text-[11px] leading-5",
+          state === "over"
+            ? "bg-danger-soft font-semibold text-danger"
+            : state === "at"
+              ? "bg-warning-soft font-semibold text-warning"
+              : "text-ink-2"
+        )}
+      >
+        <span aria-hidden="true">{limit ? `${count} / ${limit}` : count}</span>
+        <span className="sr-only">{description}</span>
+      </span>
+    </Tooltip>
   );
 }
 
