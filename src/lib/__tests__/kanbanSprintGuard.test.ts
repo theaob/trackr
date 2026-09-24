@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import IssueDetailModal from "@/components/issues/IssueDetailModal";
+import IssueView from "@/components/issue/IssueView";
+import { ToastProvider } from "@/components/ui/Toast";
 import CreateIssueModal from "@/components/issues/CreateIssueModal";
 import IssuesListView from "@/components/issues/IssuesListView";
 import BacklogContextMenu from "@/components/backlog/BacklogContextMenu";
@@ -276,43 +277,31 @@ describe("Kanban Project Sprint Guardrails", () => {
     });
   });
 
-  describe("IssueDetailModal", () => {
-    it("does not render Sprint dropdown or label for a Kanban project", () => {
-      const html = renderToStaticMarkup(
-        React.createElement(IssueDetailModal, {
-          issue: kanbanIssue,
-          project: kanbanProject,
-          users: [],
-          allIssues: [],
-          sprints: [mockSprint],
-          onClose: vi.fn(),
-          onIssueUpdated: vi.fn(),
-          onIssueDeleted: vi.fn(),
-        })
+  describe("IssueView", () => {
+    const renderView = (issue: Issue, project: Project) =>
+      renderToStaticMarkup(
+        React.createElement(
+          ToastProvider,
+          null,
+          React.createElement(IssueView, { issue, project, variant: "panel", users: [], sprints: [mockSprint], versions: [], epics: [] })
+        )
       );
 
-      expect(html).not.toMatch(/<label[^>]*>\s*Sprint\s*<\/label>/i);
-      expect(html).not.toContain("Backlog (No Sprint)");
-      expect(html).not.toContain("Sprint 1");
+    it("has no Sprint property for a Kanban project", () => {
+      const html = renderView(kanbanIssue, kanbanProject);
+      expect(html).not.toMatch(/>Sprint</);
+      expect(html).not.toContain('aria-label="Sprint"');
     });
 
-    it("renders Sprint dropdown and options for a Scrum project", () => {
-      const html = renderToStaticMarkup(
-        React.createElement(IssueDetailModal, {
-          issue: scrumIssue,
-          project: scrumProject,
-          users: [],
-          allIssues: [],
-          sprints: [mockSprint],
-          onClose: vi.fn(),
-          onIssueUpdated: vi.fn(),
-          onIssueDeleted: vi.fn(),
-        })
-      );
+    it("has a Sprint picker for a Scrum project, showing Backlog when unplanned", () => {
+      const html = renderView({ ...scrumIssue, sprintId: null }, scrumProject);
+      expect(html).toMatch(/>Sprint</);
+      expect(html).toMatch(/aria-label="Sprint"[^>]*>[\s\S]*?Backlog/);
+    });
 
-      expect(html).toMatch(/<label[^>]*>\s*Sprint\s*<\/label>/i);
-      expect(html).toContain("Sprint 1");
-      expect(html).toContain("Backlog (No Sprint)");
+    it("hides the Sprint picker on an epic even in a Scrum project", () => {
+      const html = renderView({ ...scrumIssue, type: "EPIC" }, scrumProject);
+      expect(html).not.toContain('aria-label="Sprint"');
     });
   });
 
@@ -355,34 +344,35 @@ describe("Kanban Project Sprint Guardrails", () => {
   describe("IssuesListView", () => {
     it("does not render Sprint filter or Split-view Sprint selector for Kanban projects", () => {
       const html = renderToStaticMarkup(
-        React.createElement(IssuesListView, {
+        React.createElement(ToastProvider, null, React.createElement(IssuesListView, {
           project: kanbanProject,
           initialIssues: [kanbanIssue],
           users: [],
           sprints: [mockSprint],
           statuses: mockStatuses,
-        })
+        }))
       );
 
       // Filter bar must not have Sprint filter
       expect(html).not.toContain("Sprint: All");
-      expect(html).not.toContain("Backlog (No Sprint)");
+      expect(html).not.toContain('aria-label="Sprint"');
     });
 
     it("renders Sprint filter and Split-view Sprint selector for Scrum projects", () => {
       const html = renderToStaticMarkup(
-        React.createElement(IssuesListView, {
+        React.createElement(ToastProvider, null, React.createElement(IssuesListView, {
           project: scrumProject,
           initialIssues: [scrumIssue],
           users: [],
           sprints: [mockSprint],
           statuses: mockStatuses,
-        })
+        }))
       );
 
       // Filter bar must have Sprint filter
       expect(html).toContain("Sprint: All");
       expect(html).toContain("Sprint 1");
+      expect(html).toContain('aria-label="Sprint"');
     });
   });
 

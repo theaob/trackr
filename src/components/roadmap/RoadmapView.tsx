@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Project, User, Sprint, Issue, Version } from "@/types";
 import RoadmapTimeline, { RoadmapEpic } from "./RoadmapTimeline";
-import IssueDetailModal from "@/components/issues/IssueDetailModal";
+import IssuePanel from "@/components/issue/IssuePanel";
 import { getIssueByKeyOrId } from "@/lib/actions/issues";
 
 interface RoadmapViewProps {
@@ -13,7 +13,6 @@ interface RoadmapViewProps {
   users?: User[];
   sprints?: Sprint[];
   versions?: Version[];
-  initialSelectedIssueKey?: string;
 }
 
 export default function RoadmapView({
@@ -22,7 +21,6 @@ export default function RoadmapView({
   users = [],
   sprints = [],
   versions = [],
-  initialSelectedIssueKey,
 }: RoadmapViewProps) {
   const router = useRouter();
   const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
@@ -34,25 +32,11 @@ export default function RoadmapView({
     }
   };
 
-  useEffect(() => {
-    if (initialSelectedIssueKey) {
-      handleSelectIssue(initialSelectedIssueKey);
-    }
-  }, [initialSelectedIssueKey]);
-
-  useEffect(() => {
-    const handleOpenIssueEvent = (e: Event) => {
-      const customEvent = e as CustomEvent<{ issueKey?: string }>;
-      const targetKey = customEvent.detail?.issueKey;
-      if (!targetKey) return;
-      handleSelectIssue(targetKey);
-    };
-
-    window.addEventListener("trackr:open-issue", handleOpenIssueEvent);
-    return () => {
-      window.removeEventListener("trackr:open-issue", handleOpenIssueEvent);
-    };
-  }, []);
+  // The epics, in timeline order, for stepping through them in the panel.
+  const epicIssues = useMemo(
+    () => epics.map((e) => ({ ...e, type: "EPIC" as const, projectId: project.id })) as unknown as Issue[],
+    [epics, project.id]
+  );
 
   return (
     <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4">
@@ -69,28 +53,23 @@ export default function RoadmapView({
         <RoadmapTimeline epics={epics} onSelectIssue={handleSelectIssue} />
       </div>
 
-      {activeIssue && (
-        <IssueDetailModal
-          issue={activeIssue}
-          users={users}
-          allIssues={epics.map((e) => ({ ...e, type: "EPIC" as const, projectId: project.id })) as any}
-          sprints={sprints}
-          versions={versions}
-          project={project}
-          onActiveIssueChange={(newIssue) => setActiveIssue(newIssue)}
-          onClose={() => setActiveIssue(null)}
-          onIssueUpdated={(updated) => {
-            if (activeIssue?.id === updated.id) {
-              setActiveIssue(updated);
-            }
-            router.refresh();
-          }}
-          onIssueDeleted={() => {
-            setActiveIssue(null);
-            router.refresh();
-          }}
-        />
-      )}
+      <IssuePanel
+        issue={activeIssue}
+        issues={epicIssues}
+        users={users}
+        sprints={sprints}
+        versions={versions}
+        project={project}
+        onClose={() => setActiveIssue(null)}
+        onIssueUpdated={(updated) => {
+          setActiveIssue((prev) => (prev?.id === updated.id ? updated : prev));
+          router.refresh();
+        }}
+        onIssueDeleted={() => {
+          setActiveIssue(null);
+          router.refresh();
+        }}
+      />
     </div>
   );
 }

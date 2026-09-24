@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Project, Issue, User, Sprint, IssueType, WorkflowStatus, Version } from "@/types";
 import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
 import UserAvatar from "@/components/common/UserAvatar";
 
-import IssueDetailModal from "@/components/issues/IssueDetailModal";
+import IssuePanel from "@/components/issue/IssuePanel";
 import CreateIssueModal from "@/components/issues/CreateIssueModal";
 import BacklogContextMenu from "@/components/backlog/BacklogContextMenu";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
@@ -51,7 +51,6 @@ interface BacklogViewProps {
   versions?: Version[];
   statuses: WorkflowStatus[];
   searchQuery?: string;
-  initialSelectedIssueKey?: string;
   initialEpics?: Issue[];
 }
 
@@ -63,14 +62,10 @@ export default function BacklogView({
   versions = [],
   statuses,
   searchQuery: propSearchQuery,
-  initialSelectedIssueKey,
   initialEpics,
 }: BacklogViewProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const selectedIssueKey =
-    searchParams?.get("selectedIssue") || searchParams?.get("issue") || initialSelectedIssueKey;
 
   const { currentUser } = useCurrentUser();
   const permissions = useProjectPermissions(project);
@@ -174,68 +169,7 @@ export default function BacklogView({
     };
   }, [project.id]);
 
-  // Handle selectedIssue query parameter
-  useEffect(() => {
-    if (!selectedIssueKey) return;
-    const found = issues.find(
-      (i) =>
-        i.key.toUpperCase() === selectedIssueKey.toUpperCase() ||
-        i.id === selectedIssueKey
-    );
-    if (found) {
-      setActiveIssue(found);
-    } else {
-      getIssueByKeyOrId(selectedIssueKey).then((fetched) => {
-        if (fetched) {
-          setActiveIssue(fetched as unknown as Issue);
-        }
-      });
-    }
-  }, [selectedIssueKey, issues]);
-
-  // Handle jira:open-issue custom event
-  useEffect(() => {
-    const handleOpenIssueEvent = (e: Event) => {
-      const customEvent = e as CustomEvent<{ issueKey?: string }>;
-      const targetKey = customEvent.detail?.issueKey;
-      if (!targetKey) return;
-      const found = issues.find(
-        (i) =>
-          i.key.toUpperCase() === targetKey.toUpperCase() ||
-          i.id === targetKey
-      );
-      if (found) {
-        setActiveIssue(found);
-      } else {
-        getIssueByKeyOrId(targetKey).then((fetched) => {
-          if (fetched) {
-            setActiveIssue(fetched as unknown as Issue);
-          }
-        });
-      }
-    };
-
-    window.addEventListener("trackr:open-issue", handleOpenIssueEvent);
-    return () => {
-      window.removeEventListener("trackr:open-issue", handleOpenIssueEvent);
-    };
-  }, [issues]);
-
-  const handleCloseDetailModal = () => {
-    setActiveIssue(null);
-    if (typeof window !== "undefined") {
-      const currentUrl = new URL(window.location.href);
-      if (
-        currentUrl.searchParams.has("selectedIssue") ||
-        currentUrl.searchParams.has("issue")
-      ) {
-        currentUrl.searchParams.delete("selectedIssue");
-        currentUrl.searchParams.delete("issue");
-        const newSearch = currentUrl.searchParams.toString();
-        router.replace(`${currentUrl.pathname}${newSearch ? `?${newSearch}` : ""}`);
-      }
-    }
-  };
+  const handleCloseDetailModal = () => setActiveIssue(null);
 
   // Collapsed states
   const [collapsedSprints, setCollapsedSprints] = useState<Record<string, boolean>>({});
@@ -2109,15 +2043,14 @@ export default function BacklogView({
       )}
 
       {/* Issue Details Modal */}
-      {activeIssue && (
-        <IssueDetailModal
-          issue={activeIssue}
-          users={users}
-          allIssues={[...epics, ...issues]}
-          sprints={sprints}
-          versions={versions}
-          project={project}
-          onActiveIssueChange={(newIssue) => setActiveIssue(newIssue)}
+      <IssuePanel
+        issue={activeIssue}
+        issues={[...epics, ...issues]}
+        users={users}
+        sprints={sprints}
+        versions={versions}
+        epics={epics}
+        project={project}
           onClose={handleCloseDetailModal}
           onIssueUpdated={(up) => {
             setIssues((prev) => prev.map((i) => (i.id === up.id ? up : i)));
@@ -2127,7 +2060,7 @@ export default function BacklogView({
                 return exists ? prev.map((e) => (e.id === up.id ? up : e)) : [up, ...prev];
               });
             }
-            setActiveIssue(up);
+            setActiveIssue((prev) => (prev?.id === up.id ? up : prev));
           }}
           onIssueDeleted={(id) => {
             setIssues((prev) => prev.filter((i) => i.id !== id));
@@ -2135,7 +2068,6 @@ export default function BacklogView({
             setActiveIssue(null);
           }}
         />
-      )}
 
       {/* Edit Sprint Modal */}
       {editingSprint && (

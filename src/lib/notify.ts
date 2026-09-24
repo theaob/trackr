@@ -1,3 +1,4 @@
+import { issueHref } from "@/lib/issueUrls";
 import prisma from "@/lib/db";
 import { prettifyStatusName } from "@/lib/workflowDisplay";
 
@@ -105,7 +106,7 @@ export async function notifyWatchers(
 }
 
 export function issueLink(projectKey: string, issueKey: string): string {
-  return `/projects/${projectKey}/board?selectedIssue=${issueKey}`;
+  return issueHref(projectKey, issueKey);
 }
 
 /**

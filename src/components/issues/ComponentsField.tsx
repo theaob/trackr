@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { Component, IssueComponent } from "@/types";
 import { addIssueComponent, getProjectComponents, removeIssueComponent } from "@/lib/actions/components";
-import { Boxes, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 interface ComponentsFieldProps {
   issueId: string;
@@ -22,6 +23,7 @@ export default function ComponentsField({
   onComponentAdded,
   onComponentRemoved,
 }: ComponentsFieldProps) {
+  const { toast } = useToast();
   const [adding, setAdding] = useState(false);
   const [projectComponents, setProjectComponents] = useState<Component[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -60,7 +62,7 @@ export default function ComponentsField({
       onComponentAdded(res.issueComponent as unknown as IssueComponent);
     } else {
       onComponentRemoved(tempId);
-      alert((res as { error?: string }).error || "Failed to add component.");
+      toast({ title: "Couldn't add the component", description: (res as { error?: string }).error, tone: "danger" });
     }
   };
 
@@ -71,24 +73,17 @@ export default function ComponentsField({
     const res = await removeIssueComponent(issueId, componentId);
     if (!res.success) {
       if (target) onComponentAdded(target);
-      alert((res as { error?: string }).error || "Failed to remove component.");
+      toast({ title: "Couldn't remove the component", description: (res as { error?: string }).error, tone: "danger" });
     }
   };
 
-  if (components.length === 0 && !canEdit) return null;
-
   return (
-    <div>
-      <label className="block text-xs font-bold text-jira-gray-600 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-        <Boxes className="w-3 h-3 text-jira-blue" />
-        Components
-      </label>
-
+    <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-1.5">
         {components.map((issueComponent) => (
           <span
             key={issueComponent.id}
-            className="group inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-jira-gray-100 border border-jira-gray-300 text-[11px] font-medium text-jira-gray-700"
+            className="inline-flex h-6 items-center gap-1 rounded-full border border-subtle bg-surface-sunk px-2 text-xs text-ink"
             title={
               issueComponent.component.description ||
               (issueComponent.component.lead ? `Lead: ${issueComponent.component.lead.name}` : undefined)
@@ -99,62 +94,57 @@ export default function ComponentsField({
               <button
                 type="button"
                 onClick={() => handleRemove(issueComponent.componentId)}
-                className="text-jira-gray-400 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                title="Remove component"
+                aria-label={`Remove component ${issueComponent.component.name}`}
+                className="-mr-1 inline-flex h-4 w-4 items-center justify-center rounded-full text-muted hover:text-danger"
               >
-                <X className="w-3 h-3" />
+                <X className="h-3 w-3" aria-hidden="true" />
               </button>
             )}
           </span>
         ))}
 
-        {components.length === 0 && !adding && (
-          <span className="text-xs text-jira-gray-500 italic">None</span>
-        )}
+        {components.length === 0 && !canEdit && <span className="text-[13px] text-muted">None</span>}
 
         {canEdit && !adding && (
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="text-[11px] text-jira-blue hover:underline font-semibold flex items-center gap-0.5"
+            className="inline-flex h-6 items-center gap-1 rounded-control px-1.5 text-xs text-ink-2 hover:bg-surface-sunk hover:text-ink"
           >
-            <Plus className="w-3 h-3" />
-            Add
+            <Plus className="h-3 w-3" aria-hidden="true" />
+            {components.length === 0 ? "Add component" : "Add"}
           </button>
         )}
       </div>
 
       {adding && (
-        <div className="mt-2 p-2.5 border border-jira-gray-300 rounded-md bg-jira-gray-50/70 space-y-1.5">
+        <div className="mt-2 flex flex-col gap-1.5">
           {!loaded ? (
-            <p className="text-[11px] text-jira-gray-500">Loading components…</p>
+            <p className="text-xs text-ink-2">Loading components…</p>
           ) : available.length > 0 ? (
-            <div className="max-h-36 overflow-y-auto border border-jira-gray-200 rounded divide-y divide-jira-gray-100 bg-white">
+            <ul className="max-h-36 overflow-y-auto rounded-control border border-subtle bg-surface p-1">
               {available.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  disabled={submittingId === c.id}
-                  onClick={() => handleAdd(c.id)}
-                  className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-left hover:bg-jira-gray-50 disabled:opacity-50 text-xs text-jira-navy"
-                >
-                  <span>{c.name}</span>
-                  {c.lead && <span className="text-[10px] text-jira-gray-500">{c.lead.name}</span>}
-                </button>
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    disabled={submittingId === c.id}
+                    onClick={() => handleAdd(c.id)}
+                    className="flex h-7 w-full items-center justify-between gap-2 rounded-[4px] px-2 text-left text-xs text-ink hover:bg-surface-sunk disabled:opacity-50"
+                  >
+                    <span className="truncate">{c.name}</span>
+                    {c.lead && <span className="shrink-0 text-[11px] text-ink-2">{c.lead.name}</span>}
+                  </button>
+                </li>
               ))}
-            </div>
+            </ul>
           ) : (
-            <p className="text-[11px] text-jira-gray-500">
+            <p className="text-xs text-ink-2">
               {projectComponents.length === 0
-                ? "No components defined for this project yet. Add some in Project Settings → Components."
-                : "All components are already attached."}
+                ? "This project has no components yet. Add some in Project settings → Components."
+                : "All components are already added."}
             </p>
           )}
-          <button
-            type="button"
-            onClick={() => setAdding(false)}
-            className="text-[11px] text-jira-gray-600 hover:text-jira-navy font-medium"
-          >
+          <button type="button" onClick={() => setAdding(false)} className="self-start text-xs font-medium text-accent hover:underline">
             Done
           </button>
         </div>

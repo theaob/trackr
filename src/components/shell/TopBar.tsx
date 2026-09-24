@@ -90,6 +90,18 @@ export default function TopBar({ currentProject, onCreateIssue, onOpenRail }: To
                 <li aria-hidden="true" className="hidden text-muted sm:block">
                   /
                 </li>
+                {location.issueKey && (
+                  <>
+                    <li className="hidden sm:block">
+                      <Link prefetch={false} href={`/projects/${project.key}/issues`} className="text-ink-2 hover:text-ink hover:underline">
+                        Issues
+                      </Link>
+                    </li>
+                    <li aria-hidden="true" className="hidden text-muted sm:block">
+                      /
+                    </li>
+                  </>
+                )}
               </>
             )}
             <li className="min-w-0">

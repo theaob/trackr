@@ -4,7 +4,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { IssueLabel, Label } from "@/types";
 import { addIssueLabel, getProjectLabels, removeIssueLabel } from "@/lib/actions/labels";
 import { isValidLabelName, normalizeLabelName } from "@/lib/labels";
-import { Tag as TagIcon, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 interface LabelsSectionProps {
   issueId: string;
@@ -23,6 +24,7 @@ export default function LabelsSection({
   onLabelAdded,
   onLabelRemoved,
 }: LabelsSectionProps) {
+  const { toast } = useToast();
   const [adding, setAdding] = useState(false);
   const [projectLabels, setProjectLabels] = useState<Label[]>([]);
   const [input, setInput] = useState("");
@@ -96,63 +98,59 @@ export default function LabelsSection({
     const res = await removeIssueLabel(issueId, labelId);
     if (!res.success) {
       if (targetLabel) onLabelAdded(targetLabel);
-      alert((res as { error?: string }).error || "Failed to remove label.");
+      toast({ title: "Couldn't remove the label", description: (res as { error?: string }).error, tone: "danger" });
     }
   };
 
-  if (labels.length === 0 && !canEdit) return null;
+  const chip =
+    "group inline-flex h-6 items-center gap-1 rounded-full border border-subtle bg-surface-sunk px-2 text-xs text-ink";
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-xs font-bold text-jira-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-          <TagIcon className="w-3.5 h-3.5 text-jira-blue" />
-          <span>Labels{labels.length > 0 ? ` (${labels.length})` : ""}</span>
-        </h3>
-        {canEdit && !adding && (
-          <button
-            onClick={() => setAdding(true)}
-            className="text-[11px] text-jira-blue hover:underline font-semibold flex items-center gap-1"
-          >
-            <Plus className="w-3 h-3" />
-            Add label
-          </button>
-        )}
-      </div>
-
+    <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-1.5">
         {labels.map((issueLabel) => (
-          <span
-            key={issueLabel.id}
-            className="group inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-jira-gray-100 border border-jira-gray-300 text-[11px] font-medium text-jira-gray-700"
-          >
+          <span key={issueLabel.id} className={chip}>
             {issueLabel.label.name}
             {canEdit && (
               <button
+                type="button"
                 onClick={() => handleRemove(issueLabel.labelId)}
-                className="hidden group-hover:inline-flex text-jira-gray-400 hover:text-rose-600"
-                title="Remove label"
+                aria-label={`Remove label ${issueLabel.label.name}`}
+                className="-mr-1 inline-flex h-4 w-4 items-center justify-center rounded-full text-muted hover:text-danger"
               >
-                <X className="w-3 h-3" />
+                <X className="h-3 w-3" aria-hidden="true" />
               </button>
             )}
           </span>
         ))}
-        {labels.length === 0 && !adding && (
-          <span className="text-xs text-jira-gray-500 italic">No labels.</span>
+        {labels.length === 0 && !canEdit && <span className="text-[13px] text-muted">None</span>}
+        {canEdit && !adding && (
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="inline-flex h-6 items-center gap-1 rounded-control px-1.5 text-xs text-ink-2 hover:bg-surface-sunk hover:text-ink"
+          >
+            <Plus className="h-3 w-3" aria-hidden="true" />
+            {labels.length === 0 ? "Add label" : "Add"}
+          </button>
         )}
       </div>
 
       {adding && (
-        <div className="mt-2 p-3 border border-jira-gray-300 rounded-md bg-jira-gray-50/70 space-y-2">
-          {error && <div className="text-[11px] text-rose-600 font-medium">{error}</div>}
-          <div className="flex items-center gap-2">
+        <div className="mt-2 flex flex-col gap-1.5">
+          {error && (
+            <p role="alert" className="text-xs text-danger">
+              {error}
+            </p>
+          )}
+          <div className="flex items-center gap-1.5">
             <input
               ref={inputRef}
               autoFocus
               type="text"
               value={input}
               disabled={submitting}
+              aria-label="New label"
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === ",") {
@@ -163,31 +161,34 @@ export default function LabelsSection({
                   resetAddForm();
                 }
               }}
-              placeholder="Type a label and press Enter..."
-              className="flex-1 px-2.5 py-1.5 text-xs border border-jira-gray-300 rounded focus:border-jira-blue text-jira-navy"
+              placeholder="Type a label, press Enter"
+              className="h-7 min-w-0 flex-1 rounded-control border border-subtle bg-surface px-2 text-xs text-ink placeholder:text-muted focus:border-accent"
             />
             <button
+              type="button"
               onClick={resetAddForm}
-              className="p-1.5 text-jira-gray-500 hover:text-jira-navy hover:bg-jira-gray-100 rounded shrink-0"
+              aria-label="Stop adding labels"
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-control text-muted hover:bg-surface-sunk hover:text-ink"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           </div>
 
           {suggestions.length > 0 && (
-            <div className="border border-jira-gray-200 rounded divide-y divide-jira-gray-100 max-h-40 overflow-y-auto bg-white">
+            <ul className="max-h-40 overflow-y-auto rounded-control border border-subtle bg-surface p-1">
               {suggestions.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  disabled={submitting}
-                  onClick={() => submitLabel(s.name)}
-                  className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-jira-gray-50 disabled:opacity-50 text-xs text-jira-navy"
-                >
-                  {s.name}
-                </button>
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    disabled={submitting}
+                    onClick={() => submitLabel(s.name)}
+                    className="flex h-7 w-full items-center rounded-[4px] px-2 text-left text-xs text-ink hover:bg-surface-sunk disabled:opacity-50"
+                  >
+                    {s.name}
+                  </button>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
         </div>
       )}

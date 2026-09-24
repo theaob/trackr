@@ -6,6 +6,8 @@ import { getProjectVersions } from "@/lib/actions/versions";
 import { getProjectWorkflow } from "@/lib/actions/workflows";
 import KanbanBoard from "@/components/board/KanbanBoard";
 import { denyPageAccess } from "@/lib/auth/page";
+import { redirect } from "next/navigation";
+import { legacyIssueRedirect } from "@/lib/issueUrls";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +19,9 @@ interface PageProps {
 export default async function BoardPage({ params, searchParams }: PageProps) {
   const { projectKey } = await params;
   const query = await searchParams;
+  // Links from before issues had their own page open that page instead.
+  const legacyIssue = legacyIssueRedirect(projectKey, query);
+  if (legacyIssue) redirect(legacyIssue);
   const project = await getProjectByKey(projectKey);
   if (!project) return denyPageAccess(`/projects/${projectKey}/board`);
 
@@ -46,7 +51,6 @@ export default async function BoardPage({ params, searchParams }: PageProps) {
         versions={versions as any}
         statuses={boardStatuses as any}
         transitions={workflow.transitions as any}
-        initialSelectedIssueKey={query.selectedIssue || query.issue}
         initialEpics={epics as any}
       />
     </Suspense>

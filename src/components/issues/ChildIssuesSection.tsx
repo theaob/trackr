@@ -10,14 +10,11 @@ import {
   Unlink,
   Loader2,
   Search,
-  CheckCircle2,
-  Clock,
-  Layers,
   Link as LinkIcon,
   X,
-  ExternalLink,
 } from "lucide-react";
 import { isDoneStatus } from "@/lib/workflowDisplay";
+import SectionHeader, { SectionAction } from "./SectionHeader";
 
 interface ChildIssuesSectionProps {
   parentIssue: Issue;
@@ -170,62 +167,36 @@ export default function ChildIssuesSection({
     }
   };
 
+  if (totalCount === 0 && !canEdit) return null;
+
   return (
     <div className="space-y-3 min-w-0">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4 text-purple-600" />
-          <h3 className="text-xs font-bold text-jira-gray-700 uppercase tracking-wider">
-            {isEpic ? "Issues in this epic" : "Subtasks"}
-          </h3>
-          <span className="text-xs bg-jira-gray-100 text-jira-gray-600 px-2 py-0.5 rounded-full font-semibold">
-            {totalCount}
-          </span>
-        </div>
-
-        {canEdit && (
-          <div className="flex items-center gap-1.5">
-            {isEpic && (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsLinking(!isLinking);
-                  setIsCreating(false);
-                }}
-                className={`p-1.5 text-xs rounded border transition-colors flex items-center gap-1 ${
-                  isLinking
-                    ? "bg-jira-blue text-white border-jira-blue"
-                    : "text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-100 border-jira-gray-300"
-                }`}
-                title="Link existing issue"
-              >
-                <LinkIcon className="w-3.5 h-3.5" />
-                <span className="font-medium hidden sm:inline">Link issue</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={() => {
-                setIsCreating(!isCreating);
-                setIsLinking(false);
-              }}
-              className={`p-1.5 text-xs rounded border transition-colors flex items-center gap-1 ${
-                isCreating
-                  ? "bg-jira-blue text-white border-jira-blue"
-                  : "text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-100 border-jira-gray-300"
-              }`}
-              title={isEpic ? "Add issue to epic" : "Add subtask"}
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span className="font-medium hidden sm:inline">
-                {isEpic ? "Add issue" : "Add subtask"}
-              </span>
-            </button>
-          </div>
+      <SectionHeader title={isEpic ? "Issues in this epic" : "Subtasks"} count={totalCount}>
+        {canEdit && isEpic && (
+          <SectionAction
+            icon={<LinkIcon aria-hidden="true" />}
+            pressed={isLinking}
+            onClick={() => {
+              setIsLinking(!isLinking);
+              setIsCreating(false);
+            }}
+          >
+            Link issue
+          </SectionAction>
         )}
-      </div>
+        {canEdit && (
+          <SectionAction
+            icon={<Plus aria-hidden="true" />}
+            pressed={isCreating}
+            onClick={() => {
+              setIsCreating(!isCreating);
+              setIsLinking(false);
+            }}
+          >
+            {isEpic ? "Add issue" : "Add subtask"}
+          </SectionAction>
+        )}
+      </SectionHeader>
 
       {/* Progress Rollup (if there are children) */}
       {totalCount > 0 && (
@@ -510,28 +481,7 @@ export default function ChildIssuesSection({
             );
           })}
         </div>
-      ) : (
-        !isCreating &&
-        !isLinking && (
-          <div className="p-4 bg-jira-gray-50 border border-jira-gray-200 border-dashed rounded-md text-center">
-            <p className="text-xs text-jira-gray-500 italic mb-2">
-              {isEpic
-                ? "No issues in this epic yet. Break down this epic by adding stories, tasks, or bugs."
-                : "No subtasks yet."}
-            </p>
-            {canEdit && (
-              <button
-                type="button"
-                onClick={() => setIsCreating(true)}
-                className="inline-flex items-center gap-1.5 text-xs text-jira-blue font-semibold hover:underline"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>{isEpic ? "Create first issue in epic" : "Create subtask"}</span>
-              </button>
-            )}
-          </div>
-        )
-      )}
+      ) : null}
     </div>
   );
 }

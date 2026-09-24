@@ -2,59 +2,31 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Project, Issue, User, Sprint, Version, IssueType, PriorityLevel, IssueStatus, WorkflowStatus, Label, Comment } from "@/types";
+import { Project, Issue, User, Sprint, Version, IssueType, PriorityLevel, IssueStatus, WorkflowStatus, Label } from "@/types";
 import { prettifyStatusName } from "@/lib/workflowDisplay";
-import { IssueTypeIcon, IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
+import { IssueTypeBadge, PriorityIcon, StatusBadge } from "@/components/common/IssueIcons";
 import UserAvatar from "@/components/common/UserAvatar";
 
 import { useCurrentUser } from "@/context/UserContext";
 import { useSearch } from "@/context/SearchContext";
-import IssueDetailModal from "./IssueDetailModal";
-import ChildIssuesSection from "@/components/issues/ChildIssuesSection";
-import IssueLinksSection from "@/components/issues/IssueLinksSection";
-import IssueDescriptionEditor from "@/components/issues/IssueDescriptionEditor";
-import MentionInput from "@/components/common/MentionInput";
-import MarkdownContent from "@/components/common/MarkdownContent";
+import IssueView from "@/components/issue/IssueView";
+import IssuePanel from "@/components/issue/IssuePanel";
+import { useIssueStepper } from "@/components/issue/useIssueStepper";
 import {
-  updateIssue,
-  deleteIssue,
   getPaginatedIssues,
-  getIssueByKeyOrId,
-  getOlderIssueHistory,
   bulkUpdateIssues,
   bulkDeleteIssues,
 } from "@/lib/actions/issues";
-import {
-  HistoryKind,
-  historyRemaining,
-  historyTotal,
-  oldestLoadedId,
-  withCommentCountChange,
-  withOlderHistory,
-} from "@/lib/issueHistory";
-import ShowOlderButton from "@/components/issues/ShowOlderButton";
 import { bulkAddLabel } from "@/lib/actions/labels";
-import { addComment, deleteComment } from "@/lib/actions/comments";
-import { uploadAttachment } from "@/lib/actions/attachments";
-import { MAX_ATTACHMENT_SIZE, formatFileSize, generatePastedImageFileName } from "@/lib/attachments";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
 import { useRefetchOnFocus } from "@/hooks/useRefetchOnFocus";
 import {
   Search,
-  SlidersHorizontal,
   ArrowUpDown,
   Download,
   X,
-  LayoutGrid,
   Columns2,
   Table as TableIcon,
-  Trash2,
-  Calendar,
-  MessageSquare,
-  History,
-  Filter,
-  Check,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -132,8 +104,7 @@ export default function IssuesListView({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const selectedIssueKey =
-    searchParams?.get("selectedIssue") || searchParams?.get("issue") || initialSelectedIssueKey;
+  const selectedIssueKey = initialSelectedIssueKey;
 
   const urlMode = searchParams?.get("mode");
   const urlTql = searchParams?.get("tql");
@@ -180,92 +151,10 @@ export default function IssuesListView({
   );
   const isMobileDetailOpen = Boolean(selectedIssueId);
 
-  const handleMobileBackToList = () => {
-    setSelectedIssueId(null);
-    if (typeof window !== "undefined") {
-      const currentUrl = new URL(window.location.href);
-      if (
-        currentUrl.searchParams.has("selectedIssue") ||
-        currentUrl.searchParams.has("issue")
-      ) {
-        currentUrl.searchParams.delete("selectedIssue");
-        currentUrl.searchParams.delete("issue");
-        const newSearch = currentUrl.searchParams.toString();
-        router.replace(`${currentUrl.pathname}${newSearch ? `?${newSearch}` : ""}`, { scroll: false });
-      }
-    }
-  };
+  const handleMobileBackToList = () => setSelectedIssueId(null);
   const [modalIssue, setModalIssue] = useState<Issue | null>(null);
-  const [descriptionDraft, setDescriptionDraft] = useState("");
 
-  // Handle selectedIssue query parameter
-  useEffect(() => {
-    if (!selectedIssueKey) return;
-    const found = issues.find(
-      (i) =>
-        i.key.toUpperCase() === selectedIssueKey.toUpperCase() ||
-        i.id === selectedIssueKey
-    );
-    if (found) {
-      setSelectedIssueId(found.id);
-    } else {
-      getIssueByKeyOrId(selectedIssueKey).then((fetched) => {
-        if (fetched) {
-          const typed = fetched as unknown as Issue;
-          setIssues((prev) => [typed, ...prev.filter((i) => i.id !== typed.id)]);
-          setSelectedIssueId(typed.id);
-        }
-      });
-    }
-  }, [selectedIssueKey, issues]);
-
-  // Handle jira:open-issue custom event
-  useEffect(() => {
-    const handleOpenIssueEvent = (e: Event) => {
-      const customEvent = e as CustomEvent<{ issueKey?: string }>;
-      const targetKey = customEvent.detail?.issueKey;
-      if (!targetKey) return;
-      const found = issues.find(
-        (i) =>
-          i.key.toUpperCase() === targetKey.toUpperCase() ||
-          i.id === targetKey
-      );
-      if (found) {
-        setSelectedIssueId(found.id);
-      } else {
-        getIssueByKeyOrId(targetKey).then((fetched) => {
-          if (fetched) {
-            const typed = fetched as unknown as Issue;
-            setIssues((prev) => [typed, ...prev.filter((i) => i.id !== typed.id)]);
-            setSelectedIssueId(typed.id);
-          }
-        });
-      }
-    };
-
-    window.addEventListener("trackr:open-issue", handleOpenIssueEvent);
-    return () => {
-      window.removeEventListener("trackr:open-issue", handleOpenIssueEvent);
-    };
-  }, [issues]);
-
-
-
-  const handleCloseDetailModal = () => {
-    setModalIssue(null);
-    if (typeof window !== "undefined") {
-      const currentUrl = new URL(window.location.href);
-      if (
-        currentUrl.searchParams.has("selectedIssue") ||
-        currentUrl.searchParams.has("issue")
-      ) {
-        currentUrl.searchParams.delete("selectedIssue");
-        currentUrl.searchParams.delete("issue");
-        const newSearch = currentUrl.searchParams.toString();
-        router.replace(`${currentUrl.pathname}${newSearch ? `?${newSearch}` : ""}`);
-      }
-    }
-  };
+  const handleCloseDetailModal = () => setModalIssue(null);
 
   // View Mode: Split view or Full Table view
   const [viewMode, setViewMode] = useState<"split" | "table">("split");
@@ -301,11 +190,6 @@ export default function IssuesListView({
   // Sorting
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-
-  // Right Panel Editing State (for split view)
-  const [activeTab, setActiveTab] = useState<"comments" | "history">("comments");
-  const [newComment, setNewComment] = useState("");
-  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
   // Sync global search from Navbar
   useEffect(() => {
@@ -724,46 +608,15 @@ export default function IssuesListView({
     );
   }, [selectedIssueId, issues]);
 
-  // The list query does not carry comment and activity threads -- loading them
-  // for every row costs far more than the table ever shows. Fetch the full
-  // record for the one issue on display instead.
-  // Keyed on whether details are missing, not just the id: a list reload swaps
-  // in the slim record again and the details have to be fetched again.
-  const selectedId = selectedIssue?.id;
-  const selectedNeedsDetails =
-    !!selectedIssue && !(selectedIssue.comments && selectedIssue.children && selectedIssue.linksAsSource);
-  useEffect(() => {
-    if (!selectedId || !selectedNeedsDetails) return;
-
-    let cancelled = false;
-
-    getIssueByKeyOrId(selectedId).then((fetched) => {
-      if (cancelled || !fetched) return;
-      const typed = fetched as unknown as Issue;
-      setIssues((prev) => prev.map((i) => (i.id === typed.id ? typed : i)));
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedId, selectedNeedsDetails]);
-
-  const [loadingOlder, setLoadingOlder] = useState<HistoryKind | null>(null);
-  const loadOlderHistory = async (kind: HistoryKind) => {
-    if (!selectedIssue) return;
-    const beforeId = oldestLoadedId(selectedIssue, kind);
-    if (!beforeId) return;
-    const targetId = selectedIssue.id;
-    setLoadingOlder(kind);
-    const older = await getOlderIssueHistory(targetId, kind, beforeId);
-    setLoadingOlder(null);
-    setIssues((prev) => prev.map((i) => (i.id === targetId ? withOlderHistory(i, kind, older) : i)));
-  };
-
-  // Sync description draft when selected issue changes
-  useEffect(() => {
-    setDescriptionDraft(selectedIssue?.description || "");
-  }, [selectedIssue?.id, selectedIssue?.description]);
+  const handleSplitIssueUpdated = useCallback((updated: Issue) => {
+    setIssues((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
+  }, []);
+  const handleIssueDeleted = useCallback((id: string) => {
+    setIssues((prev) => prev.filter((i) => i.id !== id));
+    setSelectedIssueId((prev) => (prev === id ? null : prev));
+    setModalIssue((prev) => (prev?.id === id ? null : prev));
+  }, []);
+  const splitNav = useIssueStepper(selectedIssue, issues, (next) => setSelectedIssueId(next.id));
 
   // Export to CSV
   const handleExportCSV = () => {
@@ -799,93 +652,6 @@ export default function IssuesListView({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
-
-  // Issue update handler with optimistic update and rollback
-  const handleUpdateCurrentIssue = async (data: Partial<Issue>) => {
-    if (!selectedIssue) return;
-    const previousIssues = issues;
-    const optimisticIssue = { ...selectedIssue, ...data };
-    setIssues((prev) => prev.map((i) => (i.id === selectedIssue.id ? (optimisticIssue as Issue) : i)));
-
-    const res = await updateIssue(selectedIssue.id, {
-      ...data,
-      updatedByUserId: currentUser?.id,
-    });
-    if (res.success && res.issue) {
-      const updated = res.issue as unknown as Issue;
-      setIssues((prev) => prev.map((i) => (i.id === updated.id ? { ...optimisticIssue, ...updated } : i)));
-    } else {
-      setIssues(previousIssues);
-      if (res.error) alert(res.error);
-    }
-  };
-
-  // Add Comment in Split View with optimistic insertion and rollback
-  const handleAddComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newComment.trim() || !currentUser || !selectedIssue) return;
-
-    const commentText = newComment.trim();
-    const tempId = `temp-${Date.now()}`;
-    const optimisticComment: Comment = {
-      id: tempId,
-      content: commentText,
-      issueId: selectedIssue.id,
-      authorId: currentUser.id,
-      author: currentUser,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const previousIssues = issues;
-    const updatedComments = [optimisticComment, ...(selectedIssue.comments || [])];
-    const optimisticSelected = withCommentCountChange({ ...selectedIssue, comments: updatedComments }, 1);
-
-    setIssues((prev) => prev.map((i) => (i.id === selectedIssue.id ? optimisticSelected : i)));
-    setNewComment("");
-
-    const res = await addComment(selectedIssue.id, currentUser.id, commentText);
-    if (res.success && res.comment) {
-      const finalComments = (optimisticSelected.comments || []).map((c) =>
-        c.id === tempId ? (res.comment as unknown as Comment) : c
-      );
-      const finalSelected = { ...optimisticSelected, comments: finalComments };
-      setIssues((prev) => prev.map((i) => (i.id === selectedIssue.id ? finalSelected : i)));
-    } else {
-      setIssues(previousIssues);
-      setNewComment(commentText);
-      alert(res.error || "Failed to post comment.");
-    }
-  };
-
-  const handleSplitViewImagePaste = async (file: File) => {
-    if (!selectedIssue) return { success: false, error: "No issue selected" };
-    if (file.size > MAX_ATTACHMENT_SIZE) {
-      return {
-        success: false,
-        error: `Image too large. Maximum size is ${formatFileSize(MAX_ATTACHMENT_SIZE)}.`,
-      };
-    }
-    const fileName =
-      !file.name || file.name === "image.png" || file.name === "blob"
-        ? generatePastedImageFileName(file.type || "image/png")
-        : file.name;
-    const renamedFile = new File([file], fileName, { type: file.type || "image/png" });
-    const formData = new FormData();
-    formData.append("file", renamedFile);
-    const res = await uploadAttachment(selectedIssue.id, formData);
-    if (res.success && res.attachment) {
-      return {
-        success: true,
-        url: `/api/v1/attachments/${res.attachment.id}`,
-        fileName: res.attachment.fileName,
-      };
-    }
-    return {
-      success: false,
-      error: (res as { error?: string }).error || "Failed to upload image",
-    };
   };
 
   return (
@@ -1344,538 +1110,33 @@ export default function IssuesListView({
 
             {/* Right Issue Detail Panel */}
             <div
-              className={`flex-1 min-w-0 overflow-y-auto bg-white p-3.5 sm:p-6 ${
+              className={`flex-1 min-w-0 overflow-y-auto bg-surface ${
                 isMobileDetailOpen ? "block" : "hidden md:block"
               }`}
             >
               {selectedIssue ? (
-                <div className="max-w-4xl space-y-6 min-w-0">
-                  {/* Mobile Back Button */}
+                <>
                   <button
                     type="button"
                     onClick={handleMobileBackToList}
-                    className="md:hidden inline-flex items-center gap-1.5 text-xs text-jira-blue font-semibold hover:underline py-1"
+                    className="md:hidden inline-flex items-center gap-1.5 px-4 pt-3 text-xs font-medium text-accent hover:underline"
                   >
-                    <ChevronLeft className="w-4 h-4" />
+                    <ChevronLeft className="h-4 w-4" aria-hidden="true" />
                     <span>Back to issues list</span>
                   </button>
-
-                  {/* Issue Key & Status Ribbon */}
-                  <div className="flex items-center justify-between pb-3 border-b border-jira-gray-200">
-                    <div className="flex items-center gap-2">
-                      <IssueTypeBadge type={selectedIssue.type} size="sm" showLabel />
-                      <span className="text-sm font-bold text-jira-gray-700">{selectedIssue.key}</span>
-                      {selectedIssue.parent && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedIssueId(selectedIssue.parent!.id);
-                            getIssueByKeyOrId(selectedIssue.parent!.id).then((fetched) => {
-                              if (fetched) {
-                                setIssues((prev) => {
-                                  const exists = prev.some((i) => i.id === fetched.id);
-                                  return exists ? prev : [fetched as unknown as Issue, ...prev];
-                                });
-                              }
-                            });
-                          }}
-                          className="text-xs font-semibold bg-purple-100 text-purple-800 hover:bg-purple-200 px-2 py-0.5 rounded transition-colors text-left"
-                          title={`Parent Epic: ${selectedIssue.parent.title} (${selectedIssue.parent.key})`}
-                        >
-                          {selectedIssue.parent.title}
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      {issues.length > 1 && (
-                        <div className="flex items-center gap-1 border-r border-jira-gray-200 pr-2 text-xs text-jira-gray-500">
-                          <span className="hidden sm:inline text-[11px] font-medium text-jira-gray-500 mr-1 select-none">
-                            {issues.findIndex((i) => i.id === selectedIssue.id) + 1} of {issues.length}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const idx = issues.findIndex((i) => i.id === selectedIssue.id);
-                              if (idx > 0) setSelectedIssueId(issues[idx - 1].id);
-                            }}
-                            disabled={issues.findIndex((i) => i.id === selectedIssue.id) <= 0}
-                            className="p-1 text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-200 rounded transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed"
-                            title="Previous issue"
-                            aria-label="Previous issue"
-                          >
-                            <ChevronLeft className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const idx = issues.findIndex((i) => i.id === selectedIssue.id);
-                              if (idx >= 0 && idx < issues.length - 1) setSelectedIssueId(issues[idx + 1].id);
-                            }}
-                            disabled={
-                              issues.findIndex((i) => i.id === selectedIssue.id) === -1 ||
-                              issues.findIndex((i) => i.id === selectedIssue.id) >= issues.length - 1
-                            }
-                            className="p-1 text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-200 rounded transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed"
-                            title="Next issue"
-                            aria-label="Next issue"
-                          >
-                            <ChevronRight className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
-
-                      <select
-                        value={selectedIssue.status}
-                        disabled={!permissions.canEditIssue}
-                        onChange={(e) =>
-                          handleUpdateCurrentIssue({ status: e.target.value as IssueStatus })
-                        }
-                        className={`bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-xs font-bold text-jira-navy focus:border-jira-blue ${
-                          !permissions.canEditIssue ? "opacity-60 cursor-not-allowed" : ""
-                        }`}
-                        title={!permissions.canEditIssue ? "You do not have permission to edit issues" : undefined}
-                      >
-                        {statuses.map((s) => (
-                          <option key={s.id} value={s.name}>
-                            {prettifyStatusName(s.name)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Title */}
-                  <div>
-                    <h2 className="text-xl font-bold text-jira-navy leading-snug">
-                      {selectedIssue.title}
-                    </h2>
-                    {selectedIssue.labels && selectedIssue.labels.length > 0 && (
-                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                        {selectedIssue.labels.map((il) => (
-                          <span
-                            key={il.id}
-                            className="inline-flex px-2 py-0.5 rounded-full bg-jira-gray-100 border border-jira-gray-300 text-[11px] font-medium text-jira-gray-700"
-                          >
-                            {il.label.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Two Column Layout for Issue Details */}
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-w-0">
-                    {/* Main Details (2 cols) */}
-                    <div className="lg:col-span-2 space-y-6 min-w-0">
-                      {/* Description */}
-                      <IssueDescriptionEditor
-                        value={descriptionDraft}
-                        onChange={setDescriptionDraft}
-                        users={users}
-                        mode="click-to-edit"
-                        canEdit={permissions.canEditIssue}
-                        onSave={() => handleUpdateCurrentIssue({ description: descriptionDraft })}
-                        onCancel={() => setDescriptionDraft(selectedIssue.description || "")}
-                        onImagePaste={handleSplitViewImagePaste}
-                        placeholder="Add a description..."
-                        minRows={4}
-                      />
-
-                      {/* Child / Epic Issues Section */}
-                      <div className="pt-2 border-t border-jira-gray-200 min-w-0">
-                        <ChildIssuesSection
-                          parentIssue={selectedIssue}
-                          childIssues={selectedIssue.children as any}
-                          canEdit={permissions.canEditIssue}
-                          workflowStatuses={statuses}
-                          onChildAdded={(newChild) => {
-                            const updatedChildren = [...(selectedIssue.children || []), newChild];
-                            const updated = { ...selectedIssue, children: updatedChildren };
-                            setIssues((prev) =>
-                              prev.map((i) => (i.id === selectedIssue.id ? updated : i))
-                            );
-                          }}
-                          onChildRemoved={(childId) => {
-                            const updatedChildren = (selectedIssue.children || []).filter(
-                              (c: any) => c.id !== childId
-                            );
-                            const updated = { ...selectedIssue, children: updatedChildren };
-                            setIssues((prev) =>
-                              prev.map((i) => (i.id === selectedIssue.id ? updated : i))
-                            );
-                          }}
-                          onOpenChild={(childKey) => {
-                            const found = issues.find(
-                              (i) => i.key.toUpperCase() === childKey.toUpperCase()
-                            );
-                            if (found) {
-                              setSelectedIssueId(found.id);
-                            } else {
-                              getIssueByKeyOrId(childKey).then((fetched) => {
-                                if (fetched) {
-                                  setIssues((prev) => [fetched as unknown as Issue, ...prev]);
-                                  setSelectedIssueId(fetched.id);
-                                }
-                              });
-                            }
-                          }}
-                        />
-                      </div>
-
-                      {/* Linked Issues Section */}
-                      <div className="pt-2 border-t border-jira-gray-200 min-w-0">
-                        <IssueLinksSection
-                          issueId={selectedIssue.id}
-                          linksAsSource={selectedIssue.linksAsSource}
-                          linksAsTarget={selectedIssue.linksAsTarget}
-                          canEdit={permissions.canEditIssue}
-                          onIssueLinked={(link) => {
-                            const updated = {
-                              ...selectedIssue,
-                              linksAsSource: [...(selectedIssue.linksAsSource || []), link],
-                            };
-                            setIssues((prev) =>
-                              prev.map((i) => (i.id === selectedIssue.id ? updated : i))
-                            );
-                          }}
-                          onIssueUnlinked={(linkId) => {
-                            const updated = {
-                              ...selectedIssue,
-                              linksAsSource: (selectedIssue.linksAsSource || []).filter(
-                                (l: any) => l.id !== linkId
-                              ),
-                              linksAsTarget: (selectedIssue.linksAsTarget || []).filter(
-                                (l: any) => l.id !== linkId
-                              ),
-                            };
-                            setIssues((prev) =>
-                              prev.map((i) => (i.id === selectedIssue.id ? updated : i))
-                            );
-                          }}
-                        />
-                      </div>
-
-                      {/* Comments & Activity */}
-                      <div className="pt-2 border-t border-jira-gray-200">
-                        <div className="flex items-center gap-4 mb-4">
-                          <button
-                            onClick={() => setActiveTab("comments")}
-                            className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider pb-1 border-b-2 transition-colors ${
-                              activeTab === "comments"
-                                ? "border-jira-blue text-jira-blue"
-                                : "border-transparent text-jira-gray-600 hover:text-jira-navy"
-                            }`}
-                          >
-                            <MessageSquare className="w-3.5 h-3.5" />
-                            <span>Comments ({historyTotal(selectedIssue, "comments")})</span>
-                          </button>
-                          <button
-                            onClick={() => setActiveTab("history")}
-                            className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider pb-1 border-b-2 transition-colors ${
-                              activeTab === "history"
-                                ? "border-jira-blue text-jira-blue"
-                                : "border-transparent text-jira-gray-600 hover:text-jira-navy"
-                            }`}
-                          >
-                            <History className="w-3.5 h-3.5" />
-                            <span>History</span>
-                          </button>
-                        </div>
-
-                        {activeTab === "comments" && (
-                          <div className="space-y-4">
-                            {permissions.canAddComment ? (
-                              <form onSubmit={handleAddComment} className="flex gap-3 items-start">
-                                <div className="flex-1">
-                                  <MentionInput
-                                    value={newComment}
-                                    onChange={setNewComment}
-                                    users={users}
-                                    multiline={true}
-                                    rows={2}
-                                    placeholder="Add a comment... (Type @ to mention, paste images directly)"
-                                    onSubmit={handleAddComment}
-                                    onImagePaste={handleSplitViewImagePaste}
-                                    className="w-full px-3 py-1.5 text-xs border border-jira-gray-300 rounded focus:border-jira-blue"
-                                  />
-                                  <p className="mt-1 text-[11px] text-jira-gray-400">Markdown supported</p>
-                                </div>
-                                <button
-                                  type="submit"
-                                  disabled={isSubmittingComment || !newComment.trim()}
-                                  className="bg-jira-blue text-white text-xs font-semibold px-3 py-1.5 rounded hover:bg-jira-blue-hover disabled:opacity-50"
-                                >
-                                  Post
-                                </button>
-                              </form>
-                            ) : (
-                              <div className="p-3 bg-jira-gray-50 border border-jira-gray-200 rounded text-xs text-jira-gray-500 italic">
-                                You do not have permission to post comments in this project.
-                              </div>
-                            )}
-
-                            <div className="space-y-3 pt-2">
-                              {selectedIssue.comments?.map((comment: any) => (
-                                <div key={comment.id} className="flex gap-2.5 text-xs">
-                                  <UserAvatar
-                                    user={comment.author}
-                                    size="sm"
-                                    className="mt-0.5"
-                                  />
-                                  <div className="flex-1 bg-jira-gray-50 p-2.5 rounded border border-jira-gray-200">
-                                    <div className="flex items-center justify-between mb-1">
-                                      <span className="font-bold text-jira-navy">
-                                        {comment.author?.name}
-                                      </span>
-                                      <span className="text-[10px] text-jira-gray-500">
-                                        {formatDistanceToNow(new Date(comment.createdAt), {
-                                          addSuffix: true,
-                                        })}
-                                      </span>
-                                    </div>
-                                    <MarkdownContent
-                                      text={comment.content}
-                                      users={users}
-                                      className="text-jira-gray-800"
-                                    />
-                                  </div>
-                                </div>
-                              ))}
-                              <ShowOlderButton
-                                remaining={historyRemaining(selectedIssue, "comments")}
-                                noun="comments"
-                                loading={loadingOlder === "comments"}
-                                onClick={() => loadOlderHistory("comments")}
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        {activeTab === "history" && (
-                          <div className="space-y-2 text-xs">
-                            {selectedIssue.activityLogs && selectedIssue.activityLogs.length > 0 ? (
-                              selectedIssue.activityLogs.map((log: any) => (
-                                <div
-                                  key={log.id}
-                                  className="flex items-center gap-2 py-1 text-jira-gray-700"
-                                >
-                                  <span className="font-bold text-jira-navy">
-                                    {log.user?.name || "User"}
-                                  </span>
-                                  <span>{log.action.toLowerCase().replace("_", " ")}</span>
-                                  {log.field && (
-                                    <span className="font-medium text-jira-blue">
-                                      [{log.field}]
-                                    </span>
-                                  )}
-                                  {log.newValue && (
-                                    <span>
-                                      to <strong className="text-jira-navy">{log.newValue}</strong>
-                                    </span>
-                                  )}
-                                  <span className="text-jira-gray-400 ml-auto">
-                                    {formatDistanceToNow(new Date(log.createdAt), {
-                                      addSuffix: true,
-                                    })}
-                                  </span>
-                                </div>
-                              ))
-                            ) : (
-                              <div className="text-jira-gray-400 italic">No activity recorded</div>
-                            )}
-                            <ShowOlderButton
-                              remaining={historyRemaining(selectedIssue, "activity")}
-                              noun="entries"
-                              loading={loadingOlder === "activity"}
-                              onClick={() => loadOlderHistory("activity")}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Meta Sidebar (1 col) */}
-                    <div className="space-y-4 bg-jira-gray-50/70 p-4 rounded-lg border border-jira-gray-200 text-xs">
-                      <div>
-                        <label className="block font-bold text-jira-gray-600 uppercase tracking-wider mb-1">
-                          Assignee
-                        </label>
-                        <select
-                          value={selectedIssue.assigneeId || ""}
-                          disabled={!permissions.canEditIssue}
-                          onChange={(e) =>
-                            handleUpdateCurrentIssue({ assigneeId: e.target.value || null })
-                          }
-                          className={`w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy ${
-                            !permissions.canEditIssue ? "opacity-60 cursor-not-allowed" : ""
-                          }`}
-                        >
-                          <option value="">Unassigned</option>
-                          {users.map((u) => (
-                            <option key={u.id} value={u.id}>
-                              {u.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block font-bold text-jira-gray-600 uppercase tracking-wider mb-1">
-                          Priority
-                        </label>
-                        <div className="relative">
-                          <select
-                            value={selectedIssue.priority}
-                            disabled={!permissions.canEditIssue}
-                            onChange={(e) =>
-                              handleUpdateCurrentIssue({
-                                priority: e.target.value as PriorityLevel,
-                              })
-                            }
-                            className={`w-full bg-white border border-jira-gray-300 rounded pl-7 pr-2 py-1 text-jira-navy ${
-                              !permissions.canEditIssue ? "opacity-60 cursor-not-allowed" : ""
-                            }`}
-                          >
-                            <option value="HIGHEST">Highest</option>
-                            <option value="HIGH">High</option>
-                            <option value="MEDIUM">Medium</option>
-                            <option value="LOW">Low</option>
-                            <option value="LOWEST">Lowest</option>
-                          </select>
-                          <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
-                            <PriorityIcon priority={selectedIssue.priority} className="w-3.5 h-3.5" />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block font-bold text-jira-gray-600 uppercase tracking-wider mb-1">
-                          Story Points
-                        </label>
-                        <input
-                          type="number"
-                          value={selectedIssue.storyPoints ?? ""}
-                          disabled={!permissions.canEditIssue}
-                          onChange={(e) =>
-                            handleUpdateCurrentIssue({
-                              storyPoints:
-                                e.target.value === "" ? null : parseInt(e.target.value, 10),
-                            })
-                          }
-                          placeholder="None"
-                          className={`w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy ${
-                            !permissions.canEditIssue ? "opacity-60 cursor-not-allowed" : ""
-                          }`}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block font-bold text-jira-gray-600 uppercase tracking-wider mb-1">
-                          Reporter
-                        </label>
-                        <div className="px-2 py-1 bg-white border border-jira-gray-300 rounded text-jira-navy">
-                          {selectedIssue.reporter?.name || "Anonymous"}
-                        </div>
-                      </div>
-
-                      {/* Sprint Selector (Hidden for Epics and Kanban projects) */}
-                      {!((selectedIssue.project?.boardType ?? project?.boardType) === "KANBAN") && selectedIssue.type !== "EPIC" && (
-                        <div>
-                          <label className="block font-bold text-jira-gray-600 uppercase tracking-wider mb-1">
-                            Sprint
-                          </label>
-                          <select
-                            value={selectedIssue.sprintId || ""}
-                            disabled={!permissions.canEditIssue || !permissions.canMoveIssue}
-                            onChange={(e) => {
-                              const newSprintId = e.target.value || null;
-                              if (newSprintId && newSprintId !== selectedIssue.sprintId) {
-                                const targetSprint = sprints.find((s) => s.id === newSprintId);
-                                if (targetSprint && targetSprint.status === "COMPLETED") {
-                                  return;
-                                }
-                              }
-                              const currentIsBacklog = statuses.find(
-                                (s) => s.name === selectedIssue.status
-                              )?.isBacklog;
-                              const initialStatusName =
-                                statuses.find((s) => !s.isBacklog)?.name ?? selectedIssue.status;
-                              const newStatus =
-                                newSprintId && currentIsBacklog ? initialStatusName : selectedIssue.status;
-                              handleUpdateCurrentIssue({
-                                sprintId: newSprintId,
-                                status: newStatus,
-                              });
-                            }}
-                            className={`w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy ${
-                              !permissions.canEditIssue || !permissions.canMoveIssue ? "opacity-60 cursor-not-allowed" : ""
-                            }`}
-                          >
-                            <option value="">Backlog (No Sprint)</option>
-                            {sprints
-                              .filter((s) => s.status !== "COMPLETED" || s.id === selectedIssue.sprintId)
-                              .map((s) => (
-                                <option
-                                  key={s.id}
-                                  value={s.id}
-                                  disabled={s.status === "COMPLETED" && s.id !== selectedIssue.sprintId}
-                                >
-                                  {s.name} {s.status === "ACTIVE" ? "(Active)" : s.status === "FUTURE" ? "(Planned / Unstarted)" : "(Completed - Closed)"}
-                                </option>
-                              ))}
-                          </select>
-                        </div>
-                      )}
-
-                      {/* Fix Version */}
-                      <div>
-                        <label className="block font-bold text-jira-gray-600 uppercase tracking-wider mb-1">
-                          Fix Version
-                        </label>
-                        <select
-                          value={selectedIssue.versionId || ""}
-                          disabled={!permissions.canEditIssue}
-                          onChange={(e) => {
-                            const vId = e.target.value || null;
-                            const newVersion = versions.find((v) => v.id === vId) || null;
-                            handleUpdateCurrentIssue({
-                              versionId: vId,
-                              version: newVersion,
-                            });
-                          }}
-                          className={`w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy ${
-                            !permissions.canEditIssue ? "opacity-60 cursor-not-allowed" : ""
-                          }`}
-                        >
-                          <option value="">None (Unassigned)</option>
-                          {selectedIssue.version &&
-                            !versions.some((v) => v.id === selectedIssue.version!.id) && (
-                              <option key={selectedIssue.version.id} value={selectedIssue.version.id}>
-                                {selectedIssue.version.name} ({selectedIssue.version.status})
-                              </option>
-                            )}
-                          {versions.map((v) => (
-                            <option key={v.id} value={v.id}>
-                              {v.name} ({v.status})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="pt-3 border-t border-jira-gray-200 text-[11px] text-jira-gray-500 space-y-1">
-                        <div>
-                          Created:{" "}
-                          {format(new Date(selectedIssue.createdAt), "MMM d, yyyy, h:mm a")}
-                        </div>
-                        <div>
-                          Updated:{" "}
-                          {format(new Date(selectedIssue.updatedAt), "MMM d, yyyy, h:mm a")}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  <IssueView
+                    issue={selectedIssue}
+                    variant="split"
+                    project={project}
+                    users={users}
+                    sprints={sprints}
+                    versions={versions}
+                    nav={splitNav}
+                    onIssueUpdated={handleSplitIssueUpdated}
+                    onIssueDeleted={handleIssueDeleted}
+                    shortcuts={!modalIssue}
+                  />
+                </>
               ) : (
                 <div className="h-full flex items-center justify-center text-xs text-jira-gray-500">
                   Select an issue to inspect details
@@ -2261,30 +1522,21 @@ export default function IssuesListView({
         </div>
       </div>
 
-      {/* Modal for Table View Row Click */}
-      {modalIssue && (
-        <IssueDetailModal
-          issue={modalIssue}
-          users={users}
-          allIssues={issues}
-          sprints={sprints}
-          versions={versions}
-          // Only the row's own project resolves membership correctly; a row
-          // from a different project (the "All Projects" filter) falls back
-          // to the issue's own project relation, same as before this prop existed.
-          project={modalIssue.projectId === project?.id ? project : undefined}
-          onActiveIssueChange={(newIssue) => setModalIssue(newIssue)}
-          onClose={handleCloseDetailModal}
-          onIssueUpdated={(up) => {
-            setIssues((prev) => prev.map((i) => (i.id === up.id ? up : i)));
-            setModalIssue(up);
-          }}
-          onIssueDeleted={(id) => {
-            setIssues((prev) => prev.filter((i) => i.id !== id));
-            setModalIssue(null);
-          }}
-        />
-      )}
+      {/* Table view: a row opens the issue in a panel */}
+      <IssuePanel
+        issue={viewMode === "table" ? modalIssue : null}
+        issues={issues}
+        project={project}
+        users={users}
+        sprints={sprints}
+        versions={versions}
+        onClose={handleCloseDetailModal}
+        onIssueUpdated={(up) => {
+          setIssues((prev) => prev.map((i) => (i.id === up.id ? up : i)));
+          setModalIssue((prev) => (prev?.id === up.id ? up : prev));
+        }}
+        onIssueDeleted={handleIssueDeleted}
+      />
     </div>
   );
 }

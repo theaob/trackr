@@ -7,6 +7,8 @@ import { getProjectWorkflow } from "@/lib/actions/workflows";
 import { getProjectLabels } from "@/lib/actions/labels";
 import IssuesListView from "@/components/issues/IssuesListView";
 import { denyPageAccess } from "@/lib/auth/page";
+import { redirect } from "next/navigation";
+import { legacyIssueRedirect } from "@/lib/issueUrls";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,9 @@ interface PageProps {
 export default async function IssuesPage({ params, searchParams }: PageProps) {
   const { projectKey } = await params;
   const query = await searchParams;
+  // Links from before issues had their own page open that page instead.
+  const legacyIssue = legacyIssueRedirect(projectKey, query);
+  if (legacyIssue) redirect(legacyIssue);
   const project = await getProjectByKey(projectKey);
   if (!project) return denyPageAccess(`/projects/${projectKey}/issues`);
 
@@ -50,7 +55,6 @@ export default async function IssuesPage({ params, searchParams }: PageProps) {
         versions={versions as any}
         statuses={workflow.statuses as any}
         labels={labels as any}
-        initialSelectedIssueKey={query.selectedIssue || query.issue}
         initialFilterMode={query.mode === "tql" || query.tql ? "tql" : "basic"}
         initialTqlQuery={query.tql || ""}
       />

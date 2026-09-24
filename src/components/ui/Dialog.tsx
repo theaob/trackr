@@ -102,6 +102,8 @@ export interface SheetContentProps extends OverlayContentProps {
   side?: keyof typeof SIDES;
   /** Classes for the scrolling body, e.g. "p-0" for content with its own padding. */
   bodyClassName?: string;
+  /** Set to false when the content has its own close button. */
+  showClose?: boolean;
 }
 
 /** A panel that slides in from an edge: navigation on phones, an issue beside a list. */
@@ -113,6 +115,7 @@ export function SheetContent({
   side = "right",
   className,
   bodyClassName,
+  showClose = true,
   children,
   ...props
 }: SheetContentProps) {
@@ -138,7 +141,7 @@ export function SheetContent({
         )}
         <div className={cn("min-h-0 flex-1 overflow-y-auto px-5 py-4", bodyClassName)}>{children}</div>
         {footer ? <div className="flex justify-end gap-2 border-t border-subtle px-5 py-3">{footer}</div> : null}
-        <CloseButton />
+        {showClose ? <CloseButton /> : null}
       </RadixDialog.Content>
     </RadixDialog.Portal>
   );

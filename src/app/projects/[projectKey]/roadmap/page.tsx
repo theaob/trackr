@@ -5,6 +5,8 @@ import { getProjectVersions } from "@/lib/actions/versions";
 import { getEpicRoadmap } from "@/lib/actions/roadmap";
 import RoadmapView from "@/components/roadmap/RoadmapView";
 import { denyPageAccess } from "@/lib/auth/page";
+import { redirect } from "next/navigation";
+import { legacyIssueRedirect } from "@/lib/issueUrls";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +18,9 @@ interface PageProps {
 export default async function RoadmapPage({ params, searchParams }: PageProps) {
   const { projectKey } = await params;
   const query = await searchParams;
+  // Links from before issues had their own page open that page instead.
+  const legacyIssue = legacyIssueRedirect(projectKey, query);
+  if (legacyIssue) redirect(legacyIssue);
   const project = await getProjectByKey(projectKey);
   if (!project) return denyPageAccess(`/projects/${projectKey}/roadmap`);
 
@@ -33,7 +38,6 @@ export default async function RoadmapPage({ params, searchParams }: PageProps) {
       users={users as any}
       sprints={sprints as any}
       versions={versions as any}
-      initialSelectedIssueKey={query.selectedIssue || query.issue}
     />
   );
 }

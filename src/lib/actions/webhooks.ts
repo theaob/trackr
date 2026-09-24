@@ -257,10 +257,6 @@ async function deliverWebhook(
     "User-Agent": "Trackr-Webhook-Engine/1.0",
     "X-Trackr-Event": event,
     "X-Trackr-Delivery": deliveryId,
-    // Deprecated in 0.32.0: the old names, kept so existing receivers can
-    // move to X-Trackr-*. Remove in 0.34.0.
-    "X-Jira-Event": event,
-    "X-Jira-Delivery": deliveryId,
   };
 
   if (webhook.secret) {

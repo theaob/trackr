@@ -2,11 +2,13 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { issueHref, projectKeyOfIssue } from "@/lib/issueUrls";
+import SectionHeader, { SectionAction } from "./SectionHeader";
 import { IssueLink, LinkedIssueSummary } from "@/types";
 import { IssueTypeBadge, StatusBadge } from "@/components/common/IssueIcons";
 import { createIssueLink, deleteIssueLink, searchLinkableIssues } from "@/lib/actions/issueLinks";
 import { describeIssueLink, ISSUE_LINK_TYPES, IssueLinkType } from "@/lib/issueLinks";
-import { Link2, Plus, X, Loader2, Search } from "lucide-react";
+import { Plus, X, Loader2, Search } from "lucide-react";
 
 interface LinkRow {
   linkId: string;
@@ -22,6 +24,8 @@ interface IssueLinksSectionProps {
   canEdit: boolean;
   onIssueLinked: (link: IssueLink) => void;
   onIssueUnlinked: (linkId: string) => void;
+  /** Opens a linked issue where the view is (the side panel); otherwise its page. */
+  onOpenIssue?: (issueKey: string) => void;
 }
 
 export default function IssueLinksSection({
@@ -31,6 +35,7 @@ export default function IssueLinksSection({
   canEdit,
   onIssueLinked,
   onIssueUnlinked,
+  onOpenIssue,
 }: IssueLinksSectionProps) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
@@ -94,33 +99,21 @@ export default function IssueLinksSection({
   };
 
   const handleOpen = (issue: LinkedIssueSummary) => {
-    try {
-      window.dispatchEvent(new CustomEvent("trackr:open-issue", { detail: { issueKey: issue.key } }));
-    } catch {}
-    if (issue.project?.key) {
-      router.push(`/projects/${issue.project.key}/board?selectedIssue=${issue.key}`);
-    }
+    if (onOpenIssue) onOpenIssue(issue.key);
+    else router.push(issueHref(issue.project?.key ?? projectKeyOfIssue(issue.key), issue.key));
   };
 
   if (rows.length === 0 && !canEdit) return null;
 
   return (
     <div className="min-w-0">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-xs font-bold text-jira-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-          <Link2 className="w-3.5 h-3.5 text-jira-blue shrink-0" />
-          <span className="truncate">Linked Issues{rows.length > 0 ? ` (${rows.length})` : ""}</span>
-        </h3>
+      <SectionHeader title="Linked issues" count={rows.length} className="mb-1">
         {canEdit && !adding && (
-          <button
-            onClick={() => setAdding(true)}
-            className="text-[11px] text-jira-blue hover:underline font-semibold flex items-center gap-1 shrink-0"
-          >
-            <Plus className="w-3 h-3" />
+          <SectionAction icon={<Plus aria-hidden="true" />} onClick={() => setAdding(true)}>
             Add link
-          </button>
+          </SectionAction>
         )}
-      </div>
+      </SectionHeader>
 
       {adding && (
         <div className="mb-3 p-3 border border-jira-gray-300 rounded-md bg-jira-gray-50/70 space-y-2 min-w-0">
@@ -223,9 +216,7 @@ export default function IssueLinksSection({
             </div>
           ))}
         </div>
-      ) : (
-        !adding && <div className="text-xs text-jira-gray-500 italic">No linked issues.</div>
-      )}
+      ) : null}
     </div>
   );
 }

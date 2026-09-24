@@ -1,5 +1,6 @@
 "use client";
 
+import { issueHref } from "@/lib/issueUrls";
 import React, { useEffect, useRef, useState } from "react";
 import { Issue, Sprint } from "@/types";
 import { IssueTypeBadge } from "@/components/common/IssueIcons";
@@ -110,7 +111,7 @@ export default function BacklogContextMenu({
   const handleCopyLink = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      const url = `${window.location.origin}${window.location.pathname}?selectedIssue=${issue.key}`;
+      const url = `${window.location.origin}${issueHref(issue.key.replace(/-\d+$/, ""), issue.key)}`;
       await navigator.clipboard.writeText(url);
       setCopiedLink(true);
       setTimeout(() => {

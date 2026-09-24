@@ -7,8 +7,10 @@ import AxeBuilder from "@axe-core/playwright";
 
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
-async function expectNoSeriousViolations(page: Page, name: string) {
-  const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
+async function expectNoSeriousViolations(page: Page, name: string, include?: string) {
+  const builder = new AxeBuilder({ page }).withTags(WCAG_TAGS);
+  if (include) builder.include(include);
+  const results = await builder.analyze();
   const blocking = results.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
   const report = (list: typeof results.violations) =>
     list
@@ -80,8 +82,43 @@ test.describe.serial("accessibility", () => {
 
     // Back to classic, so a re-run starts from the same place.
     await page.getByRole("button", { name: /Ada Lovelace/ }).click();
-    await page.getByRole("menuitem", { name: "Use the classic layout" }).click();
+    // Switching reloads the page; wait for it so the next test starts clean.
+    await Promise.all([page.waitForEvent("framenavigated"), page.getByRole("menuitem", { name: "Use the classic layout" }).click()]);
     await page.waitForLoadState("load");
+  });
+
+  test("an issue: its page, the side panel and an old link", async () => {
+    await page.goto("/projects/APOLLO/backlog");
+    await page.keyboard.press("c");
+    await page.getByPlaceholder("What needs to be done?").fill("Check the issue view");
+    await page.locator("form").getByRole("button", { name: "Create", exact: true }).click();
+    await expect(page.getByText("Check the issue view").filter({ visible: true }).first()).toBeVisible();
+
+    await page.goto("/projects/APOLLO/issues/APOLLO-1");
+    await expect(page.getByRole("heading", { level: 1, name: "Check the issue view" })).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Status" })).toBeVisible();
+    await expectNoSeriousViolations(page, "Issue page");
+
+    // S opens the status picker from anywhere on the page.
+    await page.getByRole("heading", { level: 1, name: "Check the issue view" }).focus();
+    await page.keyboard.press("s");
+    await expect(page.getByRole("listbox")).toBeVisible();
+    await expectNoSeriousViolations(page, "Issue page, status picker open");
+    await page.keyboard.press("Escape");
+
+    // Links from before issues had their own page land on it.
+    await page.goto("/projects/APOLLO/board?selectedIssue=APOLLO-1");
+    await page.waitForURL(/\/projects\/APOLLO\/issues\/APOLLO-1$/);
+
+    await page.goto("/projects/APOLLO/backlog");
+    await page.getByText("Check the issue view").filter({ visible: true }).first().click();
+    const panel = page.getByRole("dialog", { name: /APOLLO-1/ });
+    await expect(panel).toBeVisible();
+    await expect(panel.getByRole("heading", { name: "Check the issue view", exact: true })).toBeVisible();
+    // Just the panel: the backlog behind it isn't covered yet (its redesign is Phase 3).
+    await expectNoSeriousViolations(page, "Issue panel", "[role=dialog]");
+    await page.keyboard.press("Escape");
+    await expect(panel).toBeHidden();
   });
 
   test("sign-in", async ({ browser }, testInfo) => {

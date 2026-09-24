@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const event = request.headers.get("x-trackr-event") || request.headers.get("x-jira-event") || "unknown";
+    const event = request.headers.get("x-trackr-event") || "unknown";
     const body = await request.json();
 
     return NextResponse.json({

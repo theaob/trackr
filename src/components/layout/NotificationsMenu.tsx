@@ -65,18 +65,8 @@ export default function NotificationsMenu() {
     }
     setIsOpen(false);
 
-    const { href: targetLink, issueKey: extractedIssueKey } = notificationTarget(notif);
-
-    if (extractedIssueKey) {
-      try {
-        window.dispatchEvent(
-          new CustomEvent("trackr:open-issue", {
-            detail: { issueKey: extractedIssueKey },
-          })
-        );
-      } catch {}
-    }
-
+    // An issue named in the notification opens on its own page.
+    const { href: targetLink } = notificationTarget(notif);
     if (targetLink) {
       router.push(targetLink);
     }

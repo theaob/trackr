@@ -1,5 +1,6 @@
 "use server";
 
+import { issueHref } from "@/lib/issueUrls";
 import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { triggerWebhooks } from "./webhooks";
@@ -79,7 +80,7 @@ export async function addComment(
           userId: mUser.id,
           title: `Mentioned in comment on ${issue.key}`,
           message: `${comment.author.name} mentioned you: "${snippet}${ellipsis}"`,
-          link: `/projects/${issue.project.key}/board?selectedIssue=${issue.key}`,
+          link: issueHref(issue.project.key, issue.key),
         })),
       });
 

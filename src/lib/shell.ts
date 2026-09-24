@@ -14,6 +14,8 @@ export interface ShellLocation {
   /** Upper-case key when inside a project. */
   projectKey?: string;
   pageId?: SpotlightPageId;
+  /** On an issue's own page, its key. */
+  issueKey?: string;
   /** What the page is called in the top bar. */
   title: string;
 }
@@ -25,9 +27,13 @@ export function projectPageTitle(pageId: SpotlightPageId): string {
 
 export function shellLocation(pathname: string | null | undefined): ShellLocation {
   const path = (pathname ?? "").split(/[?#]/)[0];
-  const project = path.match(/^\/projects\/([^/]+)(?:\/([^/]+))?/);
+  const project = path.match(/^\/projects\/([^/]+)(?:\/([^/]+))?(?:\/([^/]+))?/);
   if (project) {
     const projectKey = decodeURIComponent(project[1]).toUpperCase();
+    if (project[2] === "issues" && project[3]) {
+      const issueKey = decodeURIComponent(project[3]).toUpperCase();
+      return { section: "project", projectKey, pageId: "issues", issueKey, title: issueKey };
+    }
     const page = PROJECT_PAGES.find((p) => p.id === project[2]);
     return page
       ? { section: "project", projectKey, pageId: page.id, title: projectPageTitle(page.id) }

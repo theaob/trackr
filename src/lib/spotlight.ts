@@ -3,6 +3,8 @@
  * Pure, so it runs in the browser, in server actions and in tests.
  */
 
+import { issueHref } from "@/lib/issueUrls";
+
 export type SpotlightPageId =
   | "board"
   | "backlog"
@@ -233,9 +235,9 @@ export function rankIssueMatches<T extends { key: string; title: string; project
     .map((s) => s.issue);
 }
 
-/** Where an issue opens: its project's board, with the issue on top. */
+/** Where an issue opens: its own page. */
 export function spotlightIssueHref(projectKey: string, issueKey: string): string {
-  return `/projects/${projectKey}/board?selectedIssue=${encodeURIComponent(issueKey)}`;
+  return issueHref(projectKey, issueKey);
 }
 
 /** ⌘K on a Mac, Ctrl+K elsewhere. */

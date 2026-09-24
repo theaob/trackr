@@ -126,7 +126,7 @@ describe("helpers", () => {
     expect(projectKeyFromPath("/projects")).toBeNull();
     expect(filterablePage("/projects/APOLLO/backlog")).toBe("backlog");
     expect(filterablePage("/projects/APOLLO/reports")).toBeNull();
-    expect(spotlightIssueHref("APOLLO", "APOLLO-3")).toBe("/projects/APOLLO/board?selectedIssue=APOLLO-3");
+    expect(spotlightIssueHref("APOLLO", "APOLLO-3")).toBe("/projects/APOLLO/issues/APOLLO-3");
   });
 });
 

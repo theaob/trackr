@@ -1,5 +1,6 @@
 "use server";
 
+import { issueHref } from "@/lib/issueUrls";
 import prisma from "@/lib/db";
 import { IssueStatus, IssueType, PriorityLevel, WebhookActor, WebhookChangelogItem } from "@/types";
 import { revalidatePath } from "next/cache";
@@ -721,7 +722,7 @@ export async function createIssue(data: {
           userId: mUser.id,
           title: `Mentioned in ${newIssue.key}`,
           message: `You were mentioned in ${newIssue.key}: "${snippet}${ellipsis}"`,
-          link: `/projects/${project.key}/board?selectedIssue=${newIssue.key}`,
+          link: issueHref(project.key, newIssue.key),
         })),
       });
 
@@ -1032,7 +1033,7 @@ export async function updateIssue(
               userId: mUser.id,
               title: `Mentioned in ${existing.key}`,
               message: `You were mentioned in ${existing.key}: "${snippet}${ellipsis}"`,
-              link: `/projects/${existing.project.key}/board?selectedIssue=${existing.key}`,
+              link: issueHref(existing.project.key, existing.key),
             })),
           });
 

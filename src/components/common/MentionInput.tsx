@@ -25,6 +25,7 @@ interface MentionInputProps {
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => void;
   autoFocus?: boolean;
   disabled?: boolean;
+  "aria-label"?: string;
 }
 
 const MentionInput = forwardRef<HTMLTextAreaElement | HTMLInputElement, MentionInputProps>(function MentionInput({
@@ -40,6 +41,7 @@ const MentionInput = forwardRef<HTMLTextAreaElement | HTMLInputElement, MentionI
   onKeyDown: externalOnKeyDown,
   autoFocus = false,
   disabled = false,
+  "aria-label": ariaLabel,
 }, ref) {
   const inputRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -287,6 +289,7 @@ const MentionInput = forwardRef<HTMLTextAreaElement | HTMLInputElement, MentionI
       {multiline ? (
         <textarea
           ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+          aria-label={ariaLabel}
           value={value}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
@@ -301,6 +304,7 @@ const MentionInput = forwardRef<HTMLTextAreaElement | HTMLInputElement, MentionI
         <input
           ref={inputRef as React.RefObject<HTMLInputElement>}
           type="text"
+          aria-label={ariaLabel}
           value={value}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}

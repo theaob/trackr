@@ -6,7 +6,7 @@ import { X, Search, Command } from "lucide-react";
 interface ShortcutItem {
   keys: string[];
   description: string;
-  category: "Global" | "Navigation" | "Forms & Dialogs";
+  category: "Global" | "Navigation" | "Issue" | "Forms & Dialogs";
 }
 
 const SHORTCUTS: ShortcutItem[] = [
@@ -30,8 +30,14 @@ const SHORTCUTS: ShortcutItem[] = [
   { keys: ["g", "h"], description: "Go to Home (new layout)", category: "Navigation" },
   { keys: ["g", "n"], description: "Go to Inbox (new layout)", category: "Navigation" },
 
+  // An open issue
+  { keys: ["a"], description: "Change the assignee", category: "Issue" },
+  { keys: ["s"], description: "Change the status", category: "Issue" },
+  { keys: ["p"], description: "Change the priority", category: "Issue" },
+  { keys: ["i"], description: "Assign the issue to me", category: "Issue" },
+  { keys: ["←", "→"], description: "Previous / next issue in the list", category: "Issue" },
+
   // Forms & Dialogs
-  { keys: ["←", "→"], description: "Navigate to previous / next issue", category: "Forms & Dialogs" },
   { keys: ["⌘ / Ctrl", "↵"], description: "Submit form or modal", category: "Forms & Dialogs" },
   { keys: ["Esc"], description: "Cancel or close dialog", category: "Forms & Dialogs" },
 ];

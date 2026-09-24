@@ -6,7 +6,8 @@ import { Attachment } from "@/types";
 import { uploadAttachment, deleteAttachment } from "@/lib/actions/attachments";
 import { MAX_ATTACHMENT_SIZE, formatFileSize, isPreviewableImageMime } from "@/lib/attachments";
 import UserAvatar from "@/components/common/UserAvatar";
-import { Paperclip, Upload, Download, Trash2, FileText, Loader2 } from "lucide-react";
+import { Upload, Download, Trash2, FileText, Loader2 } from "lucide-react";
+import SectionHeader, { SectionAction } from "./SectionHeader";
 
 interface AttachmentsSectionProps {
   issueId: string;
@@ -156,31 +157,39 @@ export default function AttachmentsSection({
   if (attachments.length === 0 && !canUpload) return null;
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-xs font-bold text-jira-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-          <Paperclip className="w-3.5 h-3.5 text-jira-blue" />
-          <span>Attachments{attachments.length > 0 ? ` (${attachments.length})` : ""}</span>
-        </h3>
+    <div
+      onDragOver={
+        canUpload && attachments.length === 0
+          ? (e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }
+          : undefined
+      }
+      onDragLeave={canUpload && attachments.length === 0 ? () => setDragOver(false) : undefined}
+      onDrop={canUpload && attachments.length === 0 ? handleDrop : undefined}
+      className={attachments.length === 0 && dragOver ? "rounded-control bg-accent-soft outline-dashed outline-1 outline-accent" : undefined}
+    >
+      <SectionHeader title="Attachments" count={attachments.length} className="mb-1">
         {canUpload && (
-          <button
-            type="button"
+          <SectionAction
+            icon={uploading ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Upload aria-hidden="true" />}
             onClick={() => inputRef.current?.click()}
             disabled={uploading}
-            className="text-[11px] text-jira-blue hover:underline font-semibold flex items-center gap-1 disabled:opacity-50"
           >
-            {uploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
             Add files
-          </button>
+          </SectionAction>
         )}
-        {canUpload && (
-          <input ref={inputRef} type="file" multiple hidden onChange={handleFileInput} />
-        )}
-      </div>
+        {canUpload && <input ref={inputRef} type="file" multiple hidden onChange={handleFileInput} />}
+      </SectionHeader>
 
-      {error && <div className="text-[11px] text-rose-600 font-medium mb-2">{error}</div>}
+      {error && (
+        <p role="alert" className="mb-2 text-xs text-danger">
+          {error}
+        </p>
+      )}
 
-      {canUpload && (
+      {canUpload && attachments.length > 0 && (
         <div
           onDragOver={(e) => {
             e.preventDefault();
@@ -188,34 +197,21 @@ export default function AttachmentsSection({
           }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
-          className={`rounded-md border border-dashed transition-colors ${
-            dragOver ? "border-jira-blue bg-jira-blue-subtle/30" : "border-jira-gray-300"
-          } ${attachments.length === 0 ? "p-3" : "p-2"}`}
+          className={`rounded-control border border-dashed p-2 transition-colors ${
+            dragOver ? "border-accent bg-accent-soft" : "border-strong"
+          }`}
         >
-          {attachments.length === 0 ? (
-            <p className="text-xs text-jira-gray-500 text-center py-1">
-              Drag and drop files here, or{" "}
-              <button
-                type="button"
-                onClick={() => inputRef.current?.click()}
-                className="text-jira-blue hover:underline font-medium"
-              >
-                browse
-              </button>
-            </p>
-          ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-              {attachments.map((attachment) => (
-                <AttachmentTile
-                  key={attachment.id}
-                  attachment={attachment}
-                  canRemove={canDelete(attachment)}
-                  deleting={deletingId === attachment.id}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </div>
-          )}
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            {attachments.map((attachment) => (
+              <AttachmentTile
+                key={attachment.id}
+                attachment={attachment}
+                canRemove={canDelete(attachment)}
+                deleting={deletingId === attachment.id}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
         </div>
       )}
 

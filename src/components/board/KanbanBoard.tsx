@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import { Project, Issue, User, IssueStatus, IssueType, PriorityLevel, Sprint, WorkflowStatus, WorkflowTransition, Version } from "@/types";
 import KanbanColumn from "./KanbanColumn";
 import BoardFilters, { SwimlaneGroupBy } from "./BoardFilters";
-import IssueDetailModal from "@/components/issues/IssueDetailModal";
+import IssuePanel from "@/components/issue/IssuePanel";
 import CreateIssueModal from "@/components/issues/CreateIssueModal";
 import UserAvatar from "@/components/common/UserAvatar";
 import { updateIssueStatusAndOrder, getIssueByKeyOrId, getBoardIssues } from "@/lib/actions/issues";
@@ -32,7 +32,6 @@ interface KanbanBoardProps {
   statuses: WorkflowStatus[];
   transitions: WorkflowTransition[];
   searchQuery?: string;
-  initialSelectedIssueKey?: string;
   initialEpics?: Issue[];
 }
 
@@ -53,13 +52,9 @@ export default function KanbanBoard({
   statuses,
   transitions,
   searchQuery: propSearchQuery,
-  initialSelectedIssueKey,
   initialEpics,
 }: KanbanBoardProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const selectedIssueKey =
-    searchParams?.get("selectedIssue") || searchParams?.get("issue") || initialSelectedIssueKey;
 
   // Kanban ignores sprints entirely: the board is every non-backlog issue in
   // continuous flow, never scoped to whatever happens to be "active".
@@ -261,68 +256,7 @@ export default function KanbanBoard({
     };
   }, [project.id]);
 
-  // Handle selectedIssue query parameter
-  useEffect(() => {
-    if (!selectedIssueKey) return;
-    const found = issues.find(
-      (i) =>
-        i.key.toUpperCase() === selectedIssueKey.toUpperCase() ||
-        i.id === selectedIssueKey
-    );
-    if (found) {
-      setActiveIssue(found);
-    } else {
-      getIssueByKeyOrId(selectedIssueKey).then((fetched) => {
-        if (fetched) {
-          setActiveIssue(fetched as unknown as Issue);
-        }
-      });
-    }
-  }, [selectedIssueKey, issues]);
-
-  // Handle jira:open-issue custom event
-  useEffect(() => {
-    const handleOpenIssueEvent = (e: Event) => {
-      const customEvent = e as CustomEvent<{ issueKey?: string }>;
-      const targetKey = customEvent.detail?.issueKey;
-      if (!targetKey) return;
-      const found = issues.find(
-        (i) =>
-          i.key.toUpperCase() === targetKey.toUpperCase() ||
-          i.id === targetKey
-      );
-      if (found) {
-        setActiveIssue(found);
-      } else {
-        getIssueByKeyOrId(targetKey).then((fetched) => {
-          if (fetched) {
-            setActiveIssue(fetched as unknown as Issue);
-          }
-        });
-      }
-    };
-
-    window.addEventListener("trackr:open-issue", handleOpenIssueEvent);
-    return () => {
-      window.removeEventListener("trackr:open-issue", handleOpenIssueEvent);
-    };
-  }, [issues]);
-
-  const handleCloseDetailModal = () => {
-    setActiveIssue(null);
-    if (typeof window !== "undefined") {
-      const currentUrl = new URL(window.location.href);
-      if (
-        currentUrl.searchParams.has("selectedIssue") ||
-        currentUrl.searchParams.has("issue")
-      ) {
-        currentUrl.searchParams.delete("selectedIssue");
-        currentUrl.searchParams.delete("issue");
-        const newSearch = currentUrl.searchParams.toString();
-        router.replace(`${currentUrl.pathname}${newSearch ? `?${newSearch}` : ""}`);
-      }
-    }
-  };
+  const handleCloseDetailModal = () => setActiveIssue(null);
 
   // Filters State
   const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<string[]>([]);
@@ -1051,20 +985,18 @@ export default function KanbanBoard({
       </div>
 
       {/* Modals */}
-      {activeIssue && (
-        <IssueDetailModal
-          issue={activeIssue}
-          users={users}
-          allIssues={[...epics, ...issues]}
-          sprints={sprints}
-          versions={versions}
-          project={project}
-          onActiveIssueChange={(newIssue) => setActiveIssue(newIssue)}
-          onClose={handleCloseDetailModal}
-          onIssueUpdated={handleIssueUpdated}
-          onIssueDeleted={handleIssueDeleted}
-        />
-      )}
+      <IssuePanel
+        issue={activeIssue}
+        issues={[...epics, ...issues]}
+        users={users}
+        sprints={sprints}
+        versions={versions}
+        epics={epics}
+        project={project}
+        onClose={handleCloseDetailModal}
+        onIssueUpdated={handleIssueUpdated}
+        onIssueDeleted={handleIssueDeleted}
+      />
 
       {isCreateModalOpen && (
         <CreateIssueModal

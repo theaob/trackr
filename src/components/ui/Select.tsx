@@ -32,8 +32,14 @@ export interface SelectProps {
   "aria-label"?: string;
   "aria-describedby"?: string;
   "aria-invalid"?: React.AriaAttributes["aria-invalid"];
+  "aria-keyshortcuts"?: string;
   required?: boolean;
   className?: string;
+  /** "property" is borderless until hovered, for values in a list of properties. */
+  variant?: "field" | "property";
+  /** Control whether the list is open, e.g. to open it from a keyboard shortcut. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 /**
@@ -52,12 +58,20 @@ export function Select({
   emptyMessage = "No matches",
   disabled,
   className,
+  variant = "field",
+  open: openProp,
+  onOpenChange,
   ...rest
 }: SelectProps) {
   // The trigger is a select-only combobox (as in Radix Select), a role that,
   // unlike a plain button, can be marked required.
   const { required, ...fieldProps } = useFieldControl(rest);
-  const [open, setOpen] = useState(false);
+  const [openState, setOpenState] = useState(false);
+  const open = openProp ?? openState;
+  const setOpen = (next: boolean) => {
+    setOpenState(next);
+    onOpenChange?.(next);
+  };
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(-1);
   const listboxId = useId();
@@ -129,16 +143,26 @@ export function Select({
           aria-expanded={open}
           aria-controls={open ? listboxId : undefined}
           className={cn(
-            "inline-flex h-8 w-full items-center gap-2 rounded-control border border-subtle bg-surface px-2.5 text-left text-[13px] text-ink",
-            "transition-colors duration-150 hover:border-strong disabled:cursor-not-allowed disabled:bg-surface-sunk disabled:opacity-60",
-            "aria-[invalid=true]:border-danger data-[state=open]:border-accent",
+            "group inline-flex h-8 w-full items-center gap-2 rounded-control border px-2.5 text-left text-[13px] text-ink transition-colors duration-150",
+            variant === "field"
+              ? "border-subtle bg-surface hover:border-strong disabled:bg-surface-sunk disabled:opacity-60 aria-[invalid=true]:border-danger data-[state=open]:border-accent"
+              : "border-transparent bg-transparent px-2 hover:bg-surface-sunk disabled:hover:bg-transparent data-[state=open]:bg-surface-sunk",
+            "disabled:cursor-not-allowed",
             className
           )}
           {...fieldProps}
         >
           {selected?.icon}
           <span className={cn("min-w-0 flex-1 truncate", !selected && "text-muted")}>{selected ? selected.label : placeholder}</span>
-          <ChevronDown className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
+          {variant === "field" || !disabled ? (
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 shrink-0 text-muted",
+                variant === "property" && "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+              )}
+              aria-hidden="true"
+            />
+          ) : null}
         </button>
       </RadixPopover.Trigger>
       <RadixPopover.Portal>

@@ -19,6 +19,16 @@ describe("shellLocation", () => {
     expect(shellLocation("/projects/APOLLO/issues").title).toBe("Issues");
   });
 
+  it("names an issue's own page by its key", () => {
+    expect(shellLocation("/projects/apollo/issues/apollo-3")).toEqual({
+      section: "project",
+      projectKey: "APOLLO",
+      pageId: "issues",
+      issueKey: "APOLLO-3",
+      title: "APOLLO-3",
+    });
+  });
+
   it("knows the pages outside a project", () => {
     expect(shellLocation("/home")).toMatchObject({ section: "home", title: "Home" });
     expect(shellLocation("/inbox")).toMatchObject({ section: "inbox", title: "Inbox" });
@@ -98,27 +108,25 @@ describe("due dates on Home", () => {
 });
 
 describe("notificationTarget", () => {
-  it("adds the issue from the title to a link without one", () => {
+  it("opens the issue named in the title on its own page, whatever the stored link", () => {
     expect(notificationTarget({ title: "APOLLO-3 was assigned to you", message: "", link: "/projects/APOLLO/board" })).toEqual({
-      href: "/projects/APOLLO/board?selectedIssue=APOLLO-3",
+      href: "/projects/APOLLO/issues/APOLLO-3",
       issueKey: "APOLLO-3",
     });
-  });
-
-  it("keeps a link that already names the issue, and appends to an existing query", () => {
     expect(notificationTarget({ title: "APOLLO-3", message: "", link: "/projects/APOLLO/board?selectedIssue=APOLLO-3" }).href).toBe(
-      "/projects/APOLLO/board?selectedIssue=APOLLO-3"
-    );
-    expect(notificationTarget({ title: "APOLLO-3", message: "", link: "/projects/APOLLO/issues?view=all" }).href).toBe(
-      "/projects/APOLLO/issues?view=all&selectedIssue=APOLLO-3"
+      "/projects/APOLLO/issues/APOLLO-3"
     );
   });
 
-  it("builds a link from the key in the message when there is none", () => {
+  it("finds the key in the message when the title has none", () => {
     expect(notificationTarget({ title: "You were mentioned", message: "in ORION-12: hello", link: null })).toEqual({
-      href: "/projects/ORION/board?selectedIssue=ORION-12",
+      href: "/projects/ORION/issues/ORION-12",
       issueKey: "ORION-12",
     });
+  });
+
+  it("falls back to the stored link when no issue is named", () => {
+    expect(notificationTarget({ title: "Sprint started", message: "", link: "/projects/APOLLO/board" }).href).toBe("/projects/APOLLO/board");
   });
 
   it("never follows a link off the site", () => {

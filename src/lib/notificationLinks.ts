@@ -1,3 +1,5 @@
+import { issueHref, projectKeyOfIssue } from "@/lib/issueUrls";
+
 /**
  * Where a notification leads. Older notifications carry no link, or a link
  * without the issue; the issue key in the title or message fills the gap so
@@ -12,19 +14,12 @@ export function notificationTarget(notification: {
     notification.title.match(/\b([A-Z][A-Z0-9]*-\d+)\b/) || notification.message.match(/\b([A-Z][A-Z0-9]*-\d+)\b/);
   const issueKey = match ? match[1] : null;
 
-  // Only same-site paths: a notification never sends anyone off the site.
+  // The issue's own page when the notification names one; otherwise the
+  // stored link, but only a same-site path: a notification never sends
+  // anyone off the site.
+  if (issueKey) return { href: issueHref(projectKeyOfIssue(issueKey), issueKey), issueKey };
   const link = notification.link && notification.link.startsWith("/") && !notification.link.startsWith("//") ? notification.link : null;
-
-  if (link) {
-    if (issueKey && !link.includes("selectedIssue=")) {
-      return { href: `${link}${link.includes("?") ? "&" : "?"}selectedIssue=${issueKey}`, issueKey };
-    }
-    return { href: link, issueKey };
-  }
-  if (issueKey) {
-    return { href: `/projects/${issueKey.replace(/-\d+$/, "")}/board?selectedIssue=${issueKey}`, issueKey };
-  }
-  return { href: null, issueKey: null };
+  return { href: link, issueKey: null };
 }
 
 /** "Today", "Yesterday", or the date, for grouping the Inbox by day. */

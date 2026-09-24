@@ -75,8 +75,18 @@ A modern, full-stack agile project management and issue tracking platform built 
     create a new one on the fly.
   - Bulk actions from the Issues list: select several issues and change their
     status, assignee, or priority, add a label, or delete them all at once.
-- 📝 **Issue Detail Modal**:
-  - Inline editable title and rich description.
+- 📝 **The issue view**, the same everywhere: in a panel over the board,
+  backlog, roadmap and issue table, in the Issues split view, and on the
+  issue's own page at `/projects/KEY/issues/KEY-12`, which every link,
+  notification and **Open as page** leads to. Older `?selectedIssue=` links
+  still work and open that page.
+  - Title and description edited in place.
+  - Properties as a list; each value opens a searchable picker, with avatars
+    for people. Press `a` for the assignee, `s` for the status, `p` for the
+    priority and `i` to assign the issue to yourself; `←`/`→` step through
+    the list the issue was opened from.
+  - Parents, sub-issues and linked issues open in the same panel, with a way
+    back. Empty sections are a single line with their action ("Add link").
   - **Markdown support** in descriptions and comments -- headings, bold/italic,
     lists, links, inline code and fenced code blocks, and tables, rendered
     safely with `react-markdown` (no raw HTML pass-through).
@@ -91,8 +101,9 @@ A modern, full-stack agile project management and issue tracking platform built 
   - Status progression, constrained to the project's own workflow.
   - **Watch** an issue you're not assigned to, to get notified on status
     changes and new comments.
-  - Comments timeline with instant commenting and deletion.
-  - Immutable activity history (logs who changed status, priority, or created issues).
+  - **Activity**: comments and the change history in one timeline, newest
+    first, narrowed to either with **Comments** or **History**; older entries
+    load 50 at a time.
 - 🔍 **Interactive Filtering**:
   - Quick keyword search across issue keys and summaries.
   - One-click teammate avatar filter buttons.
@@ -302,10 +313,10 @@ A few other changes are worth knowing about when upgrading:
 
 ## ⬆️ Webhook headers
 
-Every delivery carries `X-Trackr-Event` and `X-Trackr-Delivery`. The
-`X-Jira-Event` and `X-Jira-Delivery` copies are **deprecated** since 0.32.0:
-they are still sent in 0.32.x and 0.33.x and will be removed in 0.34.0, so
-switch receivers to the `X-Trackr-*` names. Webhook filters use TQL, Trackr's query
+Every delivery carries `X-Trackr-Event` and `X-Trackr-Delivery`. The old
+`X-Jira-Event` and `X-Jira-Delivery` copies, deprecated in 0.32.0, are **no
+longer sent from 0.34.0**: a receiver that still reads them must switch to the
+`X-Trackr-*` names. Webhook filters use TQL, Trackr's query
 language, with the same syntax as before.
 
 ## 🔒 Single Sign-On (OIDC)
@@ -344,7 +355,8 @@ CI runs all five on every push and pull request, and the release workflow will
 not publish an image unless they pass. The accessibility checks start the
 production build on a fresh database, walk through setup, and run
 [axe](https://github.com/dequelabs/axe-core) on the setup, sign-in and Projects
-pages; any serious or critical finding fails the build. The tests include a check that every
+pages, Home and Inbox, and an issue's page and panel; any serious or critical
+finding fails the build. The tests include a check that every
 Tailwind class used under `src/` actually generates CSS, since Tailwind skips
 unknown classes silently.
 
