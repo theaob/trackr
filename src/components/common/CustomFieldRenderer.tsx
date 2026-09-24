@@ -28,7 +28,7 @@ export function CustomFieldIcon({ type, className = "w-3.5 h-3.5" }: { type: Cus
       return <Hash className={`${className} text-amber-500`} />;
     case "SELECT":
     case "MULTI_SELECT":
-      return <List className={`${className} text-jira-blue`} />;
+      return <List className={`${className} text-accent`} />;
     case "CHECKBOX":
       return <CheckSquare className={`${className} text-emerald-500`} />;
     case "DATE":
@@ -37,7 +37,7 @@ export function CustomFieldIcon({ type, className = "w-3.5 h-3.5" }: { type: Cus
       return <LinkIcon className={`${className} text-sky-500`} />;
     case "TEXT":
     default:
-      return <Type className={`${className} text-jira-gray-500`} />;
+      return <Type className={`${className} text-muted`} />;
   }
 }
 
@@ -53,7 +53,7 @@ export default function CustomFieldRenderer({
   // Read-only presentation mode
   if (readOnly) {
     if (!value || value.trim() === "") {
-      return <span className="text-jira-gray-400 italic text-xs">None</span>;
+      return <span className="text-muted italic text-xs">None</span>;
     }
 
     switch (field.type) {
@@ -64,7 +64,7 @@ export default function CustomFieldRenderer({
             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold ${
               isChecked
                 ? "bg-emerald-100 text-emerald-800"
-                : "bg-jira-gray-100 text-jira-gray-600"
+                : "bg-surface-sunk text-ink-2"
             }`}
           >
             {isChecked ? <Check className="w-3 h-3 text-emerald-600" /> : null}
@@ -74,7 +74,7 @@ export default function CustomFieldRenderer({
 
       case "SELECT":
         return (
-          <span className="inline-block px-2 py-0.5 rounded bg-jira-blue-light/60 text-jira-blue font-semibold text-xs border border-jira-blue/20">
+          <span className="inline-block px-2 py-0.5 rounded bg-accent-soft/60 text-accent font-semibold text-xs border border-accent/20">
             {value}
           </span>
         );
@@ -91,7 +91,7 @@ export default function CustomFieldRenderer({
             {selected.map((item, idx) => (
               <span
                 key={idx}
-                className="px-2 py-0.5 rounded bg-jira-gray-100 text-jira-gray-700 border border-jira-gray-300 font-medium text-[11px]"
+                className="px-2 py-0.5 rounded bg-surface-sunk text-ink-2 border border-subtle font-medium text-[11px]"
               >
                 {item}
               </span>
@@ -105,7 +105,7 @@ export default function CustomFieldRenderer({
             href={value.startsWith("http") ? value : `https://${value}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-jira-blue hover:underline inline-flex items-center gap-1 text-xs truncate max-w-xs"
+            className="text-accent hover:underline inline-flex items-center gap-1 text-xs truncate max-w-xs"
           >
             <span className="truncate">{value}</span>
             <ExternalLink className="w-3 h-3 shrink-0" />
@@ -114,18 +114,18 @@ export default function CustomFieldRenderer({
 
       case "DATE":
         return (
-          <span className="text-xs text-jira-navy font-medium flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5 text-jira-gray-500" />
+          <span className="text-xs text-ink font-medium flex items-center gap-1">
+            <Calendar className="w-3.5 h-3.5 text-muted" />
             {calendarDateToLocal(value)?.toLocaleDateString()}
           </span>
         );
 
       case "NUMBER":
-        return <span className="font-mono text-xs font-semibold text-jira-navy">{value}</span>;
+        return <span className="font-mono text-xs font-semibold text-ink">{value}</span>;
 
       case "TEXT":
       default:
-        return <span className="text-xs text-jira-navy">{value}</span>;
+        return <span className="text-xs text-ink">{value}</span>;
     }
   }
 
@@ -139,9 +139,9 @@ export default function CustomFieldRenderer({
             type="checkbox"
             checked={checked}
             onChange={(e) => onChange?.(e.target.checked ? "true" : "false")}
-            className="w-4 h-4 rounded text-jira-blue focus:ring-jira-blue border-jira-gray-300"
+            className="w-4 h-4 rounded text-accent focus:ring-accent border-subtle"
           />
-          <span className="text-xs text-jira-navy font-medium">
+          <span className="text-xs text-ink font-medium">
             {checked ? "Enabled / Yes" : "Disabled / No"}
           </span>
         </label>
@@ -152,7 +152,7 @@ export default function CustomFieldRenderer({
         <select
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
-          className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue"
+          className="w-full bg-white border border-subtle rounded px-2.5 py-1.5 text-xs text-ink focus:border-accent"
         >
           <option value="">None (Select an option)</option>
           {options.map((opt, idx) => (
@@ -183,7 +183,7 @@ export default function CustomFieldRenderer({
 
       return (
         <div className="space-y-1.5">
-          <div className="flex flex-wrap gap-1.5 p-2 bg-jira-gray-50 border border-jira-gray-300 rounded-md">
+          <div className="flex flex-wrap gap-1.5 p-2 bg-page border border-subtle rounded-md">
             {options.map((opt, idx) => {
               const isSelected = currentSelected.includes(opt);
               return (
@@ -193,8 +193,8 @@ export default function CustomFieldRenderer({
                   onClick={() => toggleOption(opt)}
                   className={`text-xs px-2.5 py-1 rounded-full border transition-all flex items-center gap-1 ${
                     isSelected
-                      ? "bg-jira-blue text-white border-jira-blue font-semibold shadow-2xs"
-                      : "bg-white text-jira-gray-700 border-jira-gray-300 hover:bg-jira-gray-100"
+                      ? "bg-accent text-accent-fg border-accent font-semibold shadow-2xs"
+                      : "bg-white text-ink-2 border-subtle hover:bg-surface-sunk"
                   }`}
                 >
                   {isSelected && <Check className="w-3 h-3" />}
@@ -212,7 +212,7 @@ export default function CustomFieldRenderer({
           type="date"
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
-          className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue"
+          className="w-full bg-white border border-subtle rounded px-2.5 py-1.5 text-xs text-ink focus:border-accent"
         />
       );
 
@@ -224,7 +224,7 @@ export default function CustomFieldRenderer({
           placeholder="0"
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
-          className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue font-mono"
+          className="w-full bg-white border border-subtle rounded px-2.5 py-1.5 text-xs text-ink focus:border-accent font-mono"
         />
       );
 
@@ -235,7 +235,7 @@ export default function CustomFieldRenderer({
           placeholder="https://..."
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
-          className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue"
+          className="w-full bg-white border border-subtle rounded px-2.5 py-1.5 text-xs text-ink focus:border-accent"
         />
       );
 
@@ -247,7 +247,7 @@ export default function CustomFieldRenderer({
           placeholder={`Enter ${field.name.toLowerCase()}...`}
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
-          className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue"
+          className="w-full bg-white border border-subtle rounded px-2.5 py-1.5 text-xs text-ink focus:border-accent"
         />
       );
   }

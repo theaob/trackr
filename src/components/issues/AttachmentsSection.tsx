@@ -37,32 +37,32 @@ function AttachmentTile({
   const url = attachmentUrl(attachment.id);
 
   return (
-    <div className="group relative flex flex-col rounded-md border border-jira-gray-200 bg-white overflow-hidden hover:border-jira-gray-300 transition-colors">
+    <div className="group relative flex flex-col rounded-md border border-subtle bg-white overflow-hidden hover:border-subtle transition-colors">
       <a
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center justify-center h-20 bg-jira-gray-50 border-b border-jira-gray-200 overflow-hidden"
+        className="flex items-center justify-center h-20 bg-page border-b border-subtle overflow-hidden"
         title={attachment.fileName}
       >
         {previewable ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={url} alt={attachment.fileName} className="w-full h-full object-cover" />
         ) : (
-          <FileText className="w-7 h-7 text-jira-gray-400" />
+          <FileText className="w-7 h-7 text-muted" />
         )}
       </a>
 
       <div className="p-2 flex flex-col gap-1 min-w-0">
-        <span className="text-[11px] font-medium text-jira-navy truncate" title={attachment.fileName}>
+        <span className="text-[11px] font-medium text-ink truncate" title={attachment.fileName}>
           {attachment.fileName}
         </span>
-        <span className="text-[10px] text-jira-gray-500">{formatFileSize(attachment.size)}</span>
-        <div className="flex items-center gap-1 text-[10px] text-jira-gray-500">
+        <span className="text-[10px] text-muted">{formatFileSize(attachment.size)}</span>
+        <div className="flex items-center gap-1 text-[10px] text-muted">
           <UserAvatar user={attachment.uploadedBy} size="xs" />
           <span className="truncate">{attachment.uploadedBy.name}</span>
         </div>
-        <span className="text-[10px] text-jira-gray-400">
+        <span className="text-[10px] text-muted">
           {formatDistanceToNow(new Date(attachment.createdAt), { addSuffix: true })}
         </span>
       </div>
@@ -72,7 +72,7 @@ function AttachmentTile({
           href={url}
           download={attachment.fileName}
           title="Download"
-          className="p-1 rounded bg-white/90 text-jira-gray-600 hover:text-jira-blue border border-jira-gray-200 shadow-xs"
+          className="p-1 rounded bg-white/90 text-ink-2 hover:text-accent border border-subtle shadow-xs"
         >
           <Download className="w-3 h-3" />
         </a>
@@ -82,7 +82,7 @@ function AttachmentTile({
             onClick={() => onDelete(attachment.id)}
             disabled={deleting}
             title="Delete"
-            className="p-1 rounded bg-white/90 text-jira-gray-600 hover:text-rose-600 border border-jira-gray-200 shadow-xs disabled:opacity-50"
+            className="p-1 rounded bg-white/90 text-ink-2 hover:text-rose-600 border border-subtle shadow-xs disabled:opacity-50"
           >
             {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
           </button>

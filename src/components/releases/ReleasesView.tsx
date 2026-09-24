@@ -1,128 +1,113 @@
 "use client";
 
-import { issueHref } from "@/lib/issueUrls";
-import React, { useState, useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
-import { Project, Version, VersionStatus } from "@/types";
 import {
-  archiveVersion,
-  deleteVersion,
-  getVersionIssues,
-  removeIssueFromVersion,
-} from "@/lib/actions/versions";
+  Archive,
+  ArchiveRestore,
+  ChevronRight,
+  FileText,
+  Loader2,
+  MoreHorizontal,
+  Package,
+  Pencil,
+  Plus,
+  Rocket,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
+import { Project, Version, VersionStatus } from "@/types";
+import { archiveVersion, deleteVersion, getVersionIssues, removeIssueFromVersion } from "@/lib/actions/versions";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
+import { issueHref } from "@/lib/issueUrls";
+import { formatCalendarDate, isCalendarDateBeforeToday } from "@/lib/calendarDate";
+import { prettifyStatusName } from "@/lib/workflowDisplay";
 import UserAvatar from "@/components/common/UserAvatar";
+import { IssueTypeIcon } from "@/components/common/IssueIcons";
+import { Button, IconButton } from "@/components/ui/Button";
+import { Dialog, DialogContent } from "@/components/ui/Dialog";
+import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/ui/Menu";
+import { StatusLozenge } from "@/components/ui/StatusLozenge";
+import { useToast } from "@/components/ui/Toast";
+import { cn } from "@/components/ui/cn";
+import { Segmented, series } from "@/components/reports/kit";
 import CreateVersionModal from "./CreateVersionModal";
 import ReleaseVersionModal from "./ReleaseVersionModal";
 import ReleaseNotesModal from "./ReleaseNotesModal";
-import {
-  Rocket,
-  Plus,
-  Search,
-  Calendar,
-  MoreHorizontal,
-  FileText,
-  Edit2,
-  Archive,
-  Trash2,
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  ChevronRight,
-  ChevronDown,
-  Package,
-  Loader2,
-  X,
-  ExternalLink,
-} from "lucide-react";
-import { format } from "date-fns";
-import { formatCalendarDate } from "@/lib/calendarDate";
-import { IssueTypeIcon, StatusBadge } from "@/components/common/IssueIcons";
 
 interface ReleasesViewProps {
   project: Project;
   initialVersions: Version[];
 }
 
-export default function ReleasesView({
-  project,
-  initialVersions,
-}: ReleasesViewProps) {
-  const permissions = useProjectPermissions(project);
-  const [versions, setVersions] = useState<Version[]>(initialVersions);
-  const [statusTab, setStatusTab] = useState<VersionStatus | "ALL">("ALL");
-  const [searchQuery, setSearchQuery] = useState("");
+type Filter = VersionStatus | "ALL";
+const EMPTY_COUNTS = { total: 0, done: 0, inProgress: 0, todo: 0, storyPoints: 0, completedStoryPoints: 0 };
+const cell = "h-11 border-b border-subtle px-2.5 text-[13px]";
 
-  // Modals state
+function VersionStatusLozenge({ version }: { version: Version }) {
+  if (version.status === "RELEASED") return <StatusLozenge label="Released" token="success" />;
+  if (version.status === "ARCHIVED") return <StatusLozenge label="Archived" />;
+  if (isCalendarDateBeforeToday(version.releaseDate)) return <StatusLozenge label="Overdue" token="danger" />;
+  return <StatusLozenge label="Unreleased" token="accent" />;
+}
+
+/** Done, in progress and to do as one bar, with a 2px gap between the parts. */
+function ProgressBar({ counts }: { counts: typeof EMPTY_COUNTS }) {
+  const parts = [
+    { n: counts.done, color: series(1) },
+    { n: counts.inProgress, color: series("1-soft") },
+    { n: counts.todo, color: "rgb(var(--color-border-strong))" },
+  ].filter((p) => p.n > 0);
+  return (
+    <span aria-hidden="true" className="flex h-2 w-full gap-0.5 overflow-hidden rounded-[3px] bg-surface-sunk">
+      {parts.map((p, i) => (
+        <span key={i} className="h-full" style={{ width: `${(p.n / Math.max(1, counts.total)) * 100}%`, backgroundColor: p.color }} />
+      ))}
+    </span>
+  );
+}
+
+/**
+ * The project's versions as a table: status, release date and progress, with
+ * the issues of each a click away. Styled like the Issues table.
+ */
+export default function ReleasesView({ project, initialVersions }: ReleasesViewProps) {
+  const permissions = useProjectPermissions(project);
+  const { toast: showToast } = useToast();
+  const [versions, setVersions] = useState<Version[]>(initialVersions);
+  const [filter, setFilter] = useState<Filter>("ALL");
+  const [query, setQuery] = useState("");
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingVersion, setEditingVersion] = useState<Version | null>(null);
   const [releasingVersion, setReleasingVersion] = useState<Version | null>(null);
   const [notesVersion, setNotesVersion] = useState<Version | null>(null);
+  const [deleting, setDeleting] = useState<Version | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
-  // Expandable issues state
-  const [expandedVersionIds, setExpandedVersionIds] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [versionIssues, setVersionIssues] = useState<Record<string, any[]>>({});
-  const [loadingVersionIssues, setLoadingVersionIssues] = useState<Record<string, boolean>>({});
+  const [loadingIssues, setLoadingIssues] = useState<Record<string, boolean>>({});
   const [removingIssueId, setRemovingIssueId] = useState<string | null>(null);
 
-  const toggleExpandIssues = async (versionId: string) => {
-    setExpandedVersionIds((prev) => {
+  const toggleExpanded = async (versionId: string) => {
+    setExpanded((prev) => {
       const next = new Set(prev);
-      if (next.has(versionId)) {
-        next.delete(versionId);
-      } else {
-        next.add(versionId);
-      }
+      if (next.has(versionId)) next.delete(versionId);
+      else next.add(versionId);
       return next;
     });
-
-    if (!versionIssues[versionId] && !loadingVersionIssues[versionId]) {
-      setLoadingVersionIssues((prev) => ({ ...prev, [versionId]: true }));
+    if (!versionIssues[versionId] && !loadingIssues[versionId]) {
+      setLoadingIssues((prev) => ({ ...prev, [versionId]: true }));
       try {
         const issues = await getVersionIssues(versionId);
         setVersionIssues((prev) => ({ ...prev, [versionId]: issues }));
       } finally {
-        setLoadingVersionIssues((prev) => ({ ...prev, [versionId]: false }));
+        setLoadingIssues((prev) => ({ ...prev, [versionId]: false }));
       }
     }
   };
-
-  const handleRemoveIssue = async (versionId: string, issueId: string) => {
-    setRemovingIssueId(issueId);
-    try {
-      const res = await removeIssueFromVersion(issueId);
-      if (res.success) {
-        setVersionIssues((prev) => ({
-          ...prev,
-          [versionId]: (prev[versionId] || []).filter((i) => i.id !== issueId),
-        }));
-        if (res.version) {
-          handleVersionSaved(res.version as unknown as Version);
-        }
-      }
-    } finally {
-      setRemovingIssueId(null);
-    }
-  };
-
-  // Filtered versions
-  const filteredVersions = useMemo(() => {
-    return versions.filter((v) => {
-      if (statusTab !== "ALL" && v.status !== statusTab) return false;
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchesName = v.name.toLowerCase().includes(q);
-        const matchesDesc = v.description?.toLowerCase().includes(q);
-        if (!matchesName && !matchesDesc) return false;
-      }
-      return true;
-    });
-  }, [versions, statusTab, searchQuery]);
-
-  // Overall Stats
-  const totalCount = versions.length;
-  const unreleasedCount = versions.filter((v) => v.status === "UNRELEASED").length;
-  const releasedCount = versions.filter((v) => v.status === "RELEASED").length;
 
   const handleVersionSaved = (saved: Version) => {
     setVersions((prev) => {
@@ -134,469 +119,322 @@ export default function ReleasesView({
       }
       return [saved, ...prev];
     });
+    if (saved.id && (expanded.has(saved.id) || versionIssues[saved.id])) {
+      getVersionIssues(saved.id).then((fresh) => setVersionIssues((prev) => ({ ...prev, [saved.id]: fresh })));
+    }
+  };
 
-    if (saved.id && (expandedVersionIds.has(saved.id) || versionIssues[saved.id])) {
-      getVersionIssues(saved.id).then((freshIssues) => {
-        setVersionIssues((prev) => ({ ...prev, [saved.id]: freshIssues }));
-      });
+  const handleRemoveIssue = async (versionId: string, issueId: string) => {
+    setRemovingIssueId(issueId);
+    try {
+      const res = await removeIssueFromVersion(issueId);
+      if (res.success) {
+        setVersionIssues((prev) => ({ ...prev, [versionId]: (prev[versionId] || []).filter((i) => i.id !== issueId) }));
+        if (res.version) handleVersionSaved(res.version as unknown as Version);
+      } else {
+        showToast({ title: "Couldn't remove the issue", tone: "danger" });
+      }
+    } finally {
+      setRemovingIssueId(null);
     }
   };
 
   const handleArchiveToggle = async (v: Version) => {
-    const willArchive = v.status !== "ARCHIVED";
-    const res = await archiveVersion(v.id, willArchive);
+    const res = await archiveVersion(v.id, v.status !== "ARCHIVED");
     if (res.success && res.version) {
-      setVersions((prev) =>
-        prev.map((item) => (item.id === v.id ? (res.version as unknown as Version) : item))
-      );
+      setVersions((prev) => prev.map((item) => (item.id === v.id ? (res.version as unknown as Version) : item)));
+      showToast({ title: v.status === "ARCHIVED" ? `${v.name} restored` : `${v.name} archived`, tone: "success" });
+    } else {
+      showToast({ title: "Couldn't change the version", tone: "danger" });
     }
   };
 
-  const handleDelete = async (v: Version) => {
-    if (!confirm(`Are you sure you want to delete version "${v.name}"?`)) return;
-    const res = await deleteVersion(v.id);
+  const confirmDelete = async () => {
+    if (!deleting) return;
+    setDeleteBusy(true);
+    const res = await deleteVersion(deleting.id);
+    setDeleteBusy(false);
     if (res.success) {
-      setVersions((prev) => prev.filter((item) => item.id !== v.id));
+      setVersions((prev) => prev.filter((item) => item.id !== deleting.id));
+      showToast({ title: `${deleting.name} deleted`, tone: "success" });
+      setDeleting(null);
+    } else {
+      showToast({ title: "Couldn't delete the version", tone: "danger" });
     }
   };
+
+  const openCreate = (v: Version | null) => {
+    setEditingVersion(v);
+    setIsCreateModalOpen(true);
+  };
+
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return versions.filter((v) => {
+      if (filter !== "ALL" && v.status !== filter) return false;
+      if (q && !v.name.toLowerCase().includes(q) && !v.description?.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [versions, filter, query]);
+
+  const count = (s: VersionStatus) => versions.filter((v) => v.status === s).length;
+  const canManage = permissions.canManageVersions;
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-white">
-      {/* Top Header */}
-      <div className="px-3 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b border-jira-gray-200 shrink-0 space-y-3 sm:space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2.5">
-              <div className="p-1.5 bg-jira-blue/10 rounded text-jira-blue">
-                <Rocket className="w-5 h-5 text-jira-blue" />
-              </div>
-              <h1 className="text-xl font-bold text-jira-navy tracking-tight">Releases</h1>
-            </div>
-            <p className="text-xs text-jira-gray-600">
-              Manage software versions, track completion progress, and generate release notes.
-            </p>
+    <div className="flex h-full flex-1 flex-col overflow-hidden bg-page">
+      <header className="shrink-0 space-y-4 border-b border-subtle bg-surface px-3 pb-3 pt-4 sm:px-6 sm:pt-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-semibold text-ink">Releases</h1>
+            <p className="mt-0.5 text-xs text-muted">Versions of {project.name}, their progress and their release notes.</p>
           </div>
-
-          {permissions.canManageVersions && (
-            <button
-              onClick={() => {
-                setEditingVersion(null);
-                setIsCreateModalOpen(true);
-              }}
-              className="text-xs font-semibold px-3.5 py-2 rounded bg-jira-blue text-white hover:bg-jira-blue-hover transition-colors flex items-center gap-1.5 shadow-xs"
-            >
-              <Plus className="w-4 h-4" />
-              Create Version
-            </button>
+          {canManage && (
+            <Button variant="primary" onClick={() => openCreate(null)}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Create version
+            </Button>
           )}
         </div>
-
-        {/* Stats Row */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-3">
-          <div className="p-2 sm:p-3 bg-jira-gray-50 border border-jira-gray-200 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-            <span className="text-[11px] sm:text-xs font-medium text-jira-gray-600">Total</span>
-            <span className="text-base sm:text-lg font-bold text-jira-navy">{totalCount}</span>
-          </div>
-          <div className="p-2 sm:p-3 bg-amber-50/50 border border-amber-200/60 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-            <span className="text-[11px] sm:text-xs font-medium text-amber-800">Unreleased</span>
-            <span className="text-base sm:text-lg font-bold text-amber-900">{unreleasedCount}</span>
-          </div>
-          <div className="p-2 sm:p-3 bg-emerald-50/50 border border-emerald-200/60 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-            <span className="text-[11px] sm:text-xs font-medium text-emerald-800">Released</span>
-            <span className="text-base sm:text-lg font-bold text-emerald-900">{releasedCount}</span>
-          </div>
-        </div>
-
-        {/* Filters and Search Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-          {/* Status Tabs */}
-          <div className="flex items-center gap-1.5 text-xs overflow-x-auto no-scrollbar pb-1">
-            {[
-              { id: "ALL", label: "All Versions" },
-              { id: "UNRELEASED", label: "Unreleased" },
-              { id: "RELEASED", label: "Released" },
-              { id: "ARCHIVED", label: "Archived" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setStatusTab(tab.id as any)}
-                className={`px-3 py-1.5 rounded-md font-medium whitespace-nowrap transition-colors ${
-                  statusTab === tab.id
-                    ? "bg-jira-blue text-white font-semibold shadow-xs"
-                    : "bg-jira-gray-100 text-jira-gray-700 hover:bg-jira-gray-200"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Search Bar */}
-          <div className="relative w-64">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-jira-gray-500" />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Segmented
+            label="Show"
+            value={filter}
+            onChange={setFilter}
+            options={[
+              { value: "ALL", label: `All ${versions.length}` },
+              { value: "UNRELEASED", label: `Unreleased ${count("UNRELEASED")}` },
+              { value: "RELEASED", label: `Released ${count("RELEASED")}` },
+              { value: "ARCHIVED", label: `Archived ${count("ARCHIVED")}` },
+            ]}
+          />
+          <div className="relative w-full sm:w-64">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" aria-hidden="true" />
             <input
-              type="text"
-              placeholder="Search versions..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-white border border-jira-gray-300 rounded focus:border-jira-blue"
+              type="search"
+              aria-label="Search versions"
+              placeholder="Search versions"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="h-8 w-full rounded-control border border-subtle bg-surface pl-8 pr-3 text-[13px] text-ink placeholder:text-muted hover:border-strong focus:border-accent"
             />
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Versions List */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-4">
-        {filteredVersions.length === 0 ? (
-          <div className="py-20 flex flex-col items-center justify-center text-jira-gray-500 gap-3">
-            <Package className="w-10 h-10 text-jira-gray-400 stroke-1" />
-            <h3 className="text-sm font-semibold text-jira-navy">No versions found</h3>
-            <p className="text-xs text-jira-gray-500 max-w-sm text-center">
-              {searchQuery || statusTab !== "ALL"
-                ? "Try clearing filters to view other release versions."
-                : "Organize your project deliveries and plan releases by creating your first version."}
+      <div className="flex-1 overflow-auto p-3 sm:p-6">
+        {shown.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-20 text-center">
+            <Package className="h-8 w-8 text-muted" aria-hidden="true" />
+            <h2 className="text-sm font-semibold text-ink">{query || filter !== "ALL" ? "No versions match" : "No versions yet"}</h2>
+            <p className="max-w-sm text-xs text-muted">
+              {query || filter !== "ALL" ? "Clear the search or show all versions." : "Create a version to plan what ships together."}
             </p>
-            {(!searchQuery && statusTab === "ALL") && (
-              <button
-                onClick={() => {
-                  setEditingVersion(null);
-                  setIsCreateModalOpen(true);
-                }}
-                className="mt-2 text-xs font-semibold px-3 py-1.5 rounded bg-jira-blue text-white hover:bg-jira-blue-hover"
-              >
-                + Create Version
-              </button>
+            {canManage && !query && filter === "ALL" && (
+              <Button variant="primary" className="mt-2" onClick={() => openCreate(null)}>
+                Create version
+              </Button>
             )}
           </div>
         ) : (
-          filteredVersions.map((version) => {
-            const counts = version.issueCount || {
-              total: 0,
-              done: 0,
-              inProgress: 0,
-              todo: 0,
-              storyPoints: 0,
-              completedStoryPoints: 0,
-            };
-
-            const percentDone =
-              counts.total > 0 ? Math.round((counts.done / counts.total) * 100) : 0;
-            const percentInProgress =
-              counts.total > 0 ? Math.round((counts.inProgress / counts.total) * 100) : 0;
-            const percentTodo =
-              counts.total > 0 ? Math.round((counts.todo / counts.total) * 100) : 0;
-
-            const isOverdue =
-              version.status === "UNRELEASED" &&
-              version.releaseDate &&
-              new Date(version.releaseDate) < new Date();
-
-            return (
-              <div
-                key={version.id}
-                className="bg-white border border-jira-gray-300 hover:border-jira-blue/50 rounded-lg p-3.5 sm:p-5 shadow-xs transition-all space-y-4"
-              >
-                {/* Card Top: Name, Status, Dates, Actions */}
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2.5">
-                      <h3 className="text-base font-bold text-jira-navy">{version.name}</h3>
-
-                      {version.status === "RELEASED" ? (
-                        <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                          RELEASED
-                        </span>
-                      ) : version.status === "ARCHIVED" ? (
-                        <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-jira-gray-200 text-jira-gray-700">
-                          ARCHIVED
-                        </span>
-                      ) : (
-                        <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-amber-600" />
-                          UNRELEASED
-                        </span>
-                      )}
-
-                      {isOverdue && (
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3 text-rose-600" />
-                          OVERDUE
-                        </span>
-                      )}
-                    </div>
-
-                    {version.description && (
-                      <p className="text-xs text-jira-gray-600 line-clamp-2 max-w-xl">
-                        {version.description}
-                      </p>
-                    )}
-
-                    {/* Release Date */}
-                    {version.releaseDate && (
-                      <div className="flex items-center gap-4 text-xs text-jira-gray-500 pt-1">
-                        <span
-                          className={`flex items-center gap-1 ${
-                            isOverdue ? "text-rose-600 font-semibold" : ""
-                          }`}
-                        >
-                          <Calendar className="w-3.5 h-3.5" />
-                          Release date: {formatCalendarDate(version.releaseDate, "MMM d, yyyy")}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Top Right Action Buttons */}
-                  <div className="flex items-center gap-2">
-                    {permissions.canManageVersions && version.status === "UNRELEASED" && (
-                      <button
-                        onClick={() => setReleasingVersion(version)}
-                        className="text-xs font-semibold px-3 py-1.5 rounded bg-jira-green text-white hover:bg-jira-green/90 transition-colors flex items-center gap-1.5 shadow-xs"
-                      >
-                        <Rocket className="w-3.5 h-3.5" />
-                        Release
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => setNotesVersion(version)}
-                      className="text-xs font-semibold px-3 py-1.5 rounded border border-jira-gray-300 bg-white hover:bg-jira-gray-100 text-jira-navy transition-colors flex items-center gap-1.5"
-                      title="Generate and view release notes"
-                    >
-                      <FileText className="w-3.5 h-3.5 text-jira-blue" />
-                      Release Notes
-                    </button>
-
-                    {permissions.canManageVersions && (
-                      <>
-                        <button
-                          onClick={() => {
-                            setEditingVersion(version);
-                            setIsCreateModalOpen(true);
-                          }}
-                          className="p-1.5 text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-100 rounded border border-jira-gray-200"
-                          title="Edit version"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-
-                        <button
-                          onClick={() => handleArchiveToggle(version)}
-                          className="p-1.5 text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-100 rounded border border-jira-gray-200"
-                          title={version.status === "ARCHIVED" ? "Unarchive version" : "Archive version"}
-                        >
-                          <Archive className="w-3.5 h-3.5" />
-                        </button>
-
-                        <button
-                          onClick={() => handleDelete(version)}
-                          className="p-1.5 text-jira-gray-600 hover:text-jira-red hover:bg-jira-red/10 rounded border border-jira-gray-200"
-                          title="Delete version"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Progress Bar & Issue Metrics */}
-                <div className="pt-2 border-t border-jira-gray-200 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-jira-navy">
-                      Progress:{" "}
-                      <strong className="text-jira-green">{percentDone}% Done</strong>
-                    </span>
-                    <div className="flex items-center gap-3 text-jira-gray-600">
-                      <span>
-                        <strong>{counts.done}</strong> of <strong>{counts.total}</strong> issues done
-                      </span>
-                      {counts.storyPoints > 0 && (
-                        <span>
-                          • <strong>{counts.completedStoryPoints}</strong> of{" "}
-                          <strong>{counts.storyPoints}</strong> pts
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Multi-tone progress bar */}
-                  <div className="w-full h-2.5 bg-jira-gray-200 rounded-full overflow-hidden flex">
-                    <div
-                      style={{ width: `${percentDone}%` }}
-                      className="bg-jira-green transition-all duration-300"
-                      title={`${counts.done} Done (${percentDone}%)`}
-                    />
-                    <div
-                      style={{ width: `${percentInProgress}%` }}
-                      className="bg-jira-blue transition-all duration-300"
-                      title={`${counts.inProgress} In Progress (${percentInProgress}%)`}
-                    />
-                    <div
-                      style={{ width: `${percentTodo}%` }}
-                      className="bg-jira-gray-400 transition-all duration-300"
-                      title={`${counts.todo} To Do (${percentTodo}%)`}
-                    />
-                  </div>
-
-                  {/* Legend */}
-                  <div className="flex items-center gap-4 text-[11px] text-jira-gray-600 pt-0.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-jira-green" />
-                      <span>Done ({counts.done})</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-jira-blue" />
-                      <span>In Progress ({counts.inProgress})</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-jira-gray-400" />
-                      <span>To Do ({counts.todo})</span>
-                    </div>
-                  </div>
-
-                  {/* Expandable Issues Section */}
-                  <div className="pt-3 border-t border-jira-gray-200">
-                    <div className="flex items-center justify-between">
-                      <button
-                        type="button"
-                        onClick={() => toggleExpandIssues(version.id)}
-                        className="flex items-center gap-2 text-xs font-semibold text-jira-navy hover:text-jira-blue transition-colors group"
-                      >
-                        <ChevronRight
-                          className={`w-3.5 h-3.5 text-jira-gray-400 group-hover:text-jira-blue transition-transform duration-200 ${
-                            expandedVersionIds.has(version.id) ? "rotate-90 text-jira-blue" : ""
-                          }`}
-                        />
-                        <span>Issues in this release</span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-jira-gray-100 text-jira-gray-700 group-hover:bg-jira-blue/10 group-hover:text-jira-blue">
-                          {counts.total}
-                        </span>
-                      </button>
-
-                      {permissions.canManageVersions && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingVersion(version);
-                            setIsCreateModalOpen(true);
-                          }}
-                          className="text-xs font-medium text-jira-blue hover:text-jira-blue-hover hover:underline flex items-center gap-1"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>Manage / Add Issues</span>
-                        </button>
-                      )}
-                    </div>
-
-                    {expandedVersionIds.has(version.id) && (
-                      <div className="mt-3 space-y-2">
-                        {loadingVersionIssues[version.id] ? (
-                          <div className="py-4 flex items-center justify-center gap-2 text-xs text-jira-gray-500">
-                            <Loader2 className="w-4 h-4 animate-spin text-jira-blue" />
-                            <span>Loading release issues...</span>
-                          </div>
-                        ) : (versionIssues[version.id] || []).length === 0 ? (
-                          <div className="py-4 px-3 bg-jira-gray-50 border border-dashed border-jira-gray-300 rounded text-center text-xs text-jira-gray-500">
-                            No issues assigned to this release. Click{" "}
-                            {permissions.canManageVersions && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setEditingVersion(version);
-                                  setIsCreateModalOpen(true);
-                                }}
-                                className="text-jira-blue font-semibold hover:underline inline"
-                              >
-                                Manage / Add Issues
-                              </button>
-                            )}{" "}
-                            to set the Fix Version on issues.
-                          </div>
-                        ) : (
-                          <div className="border border-jira-gray-200 rounded-md divide-y divide-jira-gray-200 overflow-hidden bg-white">
-                            {(versionIssues[version.id] || []).map((issue) => (
-                              <div
-                                key={issue.id}
-                                className="px-3 py-2 flex items-center justify-between gap-3 text-xs hover:bg-jira-gray-50/70 transition-colors"
-                              >
-                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                  {/* Fixed-width columns so rows line up whatever their content. */}
-                                  <IssueTypeIcon type={issue.type} className="w-3.5 h-3.5 shrink-0" />
-                                  <Link prefetch={false}
-                                    href={issueHref(project.key, issue.key)}
-                                    className="min-w-[5.5rem] font-mono font-semibold text-jira-blue hover:underline shrink-0 flex items-center gap-1"
-                                    title="View issue"
-                                  >
-                                    <span>{issue.key}</span>
-                                    <ExternalLink className="w-2.5 h-2.5 text-jira-gray-400" />
-                                  </Link>
-                                  <span className="text-jira-navy font-medium truncate" title={issue.title}>
-                                    {issue.title}
-                                  </span>
-                                </div>
-
-                                <div className="flex items-center gap-2.5 shrink-0">
-                                  <div className="w-12 flex justify-end">
-                                    {issue.storyPoints !== undefined && issue.storyPoints !== null && (
-                                      <span
-                                        className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-jira-gray-100 text-jira-gray-700"
-                                        title="Story Points"
-                                      >
-                                        {issue.storyPoints} pts
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  <div className="w-28 flex">
-                                    <StatusBadge status={issue.status} className="text-[10px] max-w-full" />
-                                  </div>
-
-                                  {issue.assignee ? (
-                                    <div className="w-6 md:w-32 flex items-center gap-1.5" title={`Assignee: ${issue.assignee.name}`}>
-                                      <UserAvatar user={issue.assignee} size="sm" />
-                                      <span className="text-[11px] text-jira-gray-600 hidden md:inline max-w-[90px] truncate">
-                                        {issue.assignee.name}
-                                      </span>
-                                    </div>
-                                  ) : (
-                                    <span className="w-6 md:w-32 text-[11px] text-jira-gray-400 italic truncate">
-                                      Unassigned
-                                    </span>
-                                  )}
-
-                                  {permissions.canManageVersions && (
+          <div className="overflow-x-auto rounded-card border border-subtle bg-surface">
+            <table className="w-full min-w-[760px] table-fixed border-separate border-spacing-0">
+              <thead className="sticky top-0 z-10 bg-surface">
+                <tr className="text-left text-xs font-medium text-ink-2">
+                  <th scope="col" className="h-9 w-9 border-b border-subtle">
+                    <span className="sr-only">Issues</span>
+                  </th>
+                  <th scope="col" className="h-9 border-b border-subtle px-2.5 font-medium">
+                    Version
+                  </th>
+                  <th scope="col" className="h-9 w-32 border-b border-subtle px-2.5 font-medium">
+                    Status
+                  </th>
+                  <th scope="col" className="h-9 w-32 border-b border-subtle px-2.5 font-medium">
+                    Release date
+                  </th>
+                  <th scope="col" className="h-9 w-56 border-b border-subtle px-2.5 font-medium">
+                    Progress
+                  </th>
+                  <th scope="col" className="h-9 w-40 border-b border-subtle px-2.5">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {shown.map((version) => {
+                  const counts = version.issueCount || EMPTY_COUNTS;
+                  const pct = counts.total > 0 ? Math.round((counts.done / counts.total) * 100) : 0;
+                  const isOpen = expanded.has(version.id);
+                  const late = version.status === "UNRELEASED" && isCalendarDateBeforeToday(version.releaseDate);
+                  const issues = versionIssues[version.id] || [];
+                  return (
+                    <React.Fragment key={version.id}>
+                      <tr className="hover:bg-surface-sunk/60">
+                        <td className={cn(cell, "px-1.5")}>
+                          <IconButton
+                            size="sm"
+                            label={`${isOpen ? "Hide" : "Show"} the issues in ${version.name}`}
+                            aria-expanded={isOpen}
+                            onClick={() => toggleExpanded(version.id)}
+                            icon={<ChevronRight className={cn("transition-transform", isOpen && "rotate-90")} aria-hidden="true" />}
+                          />
+                        </td>
+                        <td className={cn(cell, "min-w-0")}>
+                          <span className="block truncate font-medium text-ink">{version.name}</span>
+                          {version.description && <span className="block truncate text-xs text-muted">{version.description}</span>}
+                        </td>
+                        <td className={cell}>
+                          <VersionStatusLozenge version={version} />
+                        </td>
+                        <td className={cn(cell, late ? "font-medium text-danger" : "text-ink-2")}>
+                          {version.releaseDate ? (
+                            formatCalendarDate(version.releaseDate, "MMM d, yyyy")
+                          ) : (
+                            <span className="text-muted">–</span>
+                          )}
+                        </td>
+                        <td className={cell}>
+                          <span className="flex items-center gap-2.5">
+                            <ProgressBar counts={counts} />
+                            <span className="shrink-0 text-xs tabular-nums text-ink-2">
+                              {counts.done}/{counts.total}
+                              <span className="sr-only">
+                                {" "}
+                                issues done, {pct}%, {counts.inProgress} in progress, {counts.todo} to do
+                              </span>
+                            </span>
+                          </span>
+                        </td>
+                        <td className={cn(cell, "text-right")}>
+                          <span className="inline-flex items-center gap-1">
+                            {canManage && version.status === "UNRELEASED" && (
+                              <Button size="sm" onClick={() => setReleasingVersion(version)}>
+                                <Rocket className="h-3.5 w-3.5" aria-hidden="true" />
+                                Release
+                              </Button>
+                            )}
+                            <Menu>
+                              <MenuTrigger asChild>
+                                <IconButton
+                                  size="sm"
+                                  label={`More actions for ${version.name}`}
+                                  icon={<MoreHorizontal aria-hidden="true" />}
+                                />
+                              </MenuTrigger>
+                              <MenuContent align="end">
+                                <MenuItem icon={<FileText aria-hidden="true" />} onSelect={() => setNotesVersion(version)}>
+                                  Release notes
+                                </MenuItem>
+                                {canManage && (
+                                  <>
+                                    <MenuItem icon={<Pencil aria-hidden="true" />} onSelect={() => openCreate(version)}>
+                                      Edit and add issues…
+                                    </MenuItem>
+                                    <MenuItem
+                                      icon={
+                                        version.status === "ARCHIVED" ? (
+                                          <ArchiveRestore aria-hidden="true" />
+                                        ) : (
+                                          <Archive aria-hidden="true" />
+                                        )
+                                      }
+                                      onSelect={() => handleArchiveToggle(version)}
+                                    >
+                                      {version.status === "ARCHIVED" ? "Restore" : "Archive"}
+                                    </MenuItem>
+                                    <MenuSeparator />
+                                    <MenuItem danger icon={<Trash2 aria-hidden="true" />} onSelect={() => setDeleting(version)}>
+                                      Delete…
+                                    </MenuItem>
+                                  </>
+                                )}
+                              </MenuContent>
+                            </Menu>
+                          </span>
+                        </td>
+                      </tr>
+                      {isOpen && (
+                        <tr>
+                          <td colSpan={6} className="border-b border-subtle bg-page p-0">
+                            {loadingIssues[version.id] ? (
+                              <p className="flex items-center justify-center gap-2 py-4 text-xs text-muted">
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                                Loading issues…
+                              </p>
+                            ) : issues.length === 0 ? (
+                              <p className="px-12 py-4 text-xs text-muted">
+                                No issues have this fix version yet.
+                                {canManage && (
+                                  <>
+                                    {" "}
                                     <button
                                       type="button"
-                                      onClick={() => handleRemoveIssue(version.id, issue.id)}
-                                      disabled={removingIssueId === issue.id}
-                                      className="p-1 text-jira-gray-400 hover:text-jira-red hover:bg-rose-50 rounded transition-colors disabled:opacity-50 ml-1"
-                                      title="Remove issue from release"
+                                      onClick={() => openCreate(version)}
+                                      className="font-medium text-accent hover:underline"
                                     >
-                                      {removingIssueId === issue.id ? (
-                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                      ) : (
-                                        <X className="w-3.5 h-3.5" />
-                                      )}
+                                      Add issues
                                     </button>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })
+                                  </>
+                                )}
+                              </p>
+                            ) : (
+                              <ul aria-label={`Issues in ${version.name}`} className="divide-y divide-subtle">
+                                {issues.map((issue) => (
+                                  <li key={issue.id} className="flex h-10 items-center gap-2.5 pl-12 pr-3 text-[13px]">
+                                    <IssueTypeIcon type={issue.type} className="h-4 w-4 shrink-0" />
+                                    <Link
+                                      prefetch={false}
+                                      href={issueHref(project.key, issue.key)}
+                                      className="w-24 shrink-0 font-mono text-xs text-ink-2 hover:text-ink hover:underline"
+                                    >
+                                      {issue.key}
+                                    </Link>
+                                    <span className="min-w-0 flex-1 truncate text-ink">{issue.title}</span>
+                                    <span className="w-8 shrink-0 text-right font-mono text-xs text-ink-2">{issue.storyPoints ?? "–"}</span>
+                                    <span className="w-32 shrink-0">
+                                      <StatusLozenge label={prettifyStatusName(issue.status)} />
+                                    </span>
+                                    <span className="flex w-36 shrink-0 items-center gap-1.5 text-xs text-ink-2">
+                                      {issue.assignee ? (
+                                        <>
+                                          <UserAvatar user={issue.assignee} size="xs" />
+                                          <span className="truncate">{issue.assignee.name}</span>
+                                        </>
+                                      ) : (
+                                        "Unassigned"
+                                      )}
+                                    </span>
+                                    {canManage && (
+                                      <IconButton
+                                        size="sm"
+                                        label={`Remove ${issue.key} from ${version.name}`}
+                                        disabled={removingIssueId === issue.id}
+                                        onClick={() => handleRemoveIssue(version.id, issue.id)}
+                                        icon={
+                                          removingIssueId === issue.id ? (
+                                            <Loader2 className="animate-spin" aria-hidden="true" />
+                                          ) : (
+                                            <X aria-hidden="true" />
+                                          )
+                                        }
+                                      />
+                                    )}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
-      {/* Modals */}
       <CreateVersionModal
         projectId={project.id}
         version={editingVersion}
@@ -621,13 +459,25 @@ export default function ReleasesView({
         />
       )}
 
-      {notesVersion && (
-        <ReleaseNotesModal
-          version={notesVersion}
-          isOpen={Boolean(notesVersion)}
-          onClose={() => setNotesVersion(null)}
-        />
-      )}
+      {notesVersion && <ReleaseNotesModal version={notesVersion} isOpen={Boolean(notesVersion)} onClose={() => setNotesVersion(null)} />}
+
+      <Dialog open={deleting !== null} onOpenChange={(open) => !open && setDeleting(null)}>
+        {deleting && (
+          <DialogContent
+            size="sm"
+            title={`Delete ${deleting.name}?`}
+            description="Its issues stay, without this fix version. This can't be undone."
+            footer={
+              <>
+                <Button onClick={() => setDeleting(null)}>Cancel</Button>
+                <Button variant="danger" loading={deleteBusy} onClick={confirmDelete}>
+                  Delete version
+                </Button>
+              </>
+            }
+          />
+        )}
+      </Dialog>
     </div>
   );
 }

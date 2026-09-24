@@ -103,7 +103,7 @@ function Keys({ keys, active }: { keys: string[]; active: boolean }) {
         <kbd
           key={i}
           className={`min-w-[20px] h-5 px-1 inline-flex items-center justify-center rounded text-xs font-sans font-medium border ${
-            active ? "border-white/40 text-white/90" : "border-jira-gray-300 text-jira-gray-600 bg-white/70"
+            active ? "border-accent-fg/40 text-accent-fg/90" : "border-subtle text-ink-2 bg-surface/70"
           }`}
         >
           {k}
@@ -117,7 +117,7 @@ function IconTile({ children, active }: { children: React.ReactNode; active: boo
   return (
     <span
       className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${
-        active ? "bg-white/20 text-white" : "bg-jira-gray-100 text-jira-gray-700"
+        active ? "bg-accent-fg/20 text-accent-fg" : "bg-surface-sunk text-ink-2"
       }`}
     >
       {children}
@@ -245,7 +245,7 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
             ) : (
               <span
                 className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 text-xs font-bold ${
-                  isActive ? "bg-white/20 text-white" : "bg-jira-blue-light text-jira-blue"
+                  isActive ? "bg-accent-fg/20 text-accent-fg" : "bg-accent-soft text-accent"
                 }`}
               >
                 {d.projectKey?.slice(0, 2)}
@@ -254,7 +254,7 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
             <span className="min-w-0 flex-1 truncate">
               <span className="font-medium">{d.title}</span>
               {d.subtitle && (
-                <span className={isActive ? "text-white/75" : "text-jira-gray-500"}>
+                <span className={isActive ? "text-accent-fg/80" : "text-muted"}>
                   {" "}
                   — {d.subtitle}
                 </span>
@@ -268,7 +268,7 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
 
     const actionsHint = (isActive: boolean) =>
       isActive ? (
-        <span className="hidden sm:flex items-center gap-1 shrink-0 text-xs text-white/80">
+        <span className="hidden sm:flex items-center gap-1 shrink-0 text-xs text-accent-fg/80">
           <Keys keys={["→"]} active /> actions
         </span>
       ) : null;
@@ -282,12 +282,12 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
           <span className="w-7 flex justify-center shrink-0">
             <IssueTypeIcon type={issue.type as IssueType} className="w-3.5 h-3.5" />
           </span>
-          <span className={`font-mono text-xs shrink-0 ${isActive ? "text-white/85" : "text-jira-gray-600"}`}>
+          <span className={`font-mono text-xs shrink-0 ${isActive ? "text-accent-fg/90" : "text-ink-2"}`}>
             {issue.key}
           </span>
           <span className="min-w-0 flex-1 truncate font-medium">{issue.title}</span>
           {issue.projectKey !== currentProjectKey && (
-            <span className={`hidden sm:inline text-xs shrink-0 ${isActive ? "text-white/75" : "text-jira-gray-500"}`}>
+            <span className={`hidden sm:inline text-xs shrink-0 ${isActive ? "text-accent-fg/80" : "text-muted"}`}>
               {issue.projectName}
             </span>
           )}
@@ -309,7 +309,7 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
           <span className="w-7 flex justify-center shrink-0">
             <Clock className="w-3.5 h-3.5" aria-hidden="true" />
           </span>
-          <span className={`font-mono text-xs shrink-0 ${isActive ? "text-white/85" : "text-jira-gray-600"}`}>{item.key}</span>
+          <span className={`font-mono text-xs shrink-0 ${isActive ? "text-accent-fg/90" : "text-ink-2"}`}>{item.key}</span>
           <span className="min-w-0 flex-1 truncate font-medium">{item.title}</span>
           {actionsHint(isActive)}
         </>
@@ -482,7 +482,7 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-start justify-center px-3 pt-[10vh] sm:pt-[16vh] bg-jira-navy/15 animate-in fade-in duration-100"
+      className="fixed inset-0 z-[70] flex items-start justify-center px-3 pt-[10vh] sm:pt-[16vh] bg-ink/15 animate-in fade-in duration-100"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -499,13 +499,13 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
               type="button"
               onClick={closeActions}
               aria-label={`Back to results (leaving actions on ${actionsFor.key})`}
-              className="flex items-center gap-1 shrink-0 rounded-md bg-jira-gray-100 px-2 py-1 font-mono text-xs text-jira-navy hover:bg-jira-gray-200"
+              className="flex items-center gap-1 shrink-0 rounded-md bg-surface-sunk px-2 py-1 font-mono text-xs text-ink hover:bg-subtle"
             >
               <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
               {actionsFor.key}
             </button>
           ) : (
-            <Search className="w-6 h-6 text-jira-gray-500 shrink-0" aria-hidden="true" />
+            <Search className="w-6 h-6 text-muted shrink-0" aria-hidden="true" />
           )}
           <input
             ref={inputRef}
@@ -523,10 +523,10 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
             onKeyDown={handleKeyDown}
             placeholder={actionsFor ? `What to do with ${actionsFor.key}…` : "Search issues, pages and projects"}
             aria-label={actionsFor ? `Actions on ${actionsFor.key}` : "Search issues, pages and projects"}
-            className="flex-1 min-w-0 bg-transparent text-[22px] font-light text-jira-navy placeholder:text-jira-gray-500 focus-visible:outline-none"
+            className="flex-1 min-w-0 bg-transparent text-[22px] font-light text-ink placeholder:text-muted focus-visible:outline-none"
           />
           {(searching || issueActions === "loading") && (
-            <Loader2 className="w-4 h-4 text-jira-gray-500 animate-spin shrink-0" aria-label={searching ? "Searching" : "Loading actions"} />
+            <Loader2 className="w-4 h-4 text-muted animate-spin shrink-0" aria-label={searching ? "Searching" : "Loading actions"} />
           )}
         </div>
 
@@ -538,17 +538,17 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
             className="border-t border-black/5 max-h-[min(440px,60vh)] overflow-y-auto overscroll-contain px-2 py-2"
           >
             {rows.length === 0 && actionsFor && (
-              <div className="px-3 py-6 text-center text-sm text-jira-gray-600">No action matches “{q}”.</div>
+              <div className="px-3 py-6 text-center text-sm text-ink-2">No action matches “{q}”.</div>
             )}
             {rows.length === 0 && !actionsFor && (
-              <div className="px-3 py-6 text-center text-sm text-jira-gray-600">
-                No results for <span className="font-semibold text-jira-navy">“{q}”</span>. Try an issue key such as{" "}
+              <div className="px-3 py-6 text-center text-sm text-ink-2">
+                No results for <span className="font-semibold text-ink">“{q}”</span>. Try an issue key such as{" "}
                 <span className="font-mono">{currentProjectKey ?? "APOLLO"}-12</span>.
               </div>
             )}
             {groups.map((group) => (
               <div key={group.label} role="presentation" className="pb-1">
-                <div role="presentation" className="px-3 pt-2 pb-1 text-xs font-semibold text-jira-gray-500">
+                <div role="presentation" className="px-3 pt-2 pb-1 text-xs font-semibold text-muted">
                   {group.label}
                 </div>
                 {group.rows.map((row) => {
@@ -567,7 +567,7 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={(e) => choose(row, e.metaKey || e.ctrlKey)}
                       className={`flex items-center gap-3 px-2 h-11 rounded-lg text-sm cursor-pointer select-none ${
-                        isActive ? "bg-jira-blue text-white" : "text-jira-navy"
+                        isActive ? "bg-accent text-accent-fg" : "text-ink"
                       }`}
                     >
                       {row.render(isActive)}
@@ -579,7 +579,7 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
           </div>
         )}
 
-        <div className="hidden sm:flex items-center gap-4 px-4 h-9 border-t border-black/5 text-xs text-jira-gray-600 bg-white/40">
+        <div className="hidden sm:flex items-center gap-4 px-4 h-9 border-t border-black/5 text-xs text-ink-2 bg-white/40">
           <span className="flex items-center gap-1.5">
             <Keys keys={["↑", "↓"]} active={false} /> to move
           </span>

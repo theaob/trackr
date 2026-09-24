@@ -1,5 +1,6 @@
 "use client";
 
+import SaveBar from "./SaveBar";
 import React, { useState, useEffect } from "react";
 import { getSsoConfig, updateSsoConfig } from "@/lib/actions/auth";
 import {
@@ -44,6 +45,8 @@ export default function SsoSettingsTab() {
     configured: false,
   });
 
+  // What the server has, so the save bar only shows once something differs.
+  const [savedConfig, setSavedConfig] = useState<SsoConfigState | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
@@ -52,7 +55,7 @@ export default function SsoSettingsTab() {
   useEffect(() => {
     getSsoConfig().then((cfg) => {
       if (cfg) {
-        setConfig({
+        const loaded = {
           enabled: !!cfg.enabled,
           providerName: cfg.providerName || "Enterprise SAML / OIDC SSO",
           issuerUrl: cfg.issuerUrl || "",
@@ -64,7 +67,9 @@ export default function SsoSettingsTab() {
           trustUnverifiedEmails: cfg.trustUnverifiedEmails ?? false,
           defaultRole: cfg.defaultRole || "Developer",
           configured: !!cfg.configured,
-        });
+        };
+        setConfig(loaded);
+        setSavedConfig(loaded);
       } else {
         setMsg({
           type: "error",
@@ -94,7 +99,7 @@ export default function SsoSettingsTab() {
       });
 
       if (res.success && res.config) {
-        setConfig({
+        const next = {
           enabled: !!res.config.enabled,
           providerName: res.config.providerName || "",
           issuerUrl: res.config.issuerUrl || "",
@@ -106,7 +111,9 @@ export default function SsoSettingsTab() {
           trustUnverifiedEmails: res.config.trustUnverifiedEmails ?? false,
           defaultRole: res.config.defaultRole || "Developer",
           configured: !!res.config.configured,
-        });
+        };
+        setConfig(next);
+        setSavedConfig(next);
         setMsg({
           type: "success",
           text: "Single Sign-On (SSO) configuration saved successfully.",
@@ -123,26 +130,26 @@ export default function SsoSettingsTab() {
 
   if (loading) {
     return (
-      <div className="p-12 text-center text-jira-gray-500 text-xs flex items-center justify-center gap-2">
-        <Loader2 className="w-4 h-4 animate-spin text-jira-blue" />
+      <div className="p-12 text-center text-muted text-xs flex items-center justify-center gap-2">
+        <Loader2 className="w-4 h-4 animate-spin text-accent" />
         <span>Loading SSO configuration...</span>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg border border-jira-gray-300 p-6 space-y-6">
+    <div className="bg-white rounded-lg border border-subtle p-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-jira-gray-200 gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-subtle gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-lg bg-purple-100 text-purple-800 border border-purple-200">
             <Building2 className="w-6 h-6 text-purple-700" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-jira-navy">
+            <h2 className="text-base font-bold text-ink">
               Single Sign-On (SSO) & Certificates
             </h2>
-            <p className="text-xs text-jira-gray-600 mt-0.5">
+            <p className="text-xs text-ink-2 mt-0.5">
               Configure corporate IdP (Keycloak, Okta, SAML 2.0, OIDC) authentication and token verification keys.
             </p>
           </div>
@@ -187,62 +194,66 @@ export default function SsoSettingsTab() {
         </div>
       )}
 
-      <form onSubmit={handleSave} className="space-y-6 text-xs">
+      <form id="settings-sso" onSubmit={handleSave} className="space-y-6 text-xs">
         {/* Toggle SSO */}
-        <div className="flex items-center justify-between p-4 bg-jira-gray-50 rounded-lg border border-jira-gray-200">
+        <div className="flex items-center justify-between p-4 bg-page rounded-lg border border-subtle">
           <div>
-            <div className="font-bold text-jira-navy">Enable Single Sign-On</div>
-            <div className="text-[11px] text-jira-gray-600 mt-0.5">
+            <div className="font-bold text-ink">Enable Single Sign-On</div>
+            <div className="text-[11px] text-ink-2 mt-0.5">
               Allow users to sign in seamlessly using your corporate identity provider.
             </div>
           </div>
           <input
             type="checkbox"
+            aria-label="Enable single sign-on"
             checked={config.enabled}
             onChange={(e) => setConfig({ ...config, enabled: e.target.checked })}
-            className="w-4 h-4 accent-jira-blue cursor-pointer"
+            className="w-4 h-4 accent-[rgb(var(--color-accent))] cursor-pointer"
           />
         </div>
 
         {/* Basic SSO Parameters */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block font-semibold text-jira-navy mb-1">
+            <label htmlFor="sso-provider" className="block font-semibold text-ink mb-1">
               Identity Provider Name
             </label>
             <input
+              id="sso-provider"
               type="text"
               value={config.providerName || ""}
               onChange={(e) => setConfig({ ...config, providerName: e.target.value })}
               placeholder="e.g. Corporate Okta / Keycloak SSO"
-              className="w-full px-3 py-2 border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy"
+              className="w-full px-3 py-2 border border-subtle rounded-md focus:border-accent text-ink"
             />
           </div>
 
           <div>
-            <label className="block font-semibold text-jira-navy mb-1">
+            <label htmlFor="sso-client-id" className="block font-semibold text-ink mb-1">
               Client ID / Audience
             </label>
             <input
+              id="sso-client-id"
               type="text"
               value={config.clientId || ""}
               onChange={(e) => setConfig({ ...config, clientId: e.target.value })}
               placeholder="trackr-client-id"
-              className="w-full px-3 py-2 border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy font-mono text-[11px]"
+              className="w-full px-3 py-2 border border-subtle rounded-md focus:border-accent text-ink font-mono text-[11px]"
             />
           </div>
         </div>
 
         <div>
-          <label className="block font-semibold text-jira-navy mb-1">
+          <label htmlFor="sso-issuer" className="block font-semibold text-ink mb-1">
             Issuer / Metadata URL
           </label>
           <input
+              id="sso-issuer"
             type="text"
             value={config.issuerUrl || ""}
             onChange={(e) => setConfig({ ...config, issuerUrl: e.target.value })}
             placeholder="https://sso.company.com/auth/realms/master"
-            className="w-full px-3 py-2 border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy font-mono text-[11px]"
+            className="w-full px-3 py-2 border border-subtle rounded-md focus:border-accent text-ink font-mono text-[11px]"
           />
         </div>
 
@@ -261,13 +272,14 @@ export default function SsoSettingsTab() {
           </div>
 
           <div>
-            <label className="block font-semibold text-purple-900 mb-1 flex items-center justify-between">
+            <label htmlFor="sso-certificate" className="block font-semibold text-purple-900 mb-1 flex items-center justify-between">
               <span>X.509 PEM Certificate (RS256)</span>
               <span className="text-[10px] text-purple-700 font-normal">
                 -----BEGIN CERTIFICATE----- ... -----END CERTIFICATE-----
               </span>
             </label>
             <textarea
+              id="sso-certificate"
               rows={4}
               value={config.certificate || ""}
               onChange={(e) => setConfig({ ...config, certificate: e.target.value })}
@@ -277,7 +289,7 @@ export default function SsoSettingsTab() {
           </div>
 
           <div>
-            <label className="block font-semibold text-purple-900 mb-1 flex items-center justify-between">
+            <label htmlFor="sso-secret" className="block font-semibold text-purple-900 mb-1 flex items-center justify-between">
               <span>Client Secret (HS256)</span>
               {config.hasClientSecret && (
                 <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
@@ -288,6 +300,7 @@ export default function SsoSettingsTab() {
             </label>
             <div className="relative">
               <input
+              id="sso-secret"
                 type={showSecret ? "text" : "password"}
                 value={config.clientSecret || ""}
                 onChange={(e) => setConfig({ ...config, clientSecret: e.target.value })}
@@ -311,26 +324,27 @@ export default function SsoSettingsTab() {
         </div>
 
         {/* Provisioning Settings */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-jira-gray-50 rounded-lg border border-jira-gray-200">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-page rounded-lg border border-subtle">
           <div className="flex items-center justify-between">
             <div>
-              <div className="font-bold text-jira-navy">Automatic User Provisioning (JIT)</div>
-              <div className="text-[10px] text-jira-gray-600">
+              <div className="font-bold text-ink">Automatic User Provisioning (JIT)</div>
+              <div className="text-[10px] text-ink-2">
                 Automatically create a local account on first successful SSO sign-in.
               </div>
             </div>
             <input
               type="checkbox"
+              aria-label="Automatic user provisioning"
               checked={config.autoProvisionUsers}
               onChange={(e) => setConfig({ ...config, autoProvisionUsers: e.target.checked })}
-              className="w-4 h-4 accent-jira-blue"
+              className="w-4 h-4 accent-[rgb(var(--color-accent))]"
             />
           </div>
 
           <div className="flex items-center justify-between">
             <div>
-              <div className="font-bold text-jira-navy">Trust unverified email addresses</div>
-              <div className="text-[10px] text-jira-gray-600">
+              <div className="font-bold text-ink">Trust unverified email addresses</div>
+              <div className="text-[10px] text-ink-2">
                 Let an SSO login take over an existing account with the same email even when the provider
                 doesn&apos;t mark the address verified. Only for providers that don&apos;t send the claim
                 (Microsoft Entra ID) and whose addresses you trust.
@@ -338,18 +352,20 @@ export default function SsoSettingsTab() {
             </div>
             <input
               type="checkbox"
+              aria-label="Trust unverified email addresses"
               checked={config.trustUnverifiedEmails}
               onChange={(e) => setConfig({ ...config, trustUnverifiedEmails: e.target.checked })}
-              className="w-4 h-4 accent-jira-blue"
+              className="w-4 h-4 accent-[rgb(var(--color-accent))]"
             />
           </div>
 
           <div>
-            <label className="block font-semibold text-jira-navy mb-1">Default User Role</label>
+            <label htmlFor="sso-default-role" className="block font-semibold text-ink mb-1">Default User Role</label>
             <select
+              id="sso-default-role"
               value={config.defaultRole || "Developer"}
               onChange={(e) => setConfig({ ...config, defaultRole: e.target.value })}
-              className="w-full px-3 py-1.5 border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy bg-white"
+              className="w-full px-3 py-1.5 border border-subtle rounded-md focus:border-accent text-ink bg-white"
             >
               <option value="Developer">Developer</option>
               <option value="QA Lead">QA Lead</option>
@@ -358,17 +374,12 @@ export default function SsoSettingsTab() {
           </div>
         </div>
 
-        {/* Save Button */}
-        <div className="flex justify-end pt-2">
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-5 py-2.5 bg-jira-blue hover:bg-jira-blue-hover text-white font-bold text-xs rounded-md flex items-center gap-2 shadow-xs transition-colors disabled:opacity-50"
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            <span>Save SSO Configuration</span>
-          </button>
-        </div>
+        <SaveBar
+          dirty={savedConfig !== null && JSON.stringify(config) !== JSON.stringify(savedConfig)}
+          saving={saving}
+          form="settings-sso"
+          onDiscard={() => savedConfig && setConfig(savedConfig)}
+        />
       </form>
     </div>
   );

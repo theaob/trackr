@@ -84,18 +84,18 @@ export default function ReleaseNotesModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
       <div
-        className="bg-white rounded-lg shadow-xl border border-jira-gray-200 w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
+        className="bg-white rounded-lg shadow-xl border border-subtle w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-jira-gray-200 shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-subtle shrink-0">
           <div className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-jira-blue" />
+            <FileText className="w-5 h-5 text-accent" />
             <div>
-              <h2 className="text-base font-bold text-jira-navy">
+              <h2 className="text-base font-bold text-ink">
                 Release Notes: {version.name}
               </h2>
-              <p className="text-[11px] text-jira-gray-500">
+              <p className="text-[11px] text-muted">
                 {version.releaseDate
                   ? `Released on ${calendarDateToLocal(version.releaseDate)?.toLocaleDateString()}`
                   : "Unreleased"}
@@ -105,13 +105,13 @@ export default function ReleaseNotesModal({
 
           <div className="flex items-center gap-2">
             {/* Tab switchers */}
-            <div className="flex items-center bg-jira-gray-100 p-0.5 rounded border border-jira-gray-300">
+            <div className="flex items-center bg-surface-sunk p-0.5 rounded border border-subtle">
               <button
                 onClick={() => setActiveTab("preview")}
                 className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1.5 transition-colors ${
                   activeTab === "preview"
-                    ? "bg-white text-jira-blue shadow-xs"
-                    : "text-jira-gray-600 hover:text-jira-navy"
+                    ? "bg-white text-accent shadow-xs"
+                    : "text-ink-2 hover:text-ink"
                 }`}
               >
                 <Eye className="w-3.5 h-3.5" />
@@ -121,8 +121,8 @@ export default function ReleaseNotesModal({
                 onClick={() => setActiveTab("markdown")}
                 className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1.5 transition-colors ${
                   activeTab === "markdown"
-                    ? "bg-white text-jira-blue shadow-xs"
-                    : "text-jira-gray-600 hover:text-jira-navy"
+                    ? "bg-white text-accent shadow-xs"
+                    : "text-ink-2 hover:text-ink"
                 }`}
               >
                 <Code className="w-3.5 h-3.5" />
@@ -132,7 +132,7 @@ export default function ReleaseNotesModal({
 
             <button
               onClick={onClose}
-              className="text-jira-gray-500 hover:text-jira-navy p-1 rounded hover:bg-jira-gray-100 transition-colors ml-2"
+              className="text-muted hover:text-ink p-1 rounded hover:bg-surface-sunk transition-colors ml-2"
             >
               <X className="w-4 h-4" />
             </button>
@@ -142,12 +142,12 @@ export default function ReleaseNotesModal({
         {/* Content Body */}
         <div className="flex-1 overflow-y-auto p-6">
           {isLoading ? (
-            <div className="py-20 flex flex-col items-center justify-center text-jira-gray-500 gap-2">
-              <Loader2 className="w-6 h-6 animate-spin text-jira-blue" />
+            <div className="py-20 flex flex-col items-center justify-center text-muted gap-2">
+              <Loader2 className="w-6 h-6 animate-spin text-accent" />
               <span className="text-xs">Generating release notes...</span>
             </div>
           ) : !data ? (
-            <div className="py-12 text-center text-xs text-jira-gray-500">
+            <div className="py-12 text-center text-xs text-muted">
               No issues or details found for this release version.
             </div>
           ) : activeTab === "markdown" ? (
@@ -156,29 +156,29 @@ export default function ReleaseNotesModal({
               <textarea
                 readOnly
                 value={data.markdown}
-                className="w-full h-[450px] font-mono text-xs p-4 bg-jira-gray-50 border border-jira-gray-300 rounded-md resize-none leading-relaxed text-jira-navy select-all"
+                className="w-full h-[450px] font-mono text-xs p-4 bg-page border border-subtle rounded-md resize-none leading-relaxed text-ink select-all"
               />
             </div>
           ) : (
             /* Rich Formatted Preview */
             <div className="space-y-6 max-w-2xl mx-auto">
               {/* Release Header Card */}
-              <div className="p-4 bg-jira-blue-subtle/30 border border-jira-blue/20 rounded-lg">
+              <div className="p-4 bg-accent-soft/30 border border-accent/20 rounded-lg">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-jira-navy flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-ink flex items-center gap-2">
                     <span>Release {version.name}</span>
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-jira-blue text-white">
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-accent text-accent-fg">
                       {version.status}
                     </span>
                   </h3>
-                  <span className="text-xs text-jira-gray-600 font-medium">
+                  <span className="text-xs text-ink-2 font-medium">
                     {version.releaseDate
                       ? calendarDateToLocal(version.releaseDate)?.toLocaleDateString()
                       : "Pending"}
                   </span>
                 </div>
                 {version.description && (
-                  <p className="text-xs text-jira-gray-700 mt-2 italic">
+                  <p className="text-xs text-ink-2 mt-2 italic">
                     &ldquo;{version.description}&rdquo;
                   </p>
                 )}
@@ -187,27 +187,27 @@ export default function ReleaseNotesModal({
               {/* Features & Enhancements */}
               {data.features.length > 0 && (
                 <div className="space-y-2.5">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-jira-gray-700 flex items-center gap-1.5">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-ink-2 flex items-center gap-1.5">
                     <Sparkles className="w-4 h-4 text-amber-500" />
                     Features & Enhancements ({data.features.length})
                   </h4>
-                  <ul className="divide-y divide-jira-gray-200 border border-jira-gray-200 rounded-lg overflow-hidden bg-white text-xs">
+                  <ul className="divide-y divide-subtle border border-subtle rounded-lg overflow-hidden bg-white text-xs">
                     {data.features.map((issue) => (
-                      <li key={issue.id} className="p-3 flex items-start justify-between gap-3 hover:bg-jira-gray-50">
+                      <li key={issue.id} className="p-3 flex items-start justify-between gap-3 hover:bg-page">
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-jira-blue">{issue.key}</span>
-                            <span className="font-semibold text-jira-navy">{issue.title}</span>
+                            <span className="font-bold text-accent">{issue.key}</span>
+                            <span className="font-semibold text-ink">{issue.title}</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           {issue.storyPoints !== null && (
-                            <span className="px-1.5 py-0.5 rounded bg-jira-gray-100 font-bold text-[10px] text-jira-gray-600">
+                            <span className="px-1.5 py-0.5 rounded bg-surface-sunk font-bold text-[10px] text-ink-2">
                               {issue.storyPoints} pts
                             </span>
                           )}
                           {issue.assignee && (
-                            <span className="text-jira-gray-500 text-[11px]">
+                            <span className="text-muted text-[11px]">
                               {issue.assignee.name}
                             </span>
                           )}
@@ -221,19 +221,19 @@ export default function ReleaseNotesModal({
               {/* Bug Fixes */}
               {data.bugs.length > 0 && (
                 <div className="space-y-2.5">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-jira-gray-700 flex items-center gap-1.5">
-                    <Bug className="w-4 h-4 text-jira-red" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-ink-2 flex items-center gap-1.5">
+                    <Bug className="w-4 h-4 text-danger" />
                     Bug Fixes ({data.bugs.length})
                   </h4>
-                  <ul className="divide-y divide-jira-gray-200 border border-jira-gray-200 rounded-lg overflow-hidden bg-white text-xs">
+                  <ul className="divide-y divide-subtle border border-subtle rounded-lg overflow-hidden bg-white text-xs">
                     {data.bugs.map((issue) => (
-                      <li key={issue.id} className="p-3 flex items-start justify-between gap-3 hover:bg-jira-gray-50">
+                      <li key={issue.id} className="p-3 flex items-start justify-between gap-3 hover:bg-page">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-jira-blue">{issue.key}</span>
-                          <span className="font-semibold text-jira-navy">{issue.title}</span>
+                          <span className="font-bold text-accent">{issue.key}</span>
+                          <span className="font-semibold text-ink">{issue.title}</span>
                         </div>
                         {issue.assignee && (
-                          <span className="text-jira-gray-500 text-[11px] shrink-0">
+                          <span className="text-muted text-[11px] shrink-0">
                             {issue.assignee.name}
                           </span>
                         )}
@@ -246,16 +246,16 @@ export default function ReleaseNotesModal({
               {/* Technical Improvements */}
               {data.technical.length > 0 && (
                 <div className="space-y-2.5">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-jira-gray-700 flex items-center gap-1.5">
-                    <Wrench className="w-4 h-4 text-jira-gray-600" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-ink-2 flex items-center gap-1.5">
+                    <Wrench className="w-4 h-4 text-ink-2" />
                     Technical Improvements & Subtasks ({data.technical.length})
                   </h4>
-                  <ul className="divide-y divide-jira-gray-200 border border-jira-gray-200 rounded-lg overflow-hidden bg-white text-xs">
+                  <ul className="divide-y divide-subtle border border-subtle rounded-lg overflow-hidden bg-white text-xs">
                     {data.technical.map((issue) => (
-                      <li key={issue.id} className="p-3 flex items-start justify-between gap-3 hover:bg-jira-gray-50">
+                      <li key={issue.id} className="p-3 flex items-start justify-between gap-3 hover:bg-page">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-jira-blue">{issue.key}</span>
-                          <span className="font-semibold text-jira-navy">{issue.title}</span>
+                          <span className="font-bold text-accent">{issue.key}</span>
+                          <span className="font-semibold text-ink">{issue.title}</span>
                         </div>
                       </li>
                     ))}
@@ -266,17 +266,17 @@ export default function ReleaseNotesModal({
               {/* Contributors */}
               {data.contributors.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-jira-gray-700 flex items-center gap-1.5">
-                    <Users className="w-4 h-4 text-jira-blue" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-ink-2 flex items-center gap-1.5">
+                    <Users className="w-4 h-4 text-accent" />
                     Contributors ({data.contributors.length})
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {data.contributors.map((c, idx) => (
                       <div
                         key={idx}
-                        className="px-2.5 py-1 bg-jira-gray-100 border border-jira-gray-300 rounded-full text-xs font-medium text-jira-navy flex items-center gap-1.5"
+                        className="px-2.5 py-1 bg-surface-sunk border border-subtle rounded-full text-xs font-medium text-ink flex items-center gap-1.5"
                       >
-                        <div className="w-4 h-4 rounded-full bg-jira-blue text-white text-[9px] font-bold flex items-center justify-center">
+                        <div className="w-4 h-4 rounded-full bg-accent text-accent-fg text-[9px] font-bold flex items-center justify-center">
                           {c.name.charAt(0)}
                         </div>
                         <span>{c.name}</span>
@@ -290,8 +290,8 @@ export default function ReleaseNotesModal({
         </div>
 
         {/* Modal Footer with Actions */}
-        <div className="flex items-center justify-between px-6 py-3.5 border-t border-jira-gray-200 bg-jira-gray-50 shrink-0">
-          <div className="text-xs text-jira-gray-500">
+        <div className="flex items-center justify-between px-6 py-3.5 border-t border-subtle bg-page shrink-0">
+          <div className="text-xs text-muted">
             {data && (
               <span>
                 Total issues included:{" "}
@@ -306,16 +306,16 @@ export default function ReleaseNotesModal({
             <button
               onClick={handleDownload}
               disabled={!data}
-              className="text-xs font-semibold px-3 py-1.5 rounded border border-jira-gray-300 bg-white hover:bg-jira-gray-100 text-jira-navy transition-colors flex items-center gap-1.5"
+              className="text-xs font-semibold px-3 py-1.5 rounded border border-subtle bg-white hover:bg-surface-sunk text-ink transition-colors flex items-center gap-1.5"
             >
-              <Download className="w-3.5 h-3.5 text-jira-gray-600" />
+              <Download className="w-3.5 h-3.5 text-ink-2" />
               Download .md
             </button>
 
             <button
               onClick={handleCopy}
               disabled={!data}
-              className="text-xs font-semibold px-3.5 py-1.5 rounded bg-jira-blue text-white hover:bg-jira-blue-hover transition-colors flex items-center gap-1.5 shadow-xs"
+              className="text-xs font-semibold px-3.5 py-1.5 rounded bg-accent text-accent-fg hover:bg-accent-hover transition-colors flex items-center gap-1.5 shadow-xs"
             >
               {copied ? (
                 <>

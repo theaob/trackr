@@ -37,8 +37,7 @@ const config: Config = {
         "4.5": "1.125rem",
       },
       colors: {
-        // Semantic tokens (see globals.css). New code uses these; the jira-*
-        // palette below is retired screen by screen as each one is redesigned.
+        // Semantic tokens (see globals.css): components ask for a role, never a hex value.
         page: token("page"),
         surface: { DEFAULT: token("surface"), sunk: token("surface-sunk") },
         subtle: token("border"),
@@ -55,40 +54,7 @@ const config: Config = {
         success: { DEFAULT: token("success"), soft: token("success-soft") },
         warning: { DEFAULT: token("warning"), soft: token("warning-soft") },
         check: token("check"),
-        jira: {
-          blue: {
-            DEFAULT: "#0052CC",
-            hover: "#0747A6",
-            light: "#DEEBFF",
-            subtle: "#E9F2FF",
-          },
-          navy: "#172B4D",
-          green: "#00875A",
-          red: "#DE350B",
-          yellow: "#FFAB00",
-          gray: {
-            50: "#FAFBFC",
-            100: "#F4F5F7",
-            200: "#EBECF0",
-            300: "#DFE1E6",
-            400: "#C1C7D0",
-            // 500 and 600 are text greys. Darkened from Atlassian's #8993A4
-            // and #6B778C (3.1:1 and 4.5:1 on white) so secondary text meets
-            // 4.5:1 on every light surface the app uses, the blue ones included.
-            500: "#5A677D",
-            600: "#505E75",
-            700: "#5E6C84",
-            800: "#42526E",
-            900: "#172B4D",
-          },
-          status: {
-            backlog: "#DFE1E6",
-            todo: "#DFE1E6",
-            inprogress: "#0052CC",
-            inreview: "#8F44FD",
-            done: "#00875A",
-          }
-        },
+        series: { 1: token("series-1"), "1-soft": token("series-1-soft"), 2: token("series-2"), 3: token("series-3") },
       },
     },
   },

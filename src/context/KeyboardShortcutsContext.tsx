@@ -127,23 +127,23 @@ export function KeyboardShortcutsProvider({ children }: { children: React.ReactN
         <div
           role="status"
           aria-live="polite"
-          className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-jira-navy text-white text-xs px-4 py-2 rounded-full shadow-2xl flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-2 select-none border border-jira-gray-700 pointer-events-none"
+          className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-ink text-surface text-xs px-4 py-2 rounded-full shadow-2xl flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-2 select-none border border-strong pointer-events-none"
         >
-          <span className="font-bold text-jira-blue-light">Go to...</span>
-          <span className="text-jira-gray-200">
-            <kbd className="font-mono font-bold bg-white/10 px-1 py-0.5 rounded">b</kbd> Backlog ·{" "}
-            <kbd className="font-mono font-bold bg-white/10 px-1 py-0.5 rounded">d</kbd> Board ·{" "}
-            <kbd className="font-mono font-bold bg-white/10 px-1 py-0.5 rounded">i</kbd> Issues ·{" "}
-            <kbd className="font-mono font-bold bg-white/10 px-1 py-0.5 rounded">r</kbd> Roadmap ·{" "}
-            <kbd className="font-mono font-bold bg-white/10 px-1 py-0.5 rounded">l</kbd> Releases ·{" "}
-            <kbd className="font-mono font-bold bg-white/10 px-1 py-0.5 rounded">e</kbd> Reports ·{" "}
-            <kbd className="font-mono font-bold bg-white/10 px-1 py-0.5 rounded">s</kbd> Settings ·{" "}
-            <kbd className="font-mono font-bold bg-white/10 px-1 py-0.5 rounded">p</kbd> Projects
+          <span className="font-bold text-surface">Go to...</span>
+          <span className="text-surface/80">
+            <kbd className="font-mono font-bold bg-surface/15 px-1 py-0.5 rounded">b</kbd> Backlog ·{" "}
+            <kbd className="font-mono font-bold bg-surface/15 px-1 py-0.5 rounded">d</kbd> Board ·{" "}
+            <kbd className="font-mono font-bold bg-surface/15 px-1 py-0.5 rounded">i</kbd> Issues ·{" "}
+            <kbd className="font-mono font-bold bg-surface/15 px-1 py-0.5 rounded">r</kbd> Roadmap ·{" "}
+            <kbd className="font-mono font-bold bg-surface/15 px-1 py-0.5 rounded">l</kbd> Releases ·{" "}
+            <kbd className="font-mono font-bold bg-surface/15 px-1 py-0.5 rounded">e</kbd> Reports ·{" "}
+            <kbd className="font-mono font-bold bg-surface/15 px-1 py-0.5 rounded">s</kbd> Settings ·{" "}
+            <kbd className="font-mono font-bold bg-surface/15 px-1 py-0.5 rounded">p</kbd> Projects
             {currentUserHasNewLayout && (
               <>
                 {" "}·{" "}
-                <kbd className="font-mono font-bold bg-white/10 px-1 py-0.5 rounded">h</kbd> Home ·{" "}
-                <kbd className="font-mono font-bold bg-white/10 px-1 py-0.5 rounded">n</kbd> Inbox
+                <kbd className="font-mono font-bold bg-surface/15 px-1 py-0.5 rounded">h</kbd> Home ·{" "}
+                <kbd className="font-mono font-bold bg-surface/15 px-1 py-0.5 rounded">n</kbd> Inbox
               </>
             )}
           </span>

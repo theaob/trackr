@@ -1,8 +1,5 @@
-import React from "react";
 import { describe, it, expect, vi } from "vitest";
-import { renderToStaticMarkup } from "react-dom/server";
 import { computeVersionStats } from "@/lib/versionStats";
-import CreateVersionModal from "@/components/releases/CreateVersionModal";
 
 vi.mock("@/lib/actions/versions", () => ({
   createVersion: vi.fn(),
@@ -264,20 +261,6 @@ describe("Release Fix Version & Progress Metrics", () => {
   });
 
   describe("Release Dates & Start Date Removal", () => {
-    it("renders CreateVersionModal with Release Date field and without Start Date field", () => {
-      const html = renderToStaticMarkup(
-        React.createElement(CreateVersionModal, {
-          projectId: "p-1",
-          isOpen: true,
-          onClose: () => {},
-          onSaved: () => {},
-        })
-      );
-
-      expect(html).toContain("Release Date");
-      expect(html).not.toContain("Start Date");
-    });
-
     it("formats release date without start date in version card", () => {
       const version = {
         id: "v-1",

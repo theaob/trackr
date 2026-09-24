@@ -1,5 +1,6 @@
 "use client";
 
+import ColorSwatchPicker from "./ColorSwatchPicker";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Project, WorkflowStatus, WorkflowStatusCategory, WorkflowTransition } from "@/types";
@@ -249,66 +250,68 @@ export default function WorkflowSettingsTab({
       {/* Statuses */}
       <div>
         <div className="flex items-center justify-between mb-1">
-          <h3 className="text-sm font-bold text-jira-navy">Statuses</h3>
+          <h3 className="text-sm font-bold text-ink">Statuses</h3>
           {canManage && !addingStatus && (
             <button
               onClick={() => setAddingStatus(true)}
-              className="text-[11px] text-jira-blue hover:underline font-semibold flex items-center gap-1"
+              className="text-[11px] text-accent hover:underline font-semibold flex items-center gap-1"
             >
               <Plus className="w-3 h-3" />
               Add status
             </button>
           )}
         </div>
-        <p className="text-[11px] text-jira-gray-500 mb-3">
+        <p className="text-[11px] text-muted mb-3">
           The board shows one column per non-backlog status, in this order. A backlog status is
           excluded from the board and lives in the Backlog view instead.
         </p>
 
-        <div className="border border-jira-gray-200 rounded-lg divide-y divide-jira-gray-200 overflow-hidden">
+        <div className="border border-subtle rounded-lg divide-y divide-subtle overflow-hidden">
           {statuses.map((status, index) => (
             <div key={status.id} className="flex items-center gap-3 px-3 py-2.5 bg-white">
-              <div className="flex flex-col shrink-0">
+              <div className="flex shrink-0 items-center">
                 <button
                   disabled={!canManage || index === 0}
                   onClick={() => handleMove(index, -1)}
-                  className="text-jira-gray-400 hover:text-jira-navy disabled:opacity-30 disabled:cursor-not-allowed"
+                  aria-label={`Move ${status.name} up`}
+                  className="grid h-6 w-6 place-items-center rounded-control text-muted hover:bg-surface-sunk hover:text-ink disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   <ArrowUp className="w-3.5 h-3.5" />
                 </button>
                 <button
                   disabled={!canManage || index === statuses.length - 1}
                   onClick={() => handleMove(index, 1)}
-                  className="text-jira-gray-400 hover:text-jira-navy disabled:opacity-30 disabled:cursor-not-allowed"
+                  aria-label={`Move ${status.name} down`}
+                  className="grid h-6 w-6 place-items-center rounded-control text-muted hover:bg-surface-sunk hover:text-ink disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   <ArrowDown className="w-3.5 h-3.5" />
                 </button>
               </div>
 
-              <input
-                type="color"
+              <ColorSwatchPicker
                 value={status.color}
                 disabled={!canManage}
-                onChange={(e) => handleColorChange(status, e.target.value)}
-                className="w-6 h-6 rounded border border-jira-gray-300 shrink-0 disabled:opacity-60"
-                title="Column color"
+                onChange={(hex) => handleColorChange(status, hex)}
+                label={`Colour of ${status.name}`}
               />
 
               <input
                 type="text"
                 defaultValue={status.name}
+                aria-label={`Name of ${status.name}`}
                 disabled={!canManage}
                 onBlur={(e) => handleRename(status, e.target.value)}
-                className="flex-1 min-w-0 px-2 py-1 text-xs font-semibold text-jira-navy border border-transparent hover:border-jira-gray-300 focus:border-jira-blue rounded disabled:opacity-60"
+                className="flex-1 min-w-0 px-2 py-1 text-xs font-semibold text-ink border border-transparent hover:border-subtle focus:border-accent rounded disabled:opacity-60"
               />
 
               <select
                 value={status.category}
+                aria-label={`Category of ${status.name}`}
                 disabled={!canManage}
                 onChange={(e) =>
                   handleFieldChange(status, { category: e.target.value as WorkflowStatusCategory })
                 }
-                className="text-[11px] bg-white border border-jira-gray-300 rounded px-1.5 py-1 text-jira-navy disabled:opacity-60 shrink-0"
+                className="text-[11px] bg-white border border-subtle rounded px-1.5 py-1 text-ink disabled:opacity-60 shrink-0"
               >
                 {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -317,13 +320,13 @@ export default function WorkflowSettingsTab({
                 ))}
               </select>
 
-              <label className="flex items-center gap-1 text-[11px] text-jira-gray-600 shrink-0">
+              <label className="flex items-center gap-1 text-[11px] text-ink-2 shrink-0">
                 <input
                   type="checkbox"
                   checked={status.isBacklog}
                   disabled={!canManage}
                   onChange={(e) => handleFieldChange(status, { isBacklog: e.target.checked })}
-                  className="accent-jira-blue disabled:opacity-60"
+                  className="accent-[rgb(var(--color-accent))] disabled:opacity-60"
                 />
                 Backlog
               </label>
@@ -332,6 +335,7 @@ export default function WorkflowSettingsTab({
                 type="number"
                 min={0}
                 placeholder="WIP"
+                aria-label={`Work-in-progress limit for ${status.name}`}
                 value={status.wipLimit ?? ""}
                 disabled={!canManage}
                 onChange={(e) =>
@@ -339,7 +343,7 @@ export default function WorkflowSettingsTab({
                     wipLimit: e.target.value === "" ? null : parseInt(e.target.value, 10),
                   })
                 }
-                className="w-14 px-1.5 py-1 text-[11px] border border-jira-gray-300 rounded focus:border-jira-blue disabled:opacity-60 shrink-0"
+                className="w-14 px-1.5 py-1 text-[11px] border border-subtle rounded focus:border-accent disabled:opacity-60 shrink-0"
                 title="WIP limit"
               />
 
@@ -347,7 +351,7 @@ export default function WorkflowSettingsTab({
                 <button
                   onClick={() => handleDelete(status)}
                   disabled={busyId === status.id}
-                  className="p-1 text-jira-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded shrink-0"
+                  className="p-1 text-muted hover:text-rose-600 hover:bg-rose-50 rounded shrink-0"
                   title="Delete status"
                 >
                   {busyId === status.id ? (
@@ -364,7 +368,7 @@ export default function WorkflowSettingsTab({
         {addingStatus && (
           <form
             onSubmit={handleAddStatus}
-            className="mt-3 p-3 border border-jira-gray-300 rounded-md bg-jira-gray-50/70 flex items-center gap-2"
+            className="mt-3 p-3 border border-subtle rounded-md bg-page/70 flex items-center gap-2"
           >
             <input
               autoFocus
@@ -372,12 +376,12 @@ export default function WorkflowSettingsTab({
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="Status name, e.g. Code Review"
-              className="flex-1 px-2.5 py-1.5 text-xs border border-jira-gray-300 rounded focus:border-jira-blue text-jira-navy"
+              className="flex-1 px-2.5 py-1.5 text-xs border border-subtle rounded focus:border-accent text-ink"
             />
             <select
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value as WorkflowStatusCategory)}
-              className="text-xs bg-white border border-jira-gray-300 rounded px-2 py-1.5 text-jira-navy"
+              className="text-xs bg-white border border-subtle rounded px-2 py-1.5 text-ink"
             >
               {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -388,7 +392,7 @@ export default function WorkflowSettingsTab({
             <button
               type="submit"
               disabled={isCreating || !newName.trim()}
-              className="px-3 py-1.5 bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold rounded disabled:opacity-50 flex items-center gap-1.5"
+              className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-accent-fg text-xs font-semibold rounded disabled:opacity-50 flex items-center gap-1.5"
             >
               {isCreating && <Loader2 className="w-3 h-3 animate-spin" />}
               {isCreating ? "Adding…" : "Add"}
@@ -399,7 +403,7 @@ export default function WorkflowSettingsTab({
                 setAddingStatus(false);
                 setNewName("");
               }}
-              className="px-3 py-1.5 text-jira-gray-600 hover:bg-jira-gray-100 rounded text-xs font-medium"
+              className="px-3 py-1.5 text-ink-2 hover:bg-surface-sunk rounded text-xs font-medium"
             >
               Cancel
             </button>
@@ -411,24 +415,24 @@ export default function WorkflowSettingsTab({
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-bold text-jira-navy flex items-center gap-1.5 mb-0.5">
-              <GitBranch className="w-3.5 h-3.5 text-jira-blue" />
+            <h3 className="text-sm font-bold text-ink flex items-center gap-1.5 mb-0.5">
+              <GitBranch className="w-3.5 h-3.5 text-accent" />
               Transitions
             </h3>
-            <p className="text-[11px] text-jira-gray-500">
+            <p className="text-[11px] text-muted">
               Configure allowed moves between statuses. An issue can only move between statuses connected by a transition arrow.
             </p>
           </div>
 
           {/* View Mode Switcher: Graph (Default) vs Matrix */}
-          <div className="flex items-center bg-jira-gray-100 p-0.5 rounded border border-jira-gray-300 text-xs shrink-0">
+          <div className="flex items-center bg-surface-sunk p-0.5 rounded border border-subtle text-xs shrink-0">
             <button
               type="button"
               onClick={() => setTransitionViewMode("graph")}
               className={`px-3 py-1 rounded font-semibold flex items-center gap-1.5 transition-colors ${
                 transitionViewMode === "graph"
-                  ? "bg-white text-jira-blue shadow-2xs"
-                  : "text-jira-gray-600 hover:text-jira-navy"
+                  ? "bg-white text-accent shadow-2xs"
+                  : "text-ink-2 hover:text-ink"
               }`}
             >
               <Network className="w-3.5 h-3.5" />
@@ -439,8 +443,8 @@ export default function WorkflowSettingsTab({
               onClick={() => setTransitionViewMode("matrix")}
               className={`px-3 py-1 rounded font-semibold flex items-center gap-1.5 transition-colors ${
                 transitionViewMode === "matrix"
-                  ? "bg-white text-jira-blue shadow-2xs"
-                  : "text-jira-gray-600 hover:text-jira-navy"
+                  ? "bg-white text-accent shadow-2xs"
+                  : "text-ink-2 hover:text-ink"
               }`}
             >
               <TableIcon className="w-3.5 h-3.5" />
@@ -461,17 +465,17 @@ export default function WorkflowSettingsTab({
             onAddStatusClick={() => setAddingStatus(true)}
           />
         ) : (
-          <div className="overflow-x-auto border border-jira-gray-200 rounded-lg">
+          <div className="overflow-x-auto border border-subtle rounded-lg">
             <table className="text-[11px] border-collapse">
               <thead>
                 <tr>
-                  <th className="sticky left-0 bg-jira-gray-50 px-3 py-2 text-left font-bold text-jira-gray-600 border-b border-jira-gray-200">
+                  <th className="sticky left-0 bg-page px-3 py-2 text-left font-bold text-ink-2 border-b border-subtle">
                     From \ To
                   </th>
                   {statuses.map((to) => (
                     <th
                       key={to.id}
-                      className="px-2 py-2 text-center font-bold text-jira-gray-600 border-b border-l border-jira-gray-200 whitespace-nowrap"
+                      className="px-2 py-2 text-center font-bold text-ink-2 border-b border-l border-subtle whitespace-nowrap"
                     >
                       {prettifyStatusName(to.name)}
                     </th>
@@ -481,7 +485,7 @@ export default function WorkflowSettingsTab({
               <tbody>
                 {statuses.map((from) => (
                   <tr key={from.id}>
-                    <td className="sticky left-0 bg-white px-3 py-2 font-semibold text-jira-navy border-b border-jira-gray-200 whitespace-nowrap">
+                    <td className="sticky left-0 bg-white px-3 py-2 font-semibold text-ink border-b border-subtle whitespace-nowrap">
                       {prettifyStatusName(from.name)}
                     </td>
                     {statuses.map((to) => {
@@ -490,10 +494,10 @@ export default function WorkflowSettingsTab({
                       return (
                         <td
                           key={to.id}
-                          className="px-2 py-2 text-center border-b border-l border-jira-gray-200"
+                          className="px-2 py-2 text-center border-b border-l border-subtle"
                         >
                           {isSelf ? (
-                            <span className="text-jira-gray-300">—</span>
+                            <span className="text-muted">—</span>
                           ) : (
                             <input
                               type="checkbox"
@@ -502,7 +506,7 @@ export default function WorkflowSettingsTab({
                               onChange={(e) =>
                                 handleToggleTransition(from.id, to.id, e.target.checked)
                               }
-                              className="accent-jira-blue disabled:opacity-60"
+                              className="accent-[rgb(var(--color-accent))] disabled:opacity-60"
                             />
                           )}
                         </td>

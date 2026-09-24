@@ -97,18 +97,18 @@ export default function CreateProjectModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4 overflow-y-auto animate-in fade-in">
-      <div className="bg-white w-full h-full sm:h-auto max-w-lg rounded-none sm:rounded-lg shadow-2xl border-0 sm:border border-jira-gray-300 flex flex-col max-h-none sm:max-h-[90vh] overflow-hidden">
+      <div className="bg-white w-full h-full sm:h-auto max-w-lg rounded-none sm:rounded-lg shadow-2xl border-0 sm:border border-subtle flex flex-col max-h-none sm:max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-jira-gray-200">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-subtle">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded bg-jira-blue-light text-jira-blue flex items-center justify-center font-bold">
+            <div className="w-8 h-8 rounded bg-accent-soft text-accent flex items-center justify-center font-bold">
               <FolderPlus className="w-4 h-4" />
             </div>
-            <h2 className="text-lg font-bold text-jira-navy">Create Project</h2>
+            <h2 className="text-lg font-bold text-ink">Create Project</h2>
           </div>
           <button
             onClick={onClose}
-            className="text-jira-gray-500 hover:text-jira-navy p-1 rounded-md hover:bg-jira-gray-100 transition-colors"
+            className="text-muted hover:text-ink p-1 rounded-md hover:bg-surface-sunk transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -130,7 +130,7 @@ export default function CreateProjectModal({
           )}
 
           <div>
-            <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
               Project Name <span className="text-rose-500">*</span>
             </label>
             <input
@@ -140,12 +140,12 @@ export default function CreateProjectModal({
               onChange={(e) => handleNameChange(e.target.value)}
               required
               autoFocus
-              className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue text-jira-navy"
+              className="w-full px-3 py-2 border border-subtle rounded focus:border-accent text-ink"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
               Project Key <span className="text-rose-500">*</span>
             </label>
             <input
@@ -158,21 +158,21 @@ export default function CreateProjectModal({
               }}
               required
               maxLength={10}
-              className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue font-mono uppercase text-jira-navy"
+              className="w-full px-3 py-2 border border-subtle rounded focus:border-accent font-mono uppercase text-ink"
             />
-            <p className="text-[11px] text-jira-gray-500 mt-1">
+            <p className="text-[11px] text-muted mt-1">
               Prefix used for all issues in this project (e.g., {key || "KEY"}-1, {key || "KEY"}-2).
             </p>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
               Project Lead
             </label>
             <select
               value={leadId}
               onChange={(e) => setLeadId(e.target.value)}
-              className="w-full bg-white border border-jira-gray-300 rounded px-3 py-2 text-jira-navy focus:border-jira-blue"
+              className="w-full bg-white border border-subtle rounded px-3 py-2 text-ink focus:border-accent"
             >
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
@@ -183,7 +183,7 @@ export default function CreateProjectModal({
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
               Description
             </label>
             <textarea
@@ -191,23 +191,23 @@ export default function CreateProjectModal({
               placeholder="What is this project focused on?"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue text-jira-navy leading-relaxed"
+              className="w-full px-3 py-2 border border-subtle rounded focus:border-accent text-ink leading-relaxed"
             />
           </div>
 
-          <div className="pt-4 border-t border-jira-gray-200 flex items-center justify-end gap-3">
+          <div className="pt-4 border-t border-subtle flex items-center justify-end gap-3">
             <SubmitShortcutHint className="hidden sm:inline-flex mr-1" />
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-jira-gray-700 hover:bg-jira-gray-100 rounded font-medium transition-colors"
+              className="px-4 py-2 text-ink-2 hover:bg-surface-sunk rounded font-medium transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting || !canCreate}
-              className="bg-jira-blue hover:bg-jira-blue-hover text-white px-4 py-2 rounded font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
+              className="bg-accent hover:bg-accent-hover text-accent-fg px-4 py-2 rounded font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
             >
               {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
               <span>Create Project</span>

@@ -16,12 +16,12 @@ export default function LoginView({
   const [dismissedError, setDismissedError] = useState(false);
 
   return (
-    <div className="min-h-screen w-full bg-jira-gray-100 flex flex-col items-center justify-center gap-6 p-4">
+    <div className="min-h-screen w-full bg-surface-sunk flex flex-col items-center justify-center gap-6 p-4">
       <TrackrLogo size="lg" />
 
       <Link prefetch={false}
         href="/projects"
-        className="text-xs text-jira-gray-600 hover:text-jira-blue font-medium"
+        className="text-xs text-ink-2 hover:text-accent font-medium"
       >
         &larr; Continue without signing in
       </Link>

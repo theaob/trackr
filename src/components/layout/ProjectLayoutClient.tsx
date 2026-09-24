@@ -77,7 +77,7 @@ export default function ProjectLayoutClient({
             {children}
           </AppShell>
         ) : (
-          <div className="flex flex-col h-screen w-screen overflow-hidden bg-white text-jira-navy font-sans antialiased">
+          <div className="flex flex-col h-screen w-screen overflow-hidden bg-white text-ink font-sans antialiased">
             {/* Top Navbar */}
             <Navbar
               projects={projects}

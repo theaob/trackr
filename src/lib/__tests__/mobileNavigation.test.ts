@@ -402,7 +402,7 @@ describe("Mobile Viewport & Navigation", () => {
     );
 
     // System Settings link container has hidden md:block
-    expect(navbarSource).toContain("hidden md:block py-1 border-b border-jira-gray-200");
+    expect(navbarSource).toContain("hidden md:block py-1 border-b border-subtle");
     expect(navbarSource).toContain("System Settings");
   });
 
@@ -422,17 +422,21 @@ describe("Mobile Viewport & Navigation", () => {
     );
 
     // Create Project button is hidden on mobile: hidden md:inline-flex
-    expect(html).toContain("hidden md:inline-flex bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold");
+    expect(html).toContain("hidden md:inline-flex bg-accent hover:bg-accent-hover text-accent-fg text-xs font-semibold");
     // Project Settings icon link is hidden on mobile: hidden md:flex
-    expect(html).toContain("hidden md:flex items-center gap-1 hover:text-jira-blue transition-colors");
+    expect(html).toContain("hidden md:flex items-center gap-1 hover:text-accent transition-colors");
   });
 
   it("renders mobile desktop-only notice and wraps settings layout in hidden md:block in ProjectSettingsView", () => {
     const html = renderToStaticMarkup(
-      React.createElement(ProjectSettingsView, {
-        project: mockProject,
-        users: [],
-      })
+      React.createElement(
+        ToastProvider,
+        null,
+        React.createElement(ProjectSettingsView, {
+          project: mockProject,
+          users: [],
+        })
+      )
     );
 
     // Mobile notice visible on md:hidden

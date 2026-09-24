@@ -99,18 +99,18 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShor
       aria-modal="true"
       aria-labelledby="shortcuts-dialog-title"
     >
-      <div className="bg-white rounded-lg shadow-2xl border border-jira-gray-200 w-full max-w-xl max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+      <div className="bg-white rounded-lg shadow-2xl border border-subtle w-full max-w-xl max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-jira-gray-200 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-subtle flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Command className="w-5 h-5 text-jira-blue" />
-            <h2 id="shortcuts-dialog-title" className="text-base font-bold text-jira-navy">
+            <Command className="w-5 h-5 text-accent" />
+            <h2 id="shortcuts-dialog-title" className="text-base font-bold text-ink">
               Keyboard Shortcuts
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-jira-gray-500 hover:text-jira-navy hover:bg-jira-gray-100 rounded-md transition-colors"
+            className="p-1.5 text-muted hover:text-ink hover:bg-surface-sunk rounded-md transition-colors"
             aria-label="Close keyboard shortcuts"
           >
             <X className="w-5 h-5" />
@@ -120,31 +120,31 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShor
         {/* Search */}
         <div className="px-6 pt-3 pb-2">
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-400" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
             <input
               type="text"
               autoFocus
               placeholder="Search shortcuts..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-jira-gray-50 border border-jira-gray-300 focus:border-jira-blue focus:bg-white rounded-md transition-all text-jira-navy placeholder-jira-gray-400"
+              className="w-full pl-9 pr-3 py-1.5 text-xs bg-page border border-subtle focus:border-accent focus:bg-white rounded-md transition-all text-ink placeholder-muted"
             />
           </div>
         </div>
 
         {/* Shortcuts List */}
-        <div className="flex-1 overflow-y-auto px-6 py-3 space-y-5 divide-y divide-jira-gray-100">
+        <div className="flex-1 overflow-y-auto px-6 py-3 space-y-5 divide-y divide-subtle">
           {grouped.size === 0 ? (
-            <div className="py-8 text-center text-xs text-jira-gray-500">
+            <div className="py-8 text-center text-xs text-muted">
               No shortcuts found matching &ldquo;{searchQuery}&rdquo;
             </div>
           ) : (
             Array.from(grouped.entries()).map(([category, items], catIdx) => (
               <div key={category} className={catIdx > 0 ? "pt-4" : ""}>
-                <h3 className="text-[11px] font-bold text-jira-gray-600 uppercase tracking-wider mb-2.5">
+                <h3 className="text-[11px] font-bold text-ink-2 uppercase tracking-wider mb-2.5">
                   {category}
                   {category === "Navigation" && (
-                    <span className="text-[10px] font-normal text-jira-gray-500 ml-1.5">
+                    <span className="text-[10px] font-normal text-muted ml-1.5">
                       (press keys in sequence)
                     </span>
                   )}
@@ -153,19 +153,19 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShor
                   {items.map((item, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between py-1 px-1.5 rounded hover:bg-jira-gray-50 transition-colors text-xs"
+                      className="flex items-center justify-between py-1 px-1.5 rounded hover:bg-page transition-colors text-xs"
                     >
-                      <span className="text-jira-gray-800 font-medium">{item.description}</span>
+                      <span className="text-ink font-medium">{item.description}</span>
                       <div className="flex items-center gap-1 shrink-0">
                         {item.keys.map((k, kIdx) => (
                           <React.Fragment key={kIdx}>
                             {kIdx > 0 && item.category === "Navigation" && (
-                              <span className="text-[10px] text-jira-gray-400 font-mono">then</span>
+                              <span className="text-[10px] text-muted font-mono">then</span>
                             )}
                             {kIdx > 0 && item.category !== "Navigation" && (
-                              <span className="text-[10px] text-jira-gray-400 font-mono">+</span>
+                              <span className="text-[10px] text-muted font-mono">+</span>
                             )}
-                            <kbd className="inline-flex items-center justify-center min-w-[22px] px-1.5 py-0.5 text-[11px] font-semibold text-jira-navy bg-jira-gray-100 border border-jira-gray-300 rounded shadow-2xs font-mono">
+                            <kbd className="inline-flex items-center justify-center min-w-[22px] px-1.5 py-0.5 text-[11px] font-semibold text-ink bg-surface-sunk border border-subtle rounded shadow-2xs font-mono">
                               {k}
                             </kbd>
                           </React.Fragment>
@@ -180,9 +180,9 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShor
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-2.5 border-t border-jira-gray-200 bg-jira-gray-50 flex items-center justify-between text-[11px] text-jira-gray-500">
+        <div className="px-6 py-2.5 border-t border-subtle bg-page flex items-center justify-between text-[11px] text-muted">
           <span>Shortcuts work whenever you are not typing in a text field.</span>
-          <kbd className="px-1.5 py-0.5 text-[10px] bg-white border border-jira-gray-300 rounded shadow-2xs">
+          <kbd className="px-1.5 py-0.5 text-[10px] bg-white border border-subtle rounded shadow-2xs">
             Esc to close
           </kbd>
         </div>

@@ -1,9 +1,24 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { Gauge } from "lucide-react";
 import { useChartWidth } from "@/hooks/useChartWidth";
-import { Gauge, CheckCircle2, TrendingUp, HelpCircle } from "lucide-react";
 import { niceAxis } from "./chartScale";
+import {
+  DataTable,
+  EmptyChart,
+  GUIDE,
+  Headline,
+  HoverCard,
+  Legend,
+  ReportCard,
+  Segmented,
+  series,
+  UNIT_OPTIONS,
+  unitShort,
+  YGrid,
+  type Unit,
+} from "./kit";
 
 export interface VelocitySprint {
   id: string;
@@ -17,367 +32,179 @@ export interface VelocitySprint {
   reliabilityPct?: number;
 }
 
-interface VelocityChartProps {
-  sprints: VelocitySprint[];
-}
-
 // Narrowest drawing width; wider containers draw at their real width.
 const BASE_WIDTH = 680;
-const HEIGHT = 280;
-const MARGIN = { top: 32, right: 28, bottom: 36, left: 44 };
+const HEIGHT = 260;
+const MARGIN = { top: 20, right: 24, bottom: 30, left: 40 };
 const PLOT_HEIGHT = HEIGHT - MARGIN.top - MARGIN.bottom;
-const MAX_BAR_WIDTH = 26;
+const MAX_BAR = 24;
+const GAP = 2;
 
-export default function VelocityChart({ sprints }: VelocityChartProps) {
+/** A bar with a 4px rounded top and a square foot on the baseline. */
+function barPath(x: number, y: number, w: number, h: number) {
+  const r = Math.min(4, w / 2, h);
+  return `M ${x} ${y + h} V ${y + r} Q ${x} ${y} ${x + r} ${y} H ${x + w - r} Q ${x + w} ${y} ${x + w} ${y + r} V ${y + h} Z`;
+}
+
+/**
+ * Committed against completed work per sprint. It leads with the average
+ * completed per sprint and how much of the commitment was delivered.
+ */
+export default function VelocityChart({ sprints }: { sprints: VelocitySprint[] }) {
   const [chartRef, WIDTH] = useChartWidth(BASE_WIDTH);
   const PLOT_WIDTH = WIDTH - MARGIN.left - MARGIN.right;
-  const [metricUnit, setMetricUnit] = useState<"points" | "issues">("points");
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const [metric, setMetric] = useState<Unit>("points");
+  const [hover, setHover] = useState<number | null>(null);
+  const issues = metric === "issues";
+  const u = unitShort(metric);
 
-  const isIssueUnit = metricUnit === "issues";
+  const rows = useMemo(
+    () =>
+      sprints.map((s) => {
+        const completedPts = s.completedPoints ?? s.points ?? 0;
+        const committedPts = s.committedPoints ?? completedPts;
+        const completedIss = s.completedIssues ?? s.issueCount ?? 0;
+        const committedIss = s.committedIssues ?? completedIss;
+        const reliability =
+          s.reliabilityPct ??
+          (committedPts > 0 ? Math.min(100, Math.round((completedPts / committedPts) * 100)) : completedIss > 0 ? 100 : 0);
+        return {
+          id: s.id,
+          name: s.name,
+          committed: issues ? committedIss : committedPts,
+          completed: issues ? completedIss : completedPts,
+          reliability,
+        };
+      }),
+    [sprints, issues]
+  );
 
-  const normalizedSprints = useMemo(() => {
-    return sprints.map((s) => {
-      const completedPts = s.completedPoints ?? s.points ?? 0;
-      const committedPts = s.committedPoints ?? completedPts;
-      const completedIss = s.completedIssues ?? s.issueCount ?? 0;
-      const committedIss = s.committedIssues ?? completedIss;
-      const reliability =
-        s.reliabilityPct ??
-        (committedPts > 0
-          ? Math.min(100, Math.round((completedPts / committedPts) * 100))
-          : completedIss > 0
-          ? 100
-          : 0);
+  const average = rows.length ? Math.round(rows.reduce((a, r) => a + r.completed, 0) / rows.length) : 0;
+  const reliability = rows.length ? Math.round(rows.reduce((a, r) => a + r.reliability, 0) / rows.length) : 0;
+  const { ticks, axisMax } = niceAxis(Math.max(1, ...rows.map((r) => Math.max(r.committed, r.completed))));
+  const yAt = (v: number) => MARGIN.top + PLOT_HEIGHT - (v / axisMax) * PLOT_HEIGHT;
+  const slot = PLOT_WIDTH / Math.max(1, rows.length);
+  const bar = Math.max(4, Math.min(MAX_BAR, (slot - 16) / 2));
+  const committedColor = series("1-soft");
+  const completedColor = series(1);
 
-      return {
-        ...s,
-        completedPts,
-        committedPts,
-        completedIss,
-        committedIss,
-        reliability,
-      };
-    });
-  }, [sprints]);
-
-  const maxVal = useMemo(() => {
-    return Math.max(
-      ...normalizedSprints.map((s) =>
-        isIssueUnit
-          ? Math.max(s.committedIss, s.completedIss)
-          : Math.max(s.committedPts, s.completedPts)
-      ),
-      1
-    );
-  }, [normalizedSprints, isIssueUnit]);
-
-  const { ticks, axisMax: yMax } = useMemo(() => niceAxis(maxVal), [maxVal]);
-
-  const avgCompleted = useMemo(() => {
-    if (normalizedSprints.length === 0) return 0;
-    const sum = normalizedSprints.reduce(
-      (acc, s) => acc + (isIssueUnit ? s.completedIss : s.completedPts),
-      0
-    );
-    return Math.round(sum / normalizedSprints.length);
-  }, [normalizedSprints, isIssueUnit]);
-
-  const avgReliability = useMemo(() => {
-    if (normalizedSprints.length === 0) return 0;
-    const sum = normalizedSprints.reduce((acc, s) => acc + s.reliability, 0);
-    return Math.round(sum / normalizedSprints.length);
-  }, [normalizedSprints]);
-
-  if (sprints.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-52 text-jira-gray-400 gap-2">
-        <Gauge className="w-8 h-8" />
-        <p className="text-xs">Complete a sprint to start tracking velocity.</p>
-      </div>
-    );
-  }
-
-  const slotWidth = PLOT_WIDTH / normalizedSprints.length;
-  const barWidth = Math.min(MAX_BAR_WIDTH, (slotWidth - 12) / 2);
-  const yAt = (value: number) => MARGIN.top + PLOT_HEIGHT - (value / yMax) * PLOT_HEIGHT;
-
-  const unitLabel = isIssueUnit ? "issues" : "pts";
-
-  return (
-    <div className="space-y-4">
-      {/* Chart Header & Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-jira-gray-200 pb-3">
-        {/* Legend */}
-        <div className="flex items-center gap-4 text-[11px] text-jira-gray-600">
-          <span className="flex items-center gap-1.5 font-medium">
-            <span className="w-3 h-3 rounded-xs bg-[#4C9AFF]" />
-            Committed
-          </span>
-          <span className="flex items-center gap-1.5 font-medium text-jira-blue">
-            <span className="w-3 h-3 rounded-xs bg-[#0052CC]" />
-            Completed
-          </span>
-          {avgCompleted > 0 && (
-            <span className="flex items-center gap-1.5 text-jira-gray-500">
-              <svg width="14" height="8">
-                <line x1="0" y1="4" x2="14" y2="4" stroke="#8993A4" strokeWidth="1.5" strokeDasharray="3 3" />
-              </svg>
-              Avg: {avgCompleted} {unitLabel}
-            </span>
-          )}
-        </div>
-
-        {/* Unit Selector */}
-        <div className="flex items-center gap-1 bg-jira-gray-100 p-0.5 rounded border border-jira-gray-200 text-xs">
-          <button
-            type="button"
-            onClick={() => setMetricUnit("points")}
-            className={`px-2.5 py-0.5 rounded font-medium transition-all ${
-              !isIssueUnit ? "bg-white text-jira-navy shadow-2xs font-semibold" : "text-jira-gray-600"
-            }`}
-          >
-            Story Points
-          </button>
-          <button
-            type="button"
-            onClick={() => setMetricUnit("issues")}
-            className={`px-2.5 py-0.5 rounded font-medium transition-all ${
-              isIssueUnit ? "bg-white text-jira-navy shadow-2xs font-semibold" : "text-jira-gray-600"
-            }`}
-          >
-            Issue Count
-          </button>
-        </div>
-      </div>
-
-      {/* Summary KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <div className="bg-jira-gray-50 border border-jira-gray-200 rounded-md p-3">
-          <div className="text-[10px] font-bold text-jira-gray-500 uppercase">Average Velocity</div>
-          <div className="text-xl font-bold text-jira-navy mt-0.5">
-            {avgCompleted} <span className="text-xs font-normal text-jira-gray-500">{unitLabel} / sprint</span>
-          </div>
-        </div>
-        <div className="bg-jira-gray-50 border border-jira-gray-200 rounded-md p-3">
-          <div className="text-[10px] font-bold text-jira-gray-500 uppercase">Commitment Reliability</div>
-          <div className="text-xl font-bold text-jira-navy mt-0.5">
-            {avgReliability}% <span className="text-xs font-normal text-jira-gray-500">completed vs planned</span>
-          </div>
-        </div>
-        <div className="bg-jira-gray-50 border border-jira-gray-200 rounded-md p-3 col-span-2 sm:col-span-1">
-          <div className="text-[10px] font-bold text-jira-gray-500 uppercase">Sprints Evaluated</div>
-          <div className="text-xl font-bold text-jira-navy mt-0.5">
-            {normalizedSprints.length} <span className="text-xs font-normal text-jira-gray-500">sprints</span>
-          </div>
-        </div>
-      </div>
-
-      {/* SVG Dual-Bar Chart */}
+  const chart =
+    rows.length === 0 ? (
+      <EmptyChart icon={<Gauge aria-hidden="true" />}>Complete a sprint to start tracking velocity.</EmptyChart>
+    ) : (
       <div className="relative" ref={chartRef}>
         <svg
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-          className="w-full h-auto select-none"
+          className="h-auto w-full select-none"
           role="img"
-          aria-label="Sprint velocity chart"
+          aria-label="Velocity chart. The table view lists every sprint."
         >
-          {/* Y Axis Gridlines */}
-          {ticks.map((t) => (
-            <g key={t}>
-              <line
-                x1={MARGIN.left}
-                x2={WIDTH - MARGIN.right}
-                y1={yAt(t)}
-                y2={yAt(t)}
-                stroke="#EBECF0"
-                strokeWidth="1"
-              />
-              <text
-                x={MARGIN.left - 8}
-                y={yAt(t) + 3}
-                textAnchor="end"
-                className="fill-jira-gray-500"
-                fontSize="10"
-              >
-                {t}
-              </text>
-            </g>
-          ))}
-
-          {/* Average reference line */}
-          {avgCompleted > 0 && (
-            <>
-              <line
-                x1={MARGIN.left}
-                x2={WIDTH - MARGIN.right}
-                y1={yAt(avgCompleted)}
-                y2={yAt(avgCompleted)}
-                stroke="#8993A4"
-                strokeWidth="1.5"
-                strokeDasharray="4 3"
-              />
-              <text
-                x={WIDTH - MARGIN.right}
-                y={yAt(avgCompleted) - 4}
-                textAnchor="end"
-                className="fill-jira-gray-500 font-semibold"
-                fontSize="10"
-              >
-                avg {avgCompleted}
-              </text>
-            </>
-          )}
-
-          {/* Sprint Grouped Bars */}
-          {normalizedSprints.map((s, i) => {
-            const slotStart = MARGIN.left + i * slotWidth;
-            const groupCenter = slotStart + slotWidth / 2;
-
-            const committedVal = isIssueUnit ? s.committedIss : s.committedPts;
-            const completedVal = isIssueUnit ? s.completedIss : s.completedPts;
-
-            const committedBarX = groupCenter - barWidth - 1.5;
-            const completedBarX = groupCenter + 1.5;
-
-            const committedTop = yAt(committedVal);
-            const committedHeight = Math.max(0, MARGIN.top + PLOT_HEIGHT - committedTop);
-
-            const completedTop = yAt(completedVal);
-            const completedHeight = Math.max(0, MARGIN.top + PLOT_HEIGHT - completedTop);
-
-            const isHovered = hoverIndex === i;
-
+          <YGrid ticks={ticks} yAt={yAt} x1={MARGIN.left} x2={WIDTH - MARGIN.right} />
+          {rows.map((r, i) => {
+            const center = MARGIN.left + (i + 0.5) * slot;
+            const base = yAt(0);
             return (
-              <g
-                key={s.id}
-                onMouseEnter={() => setHoverIndex(i)}
-                onMouseLeave={() => setHoverIndex(null)}
-                className="cursor-pointer"
-              >
-                {/* Hover Background Column Highlight */}
-                {isHovered && (
-                  <rect
-                    x={slotStart + 4}
-                    y={MARGIN.top}
-                    width={slotWidth - 8}
-                    height={PLOT_HEIGHT}
-                    fill="#0052CC"
-                    fillOpacity="0.04"
-                    rx="4"
+              <g key={r.id} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}>
+                <rect
+                  style={{ fill: hover === i ? "rgb(var(--color-surface-sunk))" : "transparent" }}
+                  x={center - slot / 2}
+                  y={MARGIN.top}
+                  width={slot}
+                  height={PLOT_HEIGHT}
+                />
+                {r.committed > 0 && (
+                  <path
+                    style={{ fill: committedColor }}
+                    d={barPath(center - bar - GAP / 2, yAt(r.committed), bar, base - yAt(r.committed))}
                   />
                 )}
-
-                {/* Committed Bar (Light Blue) */}
-                <rect
-                  x={committedBarX}
-                  y={committedTop}
-                  width={barWidth}
-                  height={committedHeight}
-                  rx="3"
-                  fill={isHovered ? "#2684FF" : "#4C9AFF"}
-                  className="transition-colors"
-                />
-
-                {/* Completed Bar (solid blue) */}
-                <rect
-                  x={completedBarX}
-                  y={completedTop}
-                  width={barWidth}
-                  height={completedHeight}
-                  rx="3"
-                  fill={isHovered ? "#0047B3" : "#0052CC"}
-                  className="transition-colors"
-                />
-
-                {/* Value labels on top of bars */}
-                {committedVal > 0 && (
+                {r.completed > 0 && (
+                  <path style={{ fill: completedColor }} d={barPath(center + GAP / 2, yAt(r.completed), bar, base - yAt(r.completed))} />
+                )}
+                {r.completed > 0 && (
                   <text
-                    x={committedBarX + barWidth / 2}
-                    y={committedTop - 4}
+                    x={center + GAP / 2 + bar / 2}
+                    y={yAt(r.completed) - 5}
                     textAnchor="middle"
-                    className="fill-jira-gray-600 font-medium"
-                    fontSize="9"
+                    className="fill-ink-2 tabular-nums"
+                    fontSize="11"
                   >
-                    {committedVal}
+                    {r.completed}
                   </text>
                 )}
-
-                {completedVal > 0 && (
-                  <text
-                    x={completedBarX + barWidth / 2}
-                    y={completedTop - 4}
-                    textAnchor="middle"
-                    className="fill-jira-navy font-bold"
-                    fontSize="9"
-                  >
-                    {completedVal}
-                  </text>
-                )}
-
-                {/* X-axis Sprint Label */}
-                <text
-                  x={groupCenter}
-                  y={HEIGHT - 12}
-                  textAnchor="middle"
-                  className={`text-[10px] ${
-                    isHovered ? "fill-jira-blue font-bold" : "fill-jira-gray-600 font-medium"
-                  }`}
-                  fontSize="10"
-                >
-                  {s.name.length > 12 ? `${s.name.slice(0, 10)}…` : s.name}
+                <text x={center} y={HEIGHT - 10} textAnchor="middle" className={hover === i ? "fill-ink" : "fill-muted"} fontSize="11">
+                  {r.name.length > 14 ? `${r.name.slice(0, 13)}…` : r.name}
                 </text>
               </g>
             );
           })}
+          {average > 0 && (
+            <g aria-hidden="true">
+              <line
+                style={{ stroke: GUIDE }}
+                x1={MARGIN.left}
+                x2={WIDTH - MARGIN.right}
+                y1={yAt(average)}
+                y2={yAt(average)}
+                strokeWidth="1.5"
+                strokeDasharray="4 4"
+              />
+              <text x={WIDTH - MARGIN.right} y={yAt(average) - 5} textAnchor="end" className="fill-ink-2" fontSize="11">
+                Average {average}
+              </text>
+            </g>
+          )}
         </svg>
-
-        {/* Floating Tooltip */}
-        {hoverIndex !== null && normalizedSprints[hoverIndex] && (
-          <div
-            className="absolute top-2 pointer-events-none bg-jira-navy text-white text-[11px] rounded-md px-3 py-2 shadow-xl z-20 whitespace-nowrap border border-white/10"
-            style={{
-              left: `${((MARGIN.left + (hoverIndex + 0.5) * slotWidth) / WIDTH) * 100}%`,
-              transform: hoverIndex > normalizedSprints.length / 2 ? "translateX(-100%)" : "translateX(0)",
-            }}
-          >
-            <div className="font-bold text-white mb-1.5 border-b border-white/20 pb-1">
-              {normalizedSprints[hoverIndex].name}
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center justify-between gap-4">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#4C9AFF]" />
-                  Committed:
-                </span>
-                <span className="font-bold text-white">
-                  {isIssueUnit
-                    ? normalizedSprints[hoverIndex].committedIss
-                    : normalizedSprints[hoverIndex].committedPts}{" "}
-                  {unitLabel}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#0052CC]" />
-                  Completed:
-                </span>
-                <span className="font-bold text-emerald-400">
-                  {isIssueUnit
-                    ? normalizedSprints[hoverIndex].completedIss
-                    : normalizedSprints[hoverIndex].completedPts}{" "}
-                  {unitLabel}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-4 pt-1 border-t border-white/10 text-jira-gray-300">
-                <span>Reliability:</span>
-                <span className="font-bold text-white">
-                  {normalizedSprints[hoverIndex].reliability}%
-                </span>
-              </div>
-            </div>
-          </div>
+        {hover !== null && rows[hover] && (
+          <HoverCard
+            leftPct={((MARGIN.left + (hover + 0.5) * slot) / WIDTH) * 100}
+            title={rows[hover].name}
+            rows={[
+              { label: "Committed", value: `${rows[hover].committed} ${u}`, color: committedColor },
+              { label: "Completed", value: `${rows[hover].completed} ${u}`, color: completedColor },
+            ]}
+            footer={{ label: "Delivered", value: `${rows[hover].reliability}%` }}
+          />
         )}
       </div>
-    </div>
+    );
+
+  return (
+    <ReportCard
+      title="Velocity"
+      description="Work committed at the start of each sprint against work completed by its end."
+      headline={
+        <Headline
+          label="Average velocity"
+          value={average}
+          unit={`${u} per sprint`}
+          detail={rows.length ? `Over the last ${rows.length} sprint${rows.length === 1 ? "" : "s"}` : undefined}
+          figures={[{ label: "Commitment delivered", value: `${reliability}%` }]}
+        />
+      }
+      legend={
+        <Legend
+          items={[
+            { label: "Committed", color: committedColor },
+            { label: "Completed", color: completedColor },
+            { label: "Average", color: GUIDE, kind: "dash" },
+          ]}
+        />
+      }
+      controls={<Segmented label="Unit" value={metric} onChange={setMetric} options={UNIT_OPTIONS} />}
+      chart={chart}
+      table={
+        <DataTable
+          caption={`Velocity by sprint, in ${issues ? "issues" : "story points"}`}
+          columns={[
+            { label: "Sprint" },
+            { label: "Committed", numeric: true },
+            { label: "Completed", numeric: true },
+            { label: "Delivered", numeric: true },
+          ]}
+          rows={rows.map((r) => ({ key: r.id, cells: [r.name, r.committed, r.completed, `${r.reliability}%`] }))}
+        />
+      }
+    />
   );
 }

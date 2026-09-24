@@ -48,11 +48,12 @@ A modern, full-stack agile project management and issue tracking platform built 
     not just hidden from a dropdown.
   - Every project starts with the same five statuses as before (`Backlog`, `To Do`,
     `In Progress`, `In Review`, `Done`), fully interconnected, so nothing changes until
-    an administrator edits it in **Project Settings → Workflow**.
+    an administrator edits it in **Project Settings → Workflow**, where each status
+    takes its colour from a set of swatches (or any colour you pick).
 - 🔀 **Scrum or Kanban, per project**:
   - **Scrum**: plan sprints in the Backlog; the board shows only the active sprint.
   - **Kanban**: no sprints; the board is every issue pulled out of the Backlog, in
-    continuous flow. Switch anytime from **Project Settings → General**.
+    continuous flow. Switch anytime from **Project Settings → Details**.
 - 🏃 **Backlog & sprints**:
   - Each sprint is a section with a one-line header (dates, issues, points)
     and one action, **Start sprint** or **Complete sprint**; editing,
@@ -65,16 +66,27 @@ A modern, full-stack agile project management and issue tracking platform built 
   - Each row's **…** menu (or a right-click) moves it without dragging.
   - **Create issue** at the foot of a section: type a title, press Enter,
     and the row is ready for the next one.
-- 📊 **Reports** (Scrum projects):
-  - **Sprint Burndown**: story points remaining per day against an ideal guideline,
-    reconstructed from each issue's actual status-change history.
-  - **Velocity**: completed story points across recent finished sprints, with an
-    average reference line.
-  - **Status Breakdown**: where a sprint's issues currently stand, by workflow status.
+- 📊 **Reports**: each opens with its headline figure, and every chart has a
+  **Table** view with the numbers it draws.
+  - **Burndown and burnup** (Scrum): work remaining against the guideline, or
+    work done against scope, reconstructed from each issue's status history.
+    Leads with the work remaining and how far scope has moved.
+  - **Velocity** (Scrum): committed against completed work per sprint. Leads
+    with the average and how much of the commitment was delivered.
+  - **Cumulative flow**: work in each workflow status over 14, 30 or 90 days.
+    Leads with the average lead time, beside throughput and work in progress.
+  - **Distribution**: issues or points by status, assignee, type or priority.
+  - **Epic progress**: each epic's child issues by status.
+  - Chart colours come from the theme's tokens and a palette checked for
+    colour blindness.
 - 🗺️ **Roadmap**: a timeline of your epics (Scrum or Kanban -- epics aren't
-  sprint-bound), each bar spanning its start and due date with a progress fill
-  drawn from its issues' completion. Epics missing either date are listed
+  sprint-bound), each bar spanning its start and due date and filling with
+  its issues' progress, with a today line and a hover card. Expand an epic to
+  see its issues on the timeline. Epics missing either date are listed
   separately rather than silently dropped.
+- 🚀 **Releases**: versions in a table (status, release date, progress), with
+  each version's issues a click away. Release, edit, archive and delete from
+  the version's menu, and generate release notes.
 - 🎯 **Issue Management**:
   - Issue types: **Epic**, **Story**, **Task**, **Bug**, **Sub-task**.
   - Priority levels: **Highest**, **High**, **Medium**, **Low**, **Lowest**.
@@ -151,8 +163,12 @@ A modern, full-stack agile project management and issue tracking platform built 
     visitors with no account.
   - Optional OIDC single sign-on with real ID token signature verification.
   - Personal access tokens for the REST API, scoped to the owner's projects.
-- ⚙️ **Project Settings**: General details, Custom Fields, Components, Webhooks,
-  Access & Roles, Workflow, and SSO & Certificates, each its own tab.
+- ⚙️ **Project Settings**: a list of sections down the left: Details,
+  Components, Custom fields, Members, Roles, Visibility, Workflow and Webhooks.
+  Members and roles are tables edited in place. A section with unsaved changes
+  shows a bar to save or discard them. `?section=` in the address opens a
+  section directly. **System Settings** has the same layout: Users, Single
+  sign-on and About this install.
 
 ---
 
@@ -276,8 +292,8 @@ git push origin main
 ## 🌍 Public projects
 
 A project can be opened to people without an account, one project at a time.
-In **Project Settings → General → Visibility**, a project administrator ticks
-*"Allow anyone to view this project without signing in"*.
+In **Project Settings → Visibility**, a project administrator ticks
+*"Anyone with the link can view this project, without signing in"*.
 
 Visitors then get the **Viewer** role on that project alone:
 
@@ -353,7 +369,7 @@ language, with the same syntax as before.
 SSO is **disabled until it is configured**, and a session is only ever created
 from an ID token whose signature, issuer, audience, expiry and nonce all verify.
 
-1. As an instance administrator, in **System Settings → SSO**, set the issuer URL, the client id, and either
+1. As an instance administrator, in **System Settings → Single sign-on**, set the issuer URL, the client id, and either
    the identity provider's X.509 signing certificate (for `RS256` tokens) or the
    client secret (for `HS256` tokens).
 2. Register `https://<your-host>/api/v1/auth/sso/callback` as a redirect URI
@@ -387,7 +403,10 @@ production build on a fresh database, walk through setup, and run
 pages, Home and Inbox, an issue's page and panel, the backlog and the board
 (where a card is also moved with its menu, the keyboard and the mouse), and the
 Issues page (its split view, table, views menu and TQL editor, while choosing
-a view, adding a chip, running TQL and saving a view); any
+a view, adding a chip, running TQL and saving a view), the reports (each tab,
+and a chart as a table), the roadmap, releases (creating a version, its issues
+and its menu), and every project and system settings section, including the
+unsaved-changes bar and the status colour swatches; any
 serious or critical finding fails the build. The tests include a check that every
 Tailwind class used under `src/` actually generates CSS, since Tailwind skips
 unknown classes silently.

@@ -60,17 +60,17 @@ export default function SetupView() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-jira-gray-100 flex flex-col items-center justify-center gap-6 p-4">
+    <div className="min-h-screen w-full bg-surface-sunk flex flex-col items-center justify-center gap-6 p-4">
       <TrackrLogo size="lg" />
 
-      <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl border border-jira-gray-300 overflow-hidden flex flex-col">
-        <div className="bg-jira-navy text-white px-6 py-5 flex items-center gap-3 border-b border-jira-navy/80">
-          <div className="w-9 h-9 rounded-lg bg-jira-blue/30 border border-jira-blue flex items-center justify-center">
-            <ShieldCheck className="w-5 h-5 text-jira-blue-light" />
+      <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl border border-subtle overflow-hidden flex flex-col">
+        <div className="bg-ink text-surface px-6 py-5 flex items-center gap-3 border-b border-ink/80">
+          <div className="w-9 h-9 rounded-lg bg-accent/30 border border-accent flex items-center justify-center">
+            <ShieldCheck className="w-5 h-5 text-surface" />
           </div>
           <div>
             <h2 className="text-lg font-bold tracking-tight">Welcome to Trackr</h2>
-            <p className="text-xs text-jira-gray-400">
+            <p className="text-xs text-surface/75">
               This instance has no accounts yet. Create the admin account to get started.
             </p>
           </div>
@@ -85,14 +85,14 @@ export default function SetupView() {
           )}
 
           <div className="space-y-3">
-            <h3 className="text-xs font-bold text-jira-gray-700 uppercase tracking-wider">
+            <h3 className="text-xs font-bold text-ink-2 uppercase tracking-wider">
               Admin account
             </h3>
 
             <div>
-              <label htmlFor="setup-name" className="block text-xs font-semibold text-jira-navy mb-1">Full name</label>
+              <label htmlFor="setup-name" className="block text-xs font-semibold text-ink mb-1">Full name</label>
               <div className="relative">
-                <UserIcon aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
+                <UserIcon aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                 <input
                   type="text"
                   required
@@ -102,15 +102,15 @@ export default function SetupView() {
                   placeholder="Ada Lovelace"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy"
+                  className="w-full pl-9 pr-3 py-2 text-xs border border-subtle rounded-md focus:border-accent text-ink"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="setup-email" className="block text-xs font-semibold text-jira-navy mb-1">Email address</label>
+              <label htmlFor="setup-email" className="block text-xs font-semibold text-ink mb-1">Email address</label>
               <div className="relative">
-                <Mail aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
+                <Mail aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                 <input
                   type="email"
                   required
@@ -119,15 +119,15 @@ export default function SetupView() {
                   placeholder="you@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy"
+                  className="w-full pl-9 pr-3 py-2 text-xs border border-subtle rounded-md focus:border-accent text-ink"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="setup-password" className="block text-xs font-semibold text-jira-navy mb-1">Password</label>
+              <label htmlFor="setup-password" className="block text-xs font-semibold text-ink mb-1">Password</label>
               <div className="relative">
-                <Lock aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
+                <Lock aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                 <input
                   type="password"
                   required
@@ -137,21 +137,21 @@ export default function SetupView() {
                   placeholder="At least 8 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy"
+                  className="w-full pl-9 pr-3 py-2 text-xs border border-subtle rounded-md focus:border-accent text-ink"
                 />
               </div>
             </div>
           </div>
 
-          <div className="space-y-3 pt-1 border-t border-jira-gray-200">
-            <h3 className="text-xs font-bold text-jira-gray-700 uppercase tracking-wider pt-4">
+          <div className="space-y-3 pt-1 border-t border-subtle">
+            <h3 className="text-xs font-bold text-ink-2 uppercase tracking-wider pt-4">
               First project
             </h3>
 
             <div>
-              <label htmlFor="setup-project-name" className="block text-xs font-semibold text-jira-navy mb-1">Project name</label>
+              <label htmlFor="setup-project-name" className="block text-xs font-semibold text-ink mb-1">Project name</label>
               <div className="relative">
-                <FolderPlus aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
+                <FolderPlus aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                 <input
                   type="text"
                   required
@@ -159,13 +159,13 @@ export default function SetupView() {
                   placeholder="e.g. Falcon AI Engine"
                   value={projectName}
                   onChange={(e) => handleProjectNameChange(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy"
+                  className="w-full pl-9 pr-3 py-2 text-xs border border-subtle rounded-md focus:border-accent text-ink"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="setup-project-key" className="block text-xs font-semibold text-jira-navy mb-1">Project key</label>
+              <label htmlFor="setup-project-key" className="block text-xs font-semibold text-ink mb-1">Project key</label>
               <input
                 type="text"
                 required
@@ -178,9 +178,9 @@ export default function SetupView() {
                   setProjectKey(e.target.value.toUpperCase());
                 }}
                 aria-describedby="setup-project-key-hint"
-                className="w-full px-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue font-mono uppercase text-jira-navy"
+                className="w-full px-3 py-2 text-xs border border-subtle rounded-md focus:border-accent font-mono uppercase text-ink"
               />
-              <p id="setup-project-key-hint" className="text-[11px] text-jira-gray-500 mt-1">
+              <p id="setup-project-key-hint" className="text-[11px] text-muted mt-1">
                 Prefix used for issues in this project (e.g. {projectKey || "KEY"}-1).
               </p>
             </div>
@@ -189,7 +189,7 @@ export default function SetupView() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-bold rounded-md flex items-center justify-center gap-2 shadow-xs transition-colors disabled:opacity-50"
+            className="w-full py-2.5 bg-accent hover:bg-accent-hover text-accent-fg text-xs font-bold rounded-md flex items-center justify-center gap-2 shadow-xs transition-colors disabled:opacity-50"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
             <span>Complete setup</span>

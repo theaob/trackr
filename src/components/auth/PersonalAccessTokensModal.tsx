@@ -165,7 +165,7 @@ export default function PersonalAccessTokensModal({
 
   const getTokenStatus = (t: PersonalAccessToken) => {
     if (t.revokedAt) {
-      return { label: "Revoked", color: "bg-jira-gray-200 text-jira-gray-700" };
+      return { label: "Revoked", color: "bg-subtle text-ink-2" };
     }
     if (t.expiresAt && new Date(t.expiresAt) < new Date()) {
       return { label: "Expired", color: "bg-amber-100 text-amber-800 border border-amber-300" };
@@ -176,25 +176,25 @@ export default function PersonalAccessTokensModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
       <div
-        className="bg-white rounded-lg shadow-2xl border border-jira-gray-300 w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="bg-white rounded-lg shadow-2xl border border-subtle w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-jira-gray-200 bg-white shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-subtle bg-white shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-md bg-jira-blue-light/70 flex items-center justify-center text-jira-blue">
+            <div className="w-8 h-8 rounded-md bg-accent-soft/70 flex items-center justify-center text-accent">
               <KeyRound className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-jira-navy">Personal Access Tokens</h2>
-              <p className="text-xs text-jira-gray-500">
+              <h2 className="text-base font-bold text-ink">Personal Access Tokens</h2>
+              <p className="text-xs text-muted">
                 Manage API authentication tokens for scripts, integrations, and developer tools.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-jira-gray-400 hover:text-jira-navy p-1.5 rounded hover:bg-jira-gray-100 transition-colors"
+            className="text-muted hover:text-ink p-1.5 rounded hover:bg-surface-sunk transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -207,14 +207,14 @@ export default function PersonalAccessTokensModal({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-semibold text-jira-navy">Active Tokens</h3>
-                  <p className="text-xs text-jira-gray-500">
-                    Tokens authenticate as <span className="font-semibold text-jira-navy">{currentUser?.name}</span> ({currentUser?.email})
+                  <h3 className="text-sm font-semibold text-ink">Active Tokens</h3>
+                  <p className="text-xs text-muted">
+                    Tokens authenticate as <span className="font-semibold text-ink">{currentUser?.name}</span> ({currentUser?.email})
                   </p>
                 </div>
                 <button
                   onClick={() => setView("create")}
-                  className="bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold px-3 py-2 rounded flex items-center gap-1.5 shadow-2xs transition-colors"
+                  className="bg-accent hover:bg-accent-hover text-accent-fg text-xs font-semibold px-3 py-2 rounded flex items-center gap-1.5 shadow-2xs transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Generate new token
@@ -222,29 +222,29 @@ export default function PersonalAccessTokensModal({
               </div>
 
               {isLoading ? (
-                <div className="py-12 text-center text-jira-gray-500 text-xs flex items-center justify-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-jira-blue" />
+                <div className="py-12 text-center text-muted text-xs flex items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-accent" />
                   <span>Loading tokens...</span>
                 </div>
               ) : tokens.length === 0 ? (
-                <div className="text-center py-12 px-4 border border-dashed border-jira-gray-300 rounded-lg bg-jira-gray-50/70">
-                  <KeyRound className="w-8 h-8 text-jira-gray-400 mx-auto mb-2" />
-                  <h4 className="text-sm font-bold text-jira-navy">No personal access tokens</h4>
-                  <p className="text-xs text-jira-gray-500 max-w-sm mx-auto mt-1 mb-4">
+                <div className="text-center py-12 px-4 border border-dashed border-subtle rounded-lg bg-page/70">
+                  <KeyRound className="w-8 h-8 text-muted mx-auto mb-2" />
+                  <h4 className="text-sm font-bold text-ink">No personal access tokens</h4>
+                  <p className="text-xs text-muted max-w-sm mx-auto mt-1 mb-4">
                     Generate a token to interact with the Trackr API from your IDE, CI/CD pipeline, or scripts.
                   </p>
                   <button
                     onClick={() => setView("create")}
-                    className="bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold px-4 py-2 rounded inline-flex items-center gap-1.5 shadow-2xs"
+                    className="bg-accent hover:bg-accent-hover text-accent-fg text-xs font-semibold px-4 py-2 rounded inline-flex items-center gap-1.5 shadow-2xs"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     Create Your First Token
                   </button>
                 </div>
               ) : (
-                <div className="border border-jira-gray-200 rounded-lg overflow-hidden bg-white shadow-2xs">
-                  <table className="min-w-full divide-y divide-jira-gray-200 text-left text-xs">
-                    <thead className="bg-jira-gray-50 font-semibold text-jira-gray-600">
+                <div className="border border-subtle rounded-lg overflow-hidden bg-white shadow-2xs">
+                  <table className="min-w-full divide-y divide-subtle text-left text-xs">
+                    <thead className="bg-page font-semibold text-ink-2">
                       <tr>
                         <th className="px-4 py-3">Token Name</th>
                         <th className="px-4 py-3">Token Identifier</th>
@@ -254,18 +254,18 @@ export default function PersonalAccessTokensModal({
                         <th className="px-4 py-3 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-jira-gray-200 text-jira-navy">
+                    <tbody className="divide-y divide-subtle text-ink">
                       {tokens.map((token) => {
                         const status = getTokenStatus(token);
                         return (
-                          <tr key={token.id} className="hover:bg-jira-gray-50/70 transition-colors">
-                            <td className="px-4 py-3 font-semibold text-jira-navy">
+                          <tr key={token.id} className="hover:bg-page/70 transition-colors">
+                            <td className="px-4 py-3 font-semibold text-ink">
                               {token.name}
-                              <div className="text-[10px] text-jira-gray-400 font-normal">
+                              <div className="text-[10px] text-muted font-normal">
                                 Created {format(new Date(token.createdAt), "MMM d, yyyy")}
                               </div>
                             </td>
-                            <td className="px-4 py-3 font-mono text-jira-gray-600 text-[11px]">
+                            <td className="px-4 py-3 font-mono text-ink-2 text-[11px]">
                               {token.tokenPrefix}••••••••{token.lastFour}
                             </td>
                             <td className="px-4 py-3">
@@ -275,18 +275,18 @@ export default function PersonalAccessTokensModal({
                                 {status.label}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-jira-gray-600">
+                            <td className="px-4 py-3 text-ink-2">
                               {token.expiresAt ? (
                                 <span>{format(new Date(token.expiresAt), "MMM d, yyyy")}</span>
                               ) : (
-                                <span className="text-jira-gray-400 italic">Never</span>
+                                <span className="text-muted italic">Never</span>
                               )}
                             </td>
-                            <td className="px-4 py-3 text-jira-gray-600">
+                            <td className="px-4 py-3 text-ink-2">
                               {token.lastUsedAt ? (
                                 formatDistanceToNow(new Date(token.lastUsedAt), { addSuffix: true })
                               ) : (
-                                <span className="text-jira-gray-400 italic">Never used</span>
+                                <span className="text-muted italic">Never used</span>
                               )}
                             </td>
                             <td className="px-4 py-3 text-right">
@@ -295,7 +295,7 @@ export default function PersonalAccessTokensModal({
                                   <button
                                     onClick={() => handleRevoke(token.id, token.name)}
                                     title="Revoke Token"
-                                    className="p-1 rounded text-jira-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                                    className="p-1 rounded text-muted hover:text-amber-600 hover:bg-amber-50 transition-colors"
                                   >
                                     <Ban className="w-3.5 h-3.5" />
                                   </button>
@@ -303,7 +303,7 @@ export default function PersonalAccessTokensModal({
                                 <button
                                   onClick={() => handleDelete(token.id, token.name)}
                                   title="Delete Record"
-                                  className="p-1 rounded text-jira-gray-400 hover:text-jira-red hover:bg-jira-red/10 transition-colors"
+                                  className="p-1 rounded text-muted hover:text-danger hover:bg-danger/10 transition-colors"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
@@ -326,7 +326,7 @@ export default function PersonalAccessTokensModal({
                 <button
                   type="button"
                   onClick={() => setView("list")}
-                  className="text-xs text-jira-gray-500 hover:text-jira-navy flex items-center gap-1 font-medium"
+                  className="text-xs text-muted hover:text-ink flex items-center gap-1 font-medium"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
                   Back to token list
@@ -334,46 +334,46 @@ export default function PersonalAccessTokensModal({
               </div>
 
               <div>
-                <h3 className="text-base font-bold text-jira-navy">Generate Personal Access Token</h3>
-                <p className="text-xs text-jira-gray-500 mt-0.5">
+                <h3 className="text-base font-bold text-ink">Generate Personal Access Token</h3>
+                <p className="text-xs text-muted mt-0.5">
                   Personal access tokens function like ordinary passwords, but can be customized with expiration dates and revoked at any time.
                 </p>
               </div>
 
               {createError && (
-                <div className="p-3 bg-jira-red/10 border border-jira-red/30 rounded text-xs text-jira-red font-medium">
+                <div className="p-3 bg-danger/10 border border-danger/30 rounded text-xs text-danger font-medium">
                   {createError}
                 </div>
               )}
 
               {/* Token Name */}
               <div>
-                <label className="block text-xs font-semibold text-jira-gray-700 mb-1">
-                  Token Name <span className="text-jira-red">*</span>
+                <label className="block text-xs font-semibold text-ink-2 mb-1">
+                  Token Name <span className="text-danger">*</span>
                 </label>
                 <input
                   type="text"
                   placeholder="e.g. GitHub Actions CI, VS Code Trackr, Data Export Script"
                   value={tokenName}
                   onChange={(e) => setTokenName(e.target.value)}
-                  className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue"
+                  className="w-full text-xs px-3 py-2 bg-white border border-subtle rounded focus:border-accent"
                   autoFocus
                   required
                 />
-                <p className="text-[11px] text-jira-gray-500 mt-1">
+                <p className="text-[11px] text-muted mt-1">
                   What is this token for? Choose a name that helps you identify its purpose later.
                 </p>
               </div>
 
               {/* Expiration Options */}
               <div>
-                <label className="block text-xs font-semibold text-jira-gray-700 mb-1">
+                <label className="block text-xs font-semibold text-ink-2 mb-1">
                   Expiration
                 </label>
                 <select
                   value={expirationDays}
                   onChange={(e) => setExpirationDays(parseInt(e.target.value, 10))}
-                  className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue"
+                  className="w-full text-xs px-3 py-2 bg-white border border-subtle rounded focus:border-accent"
                 >
                   {EXPIRATION_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -392,18 +392,18 @@ export default function PersonalAccessTokensModal({
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-jira-gray-200">
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-subtle">
                 <button
                   type="button"
                   onClick={() => setView("list")}
-                  className="text-xs font-medium px-4 py-2 rounded text-jira-gray-700 hover:bg-jira-gray-100 transition-colors"
+                  className="text-xs font-medium px-4 py-2 rounded text-ink-2 hover:bg-surface-sunk transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isCreating}
-                  className="text-xs font-semibold px-4 py-2 rounded bg-jira-blue text-white hover:bg-jira-blue-hover disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-2xs"
+                  className="text-xs font-semibold px-4 py-2 rounded bg-accent text-accent-fg hover:bg-accent-hover disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-2xs"
                 >
                   {isCreating && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   Generate Token
@@ -424,19 +424,19 @@ export default function PersonalAccessTokensModal({
 
               {/* Raw Token Box */}
               <div>
-                <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
                   Your New Personal Access Token
                 </label>
-                <div className="flex items-center gap-2 bg-jira-gray-50 border border-jira-gray-300 rounded-md p-2">
+                <div className="flex items-center gap-2 bg-page border border-subtle rounded-md p-2">
                   <input
                     type="text"
                     readOnly
                     value={newlyCreatedToken}
-                    className="w-full bg-transparent font-mono text-xs text-jira-navy font-semibold select-all"
+                    className="w-full bg-transparent font-mono text-xs text-ink font-semibold select-all"
                   />
                   <button
                     onClick={() => copyToClipboard(newlyCreatedToken)}
-                    className="bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5 shrink-0 transition-colors shadow-2xs"
+                    className="bg-accent hover:bg-accent-hover text-accent-fg text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5 shrink-0 transition-colors shadow-2xs"
                   >
                     {hasCopied ? (
                       <>
@@ -454,14 +454,14 @@ export default function PersonalAccessTokensModal({
               </div>
 
               {/* Token Summary info */}
-              <div className="bg-jira-gray-50/70 border border-jira-gray-200 rounded-md p-3 text-xs space-y-1.5">
+              <div className="bg-page/70 border border-subtle rounded-md p-3 text-xs space-y-1.5">
                 <div className="flex justify-between">
-                  <span className="text-jira-gray-500">Token Name:</span>
-                  <span className="font-semibold text-jira-navy">{newlyCreatedData?.name}</span>
+                  <span className="text-muted">Token Name:</span>
+                  <span className="font-semibold text-ink">{newlyCreatedData?.name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-jira-gray-500">Expires:</span>
-                  <span className="font-semibold text-jira-navy">
+                  <span className="text-muted">Expires:</span>
+                  <span className="font-semibold text-ink">
                     {newlyCreatedData?.expiresAt
                       ? format(new Date(newlyCreatedData.expiresAt), "MMMM d, yyyy")
                       : "Never"}
@@ -471,11 +471,11 @@ export default function PersonalAccessTokensModal({
 
               {/* Quickstart API example */}
               <div>
-                <label className="block text-xs font-semibold text-jira-gray-700 mb-1 flex items-center gap-1">
-                  <Terminal className="w-3.5 h-3.5 text-jira-blue" />
+                <label className="block text-xs font-semibold text-ink-2 mb-1 flex items-center gap-1">
+                  <Terminal className="w-3.5 h-3.5 text-accent" />
                   <span>How to use in API requests (cURL):</span>
                 </label>
-                <div className="relative bg-jira-navy text-jira-gray-100 p-3 rounded-md font-mono text-[11px] overflow-x-auto">
+                <div className="relative bg-ink text-surface/80 p-3 rounded-md font-mono text-[11px] overflow-x-auto">
                   <pre className="pr-16">{`curl -H "Authorization: Bearer ${newlyCreatedToken}" \\\n  http://localhost:3000/api/v1/auth/verify`}</pre>
                   <button
                     onClick={() =>
@@ -484,7 +484,7 @@ export default function PersonalAccessTokensModal({
                         true
                       )
                     }
-                    className="absolute top-2.5 right-2.5 bg-jira-gray-800 hover:bg-jira-gray-700 text-white text-[10px] px-2 py-1 rounded flex items-center gap-1 transition-colors"
+                    className="absolute top-2.5 right-2.5 bg-ink hover:bg-ink-2 text-surface text-[10px] px-2 py-1 rounded flex items-center gap-1 transition-colors"
                   >
                     {hasCopiedCurl ? (
                       <Check className="w-3 h-3 text-emerald-400" />
@@ -505,7 +505,7 @@ export default function PersonalAccessTokensModal({
                     setNewlyCreatedToken(null);
                     setNewlyCreatedData(null);
                   }}
-                  className="bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold px-4 py-2 rounded transition-colors shadow-2xs"
+                  className="bg-accent hover:bg-accent-hover text-accent-fg text-xs font-semibold px-4 py-2 rounded transition-colors shadow-2xs"
                 >
                   Done (I have saved my token)
                 </button>

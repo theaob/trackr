@@ -46,7 +46,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className={`${plexSans.variable} ${plexMono.variable}`}>
-      <body className="font-sans antialiased text-jira-navy bg-white">
+      <body className="font-sans antialiased text-ink bg-white">
         <UserProvider sessionUser={sessionUser}>
           <ToastProvider>
             <KeyboardShortcutsProvider>{children}</KeyboardShortcutsProvider>

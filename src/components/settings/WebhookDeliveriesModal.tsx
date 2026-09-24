@@ -89,23 +89,23 @@ export default function WebhookDeliveriesModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-150">
       <div
-        className="bg-white rounded-none sm:rounded-lg shadow-2xl border-0 sm:border border-jira-gray-300 w-full h-full sm:h-auto max-w-4xl overflow-hidden flex flex-col max-h-none sm:max-h-[90vh]"
+        className="bg-white rounded-none sm:rounded-lg shadow-2xl border-0 sm:border border-subtle w-full h-full sm:h-auto max-w-4xl overflow-hidden flex flex-col max-h-none sm:max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-jira-gray-200 shrink-0 bg-white gap-2">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-subtle shrink-0 bg-white gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded bg-jira-blue-light/70 flex items-center justify-center text-jira-blue shrink-0">
+            <div className="w-8 h-8 rounded bg-accent-soft/70 flex items-center justify-center text-accent shrink-0">
               <History className="w-4 h-4" />
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                <h2 className="text-base font-bold text-jira-navy truncate">{webhook.name}</h2>
-                <span className="text-[10px] font-mono px-1.5 sm:px-2 py-0.5 rounded bg-jira-gray-100 text-jira-gray-600 border border-jira-gray-300 truncate max-w-[160px] sm:max-w-none">
+                <h2 className="text-base font-bold text-ink truncate">{webhook.name}</h2>
+                <span className="text-[10px] font-mono px-1.5 sm:px-2 py-0.5 rounded bg-surface-sunk text-ink-2 border border-subtle truncate max-w-[160px] sm:max-w-none">
                   {webhook.url}
                 </span>
               </div>
-              <p className="text-xs text-jira-gray-500 truncate">
+              <p className="text-xs text-muted truncate">
                 Recent delivery audit logs and response codes
               </p>
             </div>
@@ -114,7 +114,7 @@ export default function WebhookDeliveriesModal({
             <button
               onClick={handleTestPing}
               disabled={isTesting}
-              className="bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors disabled:opacity-50 shadow-2xs"
+              className="bg-accent hover:bg-accent-hover text-accent-fg text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors disabled:opacity-50 shadow-2xs"
             >
               {isTesting ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -126,7 +126,7 @@ export default function WebhookDeliveriesModal({
             </button>
             <button
               onClick={onClose}
-              className="text-jira-gray-400 hover:text-jira-navy p-1 rounded hover:bg-jira-gray-100 transition-colors"
+              className="text-muted hover:text-ink p-1 rounded hover:bg-surface-sunk transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -136,21 +136,21 @@ export default function WebhookDeliveriesModal({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {isLoading ? (
-            <div className="py-16 text-center text-xs text-jira-gray-500 flex items-center justify-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin text-jira-blue" />
+            <div className="py-16 text-center text-xs text-muted flex items-center justify-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin text-accent" />
               <span>Loading delivery logs...</span>
             </div>
           ) : deliveries.length === 0 ? (
-            <div className="text-center py-16 px-4 border border-dashed border-jira-gray-300 rounded-lg bg-jira-gray-50">
-              <History className="w-8 h-8 text-jira-gray-400 mx-auto mb-2" />
-              <h3 className="text-sm font-bold text-jira-navy">No deliveries recorded</h3>
-              <p className="text-xs text-jira-gray-500 max-w-sm mx-auto mt-1 mb-4">
+            <div className="text-center py-16 px-4 border border-dashed border-subtle rounded-lg bg-page">
+              <History className="w-8 h-8 text-muted mx-auto mb-2" />
+              <h3 className="text-sm font-bold text-ink">No deliveries recorded</h3>
+              <p className="text-xs text-muted max-w-sm mx-auto mt-1 mb-4">
                 This webhook hasn&apos;t received any events yet. You can trigger a test ping to verify the target URL right now.
               </p>
               <button
                 onClick={handleTestPing}
                 disabled={isTesting}
-                className="bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold px-3.5 py-1.5 rounded inline-flex items-center gap-1.5 shadow-2xs"
+                className="bg-accent hover:bg-accent-hover text-accent-fg text-xs font-semibold px-3.5 py-1.5 rounded inline-flex items-center gap-1.5 shadow-2xs"
               >
                 {isTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                 Send Test Ping
@@ -163,19 +163,19 @@ export default function WebhookDeliveriesModal({
                 return (
                   <div
                     key={delivery.id}
-                    className="border border-jira-gray-200 rounded-md overflow-hidden bg-white shadow-2xs text-xs"
+                    className="border border-subtle rounded-md overflow-hidden bg-white shadow-2xs text-xs"
                   >
                     {/* Delivery Row Header */}
                     <button
                       type="button"
                       onClick={() => toggleExpand(delivery.id)}
-                      className="w-full flex items-center justify-between p-3 text-left hover:bg-jira-gray-50/80 transition-colors select-none"
+                      className="w-full flex items-center justify-between p-3 text-left hover:bg-page/80 transition-colors select-none"
                     >
                       <div className="flex items-center gap-3">
                         {isExpanded ? (
-                          <ChevronDown className="w-4 h-4 text-jira-gray-400 shrink-0" />
+                          <ChevronDown className="w-4 h-4 text-muted shrink-0" />
                         ) : (
-                          <ChevronRight className="w-4 h-4 text-jira-gray-400 shrink-0" />
+                          <ChevronRight className="w-4 h-4 text-muted shrink-0" />
                         )}
 
                         {delivery.success ? (
@@ -190,16 +190,16 @@ export default function WebhookDeliveriesModal({
                           </span>
                         )}
 
-                        <span className="font-mono text-xs font-semibold text-jira-navy bg-jira-gray-100 px-2 py-0.5 rounded border border-jira-gray-300">
+                        <span className="font-mono text-xs font-semibold text-ink bg-surface-sunk px-2 py-0.5 rounded border border-subtle">
                           {delivery.event}
                         </span>
 
-                        <span className="text-jira-gray-500 text-[11px] hidden sm:inline">
-                          Duration: <strong className="text-jira-navy">{delivery.durationMs}ms</strong>
+                        <span className="text-muted text-[11px] hidden sm:inline">
+                          Duration: <strong className="text-ink">{delivery.durationMs}ms</strong>
                         </span>
                       </div>
 
-                      <div className="text-[11px] text-jira-gray-400 flex items-center gap-1">
+                      <div className="text-[11px] text-muted flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         <span>{formatDistanceToNow(new Date(delivery.createdAt), { addSuffix: true })}</span>
                       </div>
@@ -207,7 +207,7 @@ export default function WebhookDeliveriesModal({
 
                     {/* Expanded Payload & Response */}
                     {isExpanded && (
-                      <div className="p-4 bg-jira-gray-50/70 border-t border-jira-gray-200 space-y-3">
+                      <div className="p-4 bg-page/70 border-t border-subtle space-y-3">
                         {delivery.error && (
                           <div className="p-2.5 bg-rose-50 border border-rose-200 rounded text-xs text-rose-700 font-medium">
                             <span className="font-bold">Error: </span>
@@ -218,26 +218,26 @@ export default function WebhookDeliveriesModal({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {/* Request Payload */}
                           <div>
-                            <div className="flex items-center justify-between mb-1 text-[11px] font-bold text-jira-gray-700 uppercase tracking-wider">
+                            <div className="flex items-center justify-between mb-1 text-[11px] font-bold text-ink-2 uppercase tracking-wider">
                               <span className="flex items-center gap-1">
-                                <Code2 className="w-3 h-3 text-jira-blue" />
+                                <Code2 className="w-3 h-3 text-accent" />
                                 Request Payload (JSON)
                               </span>
                             </div>
-                            <pre className="bg-jira-navy text-jira-gray-100 p-3 rounded-md text-[11px] font-mono overflow-x-auto max-h-64 select-all">
+                            <pre className="bg-ink text-surface/80 p-3 rounded-md text-[11px] font-mono overflow-x-auto max-h-64 select-all">
                               {formatPayload(delivery.requestPayload)}
                             </pre>
                           </div>
 
                           {/* Response Body */}
                           <div>
-                            <div className="flex items-center justify-between mb-1 text-[11px] font-bold text-jira-gray-700 uppercase tracking-wider">
+                            <div className="flex items-center justify-between mb-1 text-[11px] font-bold text-ink-2 uppercase tracking-wider">
                               <span>Response Body</span>
-                              <span className="font-normal font-mono text-jira-gray-500">
+                              <span className="font-normal font-mono text-muted">
                                 HTTP {delivery.status}
                               </span>
                             </div>
-                            <pre className="bg-jira-gray-100 text-jira-gray-800 p-3 rounded-md text-[11px] font-mono overflow-x-auto max-h-64 border border-jira-gray-300">
+                            <pre className="bg-surface-sunk text-ink p-3 rounded-md text-[11px] font-mono overflow-x-auto max-h-64 border border-subtle">
                               {delivery.responseBody
                                 ? formatPayload(delivery.responseBody)
                                 : "<No response body returned>"}
@@ -245,7 +245,7 @@ export default function WebhookDeliveriesModal({
                           </div>
                         </div>
 
-                        <div className="text-[10px] text-jira-gray-400 text-right">
+                        <div className="text-[10px] text-muted text-right">
                           Timestamp: {format(new Date(delivery.createdAt), "yyyy-MM-dd HH:mm:ss.SSS")}
                         </div>
                       </div>

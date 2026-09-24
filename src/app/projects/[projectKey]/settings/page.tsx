@@ -13,10 +13,12 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ projectKey: string }>;
+  searchParams: Promise<{ section?: string }>;
 }
 
-export default async function SettingsPage({ params }: PageProps) {
+export default async function SettingsPage({ params, searchParams }: PageProps) {
   const { projectKey } = await params;
+  const { section } = await searchParams;
   await requirePageUser(`/projects/${projectKey}/settings`);
 
   const project = await getProjectByKey(projectKey);
@@ -45,6 +47,7 @@ export default async function SettingsPage({ params }: PageProps) {
       initialCustomRoles={customRoles as any}
       initialWorkflowStatuses={workflow.statuses as any}
       initialWorkflowTransitions={workflow.transitions as any}
+      initialSection={section}
     />
   );
 }

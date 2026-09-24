@@ -317,7 +317,7 @@ const MentionInput = forwardRef<HTMLTextAreaElement | HTMLInputElement, MentionI
       )}
 
       {isUploadingImage && (
-        <div className="absolute right-2 bottom-2 pointer-events-none flex items-center gap-1.5 text-[11px] text-jira-blue bg-white/95 px-2 py-1 rounded shadow-xs border border-jira-blue/30 font-medium">
+        <div className="absolute right-2 bottom-2 pointer-events-none flex items-center gap-1.5 text-[11px] text-accent bg-white/95 px-2 py-1 rounded shadow-xs border border-accent/30 font-medium">
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
           <span>Uploading image...</span>
         </div>
@@ -325,8 +325,8 @@ const MentionInput = forwardRef<HTMLTextAreaElement | HTMLInputElement, MentionI
 
       {/* Floating Mention Suggestions Dropdown */}
       {isOpen && filteredUsers.length > 0 && (
-        <div className="absolute left-0 top-full mt-1 w-72 max-h-56 overflow-y-auto bg-white border border-jira-gray-300 rounded-lg shadow-xl py-1 z-50 animate-in fade-in zoom-in-95">
-          <div className="px-3 py-1.5 border-b border-jira-gray-100 flex items-center justify-between text-[11px] font-bold text-jira-gray-500 uppercase tracking-wider">
+        <div className="absolute left-0 top-full mt-1 w-72 max-h-56 overflow-y-auto bg-white border border-subtle rounded-lg shadow-xl py-1 z-50 animate-in fade-in zoom-in-95">
+          <div className="px-3 py-1.5 border-b border-subtle flex items-center justify-between text-[11px] font-bold text-muted uppercase tracking-wider">
             <span>Mention someone</span>
             <span className="text-[10px] lowercase font-normal">
               use ↑ ↓ and Enter
@@ -341,19 +341,19 @@ const MentionInput = forwardRef<HTMLTextAreaElement | HTMLInputElement, MentionI
                 onClick={() => handleSelectUser(user)}
                 onMouseEnter={() => setSelectedIndex(idx)}
                 className={`w-full px-3 py-2 flex items-center gap-2.5 text-left transition-colors ${
-                  isSelected ? "bg-jira-blue-subtle/70" : "hover:bg-jira-gray-50"
+                  isSelected ? "bg-accent-soft/70" : "hover:bg-page"
                 }`}
               >
                 <UserAvatar
                   user={user}
                   size="sm"
-                  className="border border-jira-gray-200"
+                  className="border border-subtle"
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-semibold text-jira-navy truncate">
+                  <div className="text-xs font-semibold text-ink truncate">
                     {user.name}
                   </div>
-                  <div className="text-[11px] text-jira-gray-500 truncate">
+                  <div className="text-[11px] text-muted truncate">
                     {user.role || user.email}
                   </div>
                 </div>

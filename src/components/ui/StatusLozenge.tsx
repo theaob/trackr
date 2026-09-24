@@ -18,6 +18,8 @@ export interface StatusLozengeProps {
   label: string;
   /** The colour chosen in workflow settings. */
   color?: string | null;
+  /** A theme colour instead, by token name ("accent", "danger", "series-1"). */
+  token?: string;
   className?: string;
 }
 
@@ -26,9 +28,9 @@ export interface StatusLozengeProps {
  * the normal text colour. Unlike a label written in the colour itself, any
  * colour a project picks, pale yellow included, stays readable in both themes.
  */
-export function StatusLozenge({ label, color, className }: StatusLozengeProps) {
+export function StatusLozenge({ label, color, token, className }: StatusLozengeProps) {
   const rgb = parseHexColor(color);
-  const channels = rgb ? `${rgb.r} ${rgb.g} ${rgb.b}` : "var(--color-muted)";
+  const channels = token ? `var(--color-${token})` : rgb ? `${rgb.r} ${rgb.g} ${rgb.b}` : "var(--color-muted)";
   return (
     <span
       className={cn(

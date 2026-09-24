@@ -83,9 +83,9 @@ function EstimateInput({
         disabled={disabled}
         className={`text-xs text-left ${
           disabled ? "cursor-default" : "hover:underline cursor-pointer"
-        } text-jira-navy`}
+        } text-ink`}
       >
-        <span className="text-jira-gray-500">{label}: </span>
+        <span className="text-muted">{label}: </span>
         <span className="font-semibold">{value != null ? formatDuration(value) : "None"}</span>
       </button>
     );
@@ -110,7 +110,7 @@ function EstimateInput({
             setError(null);
           }
         }}
-        className="w-full px-1.5 py-0.5 text-xs border border-jira-blue rounded text-jira-navy"
+        className="w-full px-1.5 py-0.5 text-xs border border-accent rounded text-ink"
       />
       {error && <p className="text-[10px] text-rose-600 mt-0.5">{error}</p>}
     </div>
@@ -231,34 +231,34 @@ export default function TimeTrackingField({
 
   return (
     <div>
-      <label className="block text-xs font-bold text-jira-gray-600 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-        <Clock className="w-3 h-3 text-jira-blue" />
+      <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+        <Clock className="w-3 h-3 text-accent" />
         Time Tracking
       </label>
 
       {hasAnyTracking && (
         <div className="mb-2">
-          <div className="w-full h-1.5 bg-jira-gray-200 rounded-full overflow-hidden flex">
+          <div className="w-full h-1.5 bg-subtle rounded-full overflow-hidden flex">
             {loggedPct > 0 && (
-              <div className={overrun ? "bg-rose-500" : "bg-jira-blue"} style={{ width: `${loggedPct}%` }} />
+              <div className={overrun ? "bg-rose-500" : "bg-accent"} style={{ width: `${loggedPct}%` }} />
             )}
-            {remainingPct > 0 && <div className="bg-jira-gray-400" style={{ width: `${remainingPct}%` }} />}
+            {remainingPct > 0 && <div className="bg-strong" style={{ width: `${remainingPct}%` }} />}
           </div>
-          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-[11px] text-jira-gray-600">
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-[11px] text-ink-2">
             <span>
-              <span className={`font-semibold ${overrun ? "text-rose-600" : "text-jira-navy"}`}>
+              <span className={`font-semibold ${overrun ? "text-rose-600" : "text-ink"}`}>
                 {formatDuration(loggedSeconds)}
               </span>{" "}
               logged
             </span>
             {remainingEstimateSeconds != null && (
               <span>
-                <span className="font-semibold text-jira-navy">{formatDuration(remaining)}</span> remaining
+                <span className="font-semibold text-ink">{formatDuration(remaining)}</span> remaining
               </span>
             )}
             {originalEstimateSeconds != null && (
               <span>
-                <span className="font-semibold text-jira-navy">{formatDuration(original)}</span> estimated
+                <span className="font-semibold text-ink">{formatDuration(original)}</span> estimated
               </span>
             )}
           </div>
@@ -275,7 +275,7 @@ export default function TimeTrackingField({
           <button
             type="button"
             onClick={() => setLogging(true)}
-            className="text-[11px] text-jira-blue hover:underline font-semibold flex items-center gap-0.5"
+            className="text-[11px] text-accent hover:underline font-semibold flex items-center gap-0.5"
           >
             <Plus className="w-3 h-3" />
             Log work
@@ -285,7 +285,7 @@ export default function TimeTrackingField({
           <button
             type="button"
             onClick={() => setShowWorklogs((v) => !v)}
-            className="text-[11px] text-jira-gray-600 hover:text-jira-navy font-medium flex items-center gap-0.5"
+            className="text-[11px] text-ink-2 hover:text-ink font-medium flex items-center gap-0.5"
           >
             {showWorklogs ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             Work log ({worklogs.length})
@@ -296,7 +296,7 @@ export default function TimeTrackingField({
       {logging && (
         <form
           onSubmit={handleLogWork}
-          className="mt-2 p-2.5 border border-jira-gray-300 rounded-md bg-jira-gray-50/70 space-y-1.5"
+          className="mt-2 p-2.5 border border-subtle rounded-md bg-page/70 space-y-1.5"
         >
           {logError && <p className="text-[11px] text-rose-600 font-medium">{logError}</p>}
           <div className="flex items-center gap-2">
@@ -306,14 +306,14 @@ export default function TimeTrackingField({
               placeholder="Time spent, e.g. 2h 30m"
               value={timeSpentText}
               onChange={(e) => setTimeSpentText(e.target.value)}
-              className="flex-1 text-xs px-2 py-1.5 border border-jira-gray-300 rounded focus:border-jira-blue"
+              className="flex-1 text-xs px-2 py-1.5 border border-subtle rounded focus:border-accent"
             />
             <input
               type="date"
               value={workDate}
               max={format(new Date(), "yyyy-MM-dd")}
               onChange={(e) => setWorkDate(e.target.value)}
-              className="text-xs px-2 py-1.5 border border-jira-gray-300 rounded focus:border-jira-blue"
+              className="text-xs px-2 py-1.5 border border-subtle rounded focus:border-accent"
             />
           </div>
           <input
@@ -321,13 +321,13 @@ export default function TimeTrackingField({
             placeholder="What did you work on? (optional)"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full text-xs px-2 py-1.5 border border-jira-gray-300 rounded focus:border-jira-blue"
+            className="w-full text-xs px-2 py-1.5 border border-subtle rounded focus:border-accent"
           />
           <div className="flex items-center gap-2">
             <button
               type="submit"
               disabled={submitting}
-              className="text-xs font-semibold px-3 py-1.5 rounded bg-jira-blue text-white hover:bg-jira-blue-hover disabled:opacity-50 flex items-center gap-1.5"
+              className="text-xs font-semibold px-3 py-1.5 rounded bg-accent text-accent-fg hover:bg-accent-hover disabled:opacity-50 flex items-center gap-1.5"
             >
               {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               Log
@@ -338,7 +338,7 @@ export default function TimeTrackingField({
                 setLogging(false);
                 setLogError(null);
               }}
-              className="text-xs text-jira-gray-600 hover:text-jira-navy font-medium"
+              className="text-xs text-ink-2 hover:text-ink font-medium"
             >
               Cancel
             </button>
@@ -349,16 +349,16 @@ export default function TimeTrackingField({
       {showWorklogs && worklogs.length > 0 && (
         <div className="mt-2 space-y-1.5 max-h-52 overflow-y-auto">
           {worklogs.map((w) => (
-            <div key={w.id} className="group flex items-start gap-2 text-[11px] p-1.5 rounded hover:bg-jira-gray-50">
+            <div key={w.id} className="group flex items-start gap-2 text-[11px] p-1.5 rounded hover:bg-page">
               <UserAvatar user={w.author} size="xs" className="mt-0.5" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-semibold text-jira-navy">{w.author.name}</span>
-                  <span className="text-jira-gray-400">logged</span>
-                  <span className="font-semibold text-jira-navy">{formatDuration(w.timeSpentSeconds)}</span>
+                  <span className="font-semibold text-ink">{w.author.name}</span>
+                  <span className="text-muted">logged</span>
+                  <span className="font-semibold text-ink">{formatDuration(w.timeSpentSeconds)}</span>
                 </div>
-                {w.description && <p className="text-jira-gray-600 mt-0.5">{w.description}</p>}
-                <span className="text-[10px] text-jira-gray-400">
+                {w.description && <p className="text-ink-2 mt-0.5">{w.description}</p>}
+                <span className="text-[10px] text-muted">
                   {formatCalendarDate(w.workDate, "MMM d, yyyy")} &middot;{" "}
                   {formatDistanceToNow(new Date(w.createdAt), { addSuffix: true })}
                 </span>
@@ -369,7 +369,7 @@ export default function TimeTrackingField({
                   onClick={() => handleDeleteWorklog(w.id)}
                   disabled={deletingId === w.id}
                   title="Delete worklog"
-                  className="text-jira-gray-400 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+                  className="text-muted hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
                 >
                   {deletingId === w.id ? (
                     <Loader2 className="w-3 h-3 animate-spin" />

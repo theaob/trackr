@@ -35,7 +35,7 @@ export default async function BacklogPage({ params, searchParams }: PageProps) {
   ]);
 
   return (
-    <Suspense fallback={<div className="p-6 text-xs text-jira-gray-500">Loading backlog...</div>}>
+    <Suspense fallback={<div className="p-6 text-xs text-muted">Loading backlog...</div>}>
       <BacklogView
         project={project as any}
         initialIssues={issues as any}

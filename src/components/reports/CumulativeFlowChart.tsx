@@ -1,12 +1,27 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from "react";
-import { useChartWidth } from "@/hooks/useChartWidth";
+import React, { useMemo, useState } from "react";
 import { format } from "date-fns";
-import { Layers, Clock, Activity, Zap, CheckCircle2 } from "lucide-react";
+import { Layers, Loader2 } from "lucide-react";
+import { useChartWidth } from "@/hooks/useChartWidth";
 import type { CFDResult, CFDDataPoint } from "@/lib/cfd";
 import { prettifyStatusName } from "@/lib/workflowDisplay";
 import { niceAxis } from "./chartScale";
+import {
+  DataTable,
+  EmptyChart,
+  GUIDE,
+  Headline,
+  HoverCard,
+  Legend,
+  nearestIndex,
+  ReportCard,
+  Segmented,
+  SURFACE,
+  unitShort,
+  YGrid,
+  type Unit,
+} from "./kit";
 
 interface CumulativeFlowChartProps {
   initialData: CFDResult | null;
@@ -17,10 +32,14 @@ interface CumulativeFlowChartProps {
 
 // Narrowest drawing width; wider containers draw at their real width.
 const BASE_WIDTH = 680;
-const HEIGHT = 280;
-const MARGIN = { top: 28, right: 28, bottom: 32, left: 44 };
+const HEIGHT = 260;
+const MARGIN = { top: 16, right: 24, bottom: 28, left: 40 };
 const PLOT_HEIGHT = HEIGHT - MARGIN.top - MARGIN.bottom;
 
+/**
+ * How much work sat in each workflow status, day by day. It leads with the
+ * average lead time, creation to done, beside throughput and work in progress.
+ */
 export default function CumulativeFlowChart({
   initialData,
   onTimeframeChange,
@@ -29,40 +48,16 @@ export default function CumulativeFlowChart({
 }: CumulativeFlowChartProps) {
   const [chartRef, WIDTH] = useChartWidth(BASE_WIDTH);
   const PLOT_WIDTH = WIDTH - MARGIN.left - MARGIN.right;
-  const [metricUnit, setMetricUnit] = useState<"issues" | "points">("issues");
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-
+  const [metric, setMetric] = useState<Unit>("issues");
+  const [hover, setHover] = useState<number | null>(null);
+  const issues = metric === "issues";
+  const u = unitShort(metric);
   const points = useMemo(() => initialData?.points ?? [], [initialData?.points]);
   const metrics = initialData?.metrics;
-  const isIssueUnit = metricUnit === "issues";
 
-  const maxVal = useMemo(() => {
-    if (points.length === 0) return 1;
-    return Math.max(
-      ...points.map((p) => (isIssueUnit ? p.totalIssues : p.totalPoints)),
-      1
-    );
-  }, [points, isIssueUnit]);
-
-  const { ticks, axisMax: yMax } = useMemo(() => niceAxis(maxVal), [maxVal]);
-
-  const xAt = useCallback(
-    (index: number) =>
-      points.length > 1
-        ? MARGIN.left + (index / (points.length - 1)) * PLOT_WIDTH
-        : MARGIN.left + PLOT_WIDTH / 2,
-    [points.length, PLOT_WIDTH]
-  );
-
-  const yAt = useCallback(
-    (value: number) => MARGIN.top + PLOT_HEIGHT - (value / yMax) * PLOT_HEIGHT,
-    [yMax]
-  );
-
-  // One series per workflow status, in its configured color, listed
-  // bottom-to-top as stacked. Older data without per-status totals falls back
-  // to the three categories.
-  const series = useMemo(() => {
+  // One band per workflow status, in its own colour, bottom to top as stacked.
+  // Older data without per-status totals falls back to the three categories.
+  const bands = useMemo(() => {
     const all: { key: string; label: string; color: string; value: (p: CFDDataPoint) => number }[] =
       initialData?.statuses && initialData.statuses.length > 0
         ? initialData.statuses.map((st) => ({
@@ -70,313 +65,170 @@ export default function CumulativeFlowChart({
             label: prettifyStatusName(st.name),
             color: st.color,
             value: (p: CFDDataPoint) => {
-              const totals = p.byStatus?.[st.name];
-              return totals ? (isIssueUnit ? totals.count : totals.points) : 0;
+              const t = p.byStatus?.[st.name];
+              return t ? (issues ? t.count : t.points) : 0;
             },
           }))
         : (initialData?.categories ?? []).map((cat) => ({
             key: cat.key,
             label: cat.label,
             color: cat.color,
-            value: (p: CFDDataPoint) => (isIssueUnit ? p.counts[cat.key] : p.points[cat.key]),
+            value: (p: CFDDataPoint) => (issues ? p.counts[cat.key] : p.points[cat.key]),
           }));
-    // Leave out statuses that hold nothing in this window.
-    return all.filter((s) => points.some((p) => s.value(p) > 0));
-  }, [initialData?.statuses, initialData?.categories, points, isIssueUnit]);
+    return all.filter((b) => points.some((p) => b.value(p) > 0));
+  }, [initialData?.statuses, initialData?.categories, points, issues]);
 
-  const stackedBands = useMemo(() => {
+  const last = Math.max(1, points.length - 1);
+  const { ticks, axisMax } = niceAxis(Math.max(1, ...points.map((p) => (issues ? p.totalIssues : p.totalPoints))));
+  const xAt = (i: number) => (points.length > 1 ? MARGIN.left + (i / last) * PLOT_WIDTH : MARGIN.left + PLOT_WIDTH / 2);
+  const yAt = (v: number) => MARGIN.top + PLOT_HEIGHT - (v / axisMax) * PLOT_HEIGHT;
+
+  const shapes = useMemo(() => {
     if (points.length < 2) return [];
-
-    const makeAreaPath = (coords: { x: number; y0: number; y1: number }[]) => {
-      const topPath = coords.map((c, i) => `${i === 0 ? "M" : "L"} ${c.x} ${c.y1}`).join(" ");
-      const bottomPath = coords
-        .slice()
-        .reverse()
-        .map((c) => `L ${c.x} ${c.y0}`)
-        .join(" ");
-      return `${topPath} ${bottomPath} Z`;
-    };
-
-    const makeTopStrokePath = (coords: { x: number; y1: number }[]) => {
-      return coords.map((c, i) => `${i === 0 ? "M" : "L"} ${c.x} ${c.y1}`).join(" ");
-    };
-
     const base = points.map(() => 0);
-    return series.map((s) => {
-      const coords = points.map((p, i) => {
+    return bands.map((b) => {
+      const c = points.map((p, i) => {
         const y0 = base[i];
-        base[i] += s.value(p);
+        base[i] += b.value(p);
         return { x: xAt(i), y0: yAt(y0), y1: yAt(base[i]) };
       });
-      return {
-        key: s.key,
-        fill: s.color,
-        stroke: s.color,
-        areaPath: makeAreaPath(coords),
-        strokePath: makeTopStrokePath(coords),
-      };
+      const top = c.map((p, i) => `${i ? "L" : "M"} ${p.x} ${p.y1}`).join(" ");
+      const bottom = c
+        .slice()
+        .reverse()
+        .map((p) => `L ${p.x} ${p.y0}`)
+        .join(" ");
+      return { key: b.key, color: b.color, area: `${top} ${bottom} Z`, top };
     });
-  }, [points, series, xAt, yAt]);
+    // xAt and yAt only change with the width and axis, which these inputs cover.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [points, bands, WIDTH, axisMax]);
 
-  const handleMove = (e: React.MouseEvent<SVGRectElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    // The hit area covers just the plot, so map across the plot's width.
-    const relX = MARGIN.left + ((e.clientX - rect.left) / rect.width) * PLOT_WIDTH;
-    let nearest = 0;
-    let nearestDist = Infinity;
-    points.forEach((_, i) => {
-      const dist = Math.abs(xAt(i) - relX);
-      if (dist < nearestDist) {
-        nearestDist = dist;
-        nearest = i;
-      }
-    });
-    setHoverIndex(nearest);
-  };
+  const timeframe = (
+    <Segmented
+      label="Time window"
+      value={String(selectedDays)}
+      onChange={(v) => onTimeframeChange?.(Number(v))}
+      options={[
+        { value: "14", label: "14 days" },
+        { value: "30", label: "30 days" },
+        { value: "90", label: "90 days" },
+      ]}
+    />
+  );
+  const unit = (
+    <Segmented
+      label="Unit"
+      value={metric}
+      onChange={setMetric}
+      options={[
+        { value: "issues", label: "Issues" },
+        { value: "points", label: "Story points" },
+      ]}
+    />
+  );
 
-  const hovered = hoverIndex !== null ? points[hoverIndex] : null;
-  const tooltipLeft = hoverIndex !== null ? (xAt(hoverIndex) / WIDTH) * 100 : 0;
-  const tooltipAlignRight = tooltipLeft > 65;
-  const unitLabel = isIssueUnit ? "issues" : "pts";
+  const hovered = hover !== null ? points[hover] : null;
+  const topDown = bands.slice().reverse();
 
-  if (!initialData || points.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-52 text-jira-gray-400 gap-2">
-        <Layers className="w-8 h-8" />
-        <p className="text-xs">No historical activity data yet for Cumulative Flow.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {/* Controls & Filter Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-jira-gray-200 pb-3">
-        {/* Timeframe Filter Pills */}
-        <div className="flex items-center gap-1 bg-jira-gray-100 p-0.5 rounded border border-jira-gray-200 text-xs">
-          {[
-            { days: 14, label: "14 Days" },
-            { days: 30, label: "30 Days" },
-            { days: 90, label: "90 Days" },
-          ].map((item) => (
-            <button
-              key={item.days}
-              type="button"
-              onClick={() => onTimeframeChange?.(item.days)}
-              className={`px-3 py-1 rounded font-medium transition-all ${
-                selectedDays === item.days
-                  ? "bg-white text-jira-navy shadow-2xs font-semibold"
-                  : "text-jira-gray-600 hover:text-jira-navy"
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Legend: workflow order, matching the stack from the top down */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-jira-gray-600">
-          {series
-            .slice()
-            .reverse()
-            .map((s) => (
-              <span key={s.key} className="flex items-center gap-1.5 font-medium">
-                <span className="w-3 h-3 rounded-xs" style={{ backgroundColor: s.color }} />
-                {s.label}
-              </span>
-            ))}
-        </div>
-
-        {/* Unit Selector */}
-        <div className="flex items-center gap-1 bg-jira-gray-100 p-0.5 rounded border border-jira-gray-200 text-xs">
-          <button
-            type="button"
-            onClick={() => setMetricUnit("issues")}
-            className={`px-2.5 py-0.5 rounded font-medium transition-all ${
-              isIssueUnit ? "bg-white text-jira-navy shadow-2xs font-semibold" : "text-jira-gray-600"
-            }`}
-          >
-            Issues
-          </button>
-          <button
-            type="button"
-            onClick={() => setMetricUnit("points")}
-            className={`px-2.5 py-0.5 rounded font-medium transition-all ${
-              !isIssueUnit ? "bg-white text-jira-navy shadow-2xs font-semibold" : "text-jira-gray-600"
-            }`}
-          >
-            Story Points
-          </button>
-        </div>
-      </div>
-
-      {/* Flow KPI Summary Cards */}
-      {metrics && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-jira-gray-50 border border-jira-gray-200 rounded p-3">
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-jira-gray-500 uppercase">
-              <Activity className="w-3.5 h-3.5 text-jira-blue" />
-              <span>Current WIP</span>
-            </div>
-            <div className="text-xl font-bold text-jira-blue mt-1">
-              {isIssueUnit ? metrics.currentWipIssues : metrics.currentWipPoints}{" "}
-              <span className="text-xs font-normal text-jira-gray-500">{unitLabel}</span>
-            </div>
-            <div className="text-[10px] text-jira-gray-500 mt-0.5">Active in progress right now</div>
-          </div>
-
-          <div className="bg-jira-gray-50 border border-jira-gray-200 rounded p-3">
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-jira-gray-500 uppercase">
-              <Zap className="w-3.5 h-3.5 text-amber-500" />
-              <span>Throughput</span>
-            </div>
-            <div className="text-xl font-bold text-jira-navy mt-1">
-              {metrics.throughputPerWeek}{" "}
-              <span className="text-xs font-normal text-jira-gray-500">issues / week</span>
-            </div>
-            <div className="text-[10px] text-jira-gray-500 mt-0.5">Rolling completion rate</div>
-          </div>
-
-          <div className="bg-jira-gray-50 border border-jira-gray-200 rounded p-3">
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-jira-gray-500 uppercase">
-              <Clock className="w-3.5 h-3.5 text-indigo-500" />
-              <span>Avg Lead Time</span>
-            </div>
-            <div className="text-xl font-bold text-jira-navy mt-1">
-              {metrics.avgLeadTimeDays !== null ? `${metrics.avgLeadTimeDays}d` : "—"}
-            </div>
-            <div className="text-[10px] text-jira-gray-500 mt-0.5">Creation to resolution</div>
-          </div>
-
-          <div className="bg-jira-gray-50 border border-jira-gray-200 rounded p-3">
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-jira-gray-500 uppercase">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Total Delivered</span>
-            </div>
-            <div className="text-xl font-bold text-emerald-600 mt-1">
-              {metrics.totalCompletedInWindow}{" "}
-              <span className="text-xs font-normal text-jira-gray-500">issues</span>
-            </div>
-            <div className="text-[10px] text-jira-gray-500 mt-0.5">Completed in last {selectedDays} days</div>
-          </div>
-        </div>
-      )}
-
-      {/* SVG Canvas */}
+  const chart =
+    !initialData || points.length === 0 ? (
+      <EmptyChart icon={<Layers aria-hidden="true" />}>No activity to plot yet.</EmptyChart>
+    ) : (
       <div className="relative" ref={chartRef}>
+        {isLoading && (
+          <p className="absolute right-0 top-0 flex items-center gap-1.5 text-xs text-muted">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            Updating…
+          </p>
+        )}
         <svg
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-          className="w-full h-auto select-none"
+          className="h-auto w-full select-none"
           role="img"
-          aria-label="Cumulative flow diagram"
+          aria-label="Cumulative flow diagram. The table view lists every day."
         >
-          {/* Y Axis Gridlines */}
-          {ticks.map((t) => (
-            <g key={t}>
-              <line
-                x1={MARGIN.left}
-                x2={WIDTH - MARGIN.right}
-                y1={yAt(t)}
-                y2={yAt(t)}
-                stroke="#EBECF0"
-                strokeWidth="1"
-              />
-              <text
-                x={MARGIN.left - 8}
-                y={yAt(t) + 3}
-                textAnchor="end"
-                className="fill-jira-gray-500"
-                fontSize="10"
-              >
-                {t}
-              </text>
+          <YGrid ticks={ticks} yAt={yAt} x1={MARGIN.left} x2={WIDTH - MARGIN.right} />
+          {shapes.map((s) => (
+            <g key={s.key}>
+              <path style={{ fill: s.color }} d={s.area} fillOpacity="0.85" />
+              {/* A 2px surface line between bands keeps neighbours apart. */}
+              <path style={{ stroke: SURFACE }} d={s.top} fill="none" strokeWidth="2" strokeLinejoin="round" />
             </g>
           ))}
-
-          {/* Stacked Filled Area Bands */}
-          {stackedBands.map((band) => (
-            <g key={band.key}>
-              <path d={band.areaPath} fill={band.fill} fillOpacity="0.8" />
-              <path d={band.strokePath} fill="none" stroke={band.stroke} strokeWidth="1.5" />
-            </g>
-          ))}
-
-          {/* X Axis Date Labels */}
-          {[0, Math.floor((points.length - 1) / 2), points.length - 1].map((i, idx) => (
+          {[0, Math.floor(last / 2), last].map((i, n) => (
             <text
-              key={`${i}-${idx}`}
+              key={n}
               x={xAt(i)}
               y={HEIGHT - 8}
-              textAnchor={idx === 0 ? "start" : idx === 2 ? "end" : "middle"}
-              className="fill-jira-gray-500"
-              fontSize="10"
+              textAnchor={n === 0 ? "start" : n === 2 ? "end" : "middle"}
+              className="fill-muted"
+              fontSize="11"
             >
               {format(points[i].date, "MMM d")}
             </text>
           ))}
-
-          {/* Hover Crosshair */}
-          {hoverIndex !== null && (
-            <line
-              x1={xAt(hoverIndex)}
-              x2={xAt(hoverIndex)}
-              y1={MARGIN.top}
-              y2={HEIGHT - MARGIN.bottom}
-              stroke="#091E42"
-              strokeWidth="1.5"
-              strokeDasharray="2 2"
-            />
+          {hover !== null && (
+            <line style={{ stroke: GUIDE }} x1={xAt(hover)} x2={xAt(hover)} y1={MARGIN.top} y2={HEIGHT - MARGIN.bottom} strokeWidth="1" />
           )}
-
-          {/* Transparent Hover Hit Area */}
           <rect
             x={MARGIN.left}
             y={MARGIN.top}
             width={PLOT_WIDTH}
             height={PLOT_HEIGHT}
             fill="transparent"
-            onMouseMove={handleMove}
-            onMouseLeave={() => setHoverIndex(null)}
+            onMouseMove={(e) => setHover(nearestIndex(e, points.length, MARGIN.left, PLOT_WIDTH, xAt))}
+            onMouseLeave={() => setHover(null)}
           />
         </svg>
-
-        {/* Floating Tooltip */}
-        {hovered && (
-          <div
-            className="absolute top-2 pointer-events-none bg-jira-navy text-white text-[11px] rounded-md px-3 py-2 shadow-xl z-20 whitespace-nowrap border border-white/10"
-            style={{
-              left: `${tooltipLeft}%`,
-              transform: tooltipAlignRight ? "translateX(-100%)" : "translateX(0)",
-            }}
-          >
-            <div className="font-bold text-white mb-1.5 border-b border-white/20 pb-1">
-              {format(hovered.date, "EEEE, MMM d, yyyy")}
-            </div>
-            <div className="space-y-1">
-              {series
-                .slice()
-                .reverse()
-                .map((s) => (
-                  <div key={s.key} className="flex items-center justify-between gap-4">
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-                      {s.label}:
-                    </span>
-                    <span className="font-bold text-white">
-                      {s.value(hovered)} {unitLabel}
-                    </span>
-                  </div>
-                ))}
-              <div className="flex items-center justify-between gap-4 pt-1 border-t border-white/10 text-jira-gray-300">
-                <span>Total Work:</span>
-                <span className="font-bold text-white">
-                  {isIssueUnit ? hovered.totalIssues : hovered.totalPoints} {unitLabel}
-                </span>
-              </div>
-            </div>
-          </div>
+        {hovered && hover !== null && (
+          <HoverCard
+            leftPct={(xAt(hover) / WIDTH) * 100}
+            title={format(hovered.date, "EEE, MMM d")}
+            rows={topDown.map((b) => ({ label: b.label, value: `${b.value(hovered)} ${u}`, color: b.color }))}
+            footer={{ label: "Total", value: `${issues ? hovered.totalIssues : hovered.totalPoints} ${u}` }}
+          />
         )}
       </div>
-    </div>
+    );
+
+  return (
+    <ReportCard
+      title="Cumulative flow"
+      description="Work in each status over time. A widening band is where work is piling up."
+      headline={
+        metrics ? (
+          <Headline
+            label="Average lead time"
+            value={metrics.avgLeadTimeDays !== null ? metrics.avgLeadTimeDays : "–"}
+            unit={metrics.avgLeadTimeDays !== null ? "days" : undefined}
+            detail="From creation to done, for issues finished in this window"
+            figures={[
+              { label: "Throughput", value: metrics.throughputPerWeek, unit: "issues a week" },
+              { label: "In progress now", value: issues ? metrics.currentWipIssues : metrics.currentWipPoints, unit: u },
+              { label: `Done in ${selectedDays} days`, value: metrics.totalCompletedInWindow, unit: "issues" },
+            ]}
+          />
+        ) : undefined
+      }
+      legend={<Legend items={topDown.map((b) => ({ label: b.label, color: b.color }))} />}
+      controls={
+        <>
+          {timeframe}
+          {unit}
+        </>
+      }
+      chart={chart}
+      table={
+        <DataTable
+          caption={`Work in each status by day, in ${issues ? "issues" : "story points"}`}
+          columns={[{ label: "Day" }, ...topDown.map((b) => ({ label: b.label, numeric: true })), { label: "Total", numeric: true }]}
+          rows={points.map((p, i) => ({
+            key: String(i),
+            cells: [format(p.date, "EEE, MMM d"), ...topDown.map((b) => b.value(p)), issues ? p.totalIssues : p.totalPoints],
+          }))}
+        />
+      }
+    />
   );
 }

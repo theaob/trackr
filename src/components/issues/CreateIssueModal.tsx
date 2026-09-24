@@ -202,13 +202,13 @@ export default function CreateIssueModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-0 sm:p-4 overflow-y-auto animate-in fade-in">
-      <div className="bg-white w-full max-w-2xl h-full sm:h-auto sm:max-h-[90vh] rounded-none sm:rounded-lg shadow-2xl border border-jira-gray-300 flex flex-col overflow-hidden">
+      <div className="bg-white w-full max-w-2xl h-full sm:h-auto sm:max-h-[90vh] rounded-none sm:rounded-lg shadow-2xl border border-subtle flex flex-col overflow-hidden">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-jira-gray-200">
-          <h2 className="text-lg font-bold text-jira-navy">Create Issue</h2>
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-subtle">
+          <h2 className="text-lg font-bold text-ink">Create Issue</h2>
           <button
             onClick={onClose}
-            className="p-1.5 text-jira-gray-500 hover:text-jira-navy hover:bg-jira-gray-100 rounded"
+            className="p-1.5 text-muted hover:text-ink hover:bg-surface-sunk rounded"
           >
             <X className="w-5 h-5" />
           </button>
@@ -232,14 +232,14 @@ export default function CreateIssueModal({
           {/* Project & Issue Type */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
                 Project
               </label>
               {allProjects.length > 1 ? (
                 <select
                   value={selectedProjectId}
                   onChange={(e) => setSelectedProjectId(e.target.value)}
-                  className="w-full bg-white border border-jira-gray-300 rounded px-3 py-2 text-jira-navy font-medium focus:border-jira-blue"
+                  className="w-full bg-white border border-subtle rounded px-3 py-2 text-ink font-medium focus:border-accent"
                 >
                   {allProjects.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -248,21 +248,21 @@ export default function CreateIssueModal({
                   ))}
                 </select>
               ) : (
-                <div className="px-3 py-2 bg-jira-gray-100 border border-jira-gray-300 rounded font-medium text-jira-navy">
+                <div className="px-3 py-2 bg-surface-sunk border border-subtle rounded font-medium text-ink">
                   {project.name} ({project.key})
                 </div>
               )}
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
                 Issue Type
               </label>
               <div className="relative">
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value as IssueType)}
-                  className="w-full bg-white border border-jira-gray-300 rounded pl-9 pr-3 py-2 text-jira-navy focus:border-jira-blue"
+                  className="w-full bg-white border border-subtle rounded pl-9 pr-3 py-2 text-ink focus:border-accent"
                 >
                   <option value="STORY">Story</option>
                   <option value="TASK">Task</option>
@@ -278,7 +278,7 @@ export default function CreateIssueModal({
 
           {/* Summary / Title */}
           <div>
-            <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
               Summary <span className="text-rose-500">*</span>
             </label>
             <input
@@ -288,13 +288,13 @@ export default function CreateIssueModal({
               onChange={(e) => setTitle(e.target.value)}
               required
               autoFocus
-              className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue text-jira-navy"
+              className="w-full px-3 py-2 border border-subtle rounded focus:border-accent text-ink"
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
               Description
             </label>
             <IssueDescriptionEditor
@@ -311,14 +311,14 @@ export default function CreateIssueModal({
           {/* Priority, Story Points & Due Date */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
                 Priority
               </label>
               <div className="relative">
                 <select
                   value={priority}
                   onChange={(e) => setPriority(e.target.value as PriorityLevel)}
-                  className="w-full bg-white border border-jira-gray-300 rounded pl-9 pr-3 py-2 text-jira-navy focus:border-jira-blue"
+                  className="w-full bg-white border border-subtle rounded pl-9 pr-3 py-2 text-ink focus:border-accent"
                 >
                   <option value="HIGHEST">Highest</option>
                   <option value="HIGH">High</option>
@@ -333,7 +333,7 @@ export default function CreateIssueModal({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
                 Story Points
               </label>
               <input
@@ -343,32 +343,32 @@ export default function CreateIssueModal({
                 placeholder="e.g. 3, 5, 8"
                 value={storyPoints}
                 onChange={(e) => setStoryPoints(e.target.value)}
-                className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue text-jira-navy"
+                className="w-full px-3 py-2 border border-subtle rounded focus:border-accent text-ink"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
                 Due Date
               </label>
               <input
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue text-jira-navy"
+                className="w-full px-3 py-2 border border-subtle rounded focus:border-accent text-ink"
               />
             </div>
 
             {type === "EPIC" && (
               <div>
-                <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
                   Start Date
                 </label>
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue text-jira-navy"
+                  className="w-full px-3 py-2 border border-subtle rounded focus:border-accent text-ink"
                 />
               </div>
             )}
@@ -377,13 +377,13 @@ export default function CreateIssueModal({
           {/* Assignee & Sprint */}
           <div className={`grid gap-4 ${type === "EPIC" || isKanban ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"}`}>
             <div>
-              <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
                 Assignee
               </label>
               <select
                 value={assigneeId}
                 onChange={(e) => setAssigneeId(e.target.value)}
-                className="w-full bg-white border border-jira-gray-300 rounded px-3 py-2 text-jira-navy focus:border-jira-blue"
+                className="w-full bg-white border border-subtle rounded px-3 py-2 text-ink focus:border-accent"
               >
                 <option value="">Automatic (Unassigned)</option>
                 {users.map((u) => (
@@ -396,13 +396,13 @@ export default function CreateIssueModal({
 
             {type !== "EPIC" && !isKanban && (
               <div>
-                <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
                   Sprint
                 </label>
                 <select
                   value={sprintId}
                   onChange={(e) => setSprintId(e.target.value)}
-                  className="w-full bg-white border border-jira-gray-300 rounded px-3 py-2 text-jira-navy focus:border-jira-blue"
+                  className="w-full bg-white border border-subtle rounded px-3 py-2 text-ink focus:border-accent"
                 >
                   <option value="">Backlog (No Sprint)</option>
                   {projectSprints.map((s) => (
@@ -418,13 +418,13 @@ export default function CreateIssueModal({
           {/* Fix Version */}
           {projectVersions.length > 0 && (
             <div>
-              <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
                 Fix Version
               </label>
               <select
                 value={versionId}
                 onChange={(e) => setVersionId(e.target.value)}
-                className="w-full bg-white border border-jira-gray-300 rounded px-3 py-2 text-jira-navy focus:border-jira-blue"
+                className="w-full bg-white border border-subtle rounded px-3 py-2 text-ink focus:border-accent"
               >
                 <option value="">None (Unassigned)</option>
                 {projectVersions.map((v) => (
@@ -439,13 +439,13 @@ export default function CreateIssueModal({
           {/* Parent Epic (if not epic) */}
           {type !== "EPIC" && epics.length > 0 && (
             <div>
-              <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
                 Parent Epic
               </label>
               <select
                 value={parentId}
                 onChange={(e) => setParentId(e.target.value)}
-                className="w-full bg-white border border-jira-gray-300 rounded px-3 py-2 text-jira-navy focus:border-jira-blue"
+                className="w-full bg-white border border-subtle rounded px-3 py-2 text-ink focus:border-accent"
               >
                 <option value="">None</option>
                 {epics.map((epic) => (
@@ -459,17 +459,17 @@ export default function CreateIssueModal({
 
           {/* Custom Fields */}
           {customFields.length > 0 && (
-            <div className="pt-4 border-t border-jira-gray-200 space-y-3">
+            <div className="pt-4 border-t border-subtle space-y-3">
               <div className="flex items-center gap-1.5">
-                <Sliders className="w-3.5 h-3.5 text-jira-blue" />
-                <span className="text-xs font-bold text-jira-gray-700 uppercase tracking-wider">
+                <Sliders className="w-3.5 h-3.5 text-accent" />
+                <span className="text-xs font-bold text-ink-2 uppercase tracking-wider">
                   Custom Fields
                 </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {customFields.map((field) => (
                   <div key={field.id} className="space-y-1">
-                    <label className="block text-xs font-semibold text-jira-gray-700">
+                    <label className="block text-xs font-semibold text-ink-2">
                       {field.name} {field.required && <span className="text-rose-500">*</span>}
                     </label>
                     <CustomFieldRenderer
@@ -480,7 +480,7 @@ export default function CreateIssueModal({
                       }
                     />
                     {field.description && (
-                      <p className="text-[11px] text-jira-gray-500">{field.description}</p>
+                      <p className="text-[11px] text-muted">{field.description}</p>
                     )}
                   </div>
                 ))}
@@ -489,19 +489,19 @@ export default function CreateIssueModal({
           )}
 
           {/* Modal Footer */}
-          <div className="pt-4 border-t border-jira-gray-200 flex items-center justify-end gap-3">
+          <div className="pt-4 border-t border-subtle flex items-center justify-end gap-3">
             <SubmitShortcutHint className="hidden sm:inline-flex mr-1" />
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-jira-gray-700 hover:bg-jira-gray-100 rounded font-medium transition-colors"
+              className="px-4 py-2 text-ink-2 hover:bg-surface-sunk rounded font-medium transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting || !permissions.canCreateIssue}
-              className="bg-jira-blue hover:bg-jira-blue-hover text-white px-4 py-2 rounded font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
+              className="bg-accent hover:bg-accent-hover text-accent-fg px-4 py-2 rounded font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
             >
               {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
               <span>Create</span>

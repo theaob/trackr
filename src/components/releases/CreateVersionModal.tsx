@@ -1,28 +1,17 @@
 "use client";
 
-import { StatusBadge } from "@/components/common/IssueIcons";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
+import { Loader2, Search, Sparkles } from "lucide-react";
 import { Version, IssueType } from "@/types";
-import {
-  createVersion,
-  updateVersion,
-  getReleaseEligibleIssues,
-} from "@/lib/actions/versions";
-import {
-  X,
-  Calendar,
-  Tag,
-  FileText,
-  Loader2,
-  CheckSquare,
-  Square,
-  Search,
-  Sparkles,
-  CheckCircle2,
-  Clock,
-  Layers,
-  Check,
-} from "lucide-react";
+import { createVersion, updateVersion, getReleaseEligibleIssues } from "@/lib/actions/versions";
+import { prettifyStatusName } from "@/lib/workflowDisplay";
+import { IssueTypeIcon } from "@/components/common/IssueIcons";
+import { Button } from "@/components/ui/Button";
+import { Dialog, DialogContent } from "@/components/ui/Dialog";
+import { Field, Input, Textarea } from "@/components/ui/Field";
+import { StatusLozenge } from "@/components/ui/StatusLozenge";
+import { cn } from "@/components/ui/cn";
+import { Segmented } from "@/components/reports/kit";
 
 interface CreateVersionModalProps {
   projectId: string;
@@ -121,7 +110,6 @@ export default function CreateVersionModal({
       });
   }, [version, isOpen, projectId, initialSelectedIssueIds]);
 
-  if (!isOpen) return null;
 
   // Count unreleased done issues
   const unreleasedDoneIssues = eligibleIssues.filter(
@@ -236,291 +224,143 @@ export default function CreateVersionModal({
     }
   };
 
+  const categoryLabel = (c: string) => (c === "DONE" ? "Done" : c === "IN_PROGRESS" ? "In progress" : "To do");
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-      <div
-        className="bg-white rounded-lg shadow-xl border border-jira-gray-200 w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()}
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        size="lg"
+        title={isEditing ? `Edit ${version?.name}` : "Create version"}
+        description="A version groups the issues that ship together. The chosen issues get it as their fix version."
+        footer={
+          <>
+            <span className="mr-auto text-xs text-muted">
+              {selectedIssueIds.size === 0 ? "No issues chosen." : `${selectedIssueIds.size} issue${selectedIssueIds.size === 1 ? "" : "s"} chosen.`}
+            </span>
+            <Button onClick={onClose}>Cancel</Button>
+            <Button type="submit" form="version-form" variant="primary" loading={isSubmitting}>
+              {isEditing ? "Save changes" : "Create version"}
+            </Button>
+          </>
+        }
       >
-        {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-jira-gray-200 shrink-0">
-          <div className="flex items-center gap-2">
-            <Tag className="w-4 h-4 text-jira-blue" />
-            <h2 className="text-base font-bold text-jira-navy">
-              {isEditing ? "Edit Version" : "Create Version & Define Release"}
-            </h2>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-jira-gray-500 hover:text-jira-navy p-1 rounded hover:bg-jira-gray-100 transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Modal Form */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+        <form id="version-form" onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="p-3 bg-jira-red/10 border border-jira-red/30 rounded text-xs text-jira-red font-medium">
+            <p role="alert" className="rounded-control bg-danger-soft px-3 py-2 text-xs text-danger">
               {error}
-            </div>
+            </p>
           )}
-
-          {/* Version Name */}
-          <div>
-            <label className="block text-xs font-semibold text-jira-gray-700 mb-1">
-              Version Name <span className="text-jira-red">*</span>
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. 1.0.0 or 2026.Q4"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue focus:ring-1 focus:ring-jira-blue"
-              autoFocus
-              required
-            />
+          <div className="grid grid-cols-[minmax(0,1fr)_11rem] gap-3">
+            <Field label="Name" required>
+              <Input placeholder="1.0.0 or 2026.Q4" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+            </Field>
+            <Field label="Release date">
+              <Input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
+            </Field>
           </div>
+          <Field label="Description">
+            <Textarea rows={2} placeholder="What this release is about" value={description} onChange={(e) => setDescription(e.target.value)} />
+          </Field>
 
-          {/* Release Date */}
-          <div>
-            <label className="block text-xs font-semibold text-jira-gray-700 mb-1 flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-jira-gray-500" />
-              Release Date
-            </label>
-            <input
-              type="date"
-              value={releaseDate}
-              onChange={(e) => setReleaseDate(e.target.value)}
-              className="w-full text-xs px-2.5 py-1.5 bg-white border border-jira-gray-300 rounded focus:border-jira-blue"
-            />
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="block text-xs font-semibold text-jira-gray-700 mb-1 flex items-center gap-1">
-              <FileText className="w-3.5 h-3.5 text-jira-gray-500" />
-              Description
-            </label>
-            <textarea
-              rows={2}
-              placeholder="Brief summary of goals or theme for this release..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue resize-none"
-            />
-          </div>
-
-          {/* Assign Issues (Fix Version) Section */}
-          <div className="pt-3 border-t border-jira-gray-200 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="block text-xs font-bold text-jira-navy flex items-center gap-1.5">
-                  <CheckSquare className="w-4 h-4 text-jira-blue" />
-                  Assign Issues to Release (Fix Version)
-                </label>
-                <p className="text-[11px] text-jira-gray-500">
-                  Selected issues will have their <strong>Fix Version</strong> set to this release.
-                </p>
-              </div>
-
-              <span className="text-xs font-bold text-jira-blue bg-blue-50 border border-jira-blue/30 px-2 py-0.5 rounded-full">
-                {selectedIssueIds.size} selected
+          <fieldset className="space-y-2.5 border-t border-subtle pt-4">
+            <legend className="sr-only">Issues in this version</legend>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-medium text-ink-2">Issues</p>
+              <span className="flex flex-wrap items-center gap-1.5">
+                {unreleasedDoneIssues.length > 0 && (
+                  <Button size="sm" onClick={handleSelectUnreleasedDone}>
+                    <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                    Done, not released ({unreleasedDoneIssues.length})
+                  </Button>
+                )}
+                {sprints.length > 0 && (
+                  <select
+                    aria-label="Add a sprint's issues"
+                    defaultValue=""
+                    onChange={(e) => {
+                      handleSelectSprintIssues(e.target.value);
+                      e.target.value = "";
+                    }}
+                    className="h-7 rounded-control border border-subtle bg-surface px-2 text-xs text-ink hover:border-strong"
+                  >
+                    <option value="" disabled>
+                      Add a sprint&rsquo;s issues…
+                    </option>
+                    {sprints.map((sp) => (
+                      <option key={sp.id} value={sp.id}>
+                        {sp.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <Button size="sm" variant="ghost" onClick={handleSelectAllFiltered}>
+                  Choose all shown
+                </Button>
+                {selectedIssueIds.size > 0 && (
+                  <Button size="sm" variant="ghost" onClick={handleClearSelection}>
+                    Clear
+                  </Button>
+                )}
               </span>
             </div>
-
-            {/* Quick Presets Toolbar */}
-            <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              {unreleasedDoneIssues.length > 0 && (
-                <button
-                  type="button"
-                  onClick={handleSelectUnreleasedDone}
-                  className="text-[11px] font-semibold px-2 py-1 rounded bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 flex items-center gap-1 transition-colors"
-                  title="Select all currently completed issues that do not have a release yet"
-                >
-                  <Sparkles className="w-3 h-3 text-emerald-600" />
-                  <span>All Unreleased Done ({unreleasedDoneIssues.length})</span>
-                </button>
-              )}
-
-              {sprints.length > 0 && (
-                <select
-                  defaultValue=""
-                  onChange={(e) => {
-                    handleSelectSprintIssues(e.target.value);
-                    e.target.value = "";
-                  }}
-                  className="text-[11px] font-medium px-2 py-1 rounded bg-jira-gray-100 text-jira-gray-700 border border-jira-gray-300 hover:bg-jira-gray-200"
-                >
-                  <option value="" disabled>
-                    + Add from Sprint...
-                  </option>
-                  {sprints.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.status})
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              <button
-                type="button"
-                onClick={handleSelectAllFiltered}
-                className="text-[11px] text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-100 px-2 py-1 rounded border border-jira-gray-200"
-              >
-                Select All
-              </button>
-
-              {selectedIssueIds.size > 0 && (
-                <button
-                  type="button"
-                  onClick={handleClearSelection}
-                  className="text-[11px] text-rose-600 hover:bg-rose-50 px-2 py-1 rounded border border-rose-200"
-                >
-                  Clear Selection
-                </button>
-              )}
-            </div>
-
-            {/* Filter Pills and Search */}
-            <div className="flex items-center gap-2 pt-1">
-              <div className="relative flex-1">
-                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-jira-gray-400" />
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative min-w-48 flex-1">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" aria-hidden="true" />
                 <input
-                  type="text"
-                  placeholder="Search issues by key or title..."
+                  type="search"
+                  aria-label="Search issues"
+                  placeholder="Search by key or title"
                   value={issueSearchQuery}
                   onChange={(e) => setIssueSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-2 py-1 text-xs bg-white border border-jira-gray-300 rounded focus:border-jira-blue"
+                  className="h-8 w-full rounded-control border border-subtle bg-surface pl-8 pr-3 text-[13px] text-ink placeholder:text-muted hover:border-strong focus:border-accent"
                 />
               </div>
-
-              <div className="flex items-center gap-1 text-[11px]">
-                {(["ALL", "DONE", "IN_PROGRESS", "TODO"] as const).map((cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setCategoryFilter(cat)}
-                    className={`px-2 py-1 rounded transition-colors ${
-                      categoryFilter === cat
-                        ? "bg-jira-navy text-white font-semibold"
-                        : "bg-jira-gray-100 text-jira-gray-600 hover:bg-jira-gray-200"
-                    }`}
-                  >
-                    {cat === "ALL" ? "All" : cat === "DONE" ? "Done" : cat === "IN_PROGRESS" ? "In Progress" : "To Do"}
-                  </button>
-                ))}
-              </div>
+              <Segmented
+                label="Show"
+                value={categoryFilter}
+                onChange={setCategoryFilter}
+                options={(["ALL", "DONE", "IN_PROGRESS", "TODO"] as const).map((c) => ({ value: c, label: c === "ALL" ? "All" : categoryLabel(c) }))}
+              />
             </div>
-
-            {/* Issues List Container */}
-            <div className="border border-jira-gray-200 rounded-md overflow-hidden bg-slate-50/50">
+            <div className="overflow-hidden rounded-control border border-subtle">
               {isLoadingIssues ? (
-                <div className="p-8 flex items-center justify-center text-xs text-jira-gray-500 gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-jira-blue" />
-                  <span>Loading project issues...</span>
-                </div>
+                <p className="flex items-center justify-center gap-2 p-6 text-xs text-muted">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  Loading issues…
+                </p>
               ) : filteredIssues.length === 0 ? (
-                <div className="p-6 text-center text-xs text-jira-gray-500">
-                  {eligibleIssues.length === 0
-                    ? "No issues found in this project."
-                    : "No issues match your search criteria."}
-                </div>
+                <p className="p-6 text-center text-xs text-muted">{eligibleIssues.length === 0 ? "This project has no issues yet." : "No issues match."}</p>
               ) : (
-                <div className="max-h-52 overflow-y-auto divide-y divide-jira-gray-200/80">
+                <ul className="max-h-60 divide-y divide-subtle overflow-y-auto">
                   {filteredIssues.map((issue) => {
                     const isSelected = selectedIssueIds.has(issue.id);
-                    const isInOtherVersion =
-                      issue.versionId && (!version || issue.versionId !== version.id);
-
+                    const elsewhere = issue.versionId && (!version || issue.versionId !== version.id);
                     return (
-                      <div
-                        key={issue.id}
-                        onClick={() => toggleIssue(issue.id)}
-                        className={`flex items-center justify-between px-3 py-2 text-xs cursor-pointer select-none transition-colors ${
-                          isSelected
-                            ? "bg-blue-50/70 hover:bg-blue-50"
-                            : "bg-white hover:bg-jira-gray-50"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                      <li key={issue.id}>
+                        <label className={cn("flex h-9 cursor-pointer items-center gap-2.5 px-3 text-[13px]", isSelected ? "bg-accent-soft" : "hover:bg-surface-sunk")}>
                           <input
                             type="checkbox"
                             checked={isSelected}
-                            onChange={() => {}}
-                            className="rounded text-jira-blue focus:ring-jira-blue shrink-0 pointer-events-none"
+                            onChange={() => toggleIssue(issue.id)}
+                            className="h-4 w-4 shrink-0 accent-[rgb(var(--color-accent))]"
                           />
-
-                          <span className="min-w-[4.5rem] font-bold text-jira-navy text-[11px] shrink-0 font-mono">
-                            {issue.key}
+                          <IssueTypeIcon type={issue.type} className="h-4 w-4 shrink-0" />
+                          <span className="w-20 shrink-0 font-mono text-xs text-ink-2">{issue.key}</span>
+                          <span className="min-w-0 flex-1 truncate text-ink">{issue.title}</span>
+                          {elsewhere && <span className="shrink-0 rounded-full bg-warning-soft px-1.5 text-[11px] text-ink">In {issue.version?.name}</span>}
+                          <span className="w-28 shrink-0 text-right">
+                            <StatusLozenge label={prettifyStatusName(issue.status)} />
                           </span>
-
-                          <span className="truncate text-jira-gray-800 text-[11px]" title={issue.title}>
-                            {issue.title}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0 text-[10px]">
-                          {/* Other version badge */}
-                          {isInOtherVersion && (
-                            <span
-                              className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200 font-medium"
-                              title={`Currently in version ${issue.version?.name || "another release"}. Selecting this will move it to ${name || "this release"}.`}
-                            >
-                              In {issue.version?.name}
-                            </span>
-                          )}
-
-                          {/* Fixed-width status and points columns so rows line up. */}
-                          <div className="w-28 flex justify-end">
-                            <StatusBadge status={issue.status} className="text-[10px] max-w-full" />
-                          </div>
-
-                          <div className="w-4">
-                            {issue.storyPoints != null && (
-                              <span className="w-4 h-4 rounded-full bg-jira-gray-200 text-jira-gray-700 flex items-center justify-center font-bold text-[9px]">
-                                {issue.storyPoints}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                        </label>
+                      </li>
                     );
                   })}
-                </div>
+                </ul>
               )}
             </div>
-          </div>
-
-          {/* Footer Actions */}
-          <div className="flex items-center justify-between pt-3 border-t border-jira-gray-200 shrink-0">
-            <span className="text-xs text-jira-gray-500">
-              {selectedIssueIds.size === 0
-                ? "No issues selected."
-                : `${selectedIssueIds.size} issue${selectedIssueIds.size === 1 ? "" : "s"} will have Fix Version set to ${name || "this release"}.`}
-            </span>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="text-xs font-medium px-4 py-2 rounded text-jira-gray-700 hover:bg-jira-gray-100 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="text-xs font-semibold px-4 py-2 rounded bg-jira-blue text-white hover:bg-jira-blue-hover disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-xs"
-              >
-                {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                {isEditing ? "Save Changes" : "Create Version"}
-              </button>
-            </div>
-          </div>
+          </fieldset>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

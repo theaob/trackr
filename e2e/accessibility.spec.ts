@@ -235,6 +235,82 @@ test.describe.serial("accessibility", () => {
     await expect(page.getByRole("list", { name: "Issues" }).getByText("Check the issue view")).toBeVisible();
   });
 
+  test("reports, roadmap and releases", async () => {
+    await page.goto("/projects/APOLLO/reports");
+    await expect(page.getByRole("heading", { level: 1, name: "Reports" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Burndown and burnup" })).toBeVisible();
+    await expectNoSeriousViolations(page, "Reports, overview");
+    await page.getByRole("tab", { name: "Velocity" }).click();
+    await page.getByRole("button", { name: "Table" }).click();
+    await expect(page.getByRole("region", { name: /Velocity by sprint/ })).toBeVisible();
+    await expectNoSeriousViolations(page, "Reports, velocity as a table");
+    for (const [tab, heading] of [
+      ["Cumulative flow", "Cumulative flow"],
+      ["Distribution", "Distribution"],
+      ["Epic progress", "Epic progress"],
+    ]) {
+      await page.getByRole("tab", { name: tab }).click();
+      await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+      await expectNoSeriousViolations(page, `Reports, ${tab.toLowerCase()}`);
+    }
+
+    await page.goto("/projects/APOLLO/roadmap");
+    await expect(page.getByRole("heading", { level: 1, name: "Roadmap" })).toBeVisible();
+    await expectNoSeriousViolations(page, "Roadmap");
+
+    await page.goto("/projects/APOLLO/releases");
+    await expect(page.getByRole("heading", { level: 1, name: "Releases" })).toBeVisible();
+    await page.getByRole("button", { name: "Create version" }).first().click();
+    const create = page.getByRole("dialog", { name: "Create version" });
+    await create.getByLabel("Name").fill("1.0");
+    await expectNoSeriousViolations(page, "Create version dialog", "[role=dialog]");
+    await create.getByRole("button", { name: "Create version" }).click();
+    await expect(create).toBeHidden();
+    await expect(page.getByRole("cell", { name: "1.0", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Show the issues in 1.0" }).click();
+    await expectNoSeriousViolations(page, "Releases");
+    await page.getByRole("button", { name: "More actions for 1.0" }).click();
+    await expect(page.getByRole("menuitem", { name: "Release notes" })).toBeVisible();
+    await expectNoSeriousViolations(page, "Releases, version menu");
+    await page.keyboard.press("Escape");
+  });
+
+  test("settings: every section, and the save bar", async () => {
+    await page.goto("/projects/APOLLO/settings");
+    await expect(page.getByRole("heading", { level: 1, name: "Project settings" })).toBeVisible();
+    await expectNoSeriousViolations(page, "Settings, details");
+    await page.getByLabel("Name").fill("Apollo renamed");
+    const bar = page.getByRole("region", { name: "Unsaved changes" });
+    await expect(bar).toBeVisible();
+    await expectNoSeriousViolations(page, "Settings, unsaved changes");
+    await bar.getByRole("button", { name: "Discard" }).click();
+    await expect(bar).toBeHidden();
+    await expect(page.getByLabel("Name")).toHaveValue("Apollo");
+
+    const nav = page.getByRole("navigation", { name: "Project settings" });
+    for (const section of ["Components", "Custom fields", "Members", "Roles", "Visibility", "Workflow", "Webhooks"]) {
+      await nav.getByRole("button", { name: new RegExp(`^${section}`) }).click();
+      await expect(page.getByRole("heading", { level: 2, name: section, exact: true })).toBeVisible();
+      await expectNoSeriousViolations(page, `Settings, ${section.toLowerCase()}`);
+    }
+    await expect(page).toHaveURL(/section=webhooks/);
+
+    await nav.getByRole("button", { name: /^Workflow/ }).click();
+    await page.getByRole("button", { name: /^Colour of TODO/ }).click();
+    await expect(page.getByRole("group", { name: "Colour of TODO" })).toBeVisible();
+    await expectNoSeriousViolations(page, "Settings, status colours");
+    await page.keyboard.press("Escape");
+
+    await page.goto("/settings");
+    await expect(page.getByRole("heading", { level: 1, name: "System settings" })).toBeVisible();
+    const system = page.getByRole("navigation", { name: "System settings" });
+    for (const section of ["Users", "Single sign-on", "About this install"]) {
+      await system.getByRole("button", { name: section }).click();
+      await expect(page.getByRole("heading", { level: 2, name: section })).toBeVisible();
+      await expectNoSeriousViolations(page, `System settings, ${section.toLowerCase()}`);
+    }
+  });
+
   test("sign-in", async ({ browser }, testInfo) => {
     const signedOutContext = await browser.newContext({ baseURL: testInfo.project.use.baseURL });
     const signedOut = await signedOutContext.newPage();

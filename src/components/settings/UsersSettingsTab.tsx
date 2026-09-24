@@ -151,8 +151,8 @@ export default function UsersSettingsTab() {
       type="button"
       disabled={busy}
       onClick={onClick}
-      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:ring-2 focus:ring-jira-blue focus:ring-offset-1 disabled:opacity-50 ${
-        on ? onColor : "bg-jira-gray-300"
+      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:ring-2 focus:ring-accent focus:ring-offset-1 disabled:opacity-50 ${
+        on ? onColor : "bg-strong"
       }`}
       role="switch"
       aria-checked={on}
@@ -165,7 +165,7 @@ export default function UsersSettingsTab() {
           on ? "translate-x-4" : "translate-x-0"
         } flex items-center justify-center`}
       >
-        {busy && <Loader2 className="w-2.5 h-2.5 animate-spin text-jira-blue" />}
+        {busy && <Loader2 className="w-2.5 h-2.5 animate-spin text-accent" />}
       </span>
     </button>
   );
@@ -185,32 +185,32 @@ export default function UsersSettingsTab() {
   return (
     <div className="space-y-6">
       {/* Informational Banner */}
-      <div className="bg-white border border-jira-gray-200 rounded-lg p-5 shadow-2xs">
+      <div className="bg-white border border-subtle rounded-lg p-5 shadow-2xs">
         <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-lg bg-jira-blue-light text-jira-blue flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-accent-soft text-accent flex items-center justify-center shrink-0">
             <FolderPlus className="w-5 h-5" />
           </div>
           <div className="flex-1">
-            <h2 className="text-sm font-bold text-jira-navy">Instance Permissions</h2>
-            <p className="text-xs text-jira-gray-600 mt-1 leading-relaxed">
+            <h2 className="text-sm font-bold text-ink">Instance Permissions</h2>
+            <p className="text-xs text-ink-2 mt-1 leading-relaxed">
               Choose who can create new projects, and who administers this Trackr instance.
               Instance administrators manage SSO, global webhooks and these permissions; SSO controls how every
               account signs in, so grant it only to people you trust with every account.
             </p>
 
-            <div className="flex items-center gap-4 mt-3 pt-3 border-t border-jira-gray-100 text-xs">
-              <span className="text-jira-gray-500">
-                Total Users: <strong className="text-jira-navy font-semibold">{users.length}</strong>
+            <div className="flex items-center gap-4 mt-3 pt-3 border-t border-subtle text-xs">
+              <span className="text-muted">
+                Total Users: <strong className="text-ink font-semibold">{users.length}</strong>
               </span>
-              <span className="text-jira-gray-300">•</span>
-              <span className="text-jira-gray-500">
+              <span className="text-muted">•</span>
+              <span className="text-muted">
                 Allowed Creators:{" "}
                 <strong className="text-emerald-700 font-semibold">{creatorsCount}</strong>
               </span>
-              <span className="text-jira-gray-300">•</span>
-              <span className="text-jira-gray-500">
+              <span className="text-muted">•</span>
+              <span className="text-muted">
                 Restricted:{" "}
-                <strong className="text-jira-gray-700 font-semibold">
+                <strong className="text-ink-2 font-semibold">
                   {users.length - creatorsCount}
                 </strong>
               </span>
@@ -220,22 +220,22 @@ export default function UsersSettingsTab() {
       </div>
 
       {/* Self-registration */}
-      <div className="bg-white border border-jira-gray-200 rounded-lg p-5 flex items-start justify-between gap-4">
+      <div className="bg-white border border-subtle rounded-lg p-5 flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h2 className="text-sm font-bold text-jira-navy">Account creation</h2>
-          <p className="text-xs text-jira-gray-600 mt-1 leading-relaxed">
+          <h2 className="text-sm font-bold text-ink">Account creation</h2>
+          <p className="text-xs text-ink-2 mt-1 leading-relaxed">
             Let anyone who can reach this instance create an account from the sign-in page. Turn this off for
             an instance exposed to the internet; people can still sign in through SSO if it&apos;s set up,
             or you can turn it back on briefly while someone joins.
           </p>
         </div>
         {registrationOpen === null ? (
-          <Loader2 className="w-4 h-4 animate-spin text-jira-blue shrink-0" />
+          <Loader2 className="w-4 h-4 animate-spin text-accent shrink-0" />
         ) : (
           renderSwitch({
             on: registrationOpen,
             busy: updatingRegistration,
-            onColor: "bg-jira-blue",
+            onColor: "bg-accent",
             label: "Allow anyone to create an account",
             onClick: handleToggleRegistration,
           })
@@ -263,32 +263,32 @@ export default function UsersSettingsTab() {
       {/* Search and Filter */}
       <div className="flex items-center justify-between gap-3">
         <div className="relative w-full max-w-sm">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-400" />
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
           <input
             type="text"
             placeholder="Search by name, email, or role..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-jira-gray-300 rounded-md focus:border-jira-blue focus:ring-1 focus:ring-jira-blue transition-all placeholder:text-jira-gray-400"
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-subtle rounded-md focus:border-accent focus:ring-1 focus:ring-accent transition-all placeholder:text-muted"
           />
         </div>
       </div>
 
       {/* Users List */}
-      <div className="bg-white border border-jira-gray-200 rounded-lg overflow-hidden shadow-2xs">
+      <div className="bg-white border border-subtle rounded-lg overflow-hidden shadow-2xs">
         {loading ? (
-          <div className="p-8 flex items-center justify-center gap-2 text-xs text-jira-gray-500">
-            <Loader2 className="w-4 h-4 animate-spin text-jira-blue" />
+          <div className="p-8 flex items-center justify-center gap-2 text-xs text-muted">
+            <Loader2 className="w-4 h-4 animate-spin text-accent" />
             <span>Loading user directory...</span>
           </div>
         ) : filteredUsers.length === 0 ? (
-          <div className="p-8 text-center text-xs text-jira-gray-500">
-            <Users className="w-8 h-8 text-jira-gray-300 mx-auto mb-2" />
+          <div className="p-8 text-center text-xs text-muted">
+            <Users className="w-8 h-8 text-muted mx-auto mb-2" />
             <p>No users matched your query.</p>
           </div>
         ) : (
-          <div className="divide-y divide-jira-gray-100">
-            <div className="bg-jira-gray-50/70 px-4 py-2.5 grid grid-cols-12 text-[11px] font-semibold text-jira-gray-600 uppercase tracking-wider">
+          <div className="divide-y divide-subtle">
+            <div className="bg-page/70 px-4 py-2.5 grid grid-cols-12 text-[11px] font-semibold text-ink-2 uppercase tracking-wider">
               <span className="col-span-6 sm:col-span-4">User</span>
               <span className="hidden sm:block sm:col-span-2">Role</span>
               <span className="col-span-3 text-right">Create Projects</span>
@@ -303,17 +303,17 @@ export default function UsersSettingsTab() {
               return (
                 <div
                   key={user.id}
-                  className="px-4 py-3.5 grid grid-cols-12 items-center hover:bg-jira-gray-50/50 transition-colors"
+                  className="px-4 py-3.5 grid grid-cols-12 items-center hover:bg-page/50 transition-colors"
                 >
                   {/* User info */}
                   <div className="col-span-6 sm:col-span-4 flex items-center gap-3 min-w-0 pr-2">
                     <UserAvatar user={user} size="md" />
                     <div className="min-w-0 leading-tight">
-                      <div className="text-xs font-semibold text-jira-navy truncate">
+                      <div className="text-xs font-semibold text-ink truncate">
                         {user.name}
                       </div>
                       {user.email && (
-                        <div className="text-[11px] text-jira-gray-500 truncate">
+                        <div className="text-[11px] text-muted truncate">
                           {user.email}
                         </div>
                       )}
@@ -322,7 +322,7 @@ export default function UsersSettingsTab() {
 
                   {/* Role */}
                   <div className="hidden sm:block sm:col-span-2 min-w-0">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-jira-gray-100 text-jira-gray-700 border border-jira-gray-200 truncate max-w-full">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-surface-sunk text-ink-2 border border-subtle truncate max-w-full">
                       {user.role || "Member"}
                     </span>
                   </div>
@@ -331,7 +331,7 @@ export default function UsersSettingsTab() {
                   <div className="col-span-3 flex items-center justify-end gap-2">
                     <span
                       className={`hidden md:inline-flex items-center gap-1 text-[11px] font-medium ${
-                        hasPerm ? "text-emerald-700" : "text-jira-gray-500"
+                        hasPerm ? "text-emerald-700" : "text-muted"
                       }`}
                     >
                       {hasPerm ? (
@@ -341,7 +341,7 @@ export default function UsersSettingsTab() {
                         </>
                       ) : (
                         <>
-                          <Lock className="w-3 h-3 text-jira-gray-400" />
+                          <Lock className="w-3 h-3 text-muted" />
                           <span>Restricted</span>
                         </>
                       )}
@@ -358,7 +358,7 @@ export default function UsersSettingsTab() {
                   {/* Instance admin */}
                   <div className="col-span-3 flex items-center justify-end gap-2">
                     {isAdmin && (
-                      <span className="hidden md:inline-flex items-center gap-1 text-[11px] font-medium text-jira-blue">
+                      <span className="hidden md:inline-flex items-center gap-1 text-[11px] font-medium text-accent">
                         <Shield className="w-3 h-3" />
                         <span>Admin</span>
                       </span>
@@ -366,7 +366,7 @@ export default function UsersSettingsTab() {
                     {renderSwitch({
                       on: isAdmin,
                       busy: isUpdating,
-                      onColor: "bg-jira-blue",
+                      onColor: "bg-accent",
                       label: `Make ${user.name} an instance administrator`,
                       onClick: () => handleToggleInstanceAdmin(user),
                     })}

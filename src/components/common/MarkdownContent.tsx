@@ -16,10 +16,10 @@ function MentionPill({ target, children, users }: { target: string; children?: R
   const matchedUser = users.find((u) => u.id === target);
   return (
     <span
-      className="inline-flex items-center gap-0.5 px-1.5 py-px mx-0.5 rounded-sm bg-jira-blue-subtle text-jira-blue font-semibold text-xs border border-jira-blue/20 hover:bg-jira-blue/10 transition-colors select-none"
+      className="inline-flex items-center gap-0.5 px-1.5 py-px mx-0.5 rounded-sm bg-accent-soft text-accent font-semibold text-xs border border-accent/20 hover:bg-accent/10 transition-colors select-none"
       title={matchedUser ? `${matchedUser.name} (${matchedUser.role || matchedUser.email})` : undefined}
     >
-      <span className="text-jira-blue/70 text-[11px]">@</span>
+      <span className="text-accent/70 text-[11px]">@</span>
       <span>{children}</span>
     </span>
   );
@@ -40,7 +40,7 @@ function buildComponents(users: User[]): Components {
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-jira-blue hover:underline break-words"
+          className="text-accent hover:underline break-words"
         >
           {children}
         </a>
@@ -53,7 +53,7 @@ function buildComponents(users: User[]): Components {
           src={src}
           alt={alt || "Image"}
           loading="lazy"
-          className="max-w-full max-h-[480px] h-auto rounded-md border border-jira-gray-200 my-2 object-contain bg-white shadow-xs cursor-pointer hover:border-jira-blue transition-colors"
+          className="max-w-full max-h-[480px] h-auto rounded-md border border-subtle my-2 object-contain bg-white shadow-xs cursor-pointer hover:border-accent transition-colors"
           onClick={() => {
             if (typeof src === "string") window.open(src, "_blank", "noopener,noreferrer");
           }}
@@ -61,45 +61,45 @@ function buildComponents(users: User[]): Components {
         />
       );
     },
-    h1: ({ children }) => <h1 className="text-lg font-bold text-jira-navy mt-3 mb-1.5 first:mt-0">{children}</h1>,
-    h2: ({ children }) => <h2 className="text-base font-bold text-jira-navy mt-3 mb-1.5 first:mt-0">{children}</h2>,
-    h3: ({ children }) => <h3 className="text-sm font-bold text-jira-navy mt-2.5 mb-1 first:mt-0">{children}</h3>,
-    h4: ({ children }) => <h4 className="text-sm font-semibold text-jira-navy mt-2 mb-1 first:mt-0">{children}</h4>,
-    h5: ({ children }) => <h5 className="text-xs font-semibold text-jira-navy mt-2 mb-1 first:mt-0">{children}</h5>,
+    h1: ({ children }) => <h1 className="text-lg font-bold text-ink mt-3 mb-1.5 first:mt-0">{children}</h1>,
+    h2: ({ children }) => <h2 className="text-base font-bold text-ink mt-3 mb-1.5 first:mt-0">{children}</h2>,
+    h3: ({ children }) => <h3 className="text-sm font-bold text-ink mt-2.5 mb-1 first:mt-0">{children}</h3>,
+    h4: ({ children }) => <h4 className="text-sm font-semibold text-ink mt-2 mb-1 first:mt-0">{children}</h4>,
+    h5: ({ children }) => <h5 className="text-xs font-semibold text-ink mt-2 mb-1 first:mt-0">{children}</h5>,
     h6: ({ children }) => (
-      <h6 className="text-xs font-semibold text-jira-gray-600 mt-2 mb-1 first:mt-0">{children}</h6>
+      <h6 className="text-xs font-semibold text-ink-2 mt-2 mb-1 first:mt-0">{children}</h6>
     ),
     p: ({ children }) => <p className="leading-relaxed mb-2 last:mb-0 whitespace-pre-wrap">{children}</p>,
-    ul: ({ children }) => <ul className="list-disc pl-5 mb-2 last:mb-0 space-y-0.5 marker:text-jira-gray-400">{children}</ul>,
+    ul: ({ children }) => <ul className="list-disc pl-5 mb-2 last:mb-0 space-y-0.5 marker:text-muted">{children}</ul>,
     ol: ({ children }) => (
-      <ol className="list-decimal pl-5 mb-2 last:mb-0 space-y-0.5 marker:text-jira-gray-400">{children}</ol>
+      <ol className="list-decimal pl-5 mb-2 last:mb-0 space-y-0.5 marker:text-muted">{children}</ol>
     ),
     li: ({ children }) => <li className="leading-relaxed">{children}</li>,
     blockquote: ({ children }) => (
-      <blockquote className="border-l-2 border-jira-gray-300 pl-3 my-2 text-jira-gray-600 italic">
+      <blockquote className="border-l-2 border-subtle pl-3 my-2 text-ink-2 italic">
         {children}
       </blockquote>
     ),
-    strong: ({ children }) => <strong className="font-bold text-jira-navy">{children}</strong>,
+    strong: ({ children }) => <strong className="font-bold text-ink">{children}</strong>,
     em: ({ children }) => <em className="italic">{children}</em>,
-    del: ({ children }) => <del className="text-jira-gray-500">{children}</del>,
-    hr: () => <hr className="my-3 border-jira-gray-200" />,
+    del: ({ children }) => <del className="text-muted">{children}</del>,
+    hr: () => <hr className="my-3 border-subtle" />,
     table: ({ children }) => (
       <div className="overflow-x-auto my-2">
-        <table className="min-w-full border border-jira-gray-200 text-xs">{children}</table>
+        <table className="min-w-full border border-subtle text-xs">{children}</table>
       </div>
     ),
-    thead: ({ children }) => <thead className="bg-jira-gray-50">{children}</thead>,
-    tbody: ({ children }) => <tbody className="divide-y divide-jira-gray-100">{children}</tbody>,
+    thead: ({ children }) => <thead className="bg-page">{children}</thead>,
+    tbody: ({ children }) => <tbody className="divide-y divide-subtle">{children}</tbody>,
     tr: ({ children }) => <tr>{children}</tr>,
     th: ({ children }) => (
-      <th className="px-2 py-1 text-left font-semibold text-jira-gray-600 border-b border-jira-gray-200">
+      <th className="px-2 py-1 text-left font-semibold text-ink-2 border-b border-subtle">
         {children}
       </th>
     ),
-    td: ({ children }) => <td className="px-2 py-1 text-jira-navy align-top">{children}</td>,
+    td: ({ children }) => <td className="px-2 py-1 text-ink align-top">{children}</td>,
     pre: ({ children }) => (
-      <pre className="bg-jira-navy text-jira-gray-50 rounded-md p-3 overflow-x-auto my-2 text-xs leading-relaxed">
+      <pre className="bg-ink text-surface/80 rounded-md p-3 overflow-x-auto my-2 text-xs leading-relaxed">
         {children}
       </pre>
     ),
@@ -111,14 +111,14 @@ function buildComponents(users: User[]): Components {
         );
       }
       return (
-        <code className="px-1 py-0.5 rounded bg-jira-gray-100 text-jira-navy font-mono text-[0.85em]">
+        <code className="px-1 py-0.5 rounded bg-surface-sunk text-ink font-mono text-[0.85em]">
           {children}
         </code>
       );
     },
     input: ({ type, checked }) =>
       type === "checkbox" ? (
-        <input type="checkbox" checked={!!checked} disabled className="mr-1.5 align-middle accent-jira-blue" />
+        <input type="checkbox" checked={!!checked} disabled className="mr-1.5 align-middle accent-[rgb(var(--color-accent))]" />
       ) : null,
   };
 }

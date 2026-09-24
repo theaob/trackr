@@ -11,6 +11,12 @@ import {
   ProjectPermission,
 } from "@/types";
 import UserAvatar from "@/components/common/UserAvatar";
+import { Button, IconButton } from "@/components/ui/Button";
+import { Dialog, DialogContent } from "@/components/ui/Dialog";
+import { Select } from "@/components/ui/Select";
+import { StatusLozenge } from "@/components/ui/StatusLozenge";
+import { useToast } from "@/components/ui/Toast";
+import { cn } from "@/components/ui/cn";
 import {
   ROLE_CONFIG,
   ROLE_PERMISSIONS,
@@ -26,15 +32,12 @@ import {
   deleteCustomRole,
 } from "@/lib/actions/access";
 import {
-  Shield,
   Users,
-  Eye,
   Plus,
   Search,
   Check,
   X,
   Trash2,
-  HelpCircle,
   Crown,
   Info,
   Loader2,
@@ -43,522 +46,247 @@ import {
   Edit2,
   Lock,
   ShieldCheck,
-  ShieldAlert,
-  Sparkles,
-  CheckCircle2,
   AlertTriangle,
 } from "lucide-react";
 import { format } from "date-fns";
 
+// The chart palette's hues, so role colours match the rest of the app.
 const PRESET_ROLE_COLORS = [
-  { name: "Blue", hex: "#0052cc" },
-  { name: "Purple", hex: "#6554c0" },
-  { name: "Emerald", hex: "#00875a" },
-  { name: "Amber", hex: "#ff991f" },
-  { name: "Crimson", hex: "#de350b" },
-  { name: "Teal", hex: "#00b8d9" },
-  { name: "Violet", hex: "#8777d9" },
-  { name: "Slate", hex: "#4b5563" },
+  { name: "Blue", hex: "#2a78d6" },
+  { name: "Orange", hex: "#eb6834" },
+  { name: "Aqua", hex: "#1baf7a" },
+  { name: "Yellow", hex: "#eda100" },
+  { name: "Pink", hex: "#e87ba4" },
+  { name: "Green", hex: "#008300" },
+  { name: "Violet", hex: "#4a3aa7" },
+  { name: "Red", hex: "#e34948" },
 ];
 
 interface ProjectAccessTabProps {
   project: Project;
+  /** Which part of access this shows: the people, or the roles they can have. */
+  section: "members" | "roles";
   initialMembers: ProjectMember[];
   initialCustomRoles?: CustomRole[];
   allOrgUsers: User[];
   currentUserRole: ProjectRole | null;
   isProjectLead: boolean;
+  /** Keeps the settings page's member list in step, for the other sections. */
+  onMembersChange?: (members: ProjectMember[]) => void;
 }
 
+const BUILT_IN: BuiltInRole[] = ["ADMIN", "MEMBER", "VIEWER"];
+const BUILT_IN_TOKEN: Record<BuiltInRole, string | undefined> = { ADMIN: "accent", MEMBER: "success", VIEWER: undefined };
+
+function parsePermissions(role: CustomRole): ProjectPermission[] {
+  return Array.isArray(role.permissions) ? role.permissions : (JSON.parse((role.permissions as unknown as string) || "[]") as ProjectPermission[]);
+}
+
+/** A role as a lozenge: built-in roles in theme colours, custom roles in their own. */
+export function RoleLozenge({ role, customRoles }: { role: ProjectRole; customRoles: CustomRole[] }) {
+  const config = getRoleBadgeConfig(role, customRoles);
+  if (BUILT_IN.includes(role as BuiltInRole)) return <StatusLozenge label={config.name} token={BUILT_IN_TOKEN[role as BuiltInRole]} />;
+  return <StatusLozenge label={config.name} color={config.color} />;
+}
+
+/**
+ * Project access, as the settings page's Members and Roles sections: one
+ * table each, edited in place.
+ */
 export default function ProjectAccessTab({
   project,
+  section,
   initialMembers,
   initialCustomRoles = [],
   allOrgUsers,
   currentUserRole,
   isProjectLead,
+  onMembersChange,
 }: ProjectAccessTabProps) {
-  const [members, setMembers] = useState<ProjectMember[]>(initialMembers);
+  const { toast } = useToast();
+  const [members, setMembersState] = useState<ProjectMember[]>(initialMembers);
   const [customRoles, setCustomRoles] = useState<CustomRole[]>(initialCustomRoles);
-  const [activeSubTab, setActiveSubTab] = useState<"members" | "roles">("members");
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState<string>("ALL");
+  const [query, setQuery] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isMatrixModalOpen, setIsMatrixModalOpen] = useState(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<CustomRole | null>(null);
-  const [deletingRoleId, setDeletingRoleId] = useState<string | null>(null);
-
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
-  const [removingUserId, setRemovingUserId] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<ProjectMember | null>(null);
+  const [deletingRole, setDeletingRole] = useState<CustomRole | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const canManage = currentUserRole === "ADMIN" || isProjectLead;
-
-  // Filter members
-  const filteredMembers = useMemo(() => {
-    return members.filter((m) => {
-      const matchesSearch =
-        m.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (m.user.email ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (m.user.role && m.user.role.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        m.role.toLowerCase().includes(searchQuery.toLowerCase());
-
-      const matchesRole = roleFilter === "ALL" || m.role === roleFilter;
-
-      return matchesSearch && matchesRole;
+  const setMembers = (update: (prev: ProjectMember[]) => ProjectMember[]) => {
+    setMembersState((prev) => {
+      const next = update(prev);
+      onMembersChange?.(next);
+      return next;
     });
-  }, [members, searchQuery, roleFilter]);
+  };
 
-  // Statistics
-  const adminCount = members.filter((m) => m.role === "ADMIN").length;
-  const memberCount = members.filter((m) => m.role === "MEMBER").length;
-  const viewerCount = members.filter((m) => m.role === "VIEWER").length;
-  const customRoleMembersCount = members.filter(
-    (m) => m.role !== "ADMIN" && m.role !== "MEMBER" && m.role !== "VIEWER"
-  ).length;
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return members;
+    return members.filter((m) =>
+      [m.user.name, m.user.email ?? "", m.user.role ?? "", getRoleBadgeConfig(m.role, customRoles).name].some((v) => v.toLowerCase().includes(q))
+    );
+  }, [members, query, customRoles]);
 
-  // Non-member users available to invite
   const availableUsers = useMemo(() => {
-    const memberIds = new Set(members.map((m) => m.userId));
-    return allOrgUsers.filter((u) => !memberIds.has(u.id));
+    const ids = new Set(members.map((m) => m.userId));
+    return allOrgUsers.filter((u) => !ids.has(u.id));
   }, [allOrgUsers, members]);
 
-  // Handle Member Role Change
-  const handleRoleChange = async (userId: string, newRole: ProjectRole) => {
+  const roleOptions = [
+    ...BUILT_IN.map((r) => ({ value: r, label: ROLE_CONFIG[r].name, description: "Built in" })),
+    ...customRoles.map((r) => ({ value: r.name, label: r.name, description: r.description || "Custom role" })),
+  ];
+  const countFor = (role: string, id?: string) => members.filter((m) => m.role === role || (id && m.customRoleId === id)).length;
+
+  const handleRoleChange = async (userId: string, newRole: string) => {
     setUpdatingUserId(userId);
-    const matchedCustomRole = customRoles.find((r) => r.name === newRole || r.id === newRole);
-    const res = await updateProjectMemberRole(
-      project.id,
-      userId,
-      matchedCustomRole ? matchedCustomRole.name : newRole,
-      matchedCustomRole ? matchedCustomRole.id : null
-    );
+    const custom = customRoles.find((r) => r.name === newRole || r.id === newRole);
+    const res = await updateProjectMemberRole(project.id, userId, custom ? custom.name : (newRole as ProjectRole), custom ? custom.id : null);
     setUpdatingUserId(null);
-
     if (res.success && res.member) {
-      setMembers((prev) =>
-        prev.map((m) => (m.userId === userId ? (res.member as ProjectMember) : m))
-      );
-    } else if (res.error) {
-      alert(res.error);
+      setMembers((prev) => prev.map((m) => (m.userId === userId ? (res.member as ProjectMember) : m)));
+    } else {
+      toast({ title: res.error || "Couldn't change the role", tone: "danger" });
     }
   };
 
-  // Handle Remove Member
-  const handleRemoveMember = async (userId: string, userName: string) => {
-    if (!confirm(`Are you sure you want to remove ${userName} from this project?`)) {
-      return;
-    }
-
-    setRemovingUserId(userId);
-    const res = await removeProjectMember(project.id, userId);
-    setRemovingUserId(null);
-
+  const confirmRemove = async () => {
+    if (!removing) return;
+    setBusy(true);
+    const res = await removeProjectMember(project.id, removing.userId);
+    setBusy(false);
     if (res.success) {
-      setMembers((prev) => prev.filter((m) => m.userId !== userId));
-    } else if (res.error) {
-      alert(res.error);
+      setMembers((prev) => prev.filter((m) => m.userId !== removing.userId));
+      toast({ title: `${removing.user.name} removed`, tone: "success" });
+      setRemoving(null);
+    } else {
+      toast({ title: res.error || "Couldn't remove them", tone: "danger" });
     }
   };
 
-  // Handle Custom Role Deletion
-  const handleDeleteRole = async (role: CustomRole) => {
-    const assignedCount = members.filter(
-      (m) => m.customRoleId === role.id || m.role === role.name
-    ).length;
-
-    const confirmMsg =
-      assignedCount > 0
-        ? `Are you sure you want to delete the role "${role.name}"?\n\n${assignedCount} project member(s) currently assigned to this role will be safely reassigned to the default "Member" role.`
-        : `Are you sure you want to delete the role "${role.name}"?`;
-
-    if (!confirm(confirmMsg)) return;
-
-    setDeletingRoleId(role.id);
+  const confirmDeleteRole = async () => {
+    if (!deletingRole) return;
+    const role = deletingRole;
+    setBusy(true);
     const res = await deleteCustomRole(role.id, "MEMBER");
-    setDeletingRoleId(null);
-
+    setBusy(false);
     if (res.success) {
       setCustomRoles((prev) => prev.filter((r) => r.id !== role.id));
-      // Reassign affected members in UI state to MEMBER
       setMembers((prev) =>
-        prev.map((m) =>
-          m.customRoleId === role.id || m.role === role.name
-            ? { ...m, role: "MEMBER", customRoleId: null, customRole: null }
-            : m
-        )
+        prev.map((m) => (m.customRoleId === role.id || m.role === role.name ? { ...m, role: "MEMBER", customRoleId: null, customRole: null } : m))
       );
-      if (roleFilter === role.name) {
-        setRoleFilter("ALL");
-      }
-    } else if (res.error) {
-      alert(res.error);
+      toast({ title: `${role.name} deleted`, tone: "success" });
+      setDeletingRole(null);
+    } else {
+      toast({ title: res.error || "Couldn't delete the role", tone: "danger" });
     }
   };
 
+  const th = "h-9 border-b border-subtle px-3 text-left text-xs font-medium text-ink-2";
+  const td = "border-b border-subtle px-3 py-2 text-[13px] text-ink";
+
   return (
-    <div className="space-y-6">
-      {/* Sub-tab Navigation */}
-      <div className="flex items-center justify-between border-b border-jira-gray-200 pb-px">
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setActiveSubTab("members")}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${
-              activeSubTab === "members"
-                ? "border-jira-blue text-jira-blue"
-                : "border-transparent text-jira-gray-600 hover:text-jira-navy hover:border-jira-gray-300"
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>Team Members</span>
-            <span
-              className={`px-1.5 py-px rounded-full text-[10px] font-bold ${
-                activeSubTab === "members"
-                  ? "bg-jira-blue-light text-jira-blue"
-                  : "bg-jira-gray-100 text-jira-gray-600"
-              }`}
-            >
-              {members.length}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveSubTab("roles")}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${
-              activeSubTab === "roles"
-                ? "border-jira-blue text-jira-blue"
-                : "border-transparent text-jira-gray-600 hover:text-jira-navy hover:border-jira-gray-300"
-            }`}
-          >
-            <ShieldCheck className="w-4 h-4" />
-            <span>Project Roles</span>
-            <span
-              className={`px-1.5 py-px rounded-full text-[10px] font-bold ${
-                activeSubTab === "roles"
-                  ? "bg-jira-blue-light text-jira-blue"
-                  : "bg-jira-gray-100 text-jira-gray-600"
-              }`}
-            >
-              {3 + customRoles.length}
-            </span>
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setIsMatrixModalOpen(true)}
-            className="px-3 py-1.5 text-xs font-semibold text-jira-gray-700 bg-white border border-jira-gray-300 hover:bg-jira-gray-50 rounded flex items-center gap-1.5 transition-colors shadow-2xs"
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5 text-jira-gray-500" />
-            <span>Permissions Scheme</span>
-          </button>
-
-          {canManage && activeSubTab === "roles" && (
-            <button
-              type="button"
-              onClick={() => {
-                setEditingRole(null);
-                setIsRoleModalOpen(true);
-              }}
-              className="px-3 py-1.5 text-xs font-semibold text-white bg-jira-blue hover:bg-jira-blue-hover rounded flex items-center gap-1.5 transition-colors shadow-xs"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Create Custom Role</span>
-            </button>
-          )}
-
-          {canManage && activeSubTab === "members" && (
-            <button
-              type="button"
-              onClick={() => setIsAddModalOpen(true)}
-              className="px-3 py-1.5 text-xs font-semibold text-white bg-jira-blue hover:bg-jira-blue-hover rounded flex items-center gap-1.5 transition-colors shadow-xs"
-            >
-              <UserPlus className="w-3.5 h-3.5" />
-              <span>Add Member</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* SUB-TAB 1: TEAM MEMBERS */}
-      {activeSubTab === "members" && (
-        <div className="space-y-6 animate-in fade-in duration-200">
-          {/* Overview Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-jira-gray-50 border border-jira-gray-200 rounded-lg p-3.5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-jira-gray-200 text-jira-navy flex items-center justify-center font-bold">
-                <Users className="w-5 h-5 text-jira-gray-700" />
-              </div>
-              <div>
-                <div className="text-[11px] font-semibold text-jira-gray-600 uppercase tracking-wider">
-                  Total Team
-                </div>
-                <div className="text-base font-bold text-jira-navy">{members.length} Members</div>
-              </div>
+    <div className="space-y-4">
+      {section === "members" ? (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="relative w-full sm:w-72">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" aria-hidden="true" />
+              <input
+                type="search"
+                aria-label="Search members"
+                placeholder="Search by name, email or role"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="h-8 w-full rounded-control border border-subtle bg-surface pl-8 pr-3 text-[13px] text-ink placeholder:text-muted hover:border-strong focus:border-accent"
+              />
             </div>
-
-            <div className="bg-purple-50/50 border border-purple-200 rounded-lg p-3.5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-purple-100 text-purple-800 flex items-center justify-center font-bold">
-                <Shield className="w-5 h-5 text-purple-700" />
-              </div>
-              <div>
-                <div className="text-[11px] font-semibold text-purple-900 uppercase tracking-wider">
-                  Administrators
-                </div>
-                <div className="text-base font-bold text-purple-950">{adminCount} Admins</div>
-              </div>
-            </div>
-
-            <div className="bg-blue-50/50 border border-blue-200 rounded-lg p-3.5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-800 flex items-center justify-center font-bold">
-                <Users className="w-5 h-5 text-blue-700" />
-              </div>
-              <div>
-                <div className="text-[11px] font-semibold text-blue-900 uppercase tracking-wider">
-                  Contributors
-                </div>
-                <div className="text-base font-bold text-blue-950">{memberCount} Members</div>
-              </div>
-            </div>
-
-            <div className="bg-amber-50/50 border border-amber-200 rounded-lg p-3.5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
-                <Eye className="w-5 h-5 text-amber-700" />
-              </div>
-              <div>
-                <div className="text-[11px] font-semibold text-amber-900 uppercase tracking-wider">
-                  {customRoles.length > 0 ? "Custom & Viewers" : "Stakeholders"}
-                </div>
-                <div className="text-base font-bold text-amber-950">
-                  {viewerCount} Viewers
-                  {customRoleMembersCount > 0 && ` + ${customRoleMembersCount} Custom`}
-                </div>
-              </div>
-            </div>
+            {canManage && (
+              <Button variant="primary" onClick={() => setIsAddModalOpen(true)} disabled={availableUsers.length === 0}>
+                <UserPlus className="h-4 w-4" aria-hidden="true" />
+                Add member
+              </Button>
+            )}
           </div>
-
-          {/* Action Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-            <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 flex-1 min-w-full sm:min-w-[280px]">
-              {/* Search Input */}
-              <div className="relative flex-1 min-w-[200px] max-w-sm">
-                <Search className="w-4 h-4 text-jira-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Filter by name, email, or role..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-jira-gray-300 rounded focus:border-jira-blue transition-colors"
-                />
-              </div>
-
-              {/* Role Filter Pills */}
-              <div className="flex items-center bg-jira-gray-100 p-0.5 rounded border border-jira-gray-300 text-xs overflow-x-auto no-scrollbar max-w-full">
-                {["ALL", "ADMIN", "MEMBER", "VIEWER", ...customRoles.map((r) => r.name)].map(
-                  (roleKey) => {
-                    const label =
-                      roleKey === "ALL"
-                        ? "All"
-                        : roleKey === "ADMIN"
-                        ? "Admins"
-                        : roleKey === "MEMBER"
-                        ? "Members"
-                        : roleKey === "VIEWER"
-                        ? "Viewers"
-                        : roleKey;
-
-                    const isCustom = customRoles.some((r) => r.name === roleKey);
-                    const customRoleObj = customRoles.find((r) => r.name === roleKey);
-
-                    return (
-                      <button
-                        key={roleKey}
-                        onClick={() => setRoleFilter(roleKey)}
-                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded font-semibold text-[11px] whitespace-nowrap transition-colors ${
-                          roleFilter === roleKey
-                            ? "bg-white text-jira-navy shadow-xs"
-                            : "text-jira-gray-600 hover:text-jira-navy"
-                        }`}
-                      >
-                        {isCustom && customRoleObj && (
-                          <span
-                            className="w-2 h-2 rounded-full shrink-0"
-                            style={{ backgroundColor: customRoleObj.color || "#0052cc" }}
-                          />
-                        )}
-                        <span>{label}</span>
-                      </button>
-                    );
-                  }
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Members Table */}
-          <div className="border border-jira-gray-200 rounded-lg overflow-x-auto bg-white shadow-xs">
-            <table className="w-full text-left text-xs border-collapse">
+          <div className="overflow-x-auto rounded-card border border-subtle bg-surface">
+            <table className="w-full min-w-[640px] border-separate border-spacing-0">
+              <caption className="sr-only">Project members</caption>
               <thead>
-                <tr className="bg-jira-gray-50 border-b border-jira-gray-200 text-jira-gray-600 font-bold uppercase tracking-wider text-[10px]">
-                  <th className="px-4 py-3">Team Member</th>
-                  <th className="px-4 py-3">Job Title</th>
-                  <th className="px-4 py-3">Project Role</th>
-                  <th className="px-4 py-3">Joined</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
+                <tr>
+                  <th scope="col" className={th}>
+                    Name
+                  </th>
+                  <th scope="col" className={cn(th, "w-40")}>
+                    Job title
+                  </th>
+                  <th scope="col" className={cn(th, "w-56")}>
+                    Role
+                  </th>
+                  <th scope="col" className={cn(th, "w-28")}>
+                    Joined
+                  </th>
+                  <th scope="col" className={cn(th, "w-12")}>
+                    <span className="sr-only">Remove</span>
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-jira-gray-100">
-                {filteredMembers.length === 0 ? (
+              <tbody>
+                {shown.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-jira-gray-400 italic">
-                      No project members match your search criteria.
+                    <td colSpan={5} className="px-3 py-8 text-center text-xs text-muted">
+                      {query ? "No members match." : "No members yet."}
                     </td>
                   </tr>
                 ) : (
-                  filteredMembers.map((member) => {
-                    const badgeConfig = getRoleBadgeConfig(member.role, customRoles);
-                    const isLead = member.userId === project.leadId;
-                    const isUpdating = updatingUserId === member.userId;
-                    const isRemoving = removingUserId === member.userId;
-                    const isCustomRole = badgeConfig.isCustom;
-
+                  shown.map((m) => {
+                    const isLead = m.userId === project.leadId;
                     return (
-                      <tr
-                        key={member.id}
-                        className="hover:bg-jira-gray-50/60 transition-colors group"
-                      >
-                        {/* User Profile */}
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <UserAvatar
-                              user={member.user}
-                              size="lg"
-                              className="border border-jira-gray-200"
-                            />
-                            <div>
-                              <div className="font-bold text-jira-navy flex items-center gap-1.5">
-                                <span>{member.user.name}</span>
+                      <tr key={m.id} className="hover:bg-surface-sunk/60">
+                        <td className={td}>
+                          <span className="flex min-w-0 items-center gap-2.5">
+                            <UserAvatar user={m.user} size="sm" />
+                            <span className="min-w-0">
+                              <span className="flex items-center gap-1.5 font-medium">
+                                <span className="truncate">{m.user.name}</span>
                                 {isLead && (
-                                  <span
-                                    title="Project Lead"
-                                    className="inline-flex items-center gap-0.5 px-1.5 py-px rounded bg-amber-100 text-amber-800 text-[10px] font-bold"
-                                  >
-                                    <Crown className="w-3 h-3 text-amber-600" />
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-1.5 text-[11px] font-medium text-warning">
+                                    <Crown className="h-3 w-3" aria-hidden="true" />
                                     Lead
                                   </span>
                                 )}
-                              </div>
-                              <div className="text-[11px] text-jira-gray-500">{member.user.email}</div>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Job Title */}
-                        <td className="px-4 py-3 text-jira-gray-700 font-medium">
-                          <span className="px-2 py-0.5 rounded bg-jira-gray-100 text-jira-gray-800 font-medium text-[11px]">
-                            {member.user.role}
+                              </span>
+                              {m.user.email && <span className="block truncate text-xs text-muted">{m.user.email}</span>}
+                            </span>
                           </span>
                         </td>
-
-                        {/* Project Role Selector */}
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            {canManage && !isLead ? (
-                              <div className="relative">
-                                <select
-                                  value={member.role}
-                                  disabled={isUpdating}
-                                  onChange={(e) =>
-                                    handleRoleChange(member.userId, e.target.value as ProjectRole)
-                                  }
-                                  style={
-                                    isCustomRole && badgeConfig.color
-                                      ? {
-                                          backgroundColor: `${badgeConfig.color}15`,
-                                          borderColor: `${badgeConfig.color}40`,
-                                          color: badgeConfig.color,
-                                        }
-                                      : undefined
-                                  }
-                                  className={`text-xs font-semibold px-2.5 py-1 rounded border cursor-pointer transition-colors ${
-                                    !isCustomRole
-                                      ? `${badgeConfig.badgeBg} ${badgeConfig.badgeText} ${badgeConfig.border}`
-                                      : ""
-                                  } hover:brightness-95`}
-                                >
-                                  <optgroup label="System Roles">
-                                    <option value="ADMIN">Administrator</option>
-                                    <option value="MEMBER">Member (Contributor)</option>
-                                    <option value="VIEWER">Viewer (Read-Only)</option>
-                                  </optgroup>
-                                  {customRoles.length > 0 && (
-                                    <optgroup label="Custom Project Roles">
-                                      {customRoles.map((cr) => (
-                                        <option key={cr.id} value={cr.name}>
-                                          {cr.name}
-                                        </option>
-                                      ))}
-                                    </optgroup>
-                                  )}
-                                </select>
-                                {isUpdating && (
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-jira-blue absolute -right-5 top-1.5" />
-                                )}
-                              </div>
-                            ) : (
-                              <span
-                                style={
-                                  isCustomRole && badgeConfig.color
-                                    ? {
-                                        backgroundColor: `${badgeConfig.color}15`,
-                                        borderColor: `${badgeConfig.color}40`,
-                                        color: badgeConfig.color,
-                                      }
-                                    : undefined
-                                }
-                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded border font-semibold text-xs ${
-                                  !isCustomRole
-                                    ? `${badgeConfig.badgeBg} ${badgeConfig.badgeText} ${badgeConfig.border}`
-                                    : ""
-                                }`}
-                              >
-                                {isCustomRole && badgeConfig.color && (
-                                  <span
-                                    className="w-2 h-2 rounded-full shrink-0"
-                                    style={{ backgroundColor: badgeConfig.color }}
-                                  />
-                                )}
-                                {badgeConfig.name}
-                              </span>
-                            )}
-                          </div>
+                        <td className={cn(td, "text-ink-2")}>{m.user.role || "–"}</td>
+                        <td className={td}>
+                          {canManage && !isLead ? (
+                            <span className="flex items-center gap-2">
+                              <Select
+                                aria-label={`Role for ${m.user.name}`}
+                                className="w-48"
+                                value={m.role}
+                                disabled={updatingUserId === m.userId}
+                                onChange={(v) => v !== m.role && handleRoleChange(m.userId, v)}
+                                options={roleOptions}
+                              />
+                              {updatingUserId === m.userId && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted" aria-label="Saving" />}
+                            </span>
+                          ) : (
+                            <RoleLozenge role={m.role} customRoles={customRoles} />
+                          )}
                         </td>
-
-                        {/* Joined Date */}
-                        <td className="px-4 py-3 text-jira-gray-500 text-[11px]">
-                          {member.createdAt ? format(new Date(member.createdAt), "MMM d, yyyy") : "—"}
-                        </td>
-
-                        {/* Actions */}
-                        <td className="px-4 py-3 text-right">
+                        <td className={cn(td, "text-xs text-ink-2")}>{m.createdAt ? format(new Date(m.createdAt), "MMM d, yyyy") : "–"}</td>
+                        <td className={cn(td, "text-right")}>
                           {canManage && !isLead && (
-                            <button
-                              type="button"
-                              disabled={isRemoving}
-                              onClick={() => handleRemoveMember(member.userId, member.user.name)}
-                              title="Remove member from project"
-                              className="p-1.5 text-jira-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
-                            >
-                              {isRemoving ? (
-                                <Loader2 className="w-4 h-4 animate-spin text-red-600" />
-                              ) : (
-                                <Trash2 className="w-4 h-4" />
-                              )}
-                            </button>
+                            <IconButton label={`Remove ${m.user.name} from the project`} icon={<Trash2 aria-hidden="true" />} size="sm" onClick={() => setRemoving(m)} />
                           )}
                         </td>
                       </tr>
@@ -568,290 +296,151 @@ export default function ProjectAccessTab({
               </tbody>
             </table>
           </div>
-        </div>
-      )}
-
-      {/* SUB-TAB 2: PROJECT ROLES & PERMISSIONS */}
-      {activeSubTab === "roles" && (
-        <div className="space-y-8 animate-in fade-in duration-200">
-          {/* Header intro */}
-          <div className="bg-gradient-to-r from-blue-50/70 to-indigo-50/40 border border-blue-200/80 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-jira-blue" />
-                <h3 className="text-sm font-bold text-jira-navy">Project Roles & Permissions Scheme</h3>
-              </div>
-              <p className="text-xs text-jira-gray-600 max-w-2xl leading-relaxed">
-                Roles define what project members are authorized to do. Trackr comes with 3 standard built-in roles,
-                and project administrators can create bespoke custom roles with fine-grained access control.
-              </p>
-            </div>
-            {canManage && (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingRole(null);
-                  setIsRoleModalOpen(true);
-                }}
-                className="self-start sm:self-center shrink-0 px-3.5 py-2 text-xs font-semibold text-white bg-jira-blue hover:bg-jira-blue-hover rounded flex items-center gap-1.5 transition-colors shadow-xs"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Create Custom Role</span>
-              </button>
-            )}
+        </>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="max-w-xl text-xs text-muted">
+              A role decides what its members can do. The three built-in roles can&rsquo;t be changed; add your own for anything in between.
+            </p>
+            <span className="flex items-center gap-2">
+              <Button onClick={() => setIsMatrixModalOpen(true)}>
+                <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+                Compare permissions
+              </Button>
+              {canManage && (
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    setEditingRole(null);
+                    setIsRoleModalOpen(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Create role
+                </Button>
+              )}
+            </span>
           </div>
-
-          {/* Section 1: Standard System Roles */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Lock className="w-4 h-4 text-jira-gray-500" />
-                <h4 className="text-xs font-bold text-jira-navy uppercase tracking-wider">
-                  Standard System Roles (3)
-                </h4>
-              </div>
-              <span className="text-[11px] text-jira-gray-500 font-medium">
-                System default roles are built-in and immutable
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* ADMIN */}
-              <div className="bg-white border border-purple-200 rounded-lg p-4.5 shadow-2xs space-y-3 flex flex-col justify-between">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="px-2.5 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
-                      Administrator
-                    </span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-jira-gray-100 text-jira-gray-600 flex items-center gap-1">
-                      <Lock className="w-3 h-3" />
-                      Built-in
-                    </span>
-                  </div>
-                  <p className="text-xs text-jira-gray-600 leading-relaxed">
-                    {ROLE_CONFIG.ADMIN.description}
-                  </p>
-                </div>
-                <div className="pt-3 border-t border-purple-100 flex items-center justify-between text-[11px]">
-                  <span className="font-semibold text-purple-900">
-                    10 of 10 Permissions (Full Access)
-                  </span>
-                  <span className="text-jira-gray-500 font-medium">
-                    {adminCount} member{adminCount === 1 ? "" : "s"}
-                  </span>
-                </div>
-              </div>
-
-              {/* MEMBER */}
-              <div className="bg-white border border-blue-200 rounded-lg p-4.5 shadow-2xs space-y-3 flex flex-col justify-between">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="px-2.5 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
-                      Member (Contributor)
-                    </span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-jira-gray-100 text-jira-gray-600 flex items-center gap-1">
-                      <Lock className="w-3 h-3" />
-                      Built-in
-                    </span>
-                  </div>
-                  <p className="text-xs text-jira-gray-600 leading-relaxed">
-                    {ROLE_CONFIG.MEMBER.description}
-                  </p>
-                </div>
-                <div className="pt-3 border-t border-blue-100 flex items-center justify-between text-[11px]">
-                  <span className="font-semibold text-blue-900">
-                    8 Permissions (Issues & Sprints)
-                  </span>
-                  <span className="text-jira-gray-500 font-medium">
-                    {memberCount} member{memberCount === 1 ? "" : "s"}
-                  </span>
-                </div>
-              </div>
-
-              {/* VIEWER */}
-              <div className="bg-white border border-amber-200 rounded-lg p-4.5 shadow-2xs space-y-3 flex flex-col justify-between">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="px-2.5 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                      Viewer (Read-Only)
-                    </span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-jira-gray-100 text-jira-gray-600 flex items-center gap-1">
-                      <Lock className="w-3 h-3" />
-                      Built-in
-                    </span>
-                  </div>
-                  <p className="text-xs text-jira-gray-600 leading-relaxed">
-                    {ROLE_CONFIG.VIEWER.description}
-                  </p>
-                </div>
-                <div className="pt-3 border-t border-amber-100 flex items-center justify-between text-[11px]">
-                  <span className="font-semibold text-amber-900">
-                    1 Permission (View Project)
-                  </span>
-                  <span className="text-jira-gray-500 font-medium">
-                    {viewerCount} member{viewerCount === 1 ? "" : "s"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Section 2: Custom Project Roles */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-jira-blue" />
-                <h4 className="text-xs font-bold text-jira-navy uppercase tracking-wider">
-                  Custom Project Roles ({customRoles.length})
-                </h4>
-              </div>
-              <span className="text-[11px] text-jira-gray-500 font-medium">
-                Tailored permissions for contractors, QA, managers, or release specialists
-              </span>
-            </div>
-
-            {customRoles.length === 0 ? (
-              <div className="bg-jira-gray-50/70 border-2 border-dashed border-jira-gray-200 rounded-lg p-8 text-center space-y-3">
-                <div className="w-12 h-12 rounded-full bg-blue-50 text-jira-blue flex items-center justify-center mx-auto">
-                  <ShieldCheck className="w-6 h-6" />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-jira-navy">No Custom Roles Yet</h4>
-                  <p className="text-xs text-jira-gray-500 max-w-md mx-auto">
-                    Project administrators can create tailored project roles with customized permissions
-                    (e.g., &quot;QA Tester&quot;, &quot;Release Lead&quot;, or &quot;External Contractor&quot;) and assign team members.
-                  </p>
-                </div>
-                {canManage && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingRole(null);
-                      setIsRoleModalOpen(true);
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-jira-blue hover:bg-jira-blue-hover rounded transition-colors shadow-xs"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Create Custom Role</span>
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {customRoles.map((role) => {
-                  const assignedCount = members.filter(
-                    (m) => m.customRoleId === role.id || m.role === role.name
-                  ).length;
-                  const perms = Array.isArray(role.permissions)
-                    ? role.permissions
-                    : (JSON.parse((role.permissions as any) || "[]") as ProjectPermission[]);
-                  const color = role.color || "#0052cc";
-                  const isDeleting = deletingRoleId === role.id;
-
-                  return (
-                    <div
-                      key={role.id}
-                      className="bg-white border border-jira-gray-200 rounded-lg p-4.5 shadow-2xs space-y-3 flex flex-col justify-between hover:border-jira-gray-300 transition-colors"
-                    >
-                      <div className="space-y-2.5">
-                        {/* Header: Badge & Member Count */}
-                        <div className="flex items-center justify-between gap-2">
-                          <span
-                            className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded border text-xs font-bold"
-                            style={{
-                              backgroundColor: `${color}15`,
-                              borderColor: `${color}40`,
-                              color: color,
+          <div className="overflow-x-auto rounded-card border border-subtle bg-surface">
+            <table className="w-full min-w-[640px] border-separate border-spacing-0">
+              <caption className="sr-only">Project roles</caption>
+              <thead>
+                <tr>
+                  <th scope="col" className={cn(th, "w-52")}>
+                    Role
+                  </th>
+                  <th scope="col" className={th}>
+                    What it can do
+                  </th>
+                  <th scope="col" className={cn(th, "w-28 text-right")}>
+                    Permissions
+                  </th>
+                  <th scope="col" className={cn(th, "w-24 text-right")}>
+                    Members
+                  </th>
+                  <th scope="col" className={cn(th, "w-24")}>
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {BUILT_IN.map((r) => (
+                  <tr key={r} className="hover:bg-surface-sunk/60">
+                    <td className={td}>
+                      <span className="flex items-center gap-2">
+                        <RoleLozenge role={r} customRoles={customRoles} />
+                        <Lock className="h-3.5 w-3.5 text-muted" aria-label="Built in" />
+                      </span>
+                    </td>
+                    <td className={cn(td, "text-xs text-ink-2")}>{ROLE_CONFIG[r].description}</td>
+                    <td className={cn(td, "text-right tabular-nums text-ink-2")}>{ROLE_PERMISSIONS[r].length}</td>
+                    <td className={cn(td, "text-right tabular-nums text-ink-2")}>{countFor(r)}</td>
+                    <td className={td} />
+                  </tr>
+                ))}
+                {customRoles.map((role) => (
+                  <tr key={role.id} className="hover:bg-surface-sunk/60">
+                    <td className={td}>
+                      <RoleLozenge role={role.name} customRoles={customRoles} />
+                    </td>
+                    <td className={cn(td, "text-xs text-ink-2")}>
+                      {role.description || <span className="text-muted">No description</span>}
+                      <span className="mt-1 flex flex-wrap gap-1">
+                        {parsePermissions(role).map((p) => (
+                          <span key={p} title={PERMISSION_DESCRIPTIONS[p]?.description} className="rounded-full bg-surface-sunk px-1.5 text-[11px] text-ink-2">
+                            {PERMISSION_DESCRIPTIONS[p]?.label || p}
+                          </span>
+                        ))}
+                      </span>
+                    </td>
+                    <td className={cn(td, "text-right tabular-nums text-ink-2")}>{parsePermissions(role).length}</td>
+                    <td className={cn(td, "text-right tabular-nums text-ink-2")}>{countFor(role.name, role.id)}</td>
+                    <td className={cn(td, "text-right")}>
+                      {canManage && (
+                        <span className="inline-flex items-center gap-0.5">
+                          <IconButton
+                            size="sm"
+                            label={`Edit ${role.name}`}
+                            icon={<Edit2 aria-hidden="true" />}
+                            onClick={() => {
+                              setEditingRole(role);
+                              setIsRoleModalOpen(true);
                             }}
-                          >
-                            <span
-                              className="w-2 h-2 rounded-full shrink-0"
-                              style={{ backgroundColor: color }}
-                            />
-                            <span>{role.name}</span>
-                          </span>
-
-                          <span className="text-[11px] font-semibold text-jira-gray-500 bg-jira-gray-100 px-2 py-0.5 rounded">
-                            {assignedCount} member{assignedCount === 1 ? "" : "s"}
-                          </span>
-                        </div>
-
-                        {/* Description */}
-                        <p className="text-xs text-jira-gray-600 leading-relaxed min-h-[36px]">
-                          {role.description || (
-                            <span className="italic text-jira-gray-400">
-                              No description provided.
-                            </span>
-                          )}
-                        </p>
-
-                        {/* Permissions Granted Pills */}
-                        <div className="space-y-1.5 pt-1">
-                          <div className="text-[10px] font-bold text-jira-gray-500 uppercase tracking-wider">
-                            Granted Permissions ({perms.length})
-                          </div>
-                          <div className="flex flex-wrap gap-1">
-                            {perms.map((p) => {
-                              const meta = PERMISSION_DESCRIPTIONS[p];
-                              return (
-                                <span
-                                  key={p}
-                                  title={meta?.description}
-                                  className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-jira-gray-100 text-jira-gray-700"
-                                >
-                                  {meta?.label || p}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Footer Actions */}
-                      <div className="pt-3 border-t border-jira-gray-100 flex items-center justify-between">
-                        <span className="text-[10px] text-jira-gray-400 font-medium">
-                          Custom Project Role
+                          />
+                          <IconButton size="sm" label={`Delete ${role.name}`} icon={<Trash2 aria-hidden="true" />} onClick={() => setDeletingRole(role)} />
                         </span>
-
-                        {canManage && (
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingRole(role);
-                                setIsRoleModalOpen(true);
-                              }}
-                              className="p-1.5 text-jira-gray-500 hover:text-jira-blue hover:bg-blue-50 rounded transition-colors"
-                              title="Edit role & permissions"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              disabled={isDeleting}
-                              onClick={() => handleDeleteRole(role)}
-                              className="p-1.5 text-jira-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
-                              title="Delete custom role"
-                            >
-                              {isDeleting ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin text-red-600" />
-                              ) : (
-                                <Trash2 className="w-3.5 h-3.5" />
-                              )}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
+          {customRoles.length === 0 && <p className="text-xs text-muted">No custom roles yet. A &ldquo;QA tester&rdquo; or &ldquo;Contractor&rdquo; role is a common start.</p>}
+        </>
       )}
 
-      {/* Add Member Modal */}
+      <Dialog open={removing !== null} onOpenChange={(open) => !open && setRemoving(null)}>
+        {removing && (
+          <DialogContent
+            size="sm"
+            title={`Remove ${removing.user.name}?`}
+            description="They lose access to this project. Their issues and comments stay."
+            footer={
+              <>
+                <Button onClick={() => setRemoving(null)}>Cancel</Button>
+                <Button variant="danger" loading={busy} onClick={confirmRemove}>
+                  Remove
+                </Button>
+              </>
+            }
+          />
+        )}
+      </Dialog>
+
+      <Dialog open={deletingRole !== null} onOpenChange={(open) => !open && setDeletingRole(null)}>
+        {deletingRole && (
+          <DialogContent
+            size="sm"
+            title={`Delete the ${deletingRole.name} role?`}
+            description={
+              countFor(deletingRole.name, deletingRole.id) > 0
+                ? `Its ${countFor(deletingRole.name, deletingRole.id)} member(s) become Members.`
+                : "Nobody has this role."
+            }
+            footer={
+              <>
+                <Button onClick={() => setDeletingRole(null)}>Cancel</Button>
+                <Button variant="danger" loading={busy} onClick={confirmDeleteRole}>
+                  Delete role
+                </Button>
+              </>
+            }
+          />
+        )}
+      </Dialog>
+
       {isAddModalOpen && (
         <AddMemberModal
           availableUsers={availableUsers}
@@ -865,15 +454,8 @@ export default function ProjectAccessTab({
         />
       )}
 
-      {/* Permissions Scheme Matrix Modal */}
-      {isMatrixModalOpen && (
-        <PermissionsMatrixModal
-          customRoles={customRoles}
-          onClose={() => setIsMatrixModalOpen(false)}
-        />
-      )}
+      {isMatrixModalOpen && <PermissionsMatrixModal customRoles={customRoles} onClose={() => setIsMatrixModalOpen(false)} />}
 
-      {/* Create / Edit Custom Role Modal */}
       {isRoleModalOpen && (
         <CreateEditRoleModal
           projectId={project.id}
@@ -884,9 +466,7 @@ export default function ProjectAccessTab({
             "VIEWER",
             "ADMINISTRATOR",
             "LEAD",
-            ...customRoles
-              .filter((r) => !editingRole || r.id !== editingRole.id)
-              .map((r) => r.name.toLowerCase()),
+            ...customRoles.filter((r) => !editingRole || r.id !== editingRole.id).map((r) => r.name.toLowerCase()),
           ]}
           onClose={() => {
             setIsRoleModalOpen(false);
@@ -896,17 +476,8 @@ export default function ProjectAccessTab({
             if (isNew) {
               setCustomRoles((prev) => [...prev, savedRole]);
             } else {
-              setCustomRoles((prev) =>
-                prev.map((r) => (r.id === savedRole.id ? savedRole : r))
-              );
-              // Update any member records that had the old role name
-              setMembers((prev) =>
-                prev.map((m) =>
-                  m.customRoleId === savedRole.id
-                    ? { ...m, role: savedRole.name, customRole: savedRole }
-                    : m
-                )
-              );
+              setCustomRoles((prev) => prev.map((r) => (r.id === savedRole.id ? savedRole : r)));
+              setMembers((prev) => prev.map((m) => (m.customRoleId === savedRole.id ? { ...m, role: savedRole.name, customRole: savedRole } : m)));
             }
             setIsRoleModalOpen(false);
             setEditingRole(null);
@@ -968,15 +539,15 @@ function AddMemberModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in">
-      <div className="bg-white w-full max-w-lg rounded-lg shadow-2xl border border-jira-gray-300 p-6 space-y-4 max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between pb-2 border-b border-jira-gray-200 shrink-0">
+      <div className="bg-white w-full max-w-lg rounded-lg shadow-2xl border border-subtle p-6 space-y-4 max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between pb-2 border-b border-subtle shrink-0">
           <div className="flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-jira-blue" />
-            <h2 className="text-base font-bold text-jira-navy">Add Team Member</h2>
+            <UserPlus className="w-5 h-5 text-accent" />
+            <h2 className="text-base font-bold text-ink">Add Team Member</h2>
           </div>
           <button
             onClick={onClose}
-            className="text-jira-gray-400 hover:text-jira-navy rounded p-1"
+            className="text-muted hover:text-ink rounded p-1"
           >
             <X className="w-4 h-4" />
           </button>
@@ -984,8 +555,8 @@ function AddMemberModal({
 
         {availableUsers.length === 0 ? (
           <div className="py-6 text-center space-y-2">
-            <Users className="w-8 h-8 text-jira-gray-400 mx-auto" />
-            <p className="text-xs text-jira-gray-600 font-medium">
+            <Users className="w-8 h-8 text-muted mx-auto" />
+            <p className="text-xs text-ink-2 font-medium">
               All organization users are already members of this project!
             </p>
           </div>
@@ -999,13 +570,13 @@ function AddMemberModal({
             )}
 
             <div>
-              <label className="block text-jira-gray-700 font-bold uppercase tracking-wider text-[10px] mb-1.5">
+              <label className="block text-ink-2 font-bold uppercase tracking-wider text-[10px] mb-1.5">
                 Teammate
               </label>
               <select
                 value={selectedUserId}
                 onChange={(e) => setSelectedUserId(e.target.value)}
-                className="w-full border border-jira-gray-300 rounded p-2 text-jira-navy font-medium focus:border-jira-blue"
+                className="w-full border border-subtle rounded p-2 text-ink font-medium focus:border-accent"
               >
                 {availableUsers.map((u) => (
                   <option key={u.id} value={u.id}>
@@ -1016,7 +587,7 @@ function AddMemberModal({
             </div>
 
             <div className="space-y-2">
-              <label className="block text-jira-gray-700 font-bold uppercase tracking-wider text-[10px]">
+              <label className="block text-ink-2 font-bold uppercase tracking-wider text-[10px]">
                 Project Role
               </label>
 
@@ -1030,8 +601,8 @@ function AddMemberModal({
                       onClick={() => setSelectedRole(role)}
                       className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                         selectedRole === role
-                          ? "bg-jira-blue-light/30 border-jira-blue"
-                          : "border-jira-gray-200 hover:bg-jira-gray-50"
+                          ? "bg-accent-soft/30 border-accent"
+                          : "border-subtle hover:bg-page"
                       }`}
                     >
                       <input
@@ -1039,18 +610,18 @@ function AddMemberModal({
                         name="projectRole"
                         checked={selectedRole === role}
                         onChange={() => setSelectedRole(role)}
-                        className="mt-0.5 text-jira-blue"
+                        className="mt-0.5 text-accent"
                       />
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-jira-navy">{cfg.name}</span>
+                          <span className="font-bold text-ink">{cfg.name}</span>
                           <span
                             className={`text-[9px] font-bold px-1.5 py-px rounded border ${cfg.badgeBg} ${cfg.badgeText} ${cfg.border}`}
                           >
                             {role}
                           </span>
                         </div>
-                        <p className="text-[11px] text-jira-gray-600 mt-0.5">
+                        <p className="text-[11px] text-ink-2 mt-0.5">
                           {cfg.description}
                         </p>
                       </div>
@@ -1060,15 +631,15 @@ function AddMemberModal({
 
                 {/* Custom Roles (if any) */}
                 {customRoles.map((cr) => {
-                  const color = cr.color || "#0052cc";
+                  const color = cr.color || "#2a78d6";
                   return (
                     <label
                       key={cr.id}
                       onClick={() => setSelectedRole(cr.name)}
                       className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                         selectedRole === cr.name
-                          ? "bg-jira-blue-light/30 border-jira-blue"
-                          : "border-jira-gray-200 hover:bg-jira-gray-50"
+                          ? "bg-accent-soft/30 border-accent"
+                          : "border-subtle hover:bg-page"
                       }`}
                     >
                       <input
@@ -1076,11 +647,11 @@ function AddMemberModal({
                         name="projectRole"
                         checked={selectedRole === cr.name}
                         onChange={() => setSelectedRole(cr.name)}
-                        className="mt-0.5 text-jira-blue"
+                        className="mt-0.5 text-accent"
                       />
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-jira-navy">{cr.name}</span>
+                          <span className="font-bold text-ink">{cr.name}</span>
                           <span
                             className="text-[9px] font-bold px-1.5 py-px rounded border flex items-center gap-1"
                             style={{
@@ -1096,7 +667,7 @@ function AddMemberModal({
                             Custom
                           </span>
                         </div>
-                        <p className="text-[11px] text-jira-gray-600 mt-0.5">
+                        <p className="text-[11px] text-ink-2 mt-0.5">
                           {cr.description || "Custom project role with tailored permissions."}
                         </p>
                       </div>
@@ -1106,18 +677,18 @@ function AddMemberModal({
               </div>
             </div>
 
-            <div className="flex justify-end gap-2.5 pt-3 border-t border-jira-gray-200 shrink-0">
+            <div className="flex justify-end gap-2.5 pt-3 border-t border-subtle shrink-0">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-jira-gray-600 hover:bg-jira-gray-100 rounded font-semibold text-xs transition-colors"
+                className="px-4 py-2 text-ink-2 hover:bg-surface-sunk rounded font-semibold text-xs transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="bg-jira-blue hover:bg-jira-blue-hover text-white px-4 py-2 rounded font-semibold text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 shadow-xs"
+                className="bg-accent hover:bg-accent-hover text-accent-fg px-4 py-2 rounded font-semibold text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 shadow-xs"
               >
                 {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 <span>Add Member</span>
@@ -1148,7 +719,7 @@ function CreateEditRoleModal({
 
   const [name, setName] = useState(existingRole?.name || "");
   const [description, setDescription] = useState(existingRole?.description || "");
-  const [color, setColor] = useState(existingRole?.color || "#0052cc");
+  const [color, setColor] = useState(existingRole?.color || "#2a78d6");
 
   const initialPermissions = useMemo<ProjectPermission[]>(() => {
     if (!existingRole) {
@@ -1280,23 +851,23 @@ function CreateEditRoleModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in">
-      <div className="bg-white w-full max-w-2xl rounded-lg shadow-2xl border border-jira-gray-300 p-6 space-y-4 max-h-[90vh] flex flex-col">
+      <div className="bg-white w-full max-w-2xl rounded-lg shadow-2xl border border-subtle p-6 space-y-4 max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-jira-gray-200 shrink-0">
+        <div className="flex items-center justify-between pb-3 border-b border-subtle shrink-0">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-jira-blue" />
+            <ShieldCheck className="w-5 h-5 text-accent" />
             <div>
-              <h2 className="text-base font-bold text-jira-navy">
+              <h2 className="text-base font-bold text-ink">
                 {isEditing ? "Edit Custom Role" : "Create Custom Project Role"}
               </h2>
-              <p className="text-xs text-jira-gray-500">
+              <p className="text-xs text-muted">
                 Configure role details, branding color, and fine-grained permissions
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-jira-gray-400 hover:text-jira-navy rounded p-1"
+            className="text-muted hover:text-ink rounded p-1"
           >
             <X className="w-4 h-4" />
           </button>
@@ -1314,7 +885,7 @@ function CreateEditRoleModal({
           {/* Name & Color */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="sm:col-span-2">
-              <label className="block text-jira-gray-700 font-bold uppercase tracking-wider text-[10px] mb-1">
+              <label className="block text-ink-2 font-bold uppercase tracking-wider text-[10px] mb-1">
                 Role Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -1323,12 +894,12 @@ function CreateEditRoleModal({
                 placeholder="e.g. QA Specialist, Release Manager, Contractor"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 border border-jira-gray-300 rounded text-jira-navy font-semibold focus:border-jira-blue"
+                className="w-full px-3 py-2 border border-subtle rounded text-ink font-semibold focus:border-accent"
               />
             </div>
 
             <div>
-              <label className="block text-jira-gray-700 font-bold uppercase tracking-wider text-[10px] mb-1">
+              <label className="block text-ink-2 font-bold uppercase tracking-wider text-[10px] mb-1">
                 Badge Color
               </label>
               <div className="flex items-center gap-2">
@@ -1336,7 +907,7 @@ function CreateEditRoleModal({
                   type="color"
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
-                  className="w-9 h-9 p-0.5 rounded border border-jira-gray-300 cursor-pointer bg-white"
+                  className="w-9 h-9 p-0.5 rounded border border-subtle cursor-pointer bg-white"
                 />
                 <div className="flex flex-wrap gap-1">
                   {PRESET_ROLE_COLORS.map((c) => (
@@ -1348,7 +919,7 @@ function CreateEditRoleModal({
                       style={{ backgroundColor: c.hex }}
                       className={`w-4 h-4 rounded-full border transition-transform ${
                         color.toLowerCase() === c.hex.toLowerCase()
-                          ? "scale-125 border-jira-navy shadow-xs"
+                          ? "scale-125 border-ink shadow-xs"
                           : "border-transparent hover:scale-110"
                       }`}
                     />
@@ -1360,7 +931,7 @@ function CreateEditRoleModal({
 
           {/* Description */}
           <div>
-            <label className="block text-jira-gray-700 font-bold uppercase tracking-wider text-[10px] mb-1">
+            <label className="block text-ink-2 font-bold uppercase tracking-wider text-[10px] mb-1">
               Description (Optional)
             </label>
             <textarea
@@ -1368,29 +939,29 @@ function CreateEditRoleModal({
               placeholder="Explain the scope and responsibilities of this role..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-1.5 border border-jira-gray-300 rounded text-jira-navy focus:border-jira-blue"
+              className="w-full px-3 py-1.5 border border-subtle rounded text-ink focus:border-accent"
             />
           </div>
 
           {/* Permissions Checklist */}
           <div className="space-y-3 pt-2">
-            <div className="flex items-center justify-between pb-1 border-b border-jira-gray-200">
-              <label className="block text-jira-gray-700 font-bold uppercase tracking-wider text-[10px]">
+            <div className="flex items-center justify-between pb-1 border-b border-subtle">
+              <label className="block text-ink-2 font-bold uppercase tracking-wider text-[10px]">
                 Permissions Scheme ({selectedPermissions.size} selected)
               </label>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={selectAll}
-                  className="text-[11px] font-semibold text-jira-blue hover:underline"
+                  className="text-[11px] font-semibold text-accent hover:underline"
                 >
                   Select All
                 </button>
-                <span className="text-jira-gray-300">•</span>
+                <span className="text-muted">•</span>
                 <button
                   type="button"
                   onClick={clearOptional}
-                  className="text-[11px] font-semibold text-jira-gray-600 hover:text-jira-navy hover:underline"
+                  className="text-[11px] font-semibold text-ink-2 hover:text-ink hover:underline"
                 >
                   Clear Optional
                 </button>
@@ -1400,7 +971,7 @@ function CreateEditRoleModal({
             <div className="space-y-4">
               {permissionCategories.map((cat) => (
                 <div key={cat.category} className="space-y-2">
-                  <div className="text-[11px] font-bold text-jira-navy bg-jira-gray-50 px-2 py-1 rounded border border-jira-gray-200">
+                  <div className="text-[11px] font-bold text-ink bg-page px-2 py-1 rounded border border-subtle">
                     {cat.title}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1413,8 +984,8 @@ function CreateEditRoleModal({
                           key={permKey}
                           className={`flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors ${
                             isChecked
-                              ? "bg-blue-50/40 border-jira-blue/60"
-                              : "border-jira-gray-200 hover:bg-jira-gray-50/70"
+                              ? "bg-blue-50/40 border-accent/60"
+                              : "border-subtle hover:bg-page/70"
                           } ${isMandatory ? "opacity-90 cursor-not-allowed" : ""}`}
                         >
                           <input
@@ -1422,18 +993,18 @@ function CreateEditRoleModal({
                             disabled={isMandatory}
                             checked={isChecked}
                             onChange={() => togglePermission(permKey)}
-                            className="mt-0.5 rounded text-jira-blue focus:ring-jira-blue"
+                            className="mt-0.5 rounded text-accent focus:ring-accent"
                           />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-jira-navy">{permMeta.label}</span>
+                              <span className="font-bold text-ink">{permMeta.label}</span>
                               {isMandatory && (
                                 <span className="text-[9px] font-bold px-1 rounded bg-amber-100 text-amber-800">
                                   Required
                                 </span>
                               )}
                             </div>
-                            <p className="text-[11px] text-jira-gray-500 leading-tight mt-0.5">
+                            <p className="text-[11px] text-muted leading-tight mt-0.5">
                               {permMeta.description}
                             </p>
                           </div>
@@ -1447,18 +1018,18 @@ function CreateEditRoleModal({
           </div>
 
           {/* Modal Footer */}
-          <div className="flex justify-end gap-2.5 pt-3 border-t border-jira-gray-200 shrink-0">
+          <div className="flex justify-end gap-2.5 pt-3 border-t border-subtle shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-jira-gray-600 hover:bg-jira-gray-100 rounded font-semibold text-xs transition-colors"
+              className="px-4 py-2 text-ink-2 hover:bg-surface-sunk rounded font-semibold text-xs transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="bg-jira-blue hover:bg-jira-blue-hover text-white px-4 py-2 rounded font-semibold text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 shadow-xs"
+              className="bg-accent hover:bg-accent-hover text-accent-fg px-4 py-2 rounded font-semibold text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 shadow-xs"
             >
               {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               <span>{isEditing ? "Save Changes" : "Create Role"}</span>
@@ -1487,29 +1058,29 @@ function PermissionsMatrixModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in">
-      <div className="bg-white w-full max-w-4xl rounded-lg shadow-2xl border border-jira-gray-300 p-6 space-y-4 max-h-[85vh] flex flex-col">
-        <div className="flex items-center justify-between pb-3 border-b border-jira-gray-200 shrink-0">
+      <div className="bg-white w-full max-w-4xl rounded-lg shadow-2xl border border-subtle p-6 space-y-4 max-h-[85vh] flex flex-col">
+        <div className="flex items-center justify-between pb-3 border-b border-subtle shrink-0">
           <div className="flex items-center gap-2">
-            <SlidersHorizontal className="w-5 h-5 text-jira-blue" />
+            <SlidersHorizontal className="w-5 h-5 text-accent" />
             <div>
-              <h2 className="text-base font-bold text-jira-navy">Permissions Scheme Matrix</h2>
-              <p className="text-xs text-jira-gray-500">
+              <h2 className="text-base font-bold text-ink">Permissions Scheme Matrix</h2>
+              <p className="text-xs text-muted">
                 Detailed access breakdown across standard system roles and custom project roles
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-jira-gray-400 hover:text-jira-navy rounded p-1"
+            className="text-muted hover:text-ink rounded p-1"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="overflow-auto flex-1 border border-jira-gray-200 rounded-lg">
+        <div className="overflow-auto flex-1 border border-subtle rounded-lg">
           <table className="w-full text-xs text-left border-collapse">
             <thead>
-              <tr className="bg-jira-gray-100 border-b border-jira-gray-200 font-bold text-[11px] text-jira-navy sticky top-0 z-10">
+              <tr className="bg-surface-sunk border-b border-subtle font-bold text-[11px] text-ink sticky top-0 z-10">
                 <th className="px-4 py-3 min-w-[200px]">Permission Category & Action</th>
                 {builtInRoles.map((r) => (
                   <th key={r.key} className="px-3 py-3 text-center min-w-[90px]">
@@ -1521,7 +1092,7 @@ function PermissionsMatrixModal({
                     <div className="flex items-center justify-center gap-1.5">
                       <span
                         className="w-2 h-2 rounded-full shrink-0"
-                        style={{ backgroundColor: cr.color || "#0052cc" }}
+                        style={{ backgroundColor: cr.color || "#2a78d6" }}
                       />
                       <span>{cr.name}</span>
                     </div>
@@ -1529,18 +1100,18 @@ function PermissionsMatrixModal({
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-jira-gray-100">
+            <tbody className="divide-y divide-subtle">
               {permissions.map(([permKey, permMeta]) => {
                 return (
-                  <tr key={permKey} className="hover:bg-jira-gray-50/70 transition-colors">
+                  <tr key={permKey} className="hover:bg-page/70 transition-colors">
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-jira-navy">{permMeta.label}</span>
-                        <span className="text-[10px] uppercase font-semibold px-1.5 py-px rounded bg-jira-gray-100 text-jira-gray-600">
+                        <span className="font-bold text-ink">{permMeta.label}</span>
+                        <span className="text-[10px] uppercase font-semibold px-1.5 py-px rounded bg-surface-sunk text-ink-2">
                           {permMeta.category}
                         </span>
                       </div>
-                      <p className="text-[11px] text-jira-gray-500 mt-0.5">
+                      <p className="text-[11px] text-muted mt-0.5">
                         {permMeta.description}
                       </p>
                     </td>
@@ -1555,7 +1126,7 @@ function PermissionsMatrixModal({
                               <Check className="w-4 h-4" />
                             </span>
                           ) : (
-                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-jira-gray-100 text-jira-gray-400">
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-surface-sunk text-muted">
                               <X className="w-3.5 h-3.5" />
                             </span>
                           )}
@@ -1578,14 +1149,14 @@ function PermissionsMatrixModal({
                             <span
                               className="inline-flex items-center justify-center w-6 h-6 rounded-full"
                               style={{
-                                backgroundColor: `${cr.color || "#0052cc"}20`,
-                                color: cr.color || "#0052cc",
+                                backgroundColor: `${cr.color || "#2a78d6"}20`,
+                                color: cr.color || "#2a78d6",
                               }}
                             >
                               <Check className="w-4 h-4" />
                             </span>
                           ) : (
-                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-jira-gray-100 text-jira-gray-400">
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-surface-sunk text-muted">
                               <X className="w-3.5 h-3.5" />
                             </span>
                           )}
@@ -1602,7 +1173,7 @@ function PermissionsMatrixModal({
         <div className="flex justify-end pt-2 shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-jira-gray-100 hover:bg-jira-gray-200 text-jira-navy font-semibold text-xs rounded transition-colors"
+            className="px-4 py-2 bg-surface-sunk hover:bg-subtle text-ink font-semibold text-xs rounded transition-colors"
           >
             Close
           </button>

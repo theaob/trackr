@@ -130,17 +130,17 @@ export default function AuthModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-jira-navy/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl border border-jira-gray-300 overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl border border-subtle overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-jira-navy text-white px-6 py-5 flex items-center justify-between border-b border-jira-navy/80">
+        <div className="bg-ink text-surface px-6 py-5 flex items-center justify-between border-b border-ink/80">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-jira-blue/30 border border-jira-blue flex items-center justify-center">
-              <ShieldCheck className="w-5 h-5 text-jira-blue-light" />
+            <div className="w-9 h-9 rounded-lg bg-accent/30 border border-accent flex items-center justify-center">
+              <ShieldCheck className="w-5 h-5 text-surface" />
             </div>
             <div>
               <h2 className="text-lg font-bold tracking-tight">User Sign In & SSO</h2>
-              <p className="text-xs text-jira-gray-400">
+              <p className="text-xs text-surface/75">
                 Sign in with local credentials or corporate SSO
               </p>
             </div>
@@ -148,7 +148,7 @@ export default function AuthModal({
           {dismissible && (
             <button
               onClick={onClose}
-              className="text-jira-gray-400 hover:text-white p-1 rounded-md transition-colors"
+              className="text-surface/70 hover:text-surface p-1 rounded-md transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -156,13 +156,13 @@ export default function AuthModal({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-jira-gray-200 bg-jira-gray-50/80 px-6 pt-3 gap-2">
+        <div className="flex border-b border-subtle bg-page/80 px-6 pt-3 gap-2">
           <button
             onClick={() => { setActiveTab("login"); setError(null); }}
             className={`pb-3 text-xs font-semibold px-3 border-b-2 flex items-center gap-1.5 transition-colors ${
               activeTab === "login"
-                ? "border-jira-blue text-jira-blue"
-                : "border-transparent text-jira-gray-600 hover:text-jira-navy"
+                ? "border-accent text-accent"
+                : "border-transparent text-ink-2 hover:text-ink"
             }`}
           >
             <LogIn className="w-3.5 h-3.5" />
@@ -174,8 +174,8 @@ export default function AuthModal({
             onClick={() => { setActiveTab("register"); setError(null); }}
             className={`pb-3 text-xs font-semibold px-3 border-b-2 flex items-center gap-1.5 transition-colors ${
               activeTab === "register"
-                ? "border-jira-blue text-jira-blue"
-                : "border-transparent text-jira-gray-600 hover:text-jira-navy"
+                ? "border-accent text-accent"
+                : "border-transparent text-ink-2 hover:text-ink"
             }`}
           >
             <UserPlus className="w-3.5 h-3.5" />
@@ -204,9 +204,9 @@ export default function AuthModal({
           {activeTab === "login" && (
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               <div>
-                <label htmlFor="auth-login-email" className="block text-xs font-semibold text-jira-navy mb-1">Email Address</label>
+                <label htmlFor="auth-login-email" className="block text-xs font-semibold text-ink mb-1">Email Address</label>
                 <div className="relative">
-                  <Mail aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
+                  <Mail aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                   <input
                     type="email"
                     required
@@ -215,15 +215,15 @@ export default function AuthModal({
                     placeholder="name@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy"
+                    className="w-full pl-9 pr-3 py-2 text-xs border border-subtle rounded-md focus:border-accent text-ink"
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="auth-login-password" className="block text-xs font-semibold text-jira-navy mb-1">Password</label>
+                <label htmlFor="auth-login-password" className="block text-xs font-semibold text-ink mb-1">Password</label>
                 <div className="relative">
-                  <Lock aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
+                  <Lock aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                   <input
                     type="password"
                     required
@@ -232,7 +232,7 @@ export default function AuthModal({
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy"
+                    className="w-full pl-9 pr-3 py-2 text-xs border border-subtle rounded-md focus:border-accent text-ink"
                   />
                 </div>
               </div>
@@ -240,7 +240,7 @@ export default function AuthModal({
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2 bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-bold rounded-md flex items-center justify-center gap-2 shadow-xs transition-colors disabled:opacity-50"
+                className="w-full py-2 bg-accent hover:bg-accent-hover text-accent-fg text-xs font-bold rounded-md flex items-center justify-center gap-2 shadow-xs transition-colors disabled:opacity-50"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
                 <span>Sign In</span>
@@ -249,15 +249,15 @@ export default function AuthModal({
               {ssoConfig?.enabled && (
                 <>
                   <div className="relative py-2 flex items-center justify-center">
-                    <div className="border-t border-jira-gray-200 w-full absolute"></div>
-                    <span className="bg-white px-3 text-[11px] text-jira-gray-500 relative font-medium">or</span>
+                    <div className="border-t border-subtle w-full absolute"></div>
+                    <span className="bg-white px-3 text-[11px] text-muted relative font-medium">or</span>
                   </div>
 
                   <button
                     type="button"
                     onClick={handleSsoLogin}
                     disabled={loading}
-                    className="w-full py-2 bg-jira-navy hover:bg-jira-navy/90 text-white text-xs font-semibold rounded-md flex items-center justify-center gap-2 border border-jira-navy transition-colors"
+                    className="w-full py-2 bg-ink hover:bg-ink/90 text-surface text-xs font-semibold rounded-md flex items-center justify-center gap-2 border border-ink transition-colors"
                   >
                     <Building2 className="w-4 h-4 text-emerald-400" />
                     <span>Sign in with {ssoConfig?.providerName || "Corporate SSO"}</span>
@@ -271,9 +271,9 @@ export default function AuthModal({
           {activeTab === "register" && registrationOpen && (
             <form onSubmit={handleRegisterSubmit} className="space-y-4">
               <div>
-                <label htmlFor="auth-register-name" className="block text-xs font-semibold text-jira-navy mb-1">Full Name</label>
+                <label htmlFor="auth-register-name" className="block text-xs font-semibold text-ink mb-1">Full Name</label>
                 <div className="relative">
-                  <UserIcon aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
+                  <UserIcon aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                   <input
                     type="text"
                     required
@@ -282,15 +282,15 @@ export default function AuthModal({
                     placeholder="Alex Chen"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy"
+                    className="w-full pl-9 pr-3 py-2 text-xs border border-subtle rounded-md focus:border-accent text-ink"
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="auth-register-email" className="block text-xs font-semibold text-jira-navy mb-1">Email Address</label>
+                <label htmlFor="auth-register-email" className="block text-xs font-semibold text-ink mb-1">Email Address</label>
                 <div className="relative">
-                  <Mail aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
+                  <Mail aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                   <input
                     type="email"
                     required
@@ -299,15 +299,15 @@ export default function AuthModal({
                     placeholder="alex.chen@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy"
+                    className="w-full pl-9 pr-3 py-2 text-xs border border-subtle rounded-md focus:border-accent text-ink"
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="auth-register-password" className="block text-xs font-semibold text-jira-navy mb-1">Password</label>
+                <label htmlFor="auth-register-password" className="block text-xs font-semibold text-ink mb-1">Password</label>
                 <div className="relative">
-                  <Lock aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
+                  <Lock aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                   <input
                     type="password"
                     required
@@ -317,18 +317,18 @@ export default function AuthModal({
                     placeholder="Minimum 8 characters"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy"
+                    className="w-full pl-9 pr-3 py-2 text-xs border border-subtle rounded-md focus:border-accent text-ink"
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="auth-register-role" className="block text-xs font-semibold text-jira-navy mb-1">Organization Role</label>
+                <label htmlFor="auth-register-role" className="block text-xs font-semibold text-ink mb-1">Organization Role</label>
                 <select
                   id="auth-register-role"
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy bg-white"
+                  className="w-full px-3 py-2 text-xs border border-subtle rounded-md focus:border-accent text-ink bg-white"
                 >
                   <option value="Developer">Developer</option>
                   <option value="Senior Developer">Senior Developer</option>
@@ -341,7 +341,7 @@ export default function AuthModal({
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-bold rounded-md flex items-center justify-center gap-2 shadow-xs transition-colors disabled:opacity-50"
+                className="w-full py-2.5 bg-accent hover:bg-accent-hover text-accent-fg text-xs font-bold rounded-md flex items-center justify-center gap-2 shadow-xs transition-colors disabled:opacity-50"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
                 <span>Create Local User Account</span>

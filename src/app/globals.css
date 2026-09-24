@@ -30,6 +30,13 @@
   --color-warning: 154 103 0;
   --color-warning-soft: 255 247 225;
   --color-check: 22 163 74;
+  /* Chart series, from the data-viz reference palette (validated for colour
+     blindness in both themes). 1 is the main measure; 1-soft its lighter,
+     same-hue partner (committed next to completed). */
+  --color-series-1: 42 120 214;
+  --color-series-1-soft: 134 182 239;
+  --color-series-2: 235 104 52;
+  --color-series-3: 27 175 122;
 
   --radius-control: 6px;
   --radius-card: 8px;
@@ -61,6 +68,10 @@
   --color-warning: 240 190 80;
   --color-warning-soft: 52 40 12;
   --color-check: 74 222 128;
+  --color-series-1: 57 135 229;
+  --color-series-1-soft: 24 79 149;
+  --color-series-2: 217 89 38;
+  --color-series-3: 25 158 112;
 
   --shadow-raised: 0 1px 2px rgb(0 0 0 / 0.4), 0 0 0 1px rgb(255 255 255 / 0.04);
   --shadow-overlay: 0 12px 32px -8px rgb(0 0 0 / 0.6), 0 0 0 1px rgb(255 255 255 / 0.06);

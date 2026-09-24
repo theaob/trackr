@@ -116,13 +116,13 @@ export default function IssueLinksSection({
       </SectionHeader>
 
       {adding && (
-        <div className="mb-3 p-3 border border-jira-gray-300 rounded-md bg-jira-gray-50/70 space-y-2 min-w-0">
+        <div className="mb-3 p-3 border border-subtle rounded-md bg-page/70 space-y-2 min-w-0">
           {error && <div className="text-[11px] text-rose-600 font-medium">{error}</div>}
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 min-w-0">
             <select
               value={linkType}
               onChange={(e) => setLinkType(e.target.value as IssueLinkType)}
-              className="bg-white border border-jira-gray-300 rounded px-2 py-1.5 text-xs text-jira-navy focus:border-jira-blue shrink-0"
+              className="bg-white border border-subtle rounded px-2 py-1.5 text-xs text-ink focus:border-accent shrink-0"
             >
               {ISSUE_LINK_TYPES.map((t) => (
                 <option key={t} value={t}>
@@ -131,48 +131,48 @@ export default function IssueLinksSection({
               ))}
             </select>
             <div className="relative flex-1 min-w-[140px]">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-jira-gray-400" />
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
               <input
                 autoFocus
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search by issue or epic key or title..."
-                className="w-full pl-8 pr-2 py-1.5 text-xs border border-jira-gray-300 rounded focus:border-jira-blue text-jira-navy"
+                className="w-full pl-8 pr-2 py-1.5 text-xs border border-subtle rounded focus:border-accent text-ink"
               />
             </div>
             <button
               onClick={resetAddForm}
-              className="p-1.5 text-jira-gray-500 hover:text-jira-navy hover:bg-jira-gray-100 rounded shrink-0"
+              className="p-1.5 text-muted hover:text-ink hover:bg-surface-sunk rounded shrink-0"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
 
           {searching && (
-            <div className="flex items-center gap-1.5 text-[11px] text-jira-gray-500 py-1">
+            <div className="flex items-center gap-1.5 text-[11px] text-muted py-1">
               <Loader2 className="w-3 h-3 animate-spin" />
               <span>Searching...</span>
             </div>
           )}
 
           {!searching && results.length === 0 && (
-            <div className="text-[11px] text-jira-gray-500 py-1">No matching issues or epics found.</div>
+            <div className="text-[11px] text-muted py-1">No matching issues or epics found.</div>
           )}
 
           {results.length > 0 && (
-            <div className="border border-jira-gray-200 rounded divide-y divide-jira-gray-100 max-h-48 overflow-y-auto bg-white min-w-0">
+            <div className="border border-subtle rounded divide-y divide-subtle max-h-48 overflow-y-auto bg-white min-w-0">
               {results.map((r) => (
                 <button
                   key={r.id}
                   type="button"
                   disabled={submitting}
                   onClick={() => handlePick(r)}
-                  className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-jira-gray-50 disabled:opacity-50 min-w-0"
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-page disabled:opacity-50 min-w-0"
                 >
                   <IssueTypeBadge type={r.type} />
-                  <span className="text-[11px] font-mono text-jira-gray-500 shrink-0">{r.key}</span>
-                  <span className="text-xs text-jira-navy truncate flex-1">{r.title}</span>
+                  <span className="text-[11px] font-mono text-muted shrink-0">{r.key}</span>
+                  <span className="text-xs text-ink truncate flex-1">{r.title}</span>
                 </button>
               ))}
             </div>
@@ -185,21 +185,21 @@ export default function IssueLinksSection({
           {rows.map((row) => (
             <div
               key={`${row.linkId}-${row.direction}`}
-              className="flex items-center gap-2 px-2.5 py-1.5 border border-jira-gray-200 rounded-md bg-white hover:border-jira-gray-300 group min-w-0"
+              className="flex items-center gap-2 px-2.5 py-1.5 border border-subtle rounded-md bg-white hover:border-subtle group min-w-0"
             >
               <button
                 type="button"
                 onClick={() => handleOpen(row.issue)}
                 className="flex items-center gap-2 flex-1 min-w-0 text-left overflow-hidden"
               >
-                <span className="text-[11px] text-jira-gray-500 w-24 sm:w-28 shrink-0 truncate">
+                <span className="text-[11px] text-muted w-24 sm:w-28 shrink-0 truncate">
                   {describeIssueLink(row.type, row.direction)}
                 </span>
                 <IssueTypeBadge type={row.issue.type} />
-                <span className="text-[11px] font-mono text-jira-gray-500 shrink-0">
+                <span className="text-[11px] font-mono text-muted shrink-0">
                   {row.issue.key}
                 </span>
-                <span className="text-xs text-jira-navy truncate flex-1 hover:underline">
+                <span className="text-xs text-ink truncate flex-1 hover:underline">
                   {row.issue.title}
                 </span>
               </button>
@@ -207,7 +207,7 @@ export default function IssueLinksSection({
               {canEdit && (
                 <button
                   onClick={() => handleRemove(row.linkId)}
-                  className="opacity-0 group-hover:opacity-100 p-1 text-jira-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-opacity shrink-0"
+                  className="opacity-0 group-hover:opacity-100 p-1 text-muted hover:text-rose-600 hover:bg-rose-50 rounded transition-opacity shrink-0"
                   title="Remove link"
                 >
                   <X className="w-3.5 h-3.5" />

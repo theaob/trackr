@@ -42,7 +42,7 @@ export default async function BoardPage({ params, searchParams }: PageProps) {
   const boardStatuses = workflow.statuses.filter((s) => !s.isBacklog);
 
   return (
-    <Suspense fallback={<div className="p-6 text-xs text-jira-gray-500">Loading board...</div>}>
+    <Suspense fallback={<div className="p-6 text-xs text-muted">Loading board...</div>}>
       <KanbanBoard
         project={project as any}
         initialIssues={issues as any}

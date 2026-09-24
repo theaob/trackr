@@ -51,7 +51,7 @@ export default async function IssuesPage({ params, searchParams }: PageProps) {
   ]);
 
   return (
-    <Suspense fallback={<div className="p-6 text-xs text-jira-gray-500">Loading issues...</div>}>
+    <Suspense fallback={<div className="p-6 text-xs text-muted">Loading issues...</div>}>
       <IssuesListView
         project={project as any}
         allProjects={allProjects as any}

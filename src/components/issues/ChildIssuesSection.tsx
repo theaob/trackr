@@ -200,14 +200,14 @@ export default function ChildIssuesSection({
 
       {/* Progress Rollup (if there are children) */}
       {totalCount > 0 && (
-        <div className="bg-jira-gray-50 border border-jira-gray-200 rounded-md p-3 space-y-2 min-w-0">
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-jira-gray-600">
+        <div className="bg-page border border-subtle rounded-md p-3 space-y-2 min-w-0">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ink-2">
             <div className="flex items-center gap-2 min-w-0 truncate">
-              <span className="font-semibold text-jira-navy truncate">
+              <span className="font-semibold text-ink truncate">
                 {doneCount} of {totalCount} completed ({donePct}%)
               </span>
               {totalPoints > 0 && (
-                <span className="text-jira-gray-400 shrink-0">
+                <span className="text-muted shrink-0">
                   &middot; {donePoints} of {totalPoints} story points
                 </span>
               )}
@@ -223,14 +223,14 @@ export default function ChildIssuesSection({
                 {inProgressCount} In Progress
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-jira-gray-300"></span>
+                <span className="w-2 h-2 rounded-full bg-strong"></span>
                 {todoCount} To Do
               </span>
             </div>
           </div>
 
           {/* Segmented Progress Bar */}
-          <div className="w-full h-2 bg-jira-gray-200 rounded-full overflow-hidden flex">
+          <div className="w-full h-2 bg-subtle rounded-full overflow-hidden flex">
             {donePct > 0 && (
               <div
                 style={{ width: `${donePct}%` }}
@@ -248,7 +248,7 @@ export default function ChildIssuesSection({
             {todoPct > 0 && (
               <div
                 style={{ width: `${todoPct}%` }}
-                className="bg-jira-gray-300 h-full transition-all duration-300"
+                className="bg-strong h-full transition-all duration-300"
                 title={`${todoCount} To Do (${todoPct}%)`}
               />
             )}
@@ -258,10 +258,10 @@ export default function ChildIssuesSection({
 
       {/* Link Existing Issue Popover/Dropdown */}
       {isLinking && (
-        <div className="bg-white border border-jira-blue/40 ring-1 ring-jira-blue/20 rounded-md p-3 space-y-2 shadow-sm animate-in fade-in-50 duration-150">
+        <div className="bg-white border border-accent/40 ring-1 ring-accent/20 rounded-md p-3 space-y-2 shadow-sm animate-in fade-in-50 duration-150">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-jira-navy flex items-center gap-1.5">
-              <Search className="w-3.5 h-3.5 text-jira-blue" />
+            <span className="text-xs font-semibold text-ink flex items-center gap-1.5">
+              <Search className="w-3.5 h-3.5 text-accent" />
               Link existing issue to {isEpic ? "this epic" : "this issue"}
             </span>
             <button
@@ -271,7 +271,7 @@ export default function ChildIssuesSection({
                 setSearchQuery("");
                 setSearchResults([]);
               }}
-              className="text-jira-gray-400 hover:text-jira-navy"
+              className="text-muted hover:text-ink"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -284,15 +284,15 @@ export default function ChildIssuesSection({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by issue or epic key or title..."
-              className="w-full text-xs px-2.5 py-1.5 border border-jira-gray-300 rounded focus:border-jira-blue"
+              className="w-full text-xs px-2.5 py-1.5 border border-subtle rounded focus:border-accent"
             />
             {isSearching && (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-jira-gray-400 absolute right-2.5 top-2" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-muted absolute right-2.5 top-2" />
             )}
           </div>
 
           {(searchQuery.trim() || searchResults.length > 0) && (
-            <div className="max-h-48 overflow-y-auto border border-jira-gray-200 rounded divide-y divide-jira-gray-100">
+            <div className="max-h-48 overflow-y-auto border border-subtle rounded divide-y divide-subtle">
               {searchResults.length > 0 ? (
                 searchResults.map((issue) => (
                   <button
@@ -300,23 +300,23 @@ export default function ChildIssuesSection({
                     type="button"
                     disabled={isSubmitting}
                     onClick={() => handleLinkExisting(issue)}
-                    className="w-full flex items-center justify-between px-2.5 py-2 text-left hover:bg-jira-blue/5 text-xs transition-colors group"
+                    className="w-full flex items-center justify-between px-2.5 py-2 text-left hover:bg-accent/5 text-xs transition-colors group"
                   >
                     <div className="flex items-center gap-2 min-w-0 pr-2">
                       <IssueTypeIcon type={issue.type} className="w-3.5 h-3.5 shrink-0" />
-                      <span className="font-bold text-jira-gray-600 shrink-0">{issue.key}</span>
-                      <span className="truncate text-jira-navy group-hover:text-jira-blue">
+                      <span className="font-bold text-ink-2 shrink-0">{issue.key}</span>
+                      <span className="truncate text-ink group-hover:text-accent">
                         {issue.title}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <StatusBadge status={issue.status} />
-                      <Plus className="w-3.5 h-3.5 text-jira-blue opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <Plus className="w-3.5 h-3.5 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   </button>
                 ))
               ) : !isSearching ? (
-                <div className="p-3 text-xs text-jira-gray-500 text-center italic">
+                <div className="p-3 text-xs text-muted text-center italic">
                   No matching issues found in this project.
                 </div>
               ) : null}
@@ -329,10 +329,10 @@ export default function ChildIssuesSection({
       {isCreating && (
         <form
           onSubmit={handleCreateChild}
-          className="bg-white border border-jira-blue/40 ring-1 ring-jira-blue/20 rounded-md p-3 space-y-2.5 shadow-sm animate-in fade-in-50 duration-150"
+          className="bg-white border border-accent/40 ring-1 ring-accent/20 rounded-md p-3 space-y-2.5 shadow-sm animate-in fade-in-50 duration-150"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-jira-navy">
+            <span className="text-xs font-semibold text-ink">
               {isEpic ? "Create new issue in epic" : "Create subtask"}
             </span>
             <button
@@ -342,7 +342,7 @@ export default function ChildIssuesSection({
                 setNewTitle("");
                 setCreateError(null);
               }}
-              className="text-jira-gray-400 hover:text-jira-navy"
+              className="text-muted hover:text-ink"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -353,7 +353,7 @@ export default function ChildIssuesSection({
               <select
                 value={newType}
                 onChange={(e) => setNewType(e.target.value as IssueType)}
-                className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-xs text-jira-navy focus:border-jira-blue font-medium shrink-0"
+                className="bg-white border border-subtle rounded px-2 py-1 text-xs text-ink focus:border-accent font-medium shrink-0"
               >
                 <option value="STORY">Story</option>
                 <option value="TASK">Task</option>
@@ -361,7 +361,7 @@ export default function ChildIssuesSection({
                 <option value="EPIC">Epic</option>
               </select>
             ) : (
-              <span className="inline-flex items-center gap-1 bg-jira-gray-100 text-jira-gray-700 px-2 py-1 rounded text-xs font-medium shrink-0">
+              <span className="inline-flex items-center gap-1 bg-surface-sunk text-ink-2 px-2 py-1 rounded text-xs font-medium shrink-0">
                 <IssueTypeIcon type="SUBTASK" className="w-3 h-3" />
                 Subtask
               </span>
@@ -373,13 +373,13 @@ export default function ChildIssuesSection({
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
               placeholder="What needs to be done?"
-              className="flex-1 min-w-[140px] text-xs px-2.5 py-1 border border-jira-gray-300 rounded focus:border-jira-blue"
+              className="flex-1 min-w-[140px] text-xs px-2.5 py-1 border border-subtle rounded focus:border-accent"
             />
 
             <button
               type="submit"
               disabled={isSubmitting || !newTitle.trim()}
-              className="bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold px-3 py-1 rounded disabled:opacity-50 transition-colors shrink-0 flex items-center gap-1"
+              className="bg-accent hover:bg-accent-hover text-accent-fg text-xs font-semibold px-3 py-1 rounded disabled:opacity-50 transition-colors shrink-0 flex items-center gap-1"
             >
               {isSubmitting && <Loader2 className="w-3 h-3 animate-spin" />}
               <span>Create</span>
@@ -392,13 +392,13 @@ export default function ChildIssuesSection({
 
       {/* Child Issues List / Table */}
       {totalCount > 0 ? (
-        <div className="border border-jira-gray-200 rounded-md overflow-hidden divide-y divide-jira-gray-100 bg-white min-w-0">
+        <div className="border border-subtle rounded-md overflow-hidden divide-y divide-subtle bg-white min-w-0">
           {children.map((child) => {
             const isDone = doneStatusNames.includes(child.status);
             return (
               <div
                 key={child.id}
-                className="flex items-center justify-between px-3 py-2 hover:bg-jira-gray-50/80 transition-colors group cursor-pointer min-w-0"
+                className="flex items-center justify-between px-3 py-2 hover:bg-page/80 transition-colors group cursor-pointer min-w-0"
                 onClick={() => onOpenChild(child.key)}
               >
                 {/* Left: Type Icon, Key, Title */}
@@ -410,15 +410,15 @@ export default function ChildIssuesSection({
                       e.stopPropagation();
                       onOpenChild(child.key);
                     }}
-                    className={`text-xs font-bold text-jira-blue hover:underline shrink-0 ${
-                      isDone ? "line-through text-jira-gray-400" : ""
+                    className={`text-xs font-bold text-accent hover:underline shrink-0 ${
+                      isDone ? "line-through text-muted" : ""
                     }`}
                   >
                     {child.key}
                   </button>
                   <span
-                    className={`text-xs text-jira-navy font-medium truncate ${
-                      isDone ? "line-through text-jira-gray-400" : ""
+                    className={`text-xs text-ink font-medium truncate ${
+                      isDone ? "line-through text-muted" : ""
                     }`}
                     title={child.title}
                   >
@@ -441,11 +441,11 @@ export default function ChildIssuesSection({
 
                   <div className="w-6 flex items-center justify-center shrink-0">
                     {child.storyPoints !== null && child.storyPoints !== undefined ? (
-                      <span className="w-5 h-4 rounded-full bg-jira-gray-100 text-jira-gray-600 text-[10px] font-bold flex items-center justify-center">
+                      <span className="w-5 h-4 rounded-full bg-surface-sunk text-ink-2 text-[10px] font-bold flex items-center justify-center">
                         {child.storyPoints}
                       </span>
                     ) : (
-                      <span className="w-5 h-4 rounded-full text-jira-gray-300 text-[10px] font-medium flex items-center justify-center select-none">
+                      <span className="w-5 h-4 rounded-full text-muted text-[10px] font-medium flex items-center justify-center select-none">
                         -
                       </span>
                     )}
@@ -455,7 +455,7 @@ export default function ChildIssuesSection({
                     {child.assignee ? (
                       <UserAvatar user={child.assignee} size="sm" showTooltip tooltipPrefix="Assignee" />
                     ) : (
-                      <div className="w-5 h-5 rounded-full border border-dashed border-jira-gray-300" />
+                      <div className="w-5 h-5 rounded-full border border-dashed border-subtle" />
                     )}
                   </div>
 
@@ -465,7 +465,7 @@ export default function ChildIssuesSection({
                         type="button"
                         disabled={unlinkingId === child.id}
                         onClick={() => handleUnlink(child.id)}
-                        className="p-1 text-jira-gray-400 hover:text-rose-600 rounded hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-all"
+                        className="p-1 text-muted hover:text-rose-600 rounded hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-all"
                         title={isEpic ? "Unlink from epic" : "Unlink subtask"}
                       >
                         {unlinkingId === child.id ? (

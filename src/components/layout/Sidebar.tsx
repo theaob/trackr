@@ -111,18 +111,18 @@ export default function Sidebar({
           />
 
           {/* Drawer Sheet */}
-          <div className="relative w-72 max-w-[80vw] bg-jira-gray-50 border-r border-jira-gray-300 flex flex-col h-full z-10 shadow-2xl animate-in slide-in-from-left duration-200">
+          <div className="relative w-72 max-w-[80vw] bg-page border-r border-subtle flex flex-col h-full z-10 shadow-2xl animate-in slide-in-from-left duration-200">
             {/* Drawer Header */}
-            <div className="h-14 px-4 border-b border-jira-gray-200 flex items-center justify-between bg-white shrink-0">
+            <div className="h-14 px-4 border-b border-subtle flex items-center justify-between bg-white shrink-0">
               <div className="flex items-center gap-2">
                 <TrackrLogo size="sm" />
-                <span className="text-xs font-bold text-jira-gray-500 uppercase tracking-wider">
+                <span className="text-xs font-bold text-muted uppercase tracking-wider">
                   {project.key}
                 </span>
               </div>
               <button
                 onClick={onCloseMobile}
-                className="p-1.5 text-jira-gray-500 hover:text-jira-navy hover:bg-jira-gray-100 rounded-md transition-colors"
+                className="p-1.5 text-muted hover:text-ink hover:bg-surface-sunk rounded-md transition-colors"
                 aria-label="Close navigation"
               >
                 <X className="w-5 h-5" />
@@ -131,7 +131,7 @@ export default function Sidebar({
 
             {/* Drawer Navigation Links */}
             <div className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-              <div className="px-3 pb-2 text-[10px] font-bold text-jira-gray-600 uppercase tracking-wider">
+              <div className="px-3 pb-2 text-[10px] font-bold text-ink-2 uppercase tracking-wider">
                 Planning
               </div>
               {navItems
@@ -147,22 +147,22 @@ export default function Sidebar({
                     onClick={onCloseMobile}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
                       isActive
-                        ? "bg-jira-blue-light/70 text-jira-blue font-semibold"
-                        : "text-jira-gray-800 hover:bg-jira-gray-200 hover:text-jira-navy"
+                        ? "bg-accent-soft/70 text-accent font-semibold"
+                        : "text-ink hover:bg-subtle hover:text-ink"
                     }`}
                   >
-                    <Icon className={`w-4.5 h-4.5 shrink-0 ${isActive ? "text-jira-blue" : "text-jira-gray-700"}`} />
+                    <Icon className={`w-4.5 h-4.5 shrink-0 ${isActive ? "text-accent" : "text-ink-2"}`} />
                     <span className="truncate">{item.name}</span>
                   </Link>
                 );
               })}
-              <div className="pt-2 mt-2 border-t border-jira-gray-200">
+              <div className="pt-2 mt-2 border-t border-subtle">
                 <Link prefetch={false}
                   href="/projects"
                   onClick={onCloseMobile}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-jira-gray-700 hover:bg-jira-gray-200 hover:text-jira-navy transition-colors"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-ink-2 hover:bg-subtle hover:text-ink transition-colors"
                 >
-                  <FolderGit2 className="w-4.5 h-4.5 text-jira-blue shrink-0" />
+                  <FolderGit2 className="w-4.5 h-4.5 text-accent shrink-0" />
                   <span>Switch Project</span>
                 </Link>
               </div>
@@ -173,14 +173,14 @@ export default function Sidebar({
 
       {/* Desktop Sidebar */}
       <aside
-        className={`hidden md:flex relative bg-jira-gray-50 border-r border-jira-gray-300 transition-all duration-200 ease-in-out select-none flex-col shrink-0 ${
+        className={`hidden md:flex relative bg-page border-r border-subtle transition-all duration-200 ease-in-out select-none flex-col shrink-0 ${
           collapsed ? "w-14" : "w-60"
         }`}
       >
         {/* Navigation Links */}
         <div className="flex-1 py-4 px-2 space-y-1">
           {!collapsed && (
-            <div className="px-3 pb-2 text-[10px] font-bold text-jira-gray-600 uppercase tracking-wider">
+            <div className="px-3 pb-2 text-[10px] font-bold text-ink-2 uppercase tracking-wider">
               Planning
             </div>
           )}
@@ -195,11 +195,11 @@ export default function Sidebar({
                 title={collapsed ? item.name : undefined}
                 className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-jira-blue-light/70 text-jira-blue font-semibold"
-                    : "text-jira-gray-800 hover:bg-jira-gray-200 hover:text-jira-navy"
+                    ? "bg-accent-soft/70 text-accent font-semibold"
+                    : "text-ink hover:bg-subtle hover:text-ink"
                 } ${collapsed ? "justify-center px-0" : ""}`}
               >
-                <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-jira-blue" : "text-jira-gray-700"}`} />
+                <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-accent" : "text-ink-2"}`} />
                 {!collapsed && <span className="truncate">{item.name}</span>}
               </Link>
             );
@@ -209,7 +209,7 @@ export default function Sidebar({
         {/* Collapse Toggle Handle */}
         <button
           onClick={toggleCollapse}
-          className="absolute -right-3.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-white border border-jira-gray-300 rounded-full flex items-center justify-center text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-100 shadow-sm transition-all z-20"
+          className="absolute -right-3.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-white border border-subtle rounded-full flex items-center justify-center text-ink-2 hover:text-ink hover:bg-surface-sunk shadow-sm transition-all z-20"
           title={collapsed ? "Expand sidebar ([)" : "Collapse sidebar ([)"}
         >
           {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}

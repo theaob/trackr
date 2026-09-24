@@ -10,7 +10,7 @@ interface AccountSecurityModalProps {
 }
 
 const INPUT =
-  "w-full px-3 py-2 text-sm border border-jira-gray-300 rounded focus:border-jira-blue text-jira-navy";
+  "w-full px-3 py-2 text-sm border border-subtle rounded focus:border-accent text-ink";
 
 /** Change your password, or end your sessions on other devices. */
 export default function AccountSecurityModal({ isOpen, onClose }: AccountSecurityModalProps) {
@@ -72,26 +72,26 @@ export default function AccountSecurityModal({ isOpen, onClose }: AccountSecurit
       onClick={close}
     >
       <div
-        className="bg-white rounded-lg shadow-2xl border border-jira-gray-300 w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]"
+        className="bg-white rounded-lg shadow-2xl border border-subtle w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-labelledby="account-security-title"
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-jira-gray-200 bg-white shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-subtle bg-white shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-md bg-jira-blue-light/70 flex items-center justify-center text-jira-blue">
+            <div className="w-8 h-8 rounded-md bg-accent-soft/70 flex items-center justify-center text-accent">
               <ShieldCheck className="w-4 h-4" />
             </div>
             <div>
-              <h2 id="account-security-title" className="text-base font-bold text-jira-navy">
+              <h2 id="account-security-title" className="text-base font-bold text-ink">
                 Password &amp; sessions
               </h2>
-              <p className="text-xs text-jira-gray-500">Keep your account in your hands.</p>
+              <p className="text-xs text-muted">Keep your account in your hands.</p>
             </div>
           </div>
           <button
             onClick={close}
-            className="text-jira-gray-400 hover:text-jira-navy p-1.5 rounded hover:bg-jira-gray-100 transition-colors"
+            className="text-muted hover:text-ink p-1.5 rounded hover:bg-surface-sunk transition-colors"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
@@ -100,8 +100,8 @@ export default function AccountSecurityModal({ isOpen, onClose }: AccountSecurit
 
         <div className="p-6 overflow-y-auto space-y-6">
           <form onSubmit={handleChangePassword} className="space-y-3">
-            <h3 className="text-sm font-bold text-jira-navy">Change password</h3>
-            <p className="text-xs text-jira-gray-500">
+            <h3 className="text-sm font-bold text-ink">Change password</h3>
+            <p className="text-xs text-muted">
               Changing your password signs you out on every other device.
             </p>
             <input
@@ -145,28 +145,28 @@ export default function AccountSecurityModal({ isOpen, onClose }: AccountSecurit
             <button
               type="submit"
               disabled={saving}
-              className="px-4 py-2 bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold rounded disabled:opacity-50 flex items-center gap-1.5"
+              className="px-4 py-2 bg-accent hover:bg-accent-hover text-accent-fg text-xs font-semibold rounded disabled:opacity-50 flex items-center gap-1.5"
             >
               {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               Change password
             </button>
           </form>
 
-          <div className="pt-5 border-t border-jira-gray-200 space-y-2">
-            <h3 className="text-sm font-bold text-jira-navy">Other sessions</h3>
-            <p className="text-xs text-jira-gray-500">
+          <div className="pt-5 border-t border-subtle space-y-2">
+            <h3 className="text-sm font-bold text-ink">Other sessions</h3>
+            <p className="text-xs text-muted">
               Signed in somewhere you shouldn&apos;t be, or on a shared computer? End every session except this one.
             </p>
             <button
               type="button"
               onClick={handleSignOutOthers}
               disabled={signingOut}
-              className="px-3 py-2 text-xs font-semibold text-jira-navy border border-jira-gray-300 rounded hover:bg-jira-gray-100 disabled:opacity-50 flex items-center gap-1.5"
+              className="px-3 py-2 text-xs font-semibold text-ink border border-subtle rounded hover:bg-surface-sunk disabled:opacity-50 flex items-center gap-1.5"
             >
               {signingOut ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LogOut className="w-3.5 h-3.5" />}
               Sign out everywhere else
             </button>
-            {signOutResult && <p className="text-xs text-jira-gray-600">{signOutResult}</p>}
+            {signOutResult && <p className="text-xs text-ink-2">{signOutResult}</p>}
           </div>
         </div>
       </div>

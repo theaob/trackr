@@ -39,19 +39,15 @@ export default function RoadmapView({
   );
 
   return (
-    <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-jira-navy">Roadmap</h1>
-        <p className="text-xs text-jira-gray-500 mt-0.5">{project.name}</p>
-      </div>
-
-      <div className="bg-white border border-jira-gray-200 rounded-lg p-3.5 sm:p-5 shadow-xs overflow-x-auto">
-        <p className="text-[11px] text-jira-gray-500 mb-4">
-          Each epic&rsquo;s timeline and progress rollup. Click any epic to view all its linked issues,
-          or expand to see child issues directly on the timeline.
+    <div className="flex-1 space-y-5 overflow-y-auto p-3 sm:p-6">
+      <header>
+        <h1 className="text-xl font-semibold text-ink">Roadmap</h1>
+        <p className="mt-0.5 text-xs text-muted">
+          {project.name} · each epic&rsquo;s dates and progress. Open an epic to see its issues, or expand it to plot them.
         </p>
-        <RoadmapTimeline epics={epics} onSelectIssue={handleSelectIssue} />
-      </div>
+      </header>
+
+      <RoadmapTimeline epics={epics} onSelectIssue={handleSelectIssue} />
 
       <IssuePanel
         issue={activeIssue}

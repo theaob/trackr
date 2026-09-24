@@ -30,7 +30,7 @@ export default async function SettingsPage() {
     return (
       <ShellPage projects={allProjects as any}>
         <div className="flex flex-1 flex-col items-center overflow-y-auto bg-page p-6 md:p-10">
-          <div className="w-full max-w-4xl">
+          <div className="w-full max-w-6xl">
             <GeneralSettingsView initialSystemInfo={systemInfo} />
           </div>
         </div>
@@ -40,13 +40,13 @@ export default async function SettingsPage() {
 
   return (
     <SearchProvider>
-      <div className="flex flex-col h-screen w-screen overflow-hidden bg-white text-jira-navy font-sans antialiased">
+      <div className="flex flex-col h-screen w-screen overflow-hidden bg-white text-ink font-sans antialiased">
         <Navbar
           projects={allProjects as any}
           currentProject={defaultProject as any}
         />
-        <main className="flex-1 flex flex-col overflow-y-auto bg-jira-gray-50/50 p-6 md:p-10 items-center">
-          <div className="w-full max-w-4xl">
+        <main className="flex-1 flex flex-col overflow-y-auto bg-page/50 p-6 md:p-10 items-center">
+          <div className="w-full max-w-6xl">
             <GeneralSettingsView initialSystemInfo={systemInfo} />
           </div>
         </main>

@@ -306,25 +306,25 @@ export default function CreateWebhookModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-150">
       <div
-        className="bg-white rounded-none sm:rounded-lg shadow-2xl border-0 sm:border border-jira-gray-300 w-full h-full sm:h-auto max-w-2xl overflow-hidden flex flex-col max-h-none sm:max-h-[90vh]"
+        className="bg-white rounded-none sm:rounded-lg shadow-2xl border-0 sm:border border-subtle w-full h-full sm:h-auto max-w-2xl overflow-hidden flex flex-col max-h-none sm:max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-jira-gray-200 shrink-0">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-subtle shrink-0">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded bg-jira-blue-light/70 flex items-center justify-center text-jira-blue">
+            <div className="w-8 h-8 rounded bg-accent-soft/70 flex items-center justify-center text-accent">
               <WebhookIcon className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-jira-navy">Create Webhook Trigger</h2>
-              <p className="text-xs text-jira-gray-500">
+              <h2 className="text-base font-bold text-ink">Create Webhook Trigger</h2>
+              <p className="text-xs text-muted">
                 Send real-time HTTP POST notifications with actor and changelog data.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-jira-gray-400 hover:text-jira-navy p-1 rounded hover:bg-jira-gray-100 transition-colors"
+            className="text-muted hover:text-ink p-1 rounded hover:bg-surface-sunk transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -333,22 +333,22 @@ export default function CreateWebhookModal({
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
           {error && (
-            <div className="p-3 bg-jira-red/10 border border-jira-red/30 rounded text-xs text-jira-red font-medium">
+            <div className="p-3 bg-danger/10 border border-danger/30 rounded text-xs text-danger font-medium">
               {error}
             </div>
           )}
 
           {/* Webhook Name */}
           <div>
-            <label className="block text-xs font-semibold text-jira-gray-700 mb-1">
-              Webhook Name <span className="text-jira-red">*</span>
+            <label className="block text-xs font-semibold text-ink-2 mb-1">
+              Webhook Name <span className="text-danger">*</span>
             </label>
             <input
               type="text"
               placeholder="e.g. Slack Engineering Alerts, Zapier Issue Sync, CI Pipeline"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue"
+              className="w-full text-xs px-3 py-2 bg-white border border-subtle rounded focus:border-accent"
               autoFocus
               required
             />
@@ -356,51 +356,51 @@ export default function CreateWebhookModal({
 
           {/* Target URL */}
           <div>
-            <label className="block text-xs font-semibold text-jira-gray-700 mb-1">
-              Payload Endpoint URL <span className="text-jira-red">*</span>
+            <label className="block text-xs font-semibold text-ink-2 mb-1">
+              Payload Endpoint URL <span className="text-danger">*</span>
             </label>
             <input
               type="url"
               placeholder="https://api.yourcompany.com/webhooks or http://localhost:3000/api/mock-webhook-receiver"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue font-mono text-[11px]"
+              className="w-full text-xs px-3 py-2 bg-white border border-subtle rounded focus:border-accent font-mono text-[11px]"
               required
             />
-            <p className="text-[11px] text-jira-gray-500 mt-1">
+            <p className="text-[11px] text-muted mt-1">
               The external URL where HTTP POST requests with JSON payloads will be delivered.
             </p>
           </div>
 
           {/* Secret Key (Optional) */}
           <div>
-            <label className="block text-xs font-semibold text-jira-gray-700 mb-1 flex items-center justify-between">
+            <label className="block text-xs font-semibold text-ink-2 mb-1 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
-                <Shield className="w-3.5 h-3.5 text-jira-blue" />
+                <Shield className="w-3.5 h-3.5 text-accent" />
                 Secret Key (Optional HMAC Signature)
               </span>
-              <span className="text-[10px] text-jira-gray-400 font-normal">Optional</span>
+              <span className="text-[10px] text-muted font-normal">Optional</span>
             </label>
             <input
               type="text"
               placeholder="e.g. whsec_9a8b7c6d5e4f3a2b1c0d"
               value={secret}
               onChange={(e) => setSecret(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue font-mono text-[11px]"
+              className="w-full text-xs px-3 py-2 bg-white border border-subtle rounded focus:border-accent font-mono text-[11px]"
             />
-            <p className="text-[11px] text-jira-gray-500 mt-1">
-              If provided, payloads will be signed using HMAC SHA-256 and sent in the <code className="text-jira-navy font-semibold">X-Hub-Signature-256</code> header.
+            <p className="text-[11px] text-muted mt-1">
+              If provided, payloads will be signed using HMAC SHA-256 and sent in the <code className="text-ink font-semibold">X-Hub-Signature-256</code> header.
             </p>
           </div>
 
           {/* TQL issue filter (optional) */}
           <div>
-            <label className="block text-xs font-semibold text-jira-gray-700 mb-1 flex items-center justify-between">
+            <label className="block text-xs font-semibold text-ink-2 mb-1 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
-                <Filter className="w-3.5 h-3.5 text-jira-blue" />
+                <Filter className="w-3.5 h-3.5 text-accent" />
                 TQL issue filter (optional)
               </span>
-              <span className="text-[10px] text-jira-gray-400 font-normal">Optional</span>
+              <span className="text-[10px] text-muted font-normal">Optional</span>
             </label>
             <input
               type="text"
@@ -412,15 +412,15 @@ export default function CreateWebhookModal({
               }}
               onBlur={handleValidateJql}
               className={`w-full text-xs px-3 py-2 bg-white border rounded font-mono text-[11px] ${
-                jqlError ? "border-jira-red focus:border-jira-red" : "border-jira-gray-300 focus:border-jira-blue"
+                jqlError ? "border-danger focus:border-danger" : "border-subtle focus:border-accent"
               }`}
             />
             {jqlError ? (
-              <p className="text-[11px] text-jira-red mt-1 flex items-center gap-1">
+              <p className="text-[11px] text-danger mt-1 flex items-center gap-1">
                 <span>⚠</span> {jqlError}
               </p>
             ) : (
-              <p className="text-[11px] text-jira-gray-500 mt-1">
+              <p className="text-[11px] text-muted mt-1">
                 Only deliver issue-related events if the affected issue matches this TQL query.
               </p>
             )}
@@ -429,56 +429,56 @@ export default function CreateWebhookModal({
           {/* Event Triggers */}
           <div className="pt-2">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-              <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider">
                 Event Triggers ({selectedEvents.length} selected)
               </label>
               <div className="flex flex-wrap items-center gap-2 text-xs">
                 <button
                   type="button"
                   onClick={() => setSelectedEvents(ALL_EVENT_KEYS)}
-                  className="text-jira-blue hover:underline font-semibold"
+                  className="text-accent hover:underline font-semibold"
                 >
                   All Events
                 </button>
-                <span className="text-jira-gray-300">|</span>
+                <span className="text-muted">|</span>
                 <button
                   type="button"
                   onClick={() => setSelectedEvents(ISSUE_EVENTS)}
-                  className="text-jira-blue hover:underline"
+                  className="text-accent hover:underline"
                 >
                   Issues
                 </button>
-                <span className="text-jira-gray-300">|</span>
+                <span className="text-muted">|</span>
                 <button
                   type="button"
                   onClick={() => setSelectedEvents(TRANSITION_EVENTS)}
-                  className="text-jira-blue hover:underline"
+                  className="text-accent hover:underline"
                 >
                   Transitions
                 </button>
-                <span className="text-jira-gray-300">|</span>
+                <span className="text-muted">|</span>
                 <button
                   type="button"
                   onClick={() => setSelectedEvents(AGILE_EVENTS)}
-                  className="text-jira-blue hover:underline"
+                  className="text-accent hover:underline"
                 >
                   Sprints/Releases
                 </button>
-                <span className="text-jira-gray-300">|</span>
+                <span className="text-muted">|</span>
                 <button
                   type="button"
                   onClick={() => setSelectedEvents([])}
-                  className="text-jira-gray-500 hover:underline"
+                  className="text-muted hover:underline"
                 >
                   Clear
                 </button>
               </div>
             </div>
 
-            <div className="space-y-3 bg-jira-gray-50/70 border border-jira-gray-300 rounded-md p-3 max-h-72 overflow-y-auto">
+            <div className="space-y-3 bg-page/70 border border-subtle rounded-md p-3 max-h-72 overflow-y-auto">
               {AVAILABLE_EVENTS.map((category) => (
                 <div key={category.category} className="space-y-1.5">
-                  <div className="text-[11px] font-bold text-jira-gray-600 uppercase tracking-wider pb-1 border-b border-jira-gray-200">
+                  <div className="text-[11px] font-bold text-ink-2 uppercase tracking-wider pb-1 border-b border-subtle">
                     {category.category}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
@@ -489,7 +489,7 @@ export default function CreateWebhookModal({
                           key={item.event}
                           className={`flex items-start gap-2 p-2 rounded cursor-pointer border transition-colors ${
                             isChecked
-                              ? "bg-white border-jira-blue/60 shadow-2xs"
+                              ? "bg-white border-accent/60 shadow-2xs"
                               : "bg-white/60 border-transparent hover:bg-white"
                           }`}
                         >
@@ -497,13 +497,13 @@ export default function CreateWebhookModal({
                             type="checkbox"
                             checked={isChecked}
                             onChange={() => toggleEvent(item.event)}
-                            className="mt-0.5 w-3.5 h-3.5 rounded text-jira-blue focus:ring-jira-blue border-jira-gray-300"
+                            className="mt-0.5 w-3.5 h-3.5 rounded text-accent focus:ring-accent border-subtle"
                           />
                           <div className="space-y-0.5">
-                            <div className="text-xs font-semibold text-jira-navy">
+                            <div className="text-xs font-semibold text-ink">
                               {item.label}
                             </div>
-                            <p className="text-[10px] text-jira-gray-500 leading-tight">
+                            <p className="text-[10px] text-muted leading-tight">
                               {item.description}
                             </p>
                           </div>
@@ -517,18 +517,18 @@ export default function CreateWebhookModal({
           </div>
 
           {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-2 pt-4 border-t border-jira-gray-200">
+          <div className="flex items-center justify-end gap-2 pt-4 border-t border-subtle">
             <button
               type="button"
               onClick={onClose}
-              className="text-xs font-medium px-4 py-2 rounded text-jira-gray-700 hover:bg-jira-gray-100 transition-colors"
+              className="text-xs font-medium px-4 py-2 rounded text-ink-2 hover:bg-surface-sunk transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="text-xs font-semibold px-4 py-2 rounded bg-jira-blue text-white hover:bg-jira-blue-hover disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-2xs"
+              className="text-xs font-semibold px-4 py-2 rounded bg-accent text-accent-fg hover:bg-accent-hover disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-2xs"
             >
               {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               Create Webhook

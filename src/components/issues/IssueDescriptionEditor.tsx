@@ -375,26 +375,26 @@ export default function IssueDescriptionEditor({
   if (mode === "click-to-edit" && !isEditing) {
     return (
       <div>
-        <h3 className="text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-2">
+        <h3 className="text-xs font-bold text-ink-2 uppercase tracking-wider mb-2">
           Description
         </h3>
         <div
           onClick={handleClickToEdit}
-          className={`min-h-[80px] p-3 rounded-md border border-transparent transition-all text-sm text-jira-navy leading-relaxed ${
+          className={`min-h-[80px] p-3 rounded-md border border-transparent transition-all text-sm text-ink leading-relaxed ${
             canEdit
-              ? "hover:bg-jira-gray-100 cursor-pointer hover:border-jira-gray-300 group"
-              : "bg-jira-gray-50/50"
+              ? "hover:bg-surface-sunk cursor-pointer hover:border-subtle group"
+              : "bg-page/50"
           }`}
         >
           {value ? (
             <MarkdownContent text={value} users={users} />
           ) : (
-            <span className="text-jira-gray-500 italic">
+            <span className="text-muted italic">
               {canEdit ? placeholder : "No description provided."}
             </span>
           )}
           {canEdit && (
-            <div className="invisible group-hover:visible flex items-center gap-1 mt-2 text-[11px] text-jira-gray-400">
+            <div className="invisible group-hover:visible flex items-center gap-1 mt-2 text-[11px] text-muted">
               <Edit3 className="w-3 h-3" />
               <span>Click to edit</span>
             </div>
@@ -410,7 +410,7 @@ export default function IssueDescriptionEditor({
       {/* Header: tabs + actions. These controls stay out of the Tab order
           (tabIndex -1) so Tab moves straight from the previous field into the
           text; formatting also has keyboard shortcuts. */}
-      <div className="flex items-center justify-between border-b border-jira-gray-200 bg-jira-gray-50/70 rounded-t-md px-1">
+      <div className="flex items-center justify-between border-b border-subtle bg-page/70 rounded-t-md px-1">
         {/* Write / Preview tabs */}
         <div className="flex items-center">
           <button
@@ -419,8 +419,8 @@ export default function IssueDescriptionEditor({
             onClick={() => setActiveTab("write")}
             className={`px-3 py-1.5 text-xs font-semibold transition-colors border-b-2 ${
               activeTab === "write"
-                ? "border-jira-blue text-jira-blue"
-                : "border-transparent text-jira-gray-500 hover:text-jira-gray-700"
+                ? "border-accent text-accent"
+                : "border-transparent text-muted hover:text-ink-2"
             }`}
           >
             <span className="flex items-center gap-1.5">
@@ -434,8 +434,8 @@ export default function IssueDescriptionEditor({
             onClick={() => setActiveTab("preview")}
             className={`px-3 py-1.5 text-xs font-semibold transition-colors border-b-2 ${
               activeTab === "preview"
-                ? "border-jira-blue text-jira-blue"
-                : "border-transparent text-jira-gray-500 hover:text-jira-gray-700"
+                ? "border-accent text-accent"
+                : "border-transparent text-muted hover:text-ink-2"
             }`}
           >
             <span className="flex items-center gap-1.5">
@@ -452,33 +452,33 @@ export default function IssueDescriptionEditor({
               type="button"
               tabIndex={-1}
               onClick={() => setShowCheatsheet(!showCheatsheet)}
-              className="p-1.5 text-jira-gray-400 hover:text-jira-gray-600 hover:bg-jira-gray-100 rounded transition-colors"
+              className="p-1.5 text-muted hover:text-ink-2 hover:bg-surface-sunk rounded transition-colors"
               title="Markdown cheatsheet"
             >
               <HelpCircle className="w-3.5 h-3.5" />
             </button>
             {showCheatsheet && (
-              <div className="absolute right-0 top-full mt-1 w-72 bg-white border border-jira-gray-200 rounded-lg shadow-xl z-50 py-2 animate-in fade-in zoom-in-95">
-                <div className="px-3 py-1.5 border-b border-jira-gray-100 text-[11px] font-bold text-jira-gray-500 uppercase tracking-wider">
+              <div className="absolute right-0 top-full mt-1 w-72 bg-white border border-subtle rounded-lg shadow-xl z-50 py-2 animate-in fade-in zoom-in-95">
+                <div className="px-3 py-1.5 border-b border-subtle text-[11px] font-bold text-muted uppercase tracking-wider">
                   Markdown Cheatsheet
                 </div>
                 <div className="max-h-64 overflow-y-auto">
                   {CHEATSHEET_ITEMS.map((item) => (
                     <div
                       key={item.syntax}
-                      className="flex items-center justify-between px-3 py-1.5 text-xs hover:bg-jira-gray-50"
+                      className="flex items-center justify-between px-3 py-1.5 text-xs hover:bg-page"
                     >
-                      <code className="px-1.5 py-0.5 bg-jira-gray-100 rounded text-[11px] font-mono text-jira-navy">
+                      <code className="px-1.5 py-0.5 bg-surface-sunk rounded text-[11px] font-mono text-ink">
                         {item.syntax}
                       </code>
-                      <span className="text-jira-gray-500">{item.result}</span>
+                      <span className="text-muted">{item.result}</span>
                     </div>
                   ))}
                 </div>
-                <div className="px-3 pt-2 pb-1 border-t border-jira-gray-100">
-                  <div className="text-[10px] text-jira-gray-400 space-y-0.5">
-                    <div><kbd className="px-1 py-0.5 bg-jira-gray-100 rounded text-[10px]">{modKey}B</kbd> Bold • <kbd className="px-1 py-0.5 bg-jira-gray-100 rounded text-[10px]">{modKey}I</kbd> Italic • <kbd className="px-1 py-0.5 bg-jira-gray-100 rounded text-[10px]">{modKey}K</kbd> Link</div>
-                    <div><kbd className="px-1 py-0.5 bg-jira-gray-100 rounded text-[10px]">Tab</kbd> Indent list item • <kbd className="px-1 py-0.5 bg-jira-gray-100 rounded text-[10px]">{modKey}↵</kbd> Save</div>
+                <div className="px-3 pt-2 pb-1 border-t border-subtle">
+                  <div className="text-[10px] text-muted space-y-0.5">
+                    <div><kbd className="px-1 py-0.5 bg-surface-sunk rounded text-[10px]">{modKey}B</kbd> Bold • <kbd className="px-1 py-0.5 bg-surface-sunk rounded text-[10px]">{modKey}I</kbd> Italic • <kbd className="px-1 py-0.5 bg-surface-sunk rounded text-[10px]">{modKey}K</kbd> Link</div>
+                    <div><kbd className="px-1 py-0.5 bg-surface-sunk rounded text-[10px]">Tab</kbd> Indent list item • <kbd className="px-1 py-0.5 bg-surface-sunk rounded text-[10px]">{modKey}↵</kbd> Save</div>
                   </div>
                 </div>
               </div>
@@ -488,7 +488,7 @@ export default function IssueDescriptionEditor({
             type="button"
             tabIndex={-1}
             onClick={() => setIsFullscreen(!isFullscreen)}
-            className="p-1.5 text-jira-gray-400 hover:text-jira-gray-600 hover:bg-jira-gray-100 rounded transition-colors"
+            className="p-1.5 text-muted hover:text-ink-2 hover:bg-surface-sunk rounded transition-colors"
             title={isFullscreen ? "Exit fullscreen" : "Fullscreen editor"}
           >
             {isFullscreen ? (
@@ -502,13 +502,13 @@ export default function IssueDescriptionEditor({
 
       {/* Formatting Toolbar (visible only in Write tab) */}
       {activeTab === "write" && (
-        <div className="flex items-center flex-wrap gap-0.5 px-2 py-1 border-b border-jira-gray-200 bg-white">
+        <div className="flex items-center flex-wrap gap-0.5 px-2 py-1 border-b border-subtle bg-white">
           {toolbarActions.map((item, idx) => {
             if (item === "separator") {
               return (
                 <div
                   key={`sep-${idx}`}
-                  className="w-px h-4 bg-jira-gray-200 mx-0.5"
+                  className="w-px h-4 bg-subtle mx-0.5"
                 />
               );
             }
@@ -520,22 +520,22 @@ export default function IssueDescriptionEditor({
                     type="button"
                     tabIndex={-1}
                     onClick={() => setShowHeadingMenu(!showHeadingMenu)}
-                    className="flex items-center gap-0.5 px-1.5 py-1 text-jira-gray-500 hover:text-jira-gray-700 hover:bg-jira-gray-100 rounded transition-colors text-xs font-medium"
+                    className="flex items-center gap-0.5 px-1.5 py-1 text-muted hover:text-ink-2 hover:bg-surface-sunk rounded transition-colors text-xs font-medium"
                     title="Headings"
                   >
                     <span className="text-[11px]">Normal text</span>
                     <ChevronDown className="w-3 h-3" />
                   </button>
                   {showHeadingMenu && (
-                    <div className="absolute left-0 top-full mt-1 w-48 bg-white border border-jira-gray-200 rounded-lg shadow-xl z-50 py-1 animate-in fade-in zoom-in-95">
+                    <div className="absolute left-0 top-full mt-1 w-48 bg-white border border-subtle rounded-lg shadow-xl z-50 py-1 animate-in fade-in zoom-in-95">
                       <button
                         type="button"
                         tabIndex={-1}
                         onClick={() => handleHeadingSelect("# ")}
-                        className="w-full px-3 py-1.5 text-left hover:bg-jira-gray-50 flex items-center gap-2"
+                        className="w-full px-3 py-1.5 text-left hover:bg-page flex items-center gap-2"
                       >
-                        <Heading1 className="w-4 h-4 text-jira-gray-500" />
-                        <span className="text-base font-bold text-jira-navy">
+                        <Heading1 className="w-4 h-4 text-muted" />
+                        <span className="text-base font-bold text-ink">
                           Heading 1
                         </span>
                       </button>
@@ -543,10 +543,10 @@ export default function IssueDescriptionEditor({
                         type="button"
                         tabIndex={-1}
                         onClick={() => handleHeadingSelect("## ")}
-                        className="w-full px-3 py-1.5 text-left hover:bg-jira-gray-50 flex items-center gap-2"
+                        className="w-full px-3 py-1.5 text-left hover:bg-page flex items-center gap-2"
                       >
-                        <Heading2 className="w-4 h-4 text-jira-gray-500" />
-                        <span className="text-sm font-bold text-jira-navy">
+                        <Heading2 className="w-4 h-4 text-muted" />
+                        <span className="text-sm font-bold text-ink">
                           Heading 2
                         </span>
                       </button>
@@ -554,10 +554,10 @@ export default function IssueDescriptionEditor({
                         type="button"
                         tabIndex={-1}
                         onClick={() => handleHeadingSelect("### ")}
-                        className="w-full px-3 py-1.5 text-left hover:bg-jira-gray-50 flex items-center gap-2"
+                        className="w-full px-3 py-1.5 text-left hover:bg-page flex items-center gap-2"
                       >
-                        <Heading3 className="w-4 h-4 text-jira-gray-500" />
-                        <span className="text-xs font-bold text-jira-navy">
+                        <Heading3 className="w-4 h-4 text-muted" />
+                        <span className="text-xs font-bold text-ink">
                           Heading 3
                         </span>
                       </button>
@@ -574,7 +574,7 @@ export default function IssueDescriptionEditor({
                 type="button"
                 tabIndex={-1}
                 onClick={() => handleToolbarAction(toolbarItem)}
-                className="p-1.5 text-jira-gray-500 hover:text-jira-gray-700 hover:bg-jira-gray-100 rounded transition-colors"
+                className="p-1.5 text-muted hover:text-ink-2 hover:bg-surface-sunk rounded transition-colors"
                 title={
                   toolbarItem.shortcut
                     ? `${toolbarItem.label} (${toolbarItem.shortcut})`
@@ -600,20 +600,20 @@ export default function IssueDescriptionEditor({
             placeholder={placeholder + " (Type @ to mention, paste images directly)"}
             onImagePaste={onImagePaste}
             onKeyDown={handleEditorKeyDown}
-            className={`w-full text-sm text-jira-navy p-3 border-0 leading-relaxed resize-none ${
+            className={`w-full text-sm text-ink p-3 border-0 leading-relaxed resize-none ${
               isFullscreen ? "min-h-[300px]" : ""
             }`}
           />
         ) : (
           <div
-            className={`p-4 text-sm text-jira-navy leading-relaxed ${
+            className={`p-4 text-sm text-ink leading-relaxed ${
               isFullscreen ? "min-h-[300px]" : "min-h-[120px]"
             }`}
           >
             {value ? (
               <MarkdownContent text={value} users={users} />
             ) : (
-              <span className="text-jira-gray-400 italic">
+              <span className="text-muted italic">
                 Nothing to preview
               </span>
             )}
@@ -623,24 +623,24 @@ export default function IssueDescriptionEditor({
 
       {/* Footer: save/cancel and hints */}
       {showSaveButtons && (
-        <div className="flex items-center gap-2 px-3 py-2 border-t border-jira-gray-200 bg-jira-gray-50/50 rounded-b-md">
+        <div className="flex items-center gap-2 px-3 py-2 border-t border-subtle bg-page/50 rounded-b-md">
           <button
             type="button"
             onClick={handleSave}
-            className="px-3 py-1.5 bg-jira-blue text-white rounded text-xs font-semibold hover:bg-jira-blue-hover transition-colors"
+            className="px-3 py-1.5 bg-accent text-accent-fg rounded text-xs font-semibold hover:bg-accent-hover transition-colors"
           >
             Save
           </button>
           <button
             type="button"
             onClick={handleCancel}
-            className="px-3 py-1.5 text-jira-gray-700 hover:bg-jira-gray-100 rounded text-xs font-medium transition-colors"
+            className="px-3 py-1.5 text-ink-2 hover:bg-surface-sunk rounded text-xs font-medium transition-colors"
           >
             Cancel
           </button>
-          <span className="text-[11px] text-jira-gray-400 ml-auto flex items-center gap-2">
+          <span className="text-[11px] text-muted ml-auto flex items-center gap-2">
             <span>
-              <kbd className="px-1 py-0.5 bg-jira-gray-100 border border-jira-gray-200 rounded text-[10px] font-mono">{modKey}↵</kbd> Save
+              <kbd className="px-1 py-0.5 bg-surface-sunk border border-subtle rounded text-[10px] font-mono">{modKey}↵</kbd> Save
             </span>
             <span>Markdown supported</span>
           </span>
@@ -652,7 +652,7 @@ export default function IssueDescriptionEditor({
   // Render the label for click-to-edit mode
   const label =
     mode === "click-to-edit" ? (
-      <h3 className="text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-2">
+      <h3 className="text-xs font-bold text-ink-2 uppercase tracking-wider mb-2">
         Description
       </h3>
     ) : null;
@@ -664,14 +664,14 @@ export default function IssueDescriptionEditor({
         {label}
         <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-6">
           <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-jira-gray-200 bg-jira-gray-50">
-              <h3 className="text-sm font-semibold text-jira-navy">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-subtle bg-page">
+              <h3 className="text-sm font-semibold text-ink">
                 Edit Description
               </h3>
               <button
                 type="button"
                 onClick={() => setIsFullscreen(false)}
-                className="p-1 text-jira-gray-400 hover:text-jira-gray-600 hover:bg-jira-gray-100 rounded transition-colors"
+                className="p-1 text-muted hover:text-ink-2 hover:bg-surface-sunk rounded transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -688,7 +688,7 @@ export default function IssueDescriptionEditor({
   return (
     <div>
       {label}
-      <div className="border border-jira-gray-300 rounded-md overflow-hidden focus-within:border-jira-blue transition-colors">
+      <div className="border border-subtle rounded-md overflow-hidden focus-within:border-accent transition-colors">
         {editorContent}
       </div>
     </div>

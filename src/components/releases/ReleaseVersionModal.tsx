@@ -80,20 +80,20 @@ export default function ReleaseVersionModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
       <div
-        className="bg-white rounded-lg shadow-xl border border-jira-gray-200 w-full max-w-md overflow-hidden flex flex-col"
+        className="bg-white rounded-lg shadow-xl border border-subtle w-full max-w-md overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-jira-gray-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-subtle">
           <div className="flex items-center gap-2">
-            <Rocket className="w-4 h-4 text-jira-green" />
-            <h2 className="text-base font-bold text-jira-navy">
+            <Rocket className="w-4 h-4 text-success" />
+            <h2 className="text-base font-bold text-ink">
               Release Version {version.name}
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="text-jira-gray-500 hover:text-jira-navy p-1 rounded hover:bg-jira-gray-100 transition-colors"
+            className="text-muted hover:text-ink p-1 rounded hover:bg-surface-sunk transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -102,39 +102,39 @@ export default function ReleaseVersionModal({
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
-            <div className="p-3 bg-jira-red/10 border border-jira-red/30 rounded text-xs text-jira-red font-medium">
+            <div className="p-3 bg-danger/10 border border-danger/30 rounded text-xs text-danger font-medium">
               {error}
             </div>
           )}
 
           {/* Release Date */}
           <div>
-            <label className="block text-xs font-semibold text-jira-gray-700 mb-1 flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-jira-gray-500" />
+            <label className="block text-xs font-semibold text-ink-2 mb-1 flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5 text-muted" />
               Release Date
             </label>
             <input
               type="date"
               value={releaseDate}
               onChange={(e) => setReleaseDate(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue"
+              className="w-full text-xs px-3 py-2 bg-white border border-subtle rounded focus:border-accent"
               required
             />
           </div>
 
           {/* Unresolved Issues Notice */}
           {unresolvedCount > 0 ? (
-            <div className="p-3 bg-jira-yellow/15 border border-jira-yellow/40 rounded-md space-y-3">
+            <div className="p-3 bg-warning/15 border border-warning/40 rounded-md space-y-3">
               <div className="flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <div className="text-xs text-jira-navy font-medium">
+                <div className="text-xs text-ink font-medium">
                   There {unresolvedCount === 1 ? "is" : "are"}{" "}
                   <strong>{unresolvedCount} unresolved</strong> issue
                   {unresolvedCount === 1 ? "" : "s"} in this version.
                 </div>
               </div>
 
-              <div className="text-xs space-y-2 pt-1 border-t border-jira-yellow/30">
+              <div className="text-xs space-y-2 pt-1 border-t border-warning/30">
                 {availableTargetVersions.length > 0 && (
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -142,7 +142,7 @@ export default function ReleaseVersionModal({
                       name="moveAction"
                       checked={moveAction === "move"}
                       onChange={() => setMoveAction("move")}
-                      className="text-jira-blue focus:ring-jira-blue"
+                      className="text-accent focus:ring-accent"
                     />
                     <span>Move unresolved issues to:</span>
                     <select
@@ -151,7 +151,7 @@ export default function ReleaseVersionModal({
                         setTargetVersionId(e.target.value);
                         setMoveAction("move");
                       }}
-                      className="ml-auto bg-white border border-jira-gray-300 rounded px-2 py-1 text-xs"
+                      className="ml-auto bg-white border border-subtle rounded px-2 py-1 text-xs"
                     >
                       {availableTargetVersions.map((v) => (
                         <option key={v.id} value={v.id}>
@@ -168,7 +168,7 @@ export default function ReleaseVersionModal({
                     name="moveAction"
                     checked={moveAction === "ignore"}
                     onChange={() => setMoveAction("ignore")}
-                    className="text-jira-blue focus:ring-jira-blue"
+                    className="text-accent focus:ring-accent"
                   />
                   <span>Keep unresolved issues in {version.name}</span>
                 </label>
@@ -179,31 +179,31 @@ export default function ReleaseVersionModal({
                     name="moveAction"
                     checked={moveAction === "clear"}
                     onChange={() => setMoveAction("clear")}
-                    className="text-jira-blue focus:ring-jira-blue"
+                    className="text-accent focus:ring-accent"
                   />
                   <span>Unassign version from unresolved issues</span>
                 </label>
               </div>
             </div>
           ) : (
-            <div className="p-3 bg-jira-green/10 border border-jira-green/30 rounded-md text-xs text-jira-green font-semibold flex items-center gap-2">
+            <div className="p-3 bg-success/10 border border-success/30 rounded-md text-xs text-success font-semibold flex items-center gap-2">
               <span>All issues in this version are completed!</span>
             </div>
           )}
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-jira-gray-200">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-subtle">
             <button
               type="button"
               onClick={onClose}
-              className="text-xs font-medium px-4 py-2 rounded text-jira-gray-700 hover:bg-jira-gray-100 transition-colors"
+              className="text-xs font-medium px-4 py-2 rounded text-ink-2 hover:bg-surface-sunk transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="text-xs font-semibold px-4 py-2 rounded bg-jira-green text-white hover:bg-jira-green/90 disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-xs"
+              className="text-xs font-semibold px-4 py-2 rounded bg-success text-accent-fg hover:bg-success/90 disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-xs"
             >
               {isSubmitting ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />

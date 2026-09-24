@@ -186,16 +186,16 @@ export default function EditSprintModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl border border-jira-gray-300 p-6 space-y-4">
+      <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl border border-subtle p-6 space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-jira-gray-200">
+        <div className="flex items-center justify-between pb-3 border-b border-subtle">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-jira-blue-light/50 text-jira-blue">
+            <div className="p-1.5 rounded-lg bg-accent-soft/50 text-accent">
               <Pencil className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-jira-navy">Edit Sprint</h2>
-              <p className="text-xs text-jira-gray-500">
+              <h2 className="text-base font-bold text-ink">Edit Sprint</h2>
+              <p className="text-xs text-muted">
                 Update sprint timeline, dates, and goal / target
               </p>
             </div>
@@ -203,14 +203,14 @@ export default function EditSprintModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1 text-jira-gray-400 hover:text-jira-navy rounded hover:bg-jira-gray-100 transition-colors"
+            className="p-1 text-muted hover:text-ink rounded hover:bg-surface-sunk transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {serverError && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-md text-xs text-jira-red font-medium flex items-center gap-2">
+          <div className="p-3 bg-red-50 border border-red-200 rounded-md text-xs text-danger font-medium flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{serverError}</span>
           </div>
@@ -219,8 +219,8 @@ export default function EditSprintModal({
         <form onSubmit={handleSubmit} className="space-y-4 text-sm">
           {/* Sprint Name */}
           <div>
-            <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5">
-              Sprint Name <span className="text-jira-red">*</span>
+            <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
+              Sprint Name <span className="text-danger">*</span>
             </label>
             <input
               type="text"
@@ -228,18 +228,18 @@ export default function EditSprintModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Sprint 1"
-              className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy focus:border-jira-blue font-medium"
+              className="w-full border border-subtle rounded px-3 py-2 text-sm text-ink focus:border-accent font-medium"
             />
           </div>
 
           {/* Duration Selector */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider">
                 Duration
               </label>
               {durationMode === "custom" && (
-                <span className="text-xs font-bold text-jira-blue">
+                <span className="text-xs font-bold text-accent">
                   Custom: {customDays} {customDays === 1 ? "day" : "days"}
                 </span>
               )}
@@ -247,7 +247,7 @@ export default function EditSprintModal({
             <select
               value={durationMode}
               onChange={(e) => handleDurationChange(e.target.value)}
-              className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy focus:border-jira-blue bg-white"
+              className="w-full border border-subtle rounded px-3 py-2 text-sm text-ink focus:border-accent bg-white"
             >
               <option value="7">1 week (7 days)</option>
               <option value="14">2 weeks (14 days - Recommended)</option>
@@ -259,13 +259,13 @@ export default function EditSprintModal({
 
           {/* Custom Duration Stepper & Quick Presets */}
           {durationMode === "custom" && (
-            <div className="p-3 bg-jira-blue-light/40 border border-jira-blue/20 rounded-lg space-y-2.5 animate-in fade-in">
+            <div className="p-3 bg-accent-soft/40 border border-accent/20 rounded-lg space-y-2.5 animate-in fade-in">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-jira-navy flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-jira-blue" />
+                <span className="font-semibold text-ink flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-accent" />
                   Set Custom Number of Days
                 </span>
-                <span className="text-jira-gray-600">Calculates end date automatically</span>
+                <span className="text-ink-2">Calculates end date automatically</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="relative flex items-center">
@@ -275,9 +275,9 @@ export default function EditSprintModal({
                     max={180}
                     value={customDays}
                     onChange={(e) => handleCustomDaysChange(parseInt(e.target.value, 10) || 1)}
-                    className="w-24 border border-jira-gray-300 rounded px-3 py-1.5 text-sm font-semibold text-jira-navy focus:border-jira-blue"
+                    className="w-24 border border-subtle rounded px-3 py-1.5 text-sm font-semibold text-ink focus:border-accent"
                   />
-                  <span className="ml-2 text-xs font-medium text-jira-gray-600">
+                  <span className="ml-2 text-xs font-medium text-ink-2">
                     {customDays === 1 ? "day" : "days"}
                   </span>
                 </div>
@@ -291,8 +291,8 @@ export default function EditSprintModal({
                       onClick={() => handleCustomDaysChange(d)}
                       className={`px-2 py-1 text-xs rounded border transition-colors ${
                         customDays === d
-                          ? "bg-jira-blue text-white border-jira-blue font-semibold shadow-xs"
-                          : "bg-white text-jira-gray-700 border-jira-gray-300 hover:bg-jira-gray-100"
+                          ? "bg-accent text-accent-fg border-accent font-semibold shadow-xs"
+                          : "bg-white text-ink-2 border-subtle hover:bg-surface-sunk"
                       }`}
                     >
                       {d}d
@@ -306,36 +306,36 @@ export default function EditSprintModal({
           {/* Start Date & End Date Grid */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-jira-gray-500" />
-                Start Date {sprint.status === "ACTIVE" && <span className="text-jira-red">*</span>}
+              <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-muted" />
+                Start Date {sprint.status === "ACTIVE" && <span className="text-danger">*</span>}
               </label>
               <input
                 type="date"
                 value={startDateStr}
                 onChange={(e) => handleStartDateChange(e.target.value)}
-                className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy focus:border-jira-blue"
+                className="w-full border border-subtle rounded px-3 py-2 text-sm text-ink focus:border-accent"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-jira-gray-500" />
-                End Date {sprint.status === "ACTIVE" && <span className="text-jira-red">*</span>}
+              <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-muted" />
+                End Date {sprint.status === "ACTIVE" && <span className="text-danger">*</span>}
               </label>
               <input
                 type="date"
                 value={endDateStr}
                 min={startDateStr}
                 onChange={(e) => handleEndDateChange(e.target.value)}
-                className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy focus:border-jira-blue"
+                className="w-full border border-subtle rounded px-3 py-2 text-sm text-ink focus:border-accent"
               />
             </div>
           </div>
 
           {/* Date Error */}
           {dateError && (
-            <div className="p-2.5 bg-red-50 border border-red-200 rounded text-xs text-jira-red font-medium flex items-center gap-2">
+            <div className="p-2.5 bg-red-50 border border-red-200 rounded text-xs text-danger font-medium flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{dateError}</span>
             </div>
@@ -343,12 +343,12 @@ export default function EditSprintModal({
 
           {/* Timeline Summary Preview */}
           {startDateStr && endDateStr && !dateError && (
-            <div className="px-3 py-2 bg-jira-gray-50 border border-jira-gray-200 rounded-md text-xs text-jira-gray-600 flex items-center justify-between">
+            <div className="px-3 py-2 bg-page border border-subtle rounded-md text-xs text-ink-2 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-jira-gray-500" />
+                <Clock className="w-3.5 h-3.5 text-muted" />
                 Sprint Timeline:
               </span>
-              <span className="font-semibold text-jira-navy">
+              <span className="font-semibold text-ink">
                 {customDays} {customDays === 1 ? "day" : "days"} (
                 {format(new Date(startDateStr + "T00:00:00"), "MMM d, yyyy")} –{" "}
                 {format(new Date(endDateStr + "T00:00:00"), "MMM d, yyyy")})
@@ -358,8 +358,8 @@ export default function EditSprintModal({
 
           {/* Sprint Goal / Target */}
           <div>
-            <label className="block text-xs font-bold text-jira-gray-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-              <Target className="w-3.5 h-3.5 text-jira-blue" />
+            <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+              <Target className="w-3.5 h-3.5 text-accent" />
               Sprint Goal / Target
             </label>
             <textarea
@@ -367,27 +367,27 @@ export default function EditSprintModal({
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
               placeholder="What does the team aim to achieve in this sprint?"
-              className="w-full border border-jira-gray-300 rounded p-2.5 text-sm text-jira-navy focus:border-jira-blue placeholder:text-jira-gray-400"
+              className="w-full border border-subtle rounded p-2.5 text-sm text-ink focus:border-accent placeholder:text-muted"
             />
-            <p className="text-[11px] text-jira-gray-500 mt-1">
+            <p className="text-[11px] text-muted mt-1">
               The sprint target is displayed on the board and backlog to align team deliverables.
             </p>
           </div>
 
           {/* Footer Buttons */}
-          <div className="flex justify-end gap-3 pt-3 border-t border-jira-gray-200">
+          <div className="flex justify-end gap-3 pt-3 border-t border-subtle">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 border border-jira-gray-300 rounded text-sm text-jira-gray-700 hover:bg-jira-gray-100 font-medium transition-colors"
+              className="px-4 py-2 border border-subtle rounded text-sm text-ink-2 hover:bg-surface-sunk font-medium transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting || !!dateError}
-              className="px-4 py-2 bg-jira-blue hover:bg-jira-blue-hover text-white rounded text-sm font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
+              className="px-4 py-2 bg-accent hover:bg-accent-hover text-accent-fg rounded text-sm font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
             >
               {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               <span>Update Sprint</span>
