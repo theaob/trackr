@@ -320,7 +320,7 @@ export default function IssueDetailModal({
 
       try {
         window.dispatchEvent(
-          new CustomEvent("jira:open-issue", { detail: { issueKey: targetIssue.key } })
+          new CustomEvent("trackr:open-issue", { detail: { issueKey: targetIssue.key } })
         );
       } catch {}
     },
@@ -997,7 +997,7 @@ export default function IssueDetailModal({
                       }
                     }}
                     autoFocus
-                    className="w-full text-xl font-bold text-jira-navy px-2 py-1 border-2 border-jira-blue rounded outline-none"
+                    className="w-full text-xl font-bold text-jira-navy px-2 py-1 border-2 border-jira-blue rounded"
                   />
                   <div className="text-xs text-jira-gray-500">Press Enter to save, Esc to cancel</div>
                 </div>
@@ -1023,7 +1023,7 @@ export default function IssueDetailModal({
                   value={currentIssue.status}
                   disabled={!permissions.canEditIssue}
                   onChange={(e) => handleStatusChange(e.target.value as IssueStatus)}
-                  className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-xs font-semibold text-jira-navy outline-none focus:border-jira-blue"
+                  className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-xs font-semibold text-jira-navy focus:border-jira-blue"
                 >
                   {allowedNextStatusNames(currentIssue.status, workflowStatuses, workflowTransitions).map(
                     (name) => (
@@ -1042,7 +1042,7 @@ export default function IssueDetailModal({
                   value={currentIssue.assigneeId || ""}
                   disabled={!permissions.canEditIssue}
                   onChange={(e) => handleAssigneeChange(e.target.value || null)}
-                  className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-xs text-jira-navy outline-none focus:border-jira-blue max-w-[130px] truncate"
+                  className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-xs text-jira-navy focus:border-jira-blue max-w-[130px] truncate"
                 >
                   <option value="">Unassigned</option>
                   {users.map((u) => (
@@ -1060,7 +1060,7 @@ export default function IssueDetailModal({
                   value={currentIssue.priority}
                   disabled={!permissions.canEditIssue}
                   onChange={(e) => handlePriorityChange(e.target.value as PriorityLevel)}
-                  className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-xs text-jira-navy outline-none focus:border-jira-blue"
+                  className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-xs text-jira-navy focus:border-jira-blue"
                 >
                   <option value="HIGHEST">Highest</option>
                   <option value="HIGH">High</option>
@@ -1193,7 +1193,7 @@ export default function IssueDetailModal({
                           placeholder="Add a comment... (Type @ to mention, paste images directly)"
                           onSubmit={handleAddComment}
                           onImagePaste={handleImagePaste}
-                          className="w-full px-3 py-2 text-sm border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+                          className="w-full px-3 py-2 text-sm border border-jira-gray-300 rounded focus:border-jira-blue"
                         />
                         <p className="mt-1 text-[11px] text-jira-gray-400">Markdown supported</p>
                         {newComment.trim().length > 0 && (
@@ -1315,7 +1315,7 @@ export default function IssueDetailModal({
                   value={currentIssue.type}
                   disabled={!permissions.canEditIssue}
                   onChange={(e) => handleTypeChange(e.target.value as IssueType)}
-                  className="w-full bg-white border border-jira-gray-300 rounded pl-8 pr-3 py-1.5 text-xs font-semibold text-jira-navy focus:border-jira-blue outline-none shadow-xs disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full bg-white border border-jira-gray-300 rounded pl-8 pr-3 py-1.5 text-xs font-semibold text-jira-navy focus:border-jira-blue shadow-xs disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <option value="STORY">Story</option>
                   <option value="TASK">Task</option>
@@ -1338,7 +1338,7 @@ export default function IssueDetailModal({
                 value={currentIssue.status}
                 disabled={!permissions.canEditIssue}
                 onChange={(e) => handleStatusChange(e.target.value as IssueStatus)}
-                className="w-full bg-white border border-jira-gray-300 rounded px-3 py-1.5 text-xs font-semibold text-jira-navy focus:border-jira-blue outline-none shadow-xs disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full bg-white border border-jira-gray-300 rounded px-3 py-1.5 text-xs font-semibold text-jira-navy focus:border-jira-blue shadow-xs disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {allowedNextStatusNames(currentIssue.status, workflowStatuses, workflowTransitions).map(
                   (name) => (
@@ -1369,7 +1369,7 @@ export default function IssueDetailModal({
                 value={currentIssue.assigneeId || ""}
                 disabled={!permissions.canEditIssue}
                 onChange={(e) => handleAssigneeChange(e.target.value || null)}
-                className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <option value="">Unassigned</option>
                 {users.map((u) => (
@@ -1405,7 +1405,7 @@ export default function IssueDetailModal({
                   value={currentIssue.priority}
                   disabled={!permissions.canEditIssue}
                   onChange={(e) => handlePriorityChange(e.target.value as PriorityLevel)}
-                  className="w-full bg-white border border-jira-gray-300 rounded pl-7 pr-3 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full bg-white border border-jira-gray-300 rounded pl-7 pr-3 py-1.5 text-xs text-jira-navy focus:border-jira-blue disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <option value="HIGHEST">Highest</option>
                   <option value="HIGH">High</option>
@@ -1432,7 +1432,7 @@ export default function IssueDetailModal({
                 disabled={!permissions.canEditIssue}
                 value={currentIssue.storyPoints ?? ""}
                 onChange={(e) => handleStoryPointsChange(e.target.value)}
-                className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -1462,7 +1462,7 @@ export default function IssueDetailModal({
                   disabled={!permissions.canEditIssue}
                   value={calendarDateKey(currentIssue.startDate)}
                   onChange={(e) => handleStartDateChange(e.target.value)}
-                  className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
             )}
@@ -1477,7 +1477,7 @@ export default function IssueDetailModal({
                 disabled={!permissions.canEditIssue}
                 value={calendarDateKey(currentIssue.dueDate)}
                 onChange={(e) => handleDueDateChange(e.target.value)}
-                className={`w-full bg-white border rounded px-2.5 py-1.5 text-xs focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed ${
+                className={`w-full bg-white border rounded px-2.5 py-1.5 text-xs focus:border-jira-blue disabled:opacity-60 disabled:cursor-not-allowed ${
                   isOverdue(
                     currentIssue.dueDate,
                     currentIssue.status,
@@ -1510,7 +1510,7 @@ export default function IssueDetailModal({
                 value={currentIssue.parentId || ""}
                 disabled={!permissions.canEditIssue}
                 onChange={(e) => handleParentChange(e.target.value || null)}
-                className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <option value="">None (No Epic)</option>
                 {epics.map((epic) => (
@@ -1531,7 +1531,7 @@ export default function IssueDetailModal({
                   value={currentIssue.sprintId || ""}
                   disabled={!permissions.canEditIssue}
                   onChange={(e) => handleSprintChange(e.target.value || null)}
-                  className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <option value="">Backlog (No Sprint)</option>
                   {sprints
@@ -1564,7 +1564,7 @@ export default function IssueDetailModal({
                 value={currentIssue.versionId || ""}
                 disabled={!permissions.canEditIssue}
                 onChange={(e) => handleVersionChange(e.target.value || null)}
-                className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <option value="">None (Unassigned)</option>
                 {currentIssue.version &&

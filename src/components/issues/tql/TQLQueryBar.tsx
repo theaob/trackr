@@ -157,7 +157,7 @@ export default function TQLQueryBar({
             onFocus={() => setShowSuggestions(true)}
             onKeyDown={handleKeyDown}
             placeholder='e.g. project = "APOLLO" AND status = "In Progress" AND assignee = currentUser() ORDER BY priority DESC'
-            className={`w-full pl-9 pr-24 py-1.5 text-xs font-mono bg-white border rounded shadow-2xs outline-none transition-all ${
+            className={`w-full pl-9 pr-24 py-1.5 text-xs font-mono bg-white border rounded shadow-2xs transition-all ${
               !query.trim()
                 ? "border-jira-gray-300 focus:border-jira-blue"
                 : parseResult.success
@@ -176,7 +176,7 @@ export default function TQLQueryBar({
                     className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 cursor-default"
                   >
                     <Check className="w-3 h-3 text-emerald-600" />
-                    <span className="hidden sm:inline">Valid JQL</span>
+                    <span className="hidden sm:inline">Valid TQL</span>
                   </span>
                 ) : (
                   <span
@@ -207,7 +207,7 @@ export default function TQLQueryBar({
               type="button"
               onClick={() => setShowHelpModal(true)}
               className="p-1 text-jira-gray-400 hover:text-jira-blue rounded transition-colors"
-              title="JQL Syntax Guide (?)"
+              title="TQL syntax guide (?)"
             >
               <HelpCircle className="w-3.5 h-3.5" />
             </button>
@@ -299,14 +299,14 @@ export default function TQLQueryBar({
         </div>
       )}
 
-      {/* JQL Syntax Help Modal */}
+      {/* TQL syntax help */}
       {showHelpModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-start sm:items-center justify-center overflow-y-auto p-0 sm:p-4">
           <div className="bg-white border border-jira-gray-300 sm:rounded-lg shadow-2xl max-w-2xl w-full min-h-full sm:min-h-0 sm:max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between gap-2 px-4 py-3 sm:px-6 border-b border-jira-gray-200 shrink-0">
               <div className="flex items-center gap-2 min-w-0">
                 <Code2 className="w-5 h-5 text-jira-blue shrink-0" />
-                <h3 className="font-bold text-sm sm:text-base text-jira-navy truncate">Trackr JQL Query Syntax Guide</h3>
+                <h3 className="font-bold text-sm sm:text-base text-jira-navy truncate">Trackr Query Language (TQL) guide</h3>
               </div>
               <button
                 type="button"

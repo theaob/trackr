@@ -152,7 +152,7 @@ export default function CustomFieldRenderer({
         <select
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
-          className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none"
+          className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue"
         >
           <option value="">None (Select an option)</option>
           {options.map((opt, idx) => (
@@ -212,7 +212,7 @@ export default function CustomFieldRenderer({
           type="date"
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
-          className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none"
+          className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue"
         />
       );
 
@@ -224,7 +224,7 @@ export default function CustomFieldRenderer({
           placeholder="0"
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
-          className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none font-mono"
+          className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue font-mono"
         />
       );
 
@@ -235,7 +235,7 @@ export default function CustomFieldRenderer({
           placeholder="https://..."
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
-          className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none"
+          className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue"
         />
       );
 
@@ -247,7 +247,7 @@ export default function CustomFieldRenderer({
           placeholder={`Enter ${field.name.toLowerCase()}...`}
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
-          className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none"
+          className="w-full bg-white border border-jira-gray-300 rounded px-2.5 py-1.5 text-xs text-jira-navy focus:border-jira-blue"
         />
       );
   }

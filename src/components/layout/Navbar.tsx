@@ -185,7 +185,7 @@ export default function Navbar({
             placeholder="Search issues, keys..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 py-1.5 text-sm text-jira-navy outline-none bg-transparent"
+            className="flex-1 py-1.5 text-sm text-jira-navy bg-transparent"
           />
           {searchQuery && (
             <button
@@ -344,7 +344,7 @@ export default function Navbar({
               placeholder="Filter issues..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-8 py-1.5 text-sm bg-jira-gray-100 hover:bg-jira-gray-200 focus:bg-white border border-transparent focus:border-jira-blue rounded transition-all outline-none text-jira-navy"
+              className="w-full pl-9 pr-8 py-1.5 text-sm bg-jira-gray-100 hover:bg-jira-gray-200 focus:bg-white border border-transparent focus:border-jira-blue rounded transition-all text-jira-navy"
             />
             {!searchQuery && (
               <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono font-semibold text-jira-gray-400 bg-jira-gray-200/60 border border-jira-gray-300 rounded px-1.5 py-0.5 pointer-events-none">

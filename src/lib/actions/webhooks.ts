@@ -114,7 +114,7 @@ export async function createWebhook(data: {
     if (jqlFilter && jqlFilter.trim()) {
       const parsed = TQLParser.parse(jqlFilter.trim());
       if (!parsed.success) {
-        return { success: false, error: `Invalid JQL filter: ${parsed.error.message}` };
+        return { success: false, error: `Invalid TQL filter: ${parsed.error.message}` };
       }
     }
 
@@ -169,7 +169,7 @@ export async function updateWebhook(
       if (data.jqlFilter && data.jqlFilter.trim()) {
         const parsed = TQLParser.parse(data.jqlFilter.trim());
         if (!parsed.success) {
-          return { success: false, error: `Invalid JQL filter: ${parsed.error.message}` };
+          return { success: false, error: `Invalid TQL filter: ${parsed.error.message}` };
         }
         updateData.jqlFilter = data.jqlFilter.trim();
       } else {
@@ -257,6 +257,8 @@ async function deliverWebhook(
     "User-Agent": "Trackr-Webhook-Engine/1.0",
     "X-Trackr-Event": event,
     "X-Trackr-Delivery": deliveryId,
+    // Deprecated in 0.32.0: the old names, kept so existing receivers can
+    // move to X-Trackr-*. Remove in 0.33.0.
     "X-Jira-Event": event,
     "X-Jira-Delivery": deliveryId,
   };
@@ -328,7 +330,7 @@ async function deliverWebhook(
 }
 
 /**
- * Helper to test if an issue event matches a webhook's JQL filter.
+ * Helper to test if an issue event matches a webhook's TQL filter.
  */
 async function matchesJqlFilter(
   jqlFilter: string | null | undefined,
@@ -338,7 +340,7 @@ async function matchesJqlFilter(
 ): Promise<boolean> {
   if (!jqlFilter || !jqlFilter.trim()) return true;
 
-  // JQL filters in Jira specifically filter issue-related entities
+  // TQL filters only apply to issue-related events
   const isIssueRelated =
     event.startsWith("issue:") ||
     event.startsWith("comment:") ||
@@ -361,7 +363,7 @@ async function matchesJqlFilter(
   try {
     const parsed = TQLParser.parse(jqlFilter.trim());
     if (!parsed.success) {
-      console.warn("Invalid JQL filter in webhook:", parsed.error.message);
+      console.warn("Invalid TQL filter in webhook:", parsed.error.message);
       return false;
     }
     const compiler = new TQLCompiler({
@@ -378,7 +380,7 @@ async function matchesJqlFilter(
 
     return !!match;
   } catch (err) {
-    console.warn("Failed to evaluate JQL filter on webhook:", err);
+    console.warn("Failed to evaluate TQL filter on webhook:", err);
     return false;
   }
 }
@@ -448,7 +450,7 @@ export async function triggerWebhooks(
       }
     });
 
-    // Check JQL filters for subscribed webhooks
+    // Check TQL filters for subscribed webhooks
     const filterResults = await Promise.all(
       subscribedWebhooks.map(async (wh) => ({
         wh,
@@ -470,7 +472,7 @@ export async function triggerWebhooks(
 }
 
 /**
- * Validate JQL query string for webhook filters
+ * Validate the TQL query string for webhook filters
  */
 export async function validateWebhookJql(query: string): Promise<{ valid: boolean; error?: string }> {
   if (!query || !query.trim()) return { valid: true };

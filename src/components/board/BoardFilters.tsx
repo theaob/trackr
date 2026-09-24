@@ -68,7 +68,7 @@ export default function BoardFilters({
                 key={user.id}
                 onClick={() => onToggleAssignee(user.id)}
                 title={`${user.name} (${user.role})`}
-                className={`relative rounded-full transition-transform hover:scale-110 hover:z-10 focus:outline-none ${
+                className={`relative rounded-full transition-transform hover:scale-110 hover:z-10 ${
                   isSelected
                     ? "ring-2 ring-jira-blue ring-offset-1 z-10 scale-105"
                     : "opacity-80 hover:opacity-100"
@@ -89,7 +89,7 @@ export default function BoardFilters({
           <select
             value={selectedType}
             onChange={(e) => onSelectType(e.target.value as IssueType | "ALL")}
-            className="text-xs bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-jira-navy font-medium outline-none focus:border-jira-blue"
+            className="text-xs bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-jira-navy font-medium focus:border-jira-blue"
           >
             <option value="ALL">All Types</option>
             <option value="STORY">Story</option>
@@ -109,7 +109,7 @@ export default function BoardFilters({
           <select
             value={selectedPriority}
             onChange={(e) => onSelectPriority(e.target.value as PriorityLevel | "ALL")}
-            className={`text-xs bg-white border border-jira-gray-300 rounded pr-2.5 py-1 text-jira-navy font-medium outline-none focus:border-jira-blue ${
+            className={`text-xs bg-white border border-jira-gray-300 rounded pr-2.5 py-1 text-jira-navy font-medium focus:border-jira-blue ${
               selectedPriority !== "ALL" ? "pl-7" : "px-2.5"
             }`}
           >
@@ -143,7 +143,7 @@ export default function BoardFilters({
         <select
           value={groupBy}
           onChange={(e) => onSelectGroupBy(e.target.value as SwimlaneGroupBy)}
-          className="text-xs bg-jira-gray-100 hover:bg-jira-gray-200 border border-jira-gray-300 rounded-md px-2.5 py-1 font-semibold text-jira-navy outline-none focus:border-jira-blue cursor-pointer transition-colors"
+          className="text-xs bg-jira-gray-100 hover:bg-jira-gray-200 border border-jira-gray-300 rounded-md px-2.5 py-1 font-semibold text-jira-navy focus:border-jira-blue cursor-pointer transition-colors"
         >
           <option value="NONE">None (Default Board)</option>
           <option value="ASSIGNEE">Assignee</option>

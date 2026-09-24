@@ -240,7 +240,7 @@ export default function CreateWebhookModal({
     }
     const res = await validateWebhookJql(jqlFilter.trim());
     if (!res.valid) {
-      setJqlError(res.error || "Invalid JQL syntax");
+      setJqlError(res.error || "Invalid TQL syntax");
       return false;
     }
     setJqlError(null);
@@ -267,7 +267,7 @@ export default function CreateWebhookModal({
     if (jqlFilter.trim()) {
       const isValidJql = await handleValidateJql();
       if (!isValidJql) {
-        setError("Please resolve the JQL filter syntax error");
+        setError("Please fix the TQL filter first");
         return;
       }
     }
@@ -348,7 +348,7 @@ export default function CreateWebhookModal({
               placeholder="e.g. Slack Engineering Alerts, Zapier Issue Sync, CI Pipeline"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue"
               autoFocus
               required
             />
@@ -364,7 +364,7 @@ export default function CreateWebhookModal({
               placeholder="https://api.yourcompany.com/webhooks or http://localhost:3000/api/mock-webhook-receiver"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue outline-none font-mono text-[11px]"
+              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue font-mono text-[11px]"
               required
             />
             <p className="text-[11px] text-jira-gray-500 mt-1">
@@ -386,19 +386,19 @@ export default function CreateWebhookModal({
               placeholder="e.g. whsec_9a8b7c6d5e4f3a2b1c0d"
               value={secret}
               onChange={(e) => setSecret(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue outline-none font-mono text-[11px]"
+              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue font-mono text-[11px]"
             />
             <p className="text-[11px] text-jira-gray-500 mt-1">
               If provided, payloads will be signed using HMAC SHA-256 and sent in the <code className="text-jira-navy font-semibold">X-Hub-Signature-256</code> header.
             </p>
           </div>
 
-          {/* JQL Issue Filter (Optional) */}
+          {/* TQL issue filter (optional) */}
           <div>
             <label className="block text-xs font-semibold text-jira-gray-700 mb-1 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
                 <Filter className="w-3.5 h-3.5 text-jira-blue" />
-                JQL Issue Filter (Optional)
+                TQL issue filter (optional)
               </span>
               <span className="text-[10px] text-jira-gray-400 font-normal">Optional</span>
             </label>
@@ -411,7 +411,7 @@ export default function CreateWebhookModal({
                 if (jqlError) setJqlError(null);
               }}
               onBlur={handleValidateJql}
-              className={`w-full text-xs px-3 py-2 bg-white border rounded outline-none font-mono text-[11px] ${
+              className={`w-full text-xs px-3 py-2 bg-white border rounded font-mono text-[11px] ${
                 jqlError ? "border-jira-red focus:border-jira-red" : "border-jira-gray-300 focus:border-jira-blue"
               }`}
             />
@@ -421,7 +421,7 @@ export default function CreateWebhookModal({
               </p>
             ) : (
               <p className="text-[11px] text-jira-gray-500 mt-1">
-                Only deliver issue-related events if the affected issue matches this JQL query expression.
+                Only deliver issue-related events if the affected issue matches this TQL query.
               </p>
             )}
           </div>

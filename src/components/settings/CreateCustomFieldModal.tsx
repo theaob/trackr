@@ -129,7 +129,7 @@ export default function CreateCustomFieldModal({
               placeholder="e.g. Environment, Customer Tier, Estimated Hours"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue"
               autoFocus
               required
             />
@@ -145,7 +145,7 @@ export default function CreateCustomFieldModal({
               placeholder="Help text explaining this field's purpose..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue"
             />
           </div>
 
@@ -205,7 +205,7 @@ export default function CreateCustomFieldModal({
                       handleAddOption(e);
                     }
                   }}
-                  className="flex-1 text-xs px-2.5 py-1.5 bg-white border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+                  className="flex-1 text-xs px-2.5 py-1.5 bg-white border border-jira-gray-300 rounded focus:border-jira-blue"
                 />
                 <button
                   type="button"

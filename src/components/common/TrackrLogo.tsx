@@ -1,113 +1,58 @@
-import React, { useId } from "react";
+import React from "react";
+import {
+  LOGO_COLORS,
+  LOGO_PATHS,
+  LOGO_STROKE_WIDTH,
+  LOGO_TILE_RADIUS,
+} from "@/lib/logo";
+
+type LogoSize = "sm" | "md" | "lg" | number;
 
 export interface TrackrLogoIconProps {
-  size?: "sm" | "md" | "lg" | number | string;
+  size?: LogoSize | string;
   className?: string;
-  animated?: boolean;
-  interactive?: boolean;
-  idPrefix?: string;
+  /** Names the mark for screen readers. Leave unset when a visible name sits beside it. */
+  title?: string;
 }
 
 export interface TrackrLogoProps {
-  size?: "sm" | "md" | "lg" | number;
+  size?: LogoSize;
   showText?: boolean;
   className?: string;
   textClassName?: string;
-  animated?: boolean;
   interactive?: boolean;
 }
 
-export function TrackrLogoIcon({
-  size = 32,
-  className = "",
-  interactive = true,
-  idPrefix,
-}: TrackrLogoIconProps) {
-  const reactId = useId();
-  const id = idPrefix || `trackr-${reactId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
-  const pixelSize =
-    typeof size === "number"
-      ? size
-      : size === "sm"
-      ? 24
-      : size === "lg"
-      ? 40
-      : size === "md"
-      ? 32
-      : parseInt(size, 10) || 32;
+const PRESET_SIZES = { sm: 24, md: 32, lg: 40 } as const;
+
+function pixelSize(size: LogoSize | string): number {
+  if (typeof size === "number") return size;
+  if (size in PRESET_SIZES) return PRESET_SIZES[size as keyof typeof PRESET_SIZES];
+  return parseInt(size, 10) || 32;
+}
+
+/** The Check T: three rounded strokes on a signal-blue tile. See src/lib/logo.ts. */
+export function TrackrLogoIcon({ size = 32, className = "", title }: TrackrLogoIconProps) {
+  const px = pixelSize(size);
+  const stroke = {
+    fill: "none",
+    strokeWidth: LOGO_STROKE_WIDTH,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+  } as const;
 
   return (
     <svg
-      width={pixelSize}
-      height={pixelSize}
+      width={px}
+      height={px}
       viewBox="0 0 32 32"
-      fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={`shrink-0 ${className}`}
+      {...(title ? { role: "img", "aria-label": title } : { "aria-hidden": true })}
     >
-      <defs>
-        {/* Main Brand Gradient */}
-        <linearGradient
-          id={`${id}-bg`}
-          x1="0"
-          y1="0"
-          x2="32"
-          y2="32"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#0052CC" />
-          <stop offset="60%" stopColor="#2563EB" />
-          <stop offset="100%" stopColor="#4F46E5" />
-        </linearGradient>
-
-        {/* Accent Glow for tracking velocity */}
-        <linearGradient
-          id={`${id}-accent`}
-          x1="8"
-          y1="8"
-          x2="26"
-          y2="26"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#38BDF8" />
-          <stop offset="100%" stopColor="#818CF8" />
-        </linearGradient>
-
-        {/* Inner shadow/bevel for depth */}
-        <linearGradient
-          id={`${id}-bevel`}
-          x1="0"
-          y1="0"
-          x2="0"
-          y2="32"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="white" stopOpacity="0.25" />
-          <stop offset="100%" stopColor="white" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-
-      {/* Outer rounded squircle container */}
-      <rect width="32" height="32" rx="8" fill={`url(#${id}-bg)`} />
-      <rect width="32" height="32" rx="8" fill={`url(#${id}-bevel)`} />
-
-      {/* Trackr "T" Glyph: Top Agile Track (Horizontal Bar) */}
-      <rect x="7" y="7" width="18" height="4.5" rx="2.25" fill="white" />
-
-      {/* Vertical Agile Velocity Track (Stem of T) */}
-      <rect x="13.75" y="10.5" width="4.5" height="13.5" rx="2.25" fill="white" />
-
-      {/* Velocity Tracking Chevron */}
-      <path
-        d="M20 15L23.5 18.5L20 22"
-        stroke={`url(#${id}-accent)`}
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-
-      {/* Velocity Tracking Point */}
-      <circle cx="16" cy="25.5" r="1.5" fill="#38BDF8" />
+      <rect width="32" height="32" rx={LOGO_TILE_RADIUS} fill={LOGO_COLORS.tile} />
+      <path d={`${LOGO_PATHS.crossbar} ${LOGO_PATHS.stem}`} stroke={LOGO_COLORS.ink} {...stroke} />
+      <path d={LOGO_PATHS.tick} stroke={LOGO_COLORS.tick} {...stroke} />
     </svg>
   );
 }
@@ -119,49 +64,21 @@ export function TrackrLogo({
   textClassName = "",
   interactive = true,
 }: TrackrLogoProps) {
-  const iconSizes = {
-    sm: 24,
-    md: 32,
-    lg: 40,
-  };
-
-  const pixelSize = typeof size === "number" ? size : iconSizes[size];
+  const px = pixelSize(size);
 
   return (
     <div
-      className={`flex items-center gap-2.5 select-none ${
-        interactive ? "group/logo cursor-pointer" : ""
-      } ${className}`}
+      className={`flex items-center gap-2 select-none ${interactive ? "group/logo cursor-pointer" : ""} ${className}`}
     >
-      <TrackrLogoIcon
-        size={pixelSize}
-        interactive={interactive}
-        className="shadow-sm rounded-lg"
-      />
-
+      <TrackrLogoIcon size={px} title={showText ? undefined : "Trackr"} />
       {showText && (
-        <div className={`flex flex-col leading-none ${textClassName}`}>
-          <div className="flex items-center">
-            <span
-              className={`font-extrabold text-jira-navy tracking-tight text-lg ${
-                interactive
-                  ? "transition-colors duration-200 group-hover/logo:text-jira-blue"
-                  : ""
-              }`}
-            >
-              Trackr
-            </span>
-          </div>
-          <span
-            className={`text-[10px] text-jira-gray-600 font-semibold tracking-wider uppercase ${
-              interactive
-                ? "transition-colors duration-200 group-hover/logo:text-jira-navy"
-                : ""
-            }`}
-          >
-            Project OS
-          </span>
-        </div>
+        <span
+          className={`font-semibold tracking-tight text-ink leading-none ${
+            px >= 40 ? "text-xl" : px >= 32 ? "text-lg" : "text-base"
+          } ${interactive ? "transition-colors duration-150 group-hover/logo:text-accent" : ""} ${textClassName}`}
+        >
+          Trackr
+        </span>
       )}
     </div>
   );

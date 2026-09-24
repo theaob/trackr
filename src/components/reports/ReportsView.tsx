@@ -239,7 +239,7 @@ export default function ReportsView({
             <select
               value={selectedSprintId ?? ""}
               onChange={(e) => setSelectedSprintId(e.target.value)}
-              className="bg-white border border-jira-gray-300 rounded-md px-3 py-1.5 text-xs font-semibold text-jira-navy outline-none focus:border-jira-blue"
+              className="bg-white border border-jira-gray-300 rounded-md px-3 py-1.5 text-xs font-semibold text-jira-navy focus:border-jira-blue"
             >
               {sprints.map((s) => (
                 <option key={s.id} value={s.id}>

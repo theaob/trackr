@@ -168,9 +168,9 @@ export default function BacklogView({
       });
     };
 
-    window.addEventListener("jira:issue-created", handleIssueCreatedEvent);
+    window.addEventListener("trackr:issue-created", handleIssueCreatedEvent);
     return () => {
-      window.removeEventListener("jira:issue-created", handleIssueCreatedEvent);
+      window.removeEventListener("trackr:issue-created", handleIssueCreatedEvent);
     };
   }, [project.id]);
 
@@ -215,9 +215,9 @@ export default function BacklogView({
       }
     };
 
-    window.addEventListener("jira:open-issue", handleOpenIssueEvent);
+    window.addEventListener("trackr:open-issue", handleOpenIssueEvent);
     return () => {
-      window.removeEventListener("jira:open-issue", handleOpenIssueEvent);
+      window.removeEventListener("trackr:open-issue", handleOpenIssueEvent);
     };
   }, [issues]);
 
@@ -892,7 +892,7 @@ export default function BacklogView({
       );
       if (typeof window !== "undefined") {
         window.dispatchEvent(
-          new CustomEvent("jira:issue-created", {
+          new CustomEvent("trackr:issue-created", {
             detail: { issue: createdIssue, source: "backlog-inline", tempId },
           })
         );
@@ -933,7 +933,7 @@ export default function BacklogView({
               <select
                 value={selectedEpicId}
                 onChange={(e) => setSelectedEpicId(e.target.value)}
-                className="bg-jira-gray-100 hover:bg-jira-gray-200 border border-jira-gray-300 rounded px-2.5 py-1 text-xs text-jira-navy font-semibold outline-none focus:border-jira-blue transition-colors max-w-[160px] truncate"
+                className="bg-jira-gray-100 hover:bg-jira-gray-200 border border-jira-gray-300 rounded px-2.5 py-1 text-xs text-jira-navy font-semibold focus:border-jira-blue transition-colors max-w-[160px] truncate"
               >
                 <option value="ALL">All Epics</option>
                 {epics.map((epic) => (
@@ -1011,7 +1011,7 @@ export default function BacklogView({
                           onKeyDown={(e) => {
                             if (e.key === "Escape") setRenamingSprintId(null);
                           }}
-                          className="text-sm font-bold text-jira-navy bg-white border border-jira-blue rounded px-2 py-0.5 outline-none focus:ring-2 focus:ring-jira-blue/30 w-48"
+                          className="text-sm font-bold text-jira-navy bg-white border border-jira-blue rounded px-2 py-0.5 focus:ring-2 focus:ring-jira-blue/30 w-48"
                         />
                       </form>
                     ) : (
@@ -1448,7 +1448,7 @@ export default function BacklogView({
                                   if (e.key === "Escape") setInlineCreateTarget(null);
                                 }}
                                 autoFocus
-                                className="flex-1 text-sm border border-jira-gray-300 rounded px-3 py-1.5 focus:border-jira-blue outline-none"
+                                className="flex-1 text-sm border border-jira-gray-300 rounded px-3 py-1.5 focus:border-jira-blue"
                               />
                               <button
                                 onClick={() => handleInlineCreate(sprint.id)}
@@ -1779,7 +1779,7 @@ export default function BacklogView({
                             if (e.key === "Escape") setInlineCreateTarget(null);
                           }}
                           autoFocus
-                          className="flex-1 text-sm border border-jira-gray-300 rounded px-3 py-1.5 focus:border-jira-blue outline-none"
+                          className="flex-1 text-sm border border-jira-gray-300 rounded px-3 py-1.5 focus:border-jira-blue"
                         />
                         <button
                           onClick={() => handleInlineCreate(null)}
@@ -1878,7 +1878,7 @@ export default function BacklogView({
                   value={sprintName}
                   onChange={(e) => setSprintName(e.target.value)}
                   placeholder="Sprint Name"
-                  className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy outline-none focus:border-jira-blue font-medium"
+                  className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy focus:border-jira-blue font-medium"
                 />
               </div>
 
@@ -1897,7 +1897,7 @@ export default function BacklogView({
                 <select
                   value={durationMode}
                   onChange={(e) => handleDurationChange(e.target.value)}
-                  className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy outline-none focus:border-jira-blue bg-white"
+                  className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy focus:border-jira-blue bg-white"
                 >
                   <option value="7">1 week (7 days)</option>
                   <option value="14">2 weeks (14 days - Recommended)</option>
@@ -1927,7 +1927,7 @@ export default function BacklogView({
                         max={180}
                         value={customDays}
                         onChange={(e) => handleCustomDaysChange(parseInt(e.target.value, 10) || 1)}
-                        className="w-24 border border-jira-gray-300 rounded px-3 py-1.5 text-sm font-semibold text-jira-navy outline-none focus:border-jira-blue"
+                        className="w-24 border border-jira-gray-300 rounded px-3 py-1.5 text-sm font-semibold text-jira-navy focus:border-jira-blue"
                       />
                       <span className="ml-2 text-xs font-medium text-jira-gray-600">
                         {customDays === 1 ? "day" : "days"}
@@ -1966,7 +1966,7 @@ export default function BacklogView({
                     type="date"
                     value={startDateStr}
                     onChange={(e) => handleStartDateChange(e.target.value)}
-                    className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy outline-none focus:border-jira-blue"
+                    className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy focus:border-jira-blue"
                     required
                   />
                 </div>
@@ -1981,7 +1981,7 @@ export default function BacklogView({
                     value={endDateStr}
                     min={startDateStr}
                     onChange={(e) => handleEndDateChange(e.target.value)}
-                    className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy outline-none focus:border-jira-blue"
+                    className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy focus:border-jira-blue"
                     required
                   />
                 </div>
@@ -2019,7 +2019,7 @@ export default function BacklogView({
                   value={sprintGoal}
                   onChange={(e) => setSprintGoal(e.target.value)}
                   placeholder="What does the team aim to achieve in this sprint?"
-                  className="w-full border border-jira-gray-300 rounded p-2.5 text-sm text-jira-navy outline-none focus:border-jira-blue placeholder:text-jira-gray-400"
+                  className="w-full border border-jira-gray-300 rounded p-2.5 text-sm text-jira-navy focus:border-jira-blue placeholder:text-jira-gray-400"
                 />
               </div>
 
@@ -2061,7 +2061,7 @@ export default function BacklogView({
                 <select
                   value={incompleteMoveTarget}
                   onChange={(e) => setIncompleteMoveTarget(e.target.value)}
-                  className="w-full border border-jira-gray-300 rounded px-3 py-2 text-jira-navy outline-none"
+                  className="w-full border border-jira-gray-300 rounded px-3 py-2 text-jira-navy"
                 >
                   <option value="">Backlog</option>
                   {futureSprints.map((s) => (

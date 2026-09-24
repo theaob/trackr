@@ -255,9 +255,9 @@ export default function KanbanBoard({
       });
     };
 
-    window.addEventListener("jira:issue-created", handleIssueCreatedEvent);
+    window.addEventListener("trackr:issue-created", handleIssueCreatedEvent);
     return () => {
-      window.removeEventListener("jira:issue-created", handleIssueCreatedEvent);
+      window.removeEventListener("trackr:issue-created", handleIssueCreatedEvent);
     };
   }, [project.id]);
 
@@ -302,9 +302,9 @@ export default function KanbanBoard({
       }
     };
 
-    window.addEventListener("jira:open-issue", handleOpenIssueEvent);
+    window.addEventListener("trackr:open-issue", handleOpenIssueEvent);
     return () => {
-      window.removeEventListener("jira:open-issue", handleOpenIssueEvent);
+      window.removeEventListener("trackr:open-issue", handleOpenIssueEvent);
     };
   }, [issues]);
 

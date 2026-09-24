@@ -128,7 +128,7 @@ export default function ChildIssuesSection({
     if (res.success && res.issue) {
       if (typeof window !== "undefined") {
         window.dispatchEvent(
-          new CustomEvent("jira:issue-created", { detail: { issue: res.issue } })
+          new CustomEvent("trackr:issue-created", { detail: { issue: res.issue } })
         );
       }
       onChildAdded(res.issue as unknown as Issue);
@@ -313,7 +313,7 @@ export default function ChildIssuesSection({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by issue or epic key or title..."
-              className="w-full text-xs px-2.5 py-1.5 border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+              className="w-full text-xs px-2.5 py-1.5 border border-jira-gray-300 rounded focus:border-jira-blue"
             />
             {isSearching && (
               <Loader2 className="w-3.5 h-3.5 animate-spin text-jira-gray-400 absolute right-2.5 top-2" />
@@ -382,7 +382,7 @@ export default function ChildIssuesSection({
               <select
                 value={newType}
                 onChange={(e) => setNewType(e.target.value as IssueType)}
-                className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-xs text-jira-navy outline-none focus:border-jira-blue font-medium shrink-0"
+                className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-xs text-jira-navy focus:border-jira-blue font-medium shrink-0"
               >
                 <option value="STORY">Story</option>
                 <option value="TASK">Task</option>
@@ -402,7 +402,7 @@ export default function ChildIssuesSection({
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
               placeholder="What needs to be done?"
-              className="flex-1 min-w-[140px] text-xs px-2.5 py-1 border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+              className="flex-1 min-w-[140px] text-xs px-2.5 py-1 border border-jira-gray-300 rounded focus:border-jira-blue"
             />
 
             <button

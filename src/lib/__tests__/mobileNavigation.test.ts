@@ -148,6 +148,9 @@ describe("Mobile Viewport & Navigation", () => {
     expect(viewport.width).toBe("device-width");
     expect(viewport.initialScale).toBe(1);
     expect(viewport.viewportFit).toBe("cover");
+    // Pinch zoom must stay available.
+    expect(viewport.maximumScale).toBeUndefined();
+    expect(viewport.userScalable).not.toBe(false);
   });
 
   it("renders mobile menu hamburger button in Navbar when toggle handler is provided", () => {

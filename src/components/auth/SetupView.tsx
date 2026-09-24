@@ -90,48 +90,54 @@ export default function SetupView() {
             </h3>
 
             <div>
-              <label className="block text-xs font-semibold text-jira-navy mb-1">Full name</label>
+              <label htmlFor="setup-name" className="block text-xs font-semibold text-jira-navy mb-1">Full name</label>
               <div className="relative">
-                <UserIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
+                <UserIcon aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
                 <input
                   type="text"
                   required
                   autoFocus
+                  id="setup-name"
+                  autoComplete="name"
                   placeholder="Ada Lovelace"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue outline-none text-jira-navy"
+                  className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-jira-navy mb-1">Email address</label>
+              <label htmlFor="setup-email" className="block text-xs font-semibold text-jira-navy mb-1">Email address</label>
               <div className="relative">
-                <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
+                <Mail aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
                 <input
                   type="email"
                   required
+                  id="setup-email"
+                  autoComplete="email"
                   placeholder="you@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue outline-none text-jira-navy"
+                  className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-jira-navy mb-1">Password</label>
+              <label htmlFor="setup-password" className="block text-xs font-semibold text-jira-navy mb-1">Password</label>
               <div className="relative">
-                <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
+                <Lock aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
                 <input
                   type="password"
                   required
                   minLength={8}
+                  id="setup-password"
+                  autoComplete="new-password"
                   placeholder="At least 8 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue outline-none text-jira-navy"
+                  className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy"
                 />
               </div>
             </div>
@@ -143,35 +149,38 @@ export default function SetupView() {
             </h3>
 
             <div>
-              <label className="block text-xs font-semibold text-jira-navy mb-1">Project name</label>
+              <label htmlFor="setup-project-name" className="block text-xs font-semibold text-jira-navy mb-1">Project name</label>
               <div className="relative">
-                <FolderPlus className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
+                <FolderPlus aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
                 <input
                   type="text"
                   required
+                  id="setup-project-name"
                   placeholder="e.g. Falcon AI Engine"
                   value={projectName}
                   onChange={(e) => handleProjectNameChange(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue outline-none text-jira-navy"
+                  className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-jira-navy mb-1">Project key</label>
+              <label htmlFor="setup-project-key" className="block text-xs font-semibold text-jira-navy mb-1">Project key</label>
               <input
                 type="text"
                 required
                 maxLength={10}
-                placeholder="e.g. FALCON"
+                id="setup-project-key"
+                  placeholder="e.g. FALCON"
                 value={projectKey}
                 onChange={(e) => {
                   setKeyManuallyEdited(true);
                   setProjectKey(e.target.value.toUpperCase());
                 }}
-                className="w-full px-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue outline-none font-mono uppercase text-jira-navy"
+                aria-describedby="setup-project-key-hint"
+                className="w-full px-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue font-mono uppercase text-jira-navy"
               />
-              <p className="text-[11px] text-jira-gray-500 mt-1">
+              <p id="setup-project-key-hint" className="text-[11px] text-jira-gray-500 mt-1">
                 Prefix used for issues in this project (e.g. {projectKey || "KEY"}-1).
               </p>
             </div>

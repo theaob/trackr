@@ -117,7 +117,7 @@ export default function ReleaseVersionModal({
               type="date"
               value={releaseDate}
               onChange={(e) => setReleaseDate(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue"
               required
             />
           </div>
@@ -151,7 +151,7 @@ export default function ReleaseVersionModal({
                         setTargetVersionId(e.target.value);
                         setMoveAction("move");
                       }}
-                      className="ml-auto bg-white border border-jira-gray-300 rounded px-2 py-1 text-xs outline-none"
+                      className="ml-auto bg-white border border-jira-gray-300 rounded px-2 py-1 text-xs"
                     >
                       {availableTargetVersions.map((v) => (
                         <option key={v.id} value={v.id}>

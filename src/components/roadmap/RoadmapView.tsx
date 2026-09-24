@@ -48,9 +48,9 @@ export default function RoadmapView({
       handleSelectIssue(targetKey);
     };
 
-    window.addEventListener("jira:open-issue", handleOpenIssueEvent);
+    window.addEventListener("trackr:open-issue", handleOpenIssueEvent);
     return () => {
-      window.removeEventListener("jira:open-issue", handleOpenIssueEvent);
+      window.removeEventListener("trackr:open-issue", handleOpenIssueEvent);
     };
   }, []);
 

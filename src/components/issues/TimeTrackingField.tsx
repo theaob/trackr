@@ -110,7 +110,7 @@ function EstimateInput({
             setError(null);
           }
         }}
-        className="w-full px-1.5 py-0.5 text-xs border border-jira-blue rounded outline-none text-jira-navy"
+        className="w-full px-1.5 py-0.5 text-xs border border-jira-blue rounded text-jira-navy"
       />
       {error && <p className="text-[10px] text-rose-600 mt-0.5">{error}</p>}
     </div>
@@ -306,14 +306,14 @@ export default function TimeTrackingField({
               placeholder="Time spent, e.g. 2h 30m"
               value={timeSpentText}
               onChange={(e) => setTimeSpentText(e.target.value)}
-              className="flex-1 text-xs px-2 py-1.5 border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+              className="flex-1 text-xs px-2 py-1.5 border border-jira-gray-300 rounded focus:border-jira-blue"
             />
             <input
               type="date"
               value={workDate}
               max={format(new Date(), "yyyy-MM-dd")}
               onChange={(e) => setWorkDate(e.target.value)}
-              className="text-xs px-2 py-1.5 border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+              className="text-xs px-2 py-1.5 border border-jira-gray-300 rounded focus:border-jira-blue"
             />
           </div>
           <input
@@ -321,7 +321,7 @@ export default function TimeTrackingField({
             placeholder="What did you work on? (optional)"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full text-xs px-2 py-1.5 border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+            className="w-full text-xs px-2 py-1.5 border border-jira-gray-300 rounded focus:border-jira-blue"
           />
           <div className="flex items-center gap-2">
             <button

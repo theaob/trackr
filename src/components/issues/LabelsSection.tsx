@@ -164,7 +164,7 @@ export default function LabelsSection({
                 }
               }}
               placeholder="Type a label and press Enter..."
-              className="flex-1 px-2.5 py-1.5 text-xs border border-jira-gray-300 rounded focus:border-jira-blue outline-none text-jira-navy"
+              className="flex-1 px-2.5 py-1.5 text-xs border border-jira-gray-300 rounded focus:border-jira-blue text-jira-navy"
             />
             <button
               onClick={resetAddForm}

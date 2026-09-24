@@ -51,7 +51,7 @@ import {
 import { format } from "date-fns";
 
 const PRESET_ROLE_COLORS = [
-  { name: "Jira Blue", hex: "#0052cc" },
+  { name: "Blue", hex: "#0052cc" },
   { name: "Purple", hex: "#6554c0" },
   { name: "Emerald", hex: "#00875a" },
   { name: "Amber", hex: "#ff991f" },
@@ -352,7 +352,7 @@ export default function ProjectAccessTab({
                   placeholder="Filter by name, email, or role..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-jira-gray-300 rounded focus:border-jira-blue outline-none transition-colors"
+                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-jira-gray-300 rounded focus:border-jira-blue transition-colors"
                 />
               </div>
 
@@ -484,7 +484,7 @@ export default function ProjectAccessTab({
                                         }
                                       : undefined
                                   }
-                                  className={`text-xs font-semibold px-2.5 py-1 rounded border outline-none cursor-pointer transition-colors ${
+                                  className={`text-xs font-semibold px-2.5 py-1 rounded border cursor-pointer transition-colors ${
                                     !isCustomRole
                                       ? `${badgeConfig.badgeBg} ${badgeConfig.badgeText} ${badgeConfig.border}`
                                       : ""
@@ -1005,7 +1005,7 @@ function AddMemberModal({
               <select
                 value={selectedUserId}
                 onChange={(e) => setSelectedUserId(e.target.value)}
-                className="w-full border border-jira-gray-300 rounded p-2 text-jira-navy font-medium outline-none focus:border-jira-blue"
+                className="w-full border border-jira-gray-300 rounded p-2 text-jira-navy font-medium focus:border-jira-blue"
               >
                 {availableUsers.map((u) => (
                   <option key={u.id} value={u.id}>
@@ -1323,7 +1323,7 @@ function CreateEditRoleModal({
                 placeholder="e.g. QA Specialist, Release Manager, Contractor"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 border border-jira-gray-300 rounded text-jira-navy font-semibold outline-none focus:border-jira-blue"
+                className="w-full px-3 py-2 border border-jira-gray-300 rounded text-jira-navy font-semibold focus:border-jira-blue"
               />
             </div>
 
@@ -1368,7 +1368,7 @@ function CreateEditRoleModal({
               placeholder="Explain the scope and responsibilities of this role..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-1.5 border border-jira-gray-300 rounded text-jira-navy outline-none focus:border-jira-blue"
+              className="w-full px-3 py-1.5 border border-jira-gray-300 rounded text-jira-navy focus:border-jira-blue"
             />
           </div>
 

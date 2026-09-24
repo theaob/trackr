@@ -299,7 +299,7 @@ export default function WorkflowSettingsTab({
                 defaultValue={status.name}
                 disabled={!canManage}
                 onBlur={(e) => handleRename(status, e.target.value)}
-                className="flex-1 min-w-0 px-2 py-1 text-xs font-semibold text-jira-navy border border-transparent hover:border-jira-gray-300 focus:border-jira-blue rounded outline-none disabled:opacity-60"
+                className="flex-1 min-w-0 px-2 py-1 text-xs font-semibold text-jira-navy border border-transparent hover:border-jira-gray-300 focus:border-jira-blue rounded disabled:opacity-60"
               />
 
               <select
@@ -308,7 +308,7 @@ export default function WorkflowSettingsTab({
                 onChange={(e) =>
                   handleFieldChange(status, { category: e.target.value as WorkflowStatusCategory })
                 }
-                className="text-[11px] bg-white border border-jira-gray-300 rounded px-1.5 py-1 text-jira-navy outline-none disabled:opacity-60 shrink-0"
+                className="text-[11px] bg-white border border-jira-gray-300 rounded px-1.5 py-1 text-jira-navy disabled:opacity-60 shrink-0"
               >
                 {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -339,7 +339,7 @@ export default function WorkflowSettingsTab({
                     wipLimit: e.target.value === "" ? null : parseInt(e.target.value, 10),
                   })
                 }
-                className="w-14 px-1.5 py-1 text-[11px] border border-jira-gray-300 rounded outline-none focus:border-jira-blue disabled:opacity-60 shrink-0"
+                className="w-14 px-1.5 py-1 text-[11px] border border-jira-gray-300 rounded focus:border-jira-blue disabled:opacity-60 shrink-0"
                 title="WIP limit"
               />
 
@@ -372,12 +372,12 @@ export default function WorkflowSettingsTab({
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="Status name, e.g. Code Review"
-              className="flex-1 px-2.5 py-1.5 text-xs border border-jira-gray-300 rounded outline-none focus:border-jira-blue text-jira-navy"
+              className="flex-1 px-2.5 py-1.5 text-xs border border-jira-gray-300 rounded focus:border-jira-blue text-jira-navy"
             />
             <select
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value as WorkflowStatusCategory)}
-              className="text-xs bg-white border border-jira-gray-300 rounded px-2 py-1.5 text-jira-navy outline-none"
+              className="text-xs bg-white border border-jira-gray-300 rounded px-2 py-1.5 text-jira-navy"
             >
               {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>

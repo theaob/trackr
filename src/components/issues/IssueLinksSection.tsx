@@ -95,7 +95,7 @@ export default function IssueLinksSection({
 
   const handleOpen = (issue: LinkedIssueSummary) => {
     try {
-      window.dispatchEvent(new CustomEvent("jira:open-issue", { detail: { issueKey: issue.key } }));
+      window.dispatchEvent(new CustomEvent("trackr:open-issue", { detail: { issueKey: issue.key } }));
     } catch {}
     if (issue.project?.key) {
       router.push(`/projects/${issue.project.key}/board?selectedIssue=${issue.key}`);
@@ -129,7 +129,7 @@ export default function IssueLinksSection({
             <select
               value={linkType}
               onChange={(e) => setLinkType(e.target.value as IssueLinkType)}
-              className="bg-white border border-jira-gray-300 rounded px-2 py-1.5 text-xs text-jira-navy focus:border-jira-blue outline-none shrink-0"
+              className="bg-white border border-jira-gray-300 rounded px-2 py-1.5 text-xs text-jira-navy focus:border-jira-blue shrink-0"
             >
               {ISSUE_LINK_TYPES.map((t) => (
                 <option key={t} value={t}>
@@ -145,7 +145,7 @@ export default function IssueLinksSection({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search by issue or epic key or title..."
-                className="w-full pl-8 pr-2 py-1.5 text-xs border border-jira-gray-300 rounded focus:border-jira-blue outline-none text-jira-navy"
+                className="w-full pl-8 pr-2 py-1.5 text-xs border border-jira-gray-300 rounded focus:border-jira-blue text-jira-navy"
               />
             </div>
             <button

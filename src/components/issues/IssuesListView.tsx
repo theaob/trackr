@@ -243,9 +243,9 @@ export default function IssuesListView({
       }
     };
 
-    window.addEventListener("jira:open-issue", handleOpenIssueEvent);
+    window.addEventListener("trackr:open-issue", handleOpenIssueEvent);
     return () => {
-      window.removeEventListener("jira:open-issue", handleOpenIssueEvent);
+      window.removeEventListener("trackr:open-issue", handleOpenIssueEvent);
     };
   }, [issues]);
 
@@ -399,7 +399,7 @@ export default function IssuesListView({
     const res = tqlToBasicFilters(tqlQuery);
     if (!res.convertible) {
       const confirmSwitch = window.confirm(
-        `This query contains advanced JQL features (${res.reason}). Switching to Basic mode will reset those filters. Do you want to continue?`
+        `This query contains advanced TQL features (${res.reason}). Switching to Basic mode will reset those filters. Do you want to continue?`
       );
       if (!confirmSwitch) return;
       handleClearFilters();
@@ -595,9 +595,9 @@ export default function IssuesListView({
       }
     };
 
-    window.addEventListener("jira:issue-created", handleIssueCreatedEvent);
+    window.addEventListener("trackr:issue-created", handleIssueCreatedEvent);
     return () => {
-      window.removeEventListener("jira:issue-created", handleIssueCreatedEvent);
+      window.removeEventListener("trackr:issue-created", handleIssueCreatedEvent);
     };
   }, [projectFilter, page]);
 
@@ -985,15 +985,15 @@ export default function IssuesListView({
                 ))}
               </div>
 
-              {/* JQL Mode Toggle Button */}
+              {/* TQL mode toggle */}
               <button
                 type="button"
                 onClick={handleSwitchToTQL}
                 className="text-xs font-semibold px-2.5 py-1 rounded border border-jira-gray-300 text-jira-gray-700 hover:bg-jira-gray-100 hover:text-jira-navy flex items-center gap-1.5 transition-colors shrink-0"
-                title="Switch to JQL query bar"
+                title="Switch to the TQL query bar"
               >
                 <Code2 className="w-3.5 h-3.5" />
-                <span>JQL</span>
+                <span>TQL</span>
               </button>
             </div>
 
@@ -1017,7 +1017,7 @@ export default function IssuesListView({
                     fetchIssues();
                   }
                 }}
-                className="w-full pl-8 pr-2.5 py-1 text-xs bg-white border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+                className="w-full pl-8 pr-2.5 py-1 text-xs bg-white border border-jira-gray-300 rounded focus:border-jira-blue"
               />
             </div>
             <button
@@ -1044,7 +1044,7 @@ export default function IssuesListView({
                 setProjectFilter(e.target.value);
                 setPage(1);
               }}
-              className="text-xs bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-jira-navy font-semibold outline-none focus:border-jira-blue"
+              className="text-xs bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-jira-navy font-semibold focus:border-jira-blue"
             >
               <option value="ALL">All Projects</option>
               {allProjects.map((p) => (
@@ -1062,7 +1062,7 @@ export default function IssuesListView({
               setTypeFilter(e.target.value as IssueType | "ALL");
               setPage(1);
             }}
-            className="text-xs bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-jira-navy font-medium outline-none focus:border-jira-blue"
+            className="text-xs bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-jira-navy font-medium focus:border-jira-blue"
           >
             <option value="ALL">Type: All</option>
             <option value="STORY">Story</option>
@@ -1078,7 +1078,7 @@ export default function IssuesListView({
               setStatusFilter(e.target.value as IssueStatus | "ALL");
               setPage(1);
             }}
-            className="text-xs bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-jira-navy font-medium outline-none focus:border-jira-blue"
+            className="text-xs bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-jira-navy font-medium focus:border-jira-blue"
           >
             <option value="ALL">Status: All</option>
             {statuses.map((s) => (
@@ -1101,7 +1101,7 @@ export default function IssuesListView({
                 setPriorityFilter(e.target.value as PriorityLevel | "ALL");
                 setPage(1);
               }}
-              className={`text-xs bg-white border border-jira-gray-300 rounded pr-2.5 py-1 text-jira-navy font-medium outline-none focus:border-jira-blue ${
+              className={`text-xs bg-white border border-jira-gray-300 rounded pr-2.5 py-1 text-jira-navy font-medium focus:border-jira-blue ${
                 priorityFilter !== "ALL" ? "pl-7" : "px-2.5"
               }`}
             >
@@ -1121,7 +1121,7 @@ export default function IssuesListView({
               setAssigneeFilter(e.target.value);
               setPage(1);
             }}
-            className="text-xs bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-jira-navy font-medium outline-none focus:border-jira-blue"
+            className="text-xs bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-jira-navy font-medium focus:border-jira-blue"
           >
             <option value="ALL">Assignee: All</option>
             <option value="UNASSIGNED">Unassigned</option>
@@ -1140,7 +1140,7 @@ export default function IssuesListView({
                 setSprintFilter(e.target.value);
                 setPage(1);
               }}
-              className="text-xs bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-jira-navy font-medium outline-none focus:border-jira-blue"
+              className="text-xs bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-jira-navy font-medium focus:border-jira-blue"
             >
               <option value="ALL">Sprint: All</option>
               <option value="BACKLOG">Backlog (No Sprint)</option>
@@ -1160,7 +1160,7 @@ export default function IssuesListView({
                 setVersionFilter(e.target.value);
                 setPage(1);
               }}
-              className="text-xs bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-jira-navy font-medium outline-none focus:border-jira-blue"
+              className="text-xs bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-jira-navy font-medium focus:border-jira-blue"
             >
               <option value="ALL">Version: All</option>
               <option value="UNASSIGNED">Unassigned</option>
@@ -1180,7 +1180,7 @@ export default function IssuesListView({
                 setLabelFilter(e.target.value);
                 setPage(1);
               }}
-              className="text-xs bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-jira-navy font-medium outline-none focus:border-jira-blue"
+              className="text-xs bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-jira-navy font-medium focus:border-jira-blue"
             >
               <option value="ALL">Label: All</option>
               {labels.map((l) => (
@@ -1200,7 +1200,7 @@ export default function IssuesListView({
                 setSortField(e.target.value as SortField);
                 setPage(1);
               }}
-              className="text-xs bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none"
+              className="text-xs bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy"
             >
               <option value="createdAt">Created</option>
               <option value="updatedAt">Updated</option>
@@ -1431,7 +1431,7 @@ export default function IssuesListView({
                         onChange={(e) =>
                           handleUpdateCurrentIssue({ status: e.target.value as IssueStatus })
                         }
-                        className={`bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-xs font-bold text-jira-navy focus:border-jira-blue outline-none ${
+                        className={`bg-white border border-jira-gray-300 rounded px-2.5 py-1 text-xs font-bold text-jira-navy focus:border-jira-blue ${
                           !permissions.canEditIssue ? "opacity-60 cursor-not-allowed" : ""
                         }`}
                         title={!permissions.canEditIssue ? "You do not have permission to edit issues" : undefined}
@@ -1597,7 +1597,7 @@ export default function IssuesListView({
                                     placeholder="Add a comment... (Type @ to mention, paste images directly)"
                                     onSubmit={handleAddComment}
                                     onImagePaste={handleSplitViewImagePaste}
-                                    className="w-full px-3 py-1.5 text-xs border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+                                    className="w-full px-3 py-1.5 text-xs border border-jira-gray-300 rounded focus:border-jira-blue"
                                   />
                                   <p className="mt-1 text-[11px] text-jira-gray-400">Markdown supported</p>
                                 </div>
@@ -1707,7 +1707,7 @@ export default function IssuesListView({
                           onChange={(e) =>
                             handleUpdateCurrentIssue({ assigneeId: e.target.value || null })
                           }
-                          className={`w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none ${
+                          className={`w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy ${
                             !permissions.canEditIssue ? "opacity-60 cursor-not-allowed" : ""
                           }`}
                         >
@@ -1733,7 +1733,7 @@ export default function IssuesListView({
                                 priority: e.target.value as PriorityLevel,
                               })
                             }
-                            className={`w-full bg-white border border-jira-gray-300 rounded pl-7 pr-2 py-1 text-jira-navy outline-none ${
+                            className={`w-full bg-white border border-jira-gray-300 rounded pl-7 pr-2 py-1 text-jira-navy ${
                               !permissions.canEditIssue ? "opacity-60 cursor-not-allowed" : ""
                             }`}
                           >
@@ -1764,7 +1764,7 @@ export default function IssuesListView({
                             })
                           }
                           placeholder="None"
-                          className={`w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none ${
+                          className={`w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy ${
                             !permissions.canEditIssue ? "opacity-60 cursor-not-allowed" : ""
                           }`}
                         />
@@ -1808,7 +1808,7 @@ export default function IssuesListView({
                                 status: newStatus,
                               });
                             }}
-                            className={`w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none ${
+                            className={`w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy ${
                               !permissions.canEditIssue || !permissions.canMoveIssue ? "opacity-60 cursor-not-allowed" : ""
                             }`}
                           >
@@ -1844,7 +1844,7 @@ export default function IssuesListView({
                               version: newVersion,
                             });
                           }}
-                          className={`w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none ${
+                          className={`w-full bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy ${
                             !permissions.canEditIssue ? "opacity-60 cursor-not-allowed" : ""
                           }`}
                         >
@@ -1901,7 +1901,7 @@ export default function IssuesListView({
                         if (e.target.value) handleBulkStatusChange(e.target.value);
                         e.target.value = "";
                       }}
-                      className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none disabled:opacity-60"
+                      className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy disabled:opacity-60"
                     >
                       <option value="" disabled>
                         Set status...
@@ -1920,7 +1920,7 @@ export default function IssuesListView({
                         handleBulkAssigneeChange(e.target.value);
                         e.target.value = "";
                       }}
-                      className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none disabled:opacity-60"
+                      className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy disabled:opacity-60"
                     >
                       <option value="" disabled>
                         Set assignee...
@@ -1940,7 +1940,7 @@ export default function IssuesListView({
                         if (e.target.value) handleBulkPriorityChange(e.target.value);
                         e.target.value = "";
                       }}
-                      className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none disabled:opacity-60"
+                      className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy disabled:opacity-60"
                     >
                       <option value="" disabled>
                         Set priority...
@@ -1960,7 +1960,7 @@ export default function IssuesListView({
                           if (e.target.value) handleBulkVersionChange(e.target.value);
                           e.target.value = "";
                         }}
-                        className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none disabled:opacity-60"
+                        className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy disabled:opacity-60"
                       >
                         <option value="" disabled>
                           Set fix version...
@@ -1986,7 +1986,7 @@ export default function IssuesListView({
                             if (!bulkLabelInput.trim()) setShowBulkLabelInput(false);
                           }}
                           placeholder="Label name..."
-                          className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy outline-none w-32"
+                          className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-jira-navy w-32"
                         />
                         <button
                           type="submit"
@@ -2187,7 +2187,7 @@ export default function IssuesListView({
                 setPageSize(Number(e.target.value));
                 setPage(1);
               }}
-              className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-jira-blue focus:outline-none"
+              className="bg-white border border-jira-gray-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-jira-blue"
             >
               <option value={25}>25</option>
               <option value={50}>50</option>
@@ -2254,7 +2254,7 @@ export default function IssuesListView({
                     }
                   }
                 }}
-                className="w-14 bg-white border border-jira-gray-300 rounded px-1.5 py-1 text-xs text-center focus:ring-1 focus:ring-jira-blue focus:outline-none"
+                className="w-14 bg-white border border-jira-gray-300 rounded px-1.5 py-1 text-xs text-center focus:ring-1 focus:ring-jira-blue"
               />
             </div>
           )}

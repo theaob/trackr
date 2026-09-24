@@ -356,7 +356,7 @@ export default function PersonalAccessTokensModal({
                   placeholder="e.g. GitHub Actions CI, VS Code Trackr, Data Export Script"
                   value={tokenName}
                   onChange={(e) => setTokenName(e.target.value)}
-                  className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+                  className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue"
                   autoFocus
                   required
                 />
@@ -373,7 +373,7 @@ export default function PersonalAccessTokensModal({
                 <select
                   value={expirationDays}
                   onChange={(e) => setExpirationDays(parseInt(e.target.value, 10))}
-                  className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+                  className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue"
                 >
                   {EXPIRATION_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -432,7 +432,7 @@ export default function PersonalAccessTokensModal({
                     type="text"
                     readOnly
                     value={newlyCreatedToken}
-                    className="w-full bg-transparent font-mono text-xs text-jira-navy font-semibold select-all outline-none"
+                    className="w-full bg-transparent font-mono text-xs text-jira-navy font-semibold select-all"
                   />
                   <button
                     onClick={() => copyToClipboard(newlyCreatedToken)}

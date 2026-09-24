@@ -119,7 +119,7 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShor
               placeholder="Search shortcuts..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-jira-gray-50 border border-jira-gray-300 focus:border-jira-blue focus:bg-white rounded-md transition-all outline-none text-jira-navy placeholder-jira-gray-400"
+              className="w-full pl-9 pr-3 py-1.5 text-xs bg-jira-gray-50 border border-jira-gray-300 focus:border-jira-blue focus:bg-white rounded-md transition-all text-jira-navy placeholder-jira-gray-400"
             />
           </div>
         </div>

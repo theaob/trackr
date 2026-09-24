@@ -382,7 +382,7 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search issues, pages and projects"
-            className="flex-1 min-w-0 bg-transparent outline-none text-[22px] font-light text-jira-navy placeholder:text-jira-gray-500"
+            className="flex-1 min-w-0 bg-transparent text-[22px] font-light text-jira-navy placeholder:text-jira-gray-500"
           />
           {searching && <Loader2 className="w-4 h-4 text-jira-gray-500 animate-spin shrink-0" aria-label="Searching" />}
         </div>

@@ -162,7 +162,7 @@ export function tqlToBasicFilters(queryStr: string): TQLConversionResult {
       // Contains OR or NOT - cannot be represented in basic filters
       return {
         convertible: false,
-        reason: "Query contains OR or NOT grouping which requires JQL mode.",
+        reason: "Query contains OR or NOT grouping which requires TQL mode.",
       };
     }
   }
@@ -207,7 +207,7 @@ export function tqlToBasicFilters(queryStr: string): TQLConversionResult {
       // Unmapped predicate, e.g. function or relative date
       return {
         convertible: false,
-        reason: `Filter on '${p.field}' with operator '${p.operator}' requires JQL mode.`,
+        reason: `Filter on '${p.field}' with operator '${p.operator}' requires TQL mode.`,
       };
     }
   }

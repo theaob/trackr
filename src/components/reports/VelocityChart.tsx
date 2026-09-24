@@ -278,7 +278,7 @@ export default function VelocityChart({ sprints }: VelocityChartProps) {
                   className="transition-colors"
                 />
 
-                {/* Completed Bar (Solid Jira Blue) */}
+                {/* Completed Bar (solid blue) */}
                 <rect
                   x={completedBarX}
                   y={completedTop}

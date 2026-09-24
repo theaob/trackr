@@ -412,7 +412,7 @@ export default function ProjectSettingsView({
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue outline-none text-jira-navy"
+              className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue text-jira-navy"
             />
           </div>
 
@@ -439,7 +439,7 @@ export default function ProjectSettingsView({
               rows={4}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue outline-none text-jira-navy leading-relaxed"
+              className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue text-jira-navy leading-relaxed"
             />
           </div>
 
@@ -864,9 +864,9 @@ export default function ProjectSettingsView({
                             {wh.jqlFilter && (
                               <span
                                 className="text-[10px] text-jira-blue font-mono px-1.5 py-px bg-jira-blue-light/60 rounded border border-jira-blue/30 max-w-[220px] truncate"
-                                title={`JQL Filter: ${wh.jqlFilter}`}
+                                title={`TQL filter: ${wh.jqlFilter}`}
                               >
-                                JQL: {wh.jqlFilter}
+                                TQL: {wh.jqlFilter}
                               </span>
                             )}
                           </div>

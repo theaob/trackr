@@ -2,19 +2,95 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Design tokens. Components ask for a role (bg-surface, text-muted,
+ * border-subtle), never a hex value, so a theme is just a new set of values.
+ * Colours are space-separated RGB channels so Tailwind's opacity modifiers
+ * (bg-accent/10) work. The dark set is defined now and switched on by
+ * data-theme="dark"; nothing sets it yet.
+ */
 :root {
-  --foreground-rgb: 23, 43, 77;
-  --background-start-rgb: 255, 255, 255;
-  --background-end-rgb: 255, 255, 255;
+  --color-page: 247 248 250;
+  --color-surface: 255 255 255;
+  --color-surface-sunk: 240 242 245;
+  --color-border: 224 228 235;
+  --color-border-strong: 200 206 216;
+  --color-ink: 22 27 38;
+  --color-ink-2: 79 90 109;
+  --color-muted: 102 112 133;
+  --color-accent: 47 91 234;
+  --color-accent-hover: 36 74 204;
+  --color-accent-soft: 234 240 255;
+  --color-on-accent: 255 255 255;
+  --color-danger: 196 43 28;
+  --color-danger-soft: 254 240 238;
+  --color-success: 22 128 61;
+  --color-success-soft: 236 250 241;
+  --color-warning: 154 103 0;
+  --color-warning-soft: 255 247 225;
+  --color-check: 22 163 74;
+
+  --radius-control: 6px;
+  --radius-card: 8px;
+  --radius-dialog: 12px;
+
+  --shadow-raised: 0 1px 2px rgb(22 27 38 / 0.06), 0 0 0 1px rgb(22 27 38 / 0.04);
+  --shadow-overlay: 0 12px 32px -8px rgb(22 27 38 / 0.22), 0 2px 6px rgb(22 27 38 / 0.08);
+
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --color-page: 13 16 22;
+  --color-surface: 21 26 35;
+  --color-surface-sunk: 16 20 27;
+  --color-border: 38 45 57;
+  --color-border-strong: 58 67 82;
+  --color-ink: 230 233 239;
+  --color-ink-2: 169 178 193;
+  --color-muted: 128 138 155;
+  --color-accent: 124 156 255;
+  --color-accent-hover: 152 178 255;
+  --color-accent-soft: 30 40 70;
+  --color-on-accent: 13 16 22;
+  --color-danger: 255 128 112;
+  --color-danger-soft: 60 24 22;
+  --color-success: 74 222 128;
+  --color-success-soft: 18 46 30;
+  --color-warning: 240 190 80;
+  --color-warning-soft: 52 40 12;
+  --color-check: 74 222 128;
+
+  --shadow-raised: 0 1px 2px rgb(0 0 0 / 0.4), 0 0 0 1px rgb(255 255 255 / 0.04);
+  --shadow-overlay: 0 12px 32px -8px rgb(0 0 0 / 0.6), 0 0 0 1px rgb(255 255 255 / 0.06);
+
+  color-scheme: dark;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
+  color: rgb(var(--color-ink));
   background: #ffffff;
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
-/* Jira sleek scrollbars */
+/*
+ * One focus indicator everywhere: a 2px accent ring with a 2px gap, shown only
+ * for keyboard focus (and always on text fields, where the browser treats any
+ * focus as keyboard focus).
+ */
+:focus-visible {
+  outline: 2px solid rgb(var(--color-accent));
+  outline-offset: 2px;
+}
+
+/* Text fields sit in tight rows and cells; the ring hugs their border instead. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[contenteditable="true"]:focus-visible {
+  outline-offset: 0;
+}
+
+/* Slim scrollbars */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;

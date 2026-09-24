@@ -600,7 +600,7 @@ export default function IssueDescriptionEditor({
             placeholder={placeholder + " (Type @ to mention, paste images directly)"}
             onImagePaste={onImagePaste}
             onKeyDown={handleEditorKeyDown}
-            className={`w-full text-sm text-jira-navy p-3 border-0 outline-none leading-relaxed resize-none ${
+            className={`w-full text-sm text-jira-navy p-3 border-0 leading-relaxed resize-none ${
               isFullscreen ? "min-h-[300px]" : ""
             }`}
           />

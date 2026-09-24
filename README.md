@@ -287,6 +287,14 @@ A few other changes are worth knowing about when upgrading:
 - **Set `AUTH_SECRET`.** Without it, a secret is generated into the data
   directory; replacing that directory signs everyone out.
 
+## ⬆️ Webhook headers
+
+Every delivery carries `X-Trackr-Event` and `X-Trackr-Delivery`. The
+`X-Jira-Event` and `X-Jira-Delivery` copies are **deprecated** since 0.32.0:
+they are still sent in 0.32.x and will be removed in 0.33.0, so switch
+receivers to the `X-Trackr-*` names. Webhook filters use TQL, Trackr's query
+language, with the same syntax as before.
+
 ## 🔒 Single Sign-On (OIDC)
 
 SSO is **disabled until it is configured**, and a session is only ever created
@@ -316,12 +324,20 @@ npm run typecheck   # tsc --noEmit
 npm run lint        # next lint; any warning fails
 npm test            # vitest run
 npm run build       # production build
+npm run test:e2e    # accessibility checks against the build (needs `npx playwright install chromium` once)
 ```
 
-CI runs all four on every push and pull request, and the release workflow will
-not publish an image unless they pass. The tests include a check that every
+CI runs all five on every push and pull request, and the release workflow will
+not publish an image unless they pass. The accessibility checks start the
+production build on a fresh database, walk through setup, and run
+[axe](https://github.com/dequelabs/axe-core) on the setup, sign-in and Projects
+pages; any serious or critical finding fails the build. The tests include a check that every
 Tailwind class used under `src/` actually generates CSS, since Tailwind skips
 unknown classes silently.
+
+The favicon, home-screen and install icons are all drawn from `src/lib/logo.ts`.
+After changing the logo, regenerate them with `npx tsx scripts/generate-icons.ts`;
+a test fails if `src/app/icon.svg` no longer matches the drawing.
 
 Bump the version with `npm version patch --no-git-tag-version` so
 `package-lock.json` moves with `package.json`; CI fails when they differ.
@@ -330,10 +346,12 @@ Bump the version with `npm version patch --no-git-tag-version` so
 
 - **Framework**: Next.js 15 (App Router) on React 19
 - **Language**: TypeScript
-- **Styling**: Tailwind CSS
+- **Styling**: Tailwind CSS on design tokens (CSS variables in `src/app/globals.css`)
+- **Type**: IBM Plex Sans and Plex Mono, served from Trackr's own origin
+- **UI primitives**: `src/components/ui`, with behaviour from Radix UI
 - **Icons**: Lucide React
 - **Drag and Drop**: `@hello-pangea/dnd`
 - **Database & ORM**: SQLite (`dev.db`) with Prisma ORM
 - **Markdown**: `react-markdown` + `remark-gfm`
 - **Dates**: `date-fns`
-- **Tests**: Vitest
+- **Tests**: Vitest and Testing Library; Playwright with axe-core for accessibility

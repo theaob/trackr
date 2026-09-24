@@ -151,7 +151,7 @@ export default function UsersSettingsTab() {
       type="button"
       disabled={busy}
       onClick={onClick}
-      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-jira-blue focus:ring-offset-1 disabled:opacity-50 ${
+      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:ring-2 focus:ring-jira-blue focus:ring-offset-1 disabled:opacity-50 ${
         on ? onColor : "bg-jira-gray-300"
       }`}
       role="switch"
@@ -269,7 +269,7 @@ export default function UsersSettingsTab() {
             placeholder="Search by name, email, or role..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-jira-gray-300 rounded-md focus:border-jira-blue focus:ring-1 focus:ring-jira-blue outline-none transition-all placeholder:text-jira-gray-400"
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-jira-gray-300 rounded-md focus:border-jira-blue focus:ring-1 focus:ring-jira-blue transition-all placeholder:text-jira-gray-400"
           />
         </div>
       </div>

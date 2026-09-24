@@ -84,7 +84,7 @@ export default function NotificationsMenu() {
     if (extractedIssueKey) {
       try {
         window.dispatchEvent(
-          new CustomEvent("jira:open-issue", {
+          new CustomEvent("trackr:open-issue", {
             detail: { issueKey: extractedIssueKey },
           })
         );

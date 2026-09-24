@@ -96,7 +96,7 @@ export default function ProjectsDirectoryView({
               placeholder="Search projects by name or key..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-jira-gray-100 hover:bg-jira-gray-200 focus:bg-white border border-transparent focus:border-jira-blue rounded-md transition-all outline-none text-jira-navy"
+              className="w-full pl-9 pr-3 py-1.5 text-xs bg-jira-gray-100 hover:bg-jira-gray-200 focus:bg-white border border-transparent focus:border-jira-blue rounded-md transition-all text-jira-navy"
             />
           </div>
         </div>
@@ -147,7 +147,7 @@ export default function ProjectsDirectoryView({
                   {/* Description */}
                   <p className="text-xs text-jira-gray-600 line-clamp-2 min-h-[32px] leading-relaxed mb-4">
                     {project.description || (
-                      <span className="italic text-jira-gray-400">No description provided</span>
+                      <span className="italic text-jira-gray-500">No description provided</span>
                     )}
                   </p>
 

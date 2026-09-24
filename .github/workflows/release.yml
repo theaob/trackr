@@ -105,6 +105,14 @@ jobs:
           DATABASE_URL: file:./ci-build.db
           GIT_COMMIT: ${{ github.sha }}
 
+      - name: Install Chromium for the browser checks
+        run: npx playwright install --with-deps chromium
+
+      - name: Accessibility checks (axe on setup, sign-in and Projects)
+        # Starts the production build on a fresh database; a serious or
+        # critical axe finding fails the job.
+        run: npm run test:e2e
+
   release-and-publish:
     name: Create Release & Push to Docker Hub
     # Nothing is published until the checks above pass.

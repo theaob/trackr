@@ -156,7 +156,7 @@ export default function ReleaseNotesModal({
               <textarea
                 readOnly
                 value={data.markdown}
-                className="w-full h-[450px] font-mono text-xs p-4 bg-jira-gray-50 border border-jira-gray-300 rounded-md focus:outline-none resize-none leading-relaxed text-jira-navy select-all"
+                className="w-full h-[450px] font-mono text-xs p-4 bg-jira-gray-50 border border-jira-gray-300 rounded-md resize-none leading-relaxed text-jira-navy select-all"
               />
             </div>
           ) : (

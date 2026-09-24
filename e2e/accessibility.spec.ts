@@ -1,0 +1,71 @@
+import { test, expect, type BrowserContext, type Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
+
+// axe-core against the pages every install sees first: setup, sign-in and
+// Projects. Serious and critical findings fail the run; the rest are listed.
+// One browser page walks a fresh install through setup, so the steps share it.
+
+const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
+
+async function expectNoSeriousViolations(page: Page, name: string) {
+  const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
+  const blocking = results.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
+  const report = (list: typeof results.violations) =>
+    list
+      .map(
+        (v) =>
+          `[${v.impact}] ${v.id}: ${v.help}\n` +
+          v.nodes
+            .slice(0, 8)
+            .map((n) => `    ${n.target.join(" ")}  ${n.any[0]?.message ?? n.failureSummary?.split("\n")[1] ?? ""}`.trimEnd())
+            .join("\n")
+      )
+      .join("\n");
+  const minor = results.violations.filter((v) => !blocking.includes(v));
+  if (minor.length) console.log(`${name}: ${minor.length} minor finding(s)\n${report(minor)}`);
+  // Soft, so one run reports every page rather than stopping at the first.
+  expect.soft(report(blocking), `${name} has serious accessibility problems`).toBe("");
+}
+
+test.describe.serial("accessibility", () => {
+  let context: BrowserContext;
+  let page: Page;
+
+  test.beforeAll(async ({ browser }, testInfo) => {
+    context = await browser.newContext({ baseURL: testInfo.project.use.baseURL });
+    page = await context.newPage();
+  });
+
+  test.afterAll(async () => {
+    await context.close();
+  });
+
+  test("setup", async () => {
+    await page.goto("/setup");
+    await expect(page.getByRole("heading", { name: /Welcome/ })).toBeVisible();
+    await expectNoSeriousViolations(page, "Setup");
+
+    await page.getByLabel("Full name").fill("Ada Lovelace");
+    await page.getByLabel("Email address").fill("ada@example.com");
+    await page.getByLabel("Password").fill("correct horse battery");
+    await page.getByLabel("Project name").fill("Apollo");
+    await page.getByLabel("Project key").fill("APOLLO");
+    await page.getByRole("button", { name: "Complete setup" }).click();
+    await page.waitForURL(/\/projects/);
+  });
+
+  test("projects", async () => {
+    await page.goto("/projects");
+    await expect(page.getByRole("link", { name: /Apollo/ }).first()).toBeVisible();
+    await expectNoSeriousViolations(page, "Projects");
+  });
+
+  test("sign-in", async ({ browser }, testInfo) => {
+    const signedOutContext = await browser.newContext({ baseURL: testInfo.project.use.baseURL });
+    const signedOut = await signedOutContext.newPage();
+    await signedOut.goto("/login");
+    await expect(signedOut.getByLabel("Password")).toBeVisible();
+    await expectNoSeriousViolations(signedOut, "Sign-in");
+    await signedOutContext.close();
+  });
+});

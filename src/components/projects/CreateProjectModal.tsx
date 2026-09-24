@@ -140,7 +140,7 @@ export default function CreateProjectModal({
               onChange={(e) => handleNameChange(e.target.value)}
               required
               autoFocus
-              className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue outline-none text-jira-navy"
+              className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue text-jira-navy"
             />
           </div>
 
@@ -158,7 +158,7 @@ export default function CreateProjectModal({
               }}
               required
               maxLength={10}
-              className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue outline-none font-mono uppercase text-jira-navy"
+              className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue font-mono uppercase text-jira-navy"
             />
             <p className="text-[11px] text-jira-gray-500 mt-1">
               Prefix used for all issues in this project (e.g., {key || "KEY"}-1, {key || "KEY"}-2).
@@ -172,7 +172,7 @@ export default function CreateProjectModal({
             <select
               value={leadId}
               onChange={(e) => setLeadId(e.target.value)}
-              className="w-full bg-white border border-jira-gray-300 rounded px-3 py-2 text-jira-navy focus:border-jira-blue outline-none"
+              className="w-full bg-white border border-jira-gray-300 rounded px-3 py-2 text-jira-navy focus:border-jira-blue"
             >
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
@@ -191,7 +191,7 @@ export default function CreateProjectModal({
               placeholder="What is this project focused on?"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue outline-none text-jira-navy leading-relaxed"
+              className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue text-jira-navy leading-relaxed"
             />
           </div>
 

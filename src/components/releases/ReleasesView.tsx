@@ -238,7 +238,7 @@ export default function ReleasesView({
               placeholder="Search versions..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-white border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+              className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-white border border-jira-gray-300 rounded focus:border-jira-blue"
             />
           </div>
         </div>

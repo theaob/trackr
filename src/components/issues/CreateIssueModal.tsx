@@ -173,7 +173,7 @@ export default function CreateIssueModal({
       setIsSubmitting(false);
       if (typeof window !== "undefined") {
         window.dispatchEvent(
-          new CustomEvent("jira:issue-created", { detail: { issue: res.issue } })
+          new CustomEvent("trackr:issue-created", { detail: { issue: res.issue } })
         );
       }
       onIssueCreated(res.issue as Issue);
@@ -239,7 +239,7 @@ export default function CreateIssueModal({
                 <select
                   value={selectedProjectId}
                   onChange={(e) => setSelectedProjectId(e.target.value)}
-                  className="w-full bg-white border border-jira-gray-300 rounded px-3 py-2 text-jira-navy font-medium focus:border-jira-blue outline-none"
+                  className="w-full bg-white border border-jira-gray-300 rounded px-3 py-2 text-jira-navy font-medium focus:border-jira-blue"
                 >
                   {allProjects.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -262,7 +262,7 @@ export default function CreateIssueModal({
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value as IssueType)}
-                  className="w-full bg-white border border-jira-gray-300 rounded pl-9 pr-3 py-2 text-jira-navy focus:border-jira-blue outline-none"
+                  className="w-full bg-white border border-jira-gray-300 rounded pl-9 pr-3 py-2 text-jira-navy focus:border-jira-blue"
                 >
                   <option value="STORY">Story</option>
                   <option value="TASK">Task</option>
@@ -288,7 +288,7 @@ export default function CreateIssueModal({
               onChange={(e) => setTitle(e.target.value)}
               required
               autoFocus
-              className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue outline-none text-jira-navy"
+              className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue text-jira-navy"
             />
           </div>
 
@@ -318,7 +318,7 @@ export default function CreateIssueModal({
                 <select
                   value={priority}
                   onChange={(e) => setPriority(e.target.value as PriorityLevel)}
-                  className="w-full bg-white border border-jira-gray-300 rounded pl-9 pr-3 py-2 text-jira-navy focus:border-jira-blue outline-none"
+                  className="w-full bg-white border border-jira-gray-300 rounded pl-9 pr-3 py-2 text-jira-navy focus:border-jira-blue"
                 >
                   <option value="HIGHEST">Highest</option>
                   <option value="HIGH">High</option>
@@ -343,7 +343,7 @@ export default function CreateIssueModal({
                 placeholder="e.g. 3, 5, 8"
                 value={storyPoints}
                 onChange={(e) => setStoryPoints(e.target.value)}
-                className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue outline-none text-jira-navy"
+                className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue text-jira-navy"
               />
             </div>
 
@@ -355,7 +355,7 @@ export default function CreateIssueModal({
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue outline-none text-jira-navy"
+                className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue text-jira-navy"
               />
             </div>
 
@@ -368,7 +368,7 @@ export default function CreateIssueModal({
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue outline-none text-jira-navy"
+                  className="w-full px-3 py-2 border border-jira-gray-300 rounded focus:border-jira-blue text-jira-navy"
                 />
               </div>
             )}
@@ -383,7 +383,7 @@ export default function CreateIssueModal({
               <select
                 value={assigneeId}
                 onChange={(e) => setAssigneeId(e.target.value)}
-                className="w-full bg-white border border-jira-gray-300 rounded px-3 py-2 text-jira-navy focus:border-jira-blue outline-none"
+                className="w-full bg-white border border-jira-gray-300 rounded px-3 py-2 text-jira-navy focus:border-jira-blue"
               >
                 <option value="">Automatic (Unassigned)</option>
                 {users.map((u) => (
@@ -402,7 +402,7 @@ export default function CreateIssueModal({
                 <select
                   value={sprintId}
                   onChange={(e) => setSprintId(e.target.value)}
-                  className="w-full bg-white border border-jira-gray-300 rounded px-3 py-2 text-jira-navy focus:border-jira-blue outline-none"
+                  className="w-full bg-white border border-jira-gray-300 rounded px-3 py-2 text-jira-navy focus:border-jira-blue"
                 >
                   <option value="">Backlog (No Sprint)</option>
                   {projectSprints.map((s) => (
@@ -424,7 +424,7 @@ export default function CreateIssueModal({
               <select
                 value={versionId}
                 onChange={(e) => setVersionId(e.target.value)}
-                className="w-full bg-white border border-jira-gray-300 rounded px-3 py-2 text-jira-navy focus:border-jira-blue outline-none"
+                className="w-full bg-white border border-jira-gray-300 rounded px-3 py-2 text-jira-navy focus:border-jira-blue"
               >
                 <option value="">None (Unassigned)</option>
                 {projectVersions.map((v) => (
@@ -445,7 +445,7 @@ export default function CreateIssueModal({
               <select
                 value={parentId}
                 onChange={(e) => setParentId(e.target.value)}
-                className="w-full bg-white border border-jira-gray-300 rounded px-3 py-2 text-jira-navy focus:border-jira-blue outline-none"
+                className="w-full bg-white border border-jira-gray-300 rounded px-3 py-2 text-jira-navy focus:border-jira-blue"
               >
                 <option value="">None</option>
                 {epics.map((epic) => (

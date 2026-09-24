@@ -101,7 +101,7 @@ export default function CreateComponentModal({
               placeholder="e.g. Backend API, Mobile App, Infrastructure"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue"
               autoFocus
               required
             />
@@ -116,7 +116,7 @@ export default function CreateComponentModal({
               placeholder="What this part of the project covers..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue"
             />
           </div>
 
@@ -127,7 +127,7 @@ export default function CreateComponentModal({
             <select
               value={leadId}
               onChange={(e) => setLeadId(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue"
             >
               <option value="">None</option>
               {members.map((m) => (

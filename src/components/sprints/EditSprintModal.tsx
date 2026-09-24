@@ -228,7 +228,7 @@ export default function EditSprintModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Sprint 1"
-              className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy outline-none focus:border-jira-blue font-medium"
+              className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy focus:border-jira-blue font-medium"
             />
           </div>
 
@@ -247,7 +247,7 @@ export default function EditSprintModal({
             <select
               value={durationMode}
               onChange={(e) => handleDurationChange(e.target.value)}
-              className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy outline-none focus:border-jira-blue bg-white"
+              className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy focus:border-jira-blue bg-white"
             >
               <option value="7">1 week (7 days)</option>
               <option value="14">2 weeks (14 days - Recommended)</option>
@@ -275,7 +275,7 @@ export default function EditSprintModal({
                     max={180}
                     value={customDays}
                     onChange={(e) => handleCustomDaysChange(parseInt(e.target.value, 10) || 1)}
-                    className="w-24 border border-jira-gray-300 rounded px-3 py-1.5 text-sm font-semibold text-jira-navy outline-none focus:border-jira-blue"
+                    className="w-24 border border-jira-gray-300 rounded px-3 py-1.5 text-sm font-semibold text-jira-navy focus:border-jira-blue"
                   />
                   <span className="ml-2 text-xs font-medium text-jira-gray-600">
                     {customDays === 1 ? "day" : "days"}
@@ -314,7 +314,7 @@ export default function EditSprintModal({
                 type="date"
                 value={startDateStr}
                 onChange={(e) => handleStartDateChange(e.target.value)}
-                className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy outline-none focus:border-jira-blue"
+                className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy focus:border-jira-blue"
               />
             </div>
 
@@ -328,7 +328,7 @@ export default function EditSprintModal({
                 value={endDateStr}
                 min={startDateStr}
                 onChange={(e) => handleEndDateChange(e.target.value)}
-                className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy outline-none focus:border-jira-blue"
+                className="w-full border border-jira-gray-300 rounded px-3 py-2 text-sm text-jira-navy focus:border-jira-blue"
               />
             </div>
           </div>
@@ -367,7 +367,7 @@ export default function EditSprintModal({
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
               placeholder="What does the team aim to achieve in this sprint?"
-              className="w-full border border-jira-gray-300 rounded p-2.5 text-sm text-jira-navy outline-none focus:border-jira-blue placeholder:text-jira-gray-400"
+              className="w-full border border-jira-gray-300 rounded p-2.5 text-sm text-jira-navy focus:border-jira-blue placeholder:text-jira-gray-400"
             />
             <p className="text-[11px] text-jira-gray-500 mt-1">
               The sprint target is displayed on the board and backlog to align team deliverables.

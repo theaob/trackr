@@ -204,31 +204,35 @@ export default function AuthModal({
           {activeTab === "login" && (
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-jira-navy mb-1">Email Address</label>
+                <label htmlFor="auth-login-email" className="block text-xs font-semibold text-jira-navy mb-1">Email Address</label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
+                  <Mail aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
                   <input
                     type="email"
                     required
+                    id="auth-login-email"
+                    autoComplete="email"
                     placeholder="name@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue outline-none text-jira-navy"
+                    className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-jira-navy mb-1">Password</label>
+                <label htmlFor="auth-login-password" className="block text-xs font-semibold text-jira-navy mb-1">Password</label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
+                  <Lock aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
                   <input
                     type="password"
                     required
+                    id="auth-login-password"
+                    autoComplete="current-password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue outline-none text-jira-navy"
+                    className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy"
                   />
                 </div>
               </div>
@@ -267,57 +271,64 @@ export default function AuthModal({
           {activeTab === "register" && registrationOpen && (
             <form onSubmit={handleRegisterSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-jira-navy mb-1">Full Name</label>
+                <label htmlFor="auth-register-name" className="block text-xs font-semibold text-jira-navy mb-1">Full Name</label>
                 <div className="relative">
-                  <UserIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
+                  <UserIcon aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
                   <input
                     type="text"
                     required
+                    id="auth-register-name"
+                    autoComplete="name"
                     placeholder="Alex Chen"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue outline-none text-jira-navy"
+                    className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-jira-navy mb-1">Email Address</label>
+                <label htmlFor="auth-register-email" className="block text-xs font-semibold text-jira-navy mb-1">Email Address</label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
+                  <Mail aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
                   <input
                     type="email"
                     required
+                    id="auth-register-email"
+                    autoComplete="email"
                     placeholder="alex.chen@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue outline-none text-jira-navy"
+                    className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-jira-navy mb-1">Password</label>
+                <label htmlFor="auth-register-password" className="block text-xs font-semibold text-jira-navy mb-1">Password</label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
+                  <Lock aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500" />
                   <input
                     type="password"
                     required
                     minLength={8}
+                    id="auth-register-password"
+                    autoComplete="new-password"
                     placeholder="Minimum 8 characters"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue outline-none text-jira-navy"
+                    className="w-full pl-9 pr-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-jira-navy mb-1">Organization Role</label>
+                <label htmlFor="auth-register-role" className="block text-xs font-semibold text-jira-navy mb-1">Organization Role</label>
                 <select
+                  id="auth-register-role"
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue outline-none text-jira-navy bg-white"
+                  className="w-full px-3 py-2 text-xs border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy bg-white"
                 >
                   <option value="Developer">Developer</option>
                   <option value="Senior Developer">Senior Developer</option>

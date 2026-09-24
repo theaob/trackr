@@ -277,7 +277,7 @@ export default function CreateVersionModal({
               placeholder="e.g. 1.0.0 or 2026.Q4"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue focus:ring-1 focus:ring-jira-blue outline-none"
+              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue focus:ring-1 focus:ring-jira-blue"
               autoFocus
               required
             />
@@ -293,7 +293,7 @@ export default function CreateVersionModal({
               type="date"
               value={releaseDate}
               onChange={(e) => setReleaseDate(e.target.value)}
-              className="w-full text-xs px-2.5 py-1.5 bg-white border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+              className="w-full text-xs px-2.5 py-1.5 bg-white border border-jira-gray-300 rounded focus:border-jira-blue"
             />
           </div>
 
@@ -308,7 +308,7 @@ export default function CreateVersionModal({
               placeholder="Brief summary of goals or theme for this release..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue outline-none resize-none"
+              className="w-full text-xs px-3 py-2 bg-white border border-jira-gray-300 rounded focus:border-jira-blue resize-none"
             />
           </div>
 
@@ -351,7 +351,7 @@ export default function CreateVersionModal({
                     handleSelectSprintIssues(e.target.value);
                     e.target.value = "";
                   }}
-                  className="text-[11px] font-medium px-2 py-1 rounded bg-jira-gray-100 text-jira-gray-700 border border-jira-gray-300 hover:bg-jira-gray-200 outline-none"
+                  className="text-[11px] font-medium px-2 py-1 rounded bg-jira-gray-100 text-jira-gray-700 border border-jira-gray-300 hover:bg-jira-gray-200"
                 >
                   <option value="" disabled>
                     + Add from Sprint...
@@ -392,7 +392,7 @@ export default function CreateVersionModal({
                   placeholder="Search issues by key or title..."
                   value={issueSearchQuery}
                   onChange={(e) => setIssueSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-2 py-1 text-xs bg-white border border-jira-gray-300 rounded focus:border-jira-blue outline-none"
+                  className="w-full pl-8 pr-2 py-1 text-xs bg-white border border-jira-gray-300 rounded focus:border-jira-blue"
                 />
               </div>
 

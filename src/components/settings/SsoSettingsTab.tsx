@@ -215,7 +215,7 @@ export default function SsoSettingsTab() {
               value={config.providerName || ""}
               onChange={(e) => setConfig({ ...config, providerName: e.target.value })}
               placeholder="e.g. Corporate Okta / Keycloak SSO"
-              className="w-full px-3 py-2 border border-jira-gray-300 rounded-md focus:border-jira-blue outline-none text-jira-navy"
+              className="w-full px-3 py-2 border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy"
             />
           </div>
 
@@ -228,7 +228,7 @@ export default function SsoSettingsTab() {
               value={config.clientId || ""}
               onChange={(e) => setConfig({ ...config, clientId: e.target.value })}
               placeholder="trackr-client-id"
-              className="w-full px-3 py-2 border border-jira-gray-300 rounded-md focus:border-jira-blue outline-none text-jira-navy font-mono text-[11px]"
+              className="w-full px-3 py-2 border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy font-mono text-[11px]"
             />
           </div>
         </div>
@@ -242,7 +242,7 @@ export default function SsoSettingsTab() {
             value={config.issuerUrl || ""}
             onChange={(e) => setConfig({ ...config, issuerUrl: e.target.value })}
             placeholder="https://sso.company.com/auth/realms/master"
-            className="w-full px-3 py-2 border border-jira-gray-300 rounded-md focus:border-jira-blue outline-none text-jira-navy font-mono text-[11px]"
+            className="w-full px-3 py-2 border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy font-mono text-[11px]"
           />
         </div>
 
@@ -272,7 +272,7 @@ export default function SsoSettingsTab() {
               value={config.certificate || ""}
               onChange={(e) => setConfig({ ...config, certificate: e.target.value })}
               placeholder="-----BEGIN CERTIFICATE-----&#10;MIIDdTCCAl2gAwIBAgILBAAAAAABFUzAVTANBgkqhkiG9w0BAQsFADBLMQswCQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEUMSAwHgYDVQQDExdFbnRlcnByaXNlIFNlc3Npb24gQ0E...&#10;-----END CERTIFICATE-----"
-              className="w-full px-3 py-2 border border-purple-300 rounded-md focus:border-purple-600 outline-none text-purple-950 font-mono text-[10px] bg-white"
+              className="w-full px-3 py-2 border border-purple-300 rounded-md focus:border-purple-600 text-purple-950 font-mono text-[10px] bg-white"
             />
           </div>
 
@@ -296,7 +296,7 @@ export default function SsoSettingsTab() {
                     ? "Leave empty to keep current client secret"
                     : "Enter client secret for HS256 token verification"
                 }
-                className="w-full px-3 py-2 pr-9 border border-purple-300 rounded-md focus:border-purple-600 outline-none text-purple-950 font-mono text-[11px] bg-white"
+                className="w-full px-3 py-2 pr-9 border border-purple-300 rounded-md focus:border-purple-600 text-purple-950 font-mono text-[11px] bg-white"
               />
               <button
                 type="button"
@@ -349,7 +349,7 @@ export default function SsoSettingsTab() {
             <select
               value={config.defaultRole || "Developer"}
               onChange={(e) => setConfig({ ...config, defaultRole: e.target.value })}
-              className="w-full px-3 py-1.5 border border-jira-gray-300 rounded-md focus:border-jira-blue outline-none text-jira-navy bg-white"
+              className="w-full px-3 py-1.5 border border-jira-gray-300 rounded-md focus:border-jira-blue text-jira-navy bg-white"
             >
               <option value="Developer">Developer</option>
               <option value="QA Lead">QA Lead</option>

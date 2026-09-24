@@ -10,7 +10,7 @@ interface AccountSecurityModalProps {
 }
 
 const INPUT =
-  "w-full px-3 py-2 text-sm border border-jira-gray-300 rounded outline-none focus:border-jira-blue text-jira-navy";
+  "w-full px-3 py-2 text-sm border border-jira-gray-300 rounded focus:border-jira-blue text-jira-navy";
 
 /** Change your password, or end your sessions on other devices. */
 export default function AccountSecurityModal({ isOpen, onClose }: AccountSecurityModalProps) {
