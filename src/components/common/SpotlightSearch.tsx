@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import * as RadixDialog from "@radix-ui/react-dialog";
 import {
   ArrowLeft,
   BarChart3,
@@ -481,18 +482,22 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
   let optionIndex = -1;
 
   return (
-    <div
-      className="fixed inset-0 z-[70] flex items-start justify-center px-3 pt-[10vh] sm:pt-[16vh] bg-ink/15 animate-in fade-in duration-100"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Search issues, pages and projects"
-        className="w-full max-w-[680px] rounded-2xl bg-surface/95 sm:bg-surface/85 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_24px_80px_rgba(9,30,66,0.30),0_2px_8px_rgba(9,30,66,0.12)] ring-1 ring-black/10 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+    <RadixDialog.Root open onOpenChange={(open) => !open && onClose()}>
+      <RadixDialog.Portal>
+      <RadixDialog.Overlay className="fixed inset-0 z-[70] bg-ink/15 animate-in fade-in duration-100" />
+      <RadixDialog.Content
+        aria-describedby={undefined}
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          inputRef.current?.focus();
+        }}
+        // In the search field Escape clears, then steps back, then closes; the field handles that.
+        onEscapeKeyDown={(e) => {
+          if (document.activeElement === inputRef.current) e.preventDefault();
+        }}
+        className="fixed left-1/2 top-[10vh] sm:top-[16vh] z-[70] w-[calc(100vw-1.5rem)] -translate-x-1/2 max-w-[680px] rounded-2xl bg-surface/95 sm:bg-surface/85 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_24px_80px_rgba(9,30,66,0.30),0_2px_8px_rgba(9,30,66,0.12)] ring-1 ring-black/10 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
       >
+        <RadixDialog.Title className="sr-only">Search issues, pages and projects</RadixDialog.Title>
         <div className="flex items-center gap-3 px-4 h-14">
           {actionsFor ? (
             <button
@@ -596,10 +601,11 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
             <Keys keys={["esc"]} active={false} /> to close
           </span>
         </div>
-      </div>
-      <span className="sr-only" aria-live="polite">
-        {q && !searching ? `${rows.length} results` : ""}
-      </span>
-    </div>
+        <span className="sr-only" aria-live="polite">
+          {q && !searching ? `${rows.length} results` : ""}
+        </span>
+      </RadixDialog.Content>
+      </RadixDialog.Portal>
+    </RadixDialog.Root>
   );
 }

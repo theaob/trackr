@@ -37,7 +37,6 @@ vi.mock("@/components/projects/CreateProjectModal", () => ({
 }));
 
 import ProjectsDirectoryView from "@/components/projects/ProjectsDirectoryView";
-import Navbar from "@/components/layout/Navbar";
 
 describe("Project Creation Permission Guard", () => {
   beforeEach(() => {

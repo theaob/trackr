@@ -4,6 +4,7 @@ import React, { useState, useRef, useCallback, useEffect } from "react";
 import { User } from "@/types";
 import MentionInput, { ImagePasteResult } from "@/components/common/MentionInput";
 import MarkdownContent from "@/components/common/MarkdownContent";
+import { Dialog, DialogContent } from "@/components/ui/Dialog";
 import { useModKeyLabel } from "@/hooks/useModKeyLabel";
 import {
   applyWrapFormatting,
@@ -25,7 +26,6 @@ import {
   Quote,
   Table,
   Link,
-  Image,
   AtSign,
   Eye,
   Edit3,
@@ -38,7 +38,6 @@ import {
   Heading3,
   ChevronDown,
   FileText,
-  X,
 } from "lucide-react";
 
 interface IssueDescriptionEditorProps {
@@ -489,7 +488,8 @@ export default function IssueDescriptionEditor({
             tabIndex={-1}
             onClick={() => setIsFullscreen(!isFullscreen)}
             className="p-1.5 text-muted hover:text-ink-2 hover:bg-surface-sunk rounded transition-colors"
-            title={isFullscreen ? "Exit fullscreen" : "Fullscreen editor"}
+            title={isFullscreen ? "Exit full screen" : "Full screen"}
+            aria-label={isFullscreen ? "Exit full screen" : "Full screen"}
           >
             {isFullscreen ? (
               <Minimize2 className="w-3.5 h-3.5" />
@@ -662,25 +662,13 @@ export default function IssueDescriptionEditor({
     return (
       <>
         {label}
-        <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-6">
-          <div className="bg-surface rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-subtle bg-page">
-              <h3 className="text-sm font-semibold text-ink">
-                Edit Description
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsFullscreen(false)}
-                className="p-1 text-muted hover:text-ink-2 hover:bg-surface-sunk rounded transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-hidden flex flex-col">
+        <Dialog open onOpenChange={(open) => !open && setIsFullscreen(false)}>
+          <DialogContent size="xl" title="Edit description" className="h-[min(48rem,calc(100dvh-2rem))]">
+            <div className="flex h-full flex-col overflow-hidden rounded-control border border-subtle focus-within:border-accent">
               {editorContent}
             </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       </>
     );
   }

@@ -13,10 +13,12 @@ import {
 import UserAvatar from "@/components/common/UserAvatar";
 import { Button, IconButton } from "@/components/ui/Button";
 import { Dialog, DialogContent } from "@/components/ui/Dialog";
+import { Field, Input, Textarea } from "@/components/ui/Field";
 import { Select } from "@/components/ui/Select";
 import { StatusLozenge } from "@/components/ui/StatusLozenge";
 import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/components/ui/cn";
+import ColorSwatchPicker from "./ColorSwatchPicker";
 import {
   ROLE_CONFIG,
   ROLE_PERMISSIONS,
@@ -39,28 +41,13 @@ import {
   X,
   Trash2,
   Crown,
-  Info,
   Loader2,
   UserPlus,
   SlidersHorizontal,
   Edit2,
   Lock,
-  ShieldCheck,
-  AlertTriangle,
 } from "lucide-react";
 import { format } from "date-fns";
-
-// The chart palette's hues, so role colours match the rest of the app.
-const PRESET_ROLE_COLORS = [
-  { name: "Blue", hex: "#2a78d6" },
-  { name: "Orange", hex: "#eb6834" },
-  { name: "Aqua", hex: "#1baf7a" },
-  { name: "Yellow", hex: "#eda100" },
-  { name: "Pink", hex: "#e87ba4" },
-  { name: "Green", hex: "#008300" },
-  { name: "Violet", hex: "#4a3aa7" },
-  { name: "Red", hex: "#e34948" },
-];
 
 interface ProjectAccessTabProps {
   project: Project;
@@ -537,167 +524,96 @@ function AddMemberModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in">
-      <div className="bg-surface w-full max-w-lg rounded-lg shadow-2xl border border-subtle p-6 space-y-4 max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between pb-2 border-b border-subtle shrink-0">
-          <div className="flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-accent" />
-            <h2 className="text-base font-bold text-ink">Add Team Member</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-muted hover:text-ink rounded p-1"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+  const roleOption = (value: string, name: string, description: string, badge: React.ReactNode) => (
+    <label
+      key={value}
+      className={cn(
+        "flex cursor-pointer items-start gap-3 rounded-control border p-3 transition-colors",
+        selectedRole === value ? "border-accent bg-accent-soft" : "border-subtle hover:bg-surface-sunk"
+      )}
+    >
+      <input
+        type="radio"
+        name="projectRole"
+        checked={selectedRole === value}
+        onChange={() => setSelectedRole(value)}
+        className="mt-0.5 accent-[rgb(var(--color-accent))]"
+      />
+      <span className="flex-1">
+        <span className="flex items-center gap-2 text-[13px] font-medium text-ink">
+          {name}
+          {badge}
+        </span>
+        <span className="mt-0.5 block text-xs text-ink-2">{description}</span>
+      </span>
+    </label>
+  );
 
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        title="Add a member"
+        footer={
+          availableUsers.length === 0 ? (
+            <Button onClick={onClose}>Close</Button>
+          ) : (
+            <>
+              <Button onClick={onClose}>Cancel</Button>
+              <Button type="submit" form="add-member-form" variant="primary" loading={isSubmitting}>
+                Add member
+              </Button>
+            </>
+          )
+        }
+      >
         {availableUsers.length === 0 ? (
-          <div className="py-6 text-center space-y-2">
-            <Users className="w-8 h-8 text-muted mx-auto" />
-            <p className="text-xs text-ink-2 font-medium">
-              All organization users are already members of this project!
-            </p>
+          <div className="space-y-2 py-6 text-center">
+            <Users className="mx-auto h-8 w-8 text-muted" aria-hidden="true" />
+            <p className="text-[13px] text-ink-2">Everyone in the workspace is already a member of this project.</p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4 text-xs overflow-y-auto pr-1">
+          <form id="add-member-form" onSubmit={handleSubmit} className="space-y-4">
             {errorMessage && (
-              <div className="p-2.5 rounded bg-danger-soft border border-danger/30 text-danger text-xs font-medium flex items-center gap-2">
-                <Info className="w-4 h-4 shrink-0" />
-                <span>{errorMessage}</span>
-              </div>
+              <p role="alert" className="rounded-control bg-danger-soft px-3 py-2 text-xs text-danger">
+                {errorMessage}
+              </p>
             )}
-
-            <div>
-              <label className="block text-ink-2 font-bold uppercase tracking-wider text-[10px] mb-1.5">
-                Teammate
-              </label>
-              <select
+            <Field label="Person">
+              <Select
+                searchable
+                searchPlaceholder="Find a person…"
                 value={selectedUserId}
-                onChange={(e) => setSelectedUserId(e.target.value)}
-                className="w-full border border-subtle rounded p-2 text-ink font-medium focus:border-accent"
-              >
-                {availableUsers.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name} ({u.email}) - {u.role}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-ink-2 font-bold uppercase tracking-wider text-[10px]">
-                Project Role
-              </label>
-
-              {/* System Roles */}
-              <div className="space-y-2">
-                {(["ADMIN", "MEMBER", "VIEWER"] as BuiltInRole[]).map((role) => {
-                  const cfg = ROLE_CONFIG[role];
-                  return (
-                    <label
-                      key={role}
-                      onClick={() => setSelectedRole(role)}
-                      className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                        selectedRole === role
-                          ? "bg-accent-soft/30 border-accent"
-                          : "border-subtle hover:bg-page"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="projectRole"
-                        checked={selectedRole === role}
-                        onChange={() => setSelectedRole(role)}
-                        className="mt-0.5 text-accent"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-ink">{cfg.name}</span>
-                          <span
-                            className={`text-[9px] font-bold px-1.5 py-px rounded border ${cfg.badgeBg} ${cfg.badgeText} ${cfg.border}`}
-                          >
-                            {role}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-ink-2 mt-0.5">
-                          {cfg.description}
-                        </p>
-                      </div>
-                    </label>
-                  );
-                })}
-
-                {/* Custom Roles (if any) */}
-                {customRoles.map((cr) => {
-                  const color = cr.color || "#2a78d6";
-                  return (
-                    <label
-                      key={cr.id}
-                      onClick={() => setSelectedRole(cr.name)}
-                      className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                        selectedRole === cr.name
-                          ? "bg-accent-soft/30 border-accent"
-                          : "border-subtle hover:bg-page"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="projectRole"
-                        checked={selectedRole === cr.name}
-                        onChange={() => setSelectedRole(cr.name)}
-                        className="mt-0.5 text-accent"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-ink">{cr.name}</span>
-                          <span
-                            className="text-[9px] font-bold px-1.5 py-px rounded border flex items-center gap-1"
-                            style={{
-                              backgroundColor: `${color}15`,
-                              borderColor: `${color}40`,
-                              color: color,
-                            }}
-                          >
-                            <span
-                              className="w-1.5 h-1.5 rounded-full shrink-0"
-                              style={{ backgroundColor: color }}
-                            />
-                            Custom
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-ink-2 mt-0.5">
-                          {cr.description || "Custom project role with tailored permissions."}
-                        </p>
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2.5 pt-3 border-t border-subtle shrink-0">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-ink-2 hover:bg-surface-sunk rounded font-semibold text-xs transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="bg-accent hover:bg-accent-hover text-accent-fg px-4 py-2 rounded font-semibold text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 shadow-xs"
-              >
-                {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                <span>Add Member</span>
-              </button>
-            </div>
+                onChange={setSelectedUserId}
+                options={availableUsers.map((u) => ({
+                  value: u.id,
+                  label: u.name,
+                  description: u.email,
+                  keywords: u.email,
+                  icon: <UserAvatar user={u} size="xs" />,
+                }))}
+              />
+            </Field>
+            <fieldset className="space-y-2">
+              <legend className="mb-1.5 text-xs font-medium text-ink-2">Role</legend>
+              {(["ADMIN", "MEMBER", "VIEWER"] as BuiltInRole[]).map((role) =>
+                roleOption(role, ROLE_CONFIG[role].name, ROLE_CONFIG[role].description, null)
+              )}
+              {customRoles.map((cr) =>
+                roleOption(
+                  cr.name,
+                  cr.name,
+                  cr.description || "A custom role with its own permissions.",
+                  <span className="inline-flex items-center gap-1 text-[11px] font-normal text-muted">
+                    <span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ backgroundColor: cr.color || "#2a78d6" }} />
+                    Custom
+                  </span>
+                )
+              )}
+            </fieldset>
           </form>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -850,194 +766,95 @@ function CreateEditRoleModal({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in">
-      <div className="bg-surface w-full max-w-2xl rounded-lg shadow-2xl border border-subtle p-6 space-y-4 max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-subtle shrink-0">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-accent" />
-            <div>
-              <h2 className="text-base font-bold text-ink">
-                {isEditing ? "Edit Custom Role" : "Create Custom Project Role"}
-              </h2>
-              <p className="text-xs text-muted">
-                Configure role details, branding color, and fine-grained permissions
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-muted hover:text-ink rounded p-1"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs overflow-y-auto pr-1 flex-1">
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        size="lg"
+        title={isEditing ? `Edit ${existingRole?.name ?? "role"}` : "Create role"}
+        description="A role is a set of permissions you can give members of this project."
+        footer={
+          <>
+            <span className="mr-auto text-xs text-muted">{selectedPermissions.size} permissions</span>
+            <Button onClick={onClose}>Cancel</Button>
+            <Button type="submit" form="role-form" variant="primary" loading={isSubmitting}>
+              {isEditing ? "Save changes" : "Create role"}
+            </Button>
+          </>
+        }
+      >
+        <form id="role-form" onSubmit={handleSubmit} noValidate className="space-y-4">
           {errorMessage && (
-            <div className="p-2.5 rounded bg-danger-soft border border-danger/30 text-danger text-xs font-medium flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 shrink-0" />
-              <span>{errorMessage}</span>
-            </div>
+            <p role="alert" className="rounded-control bg-danger-soft px-3 py-2 text-xs text-danger">
+              {errorMessage}
+            </p>
           )}
-
-          {/* Name & Color */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="sm:col-span-2">
-              <label className="block text-ink-2 font-bold uppercase tracking-wider text-[10px] mb-1">
-                Role Name <span className="text-danger">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. QA Specialist, Release Manager, Contractor"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 border border-subtle rounded text-ink font-semibold focus:border-accent"
-              />
+          <div className="flex items-end gap-3">
+            <Field label="Name" required className="flex-1">
+              <Input placeholder="QA, Release manager, Contractor" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+            </Field>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-ink-2" aria-hidden="true">
+                Colour
+              </span>
+              <ColorSwatchPicker label="Role colour" value={color} onChange={setColor} />
             </div>
+          </div>
+          <Field label="Description">
+            <Textarea rows={2} placeholder="What people with this role do" value={description} onChange={(e) => setDescription(e.target.value)} />
+          </Field>
 
-            <div>
-              <label className="block text-ink-2 font-bold uppercase tracking-wider text-[10px] mb-1">
-                Badge Color
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={color}
-                  onChange={(e) => setColor(e.target.value)}
-                  className="w-9 h-9 p-0.5 rounded border border-subtle cursor-pointer bg-surface"
-                />
-                <div className="flex flex-wrap gap-1">
-                  {PRESET_ROLE_COLORS.map((c) => (
-                    <button
-                      key={c.hex}
-                      type="button"
-                      onClick={() => setColor(c.hex)}
-                      title={c.name}
-                      style={{ backgroundColor: c.hex }}
-                      className={`w-4 h-4 rounded-full border transition-transform ${
-                        color.toLowerCase() === c.hex.toLowerCase()
-                          ? "scale-125 border-ink shadow-xs"
-                          : "border-transparent hover:scale-110"
-                      }`}
-                    />
-                  ))}
+          <fieldset className="space-y-3">
+            <div className="flex items-center justify-between">
+              <legend className="text-xs font-medium text-ink-2">Permissions</legend>
+              <span className="flex gap-1">
+                <Button size="sm" variant="ghost" onClick={selectAll}>
+                  All
+                </Button>
+                <Button size="sm" variant="ghost" onClick={clearOptional}>
+                  Only required
+                </Button>
+              </span>
+            </div>
+            {permissionCategories.map((cat) => (
+              <fieldset key={cat.category} className="space-y-2">
+                <legend className="pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted">{cat.title}</legend>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {cat.items.map(([permKey, permMeta]) => {
+                    const isMandatory = permKey === "VIEW_PROJECT";
+                    return (
+                      <label
+                        key={permKey}
+                        className={cn(
+                          "flex items-start gap-2.5 rounded-control border border-subtle p-2.5",
+                          isMandatory ? "cursor-not-allowed" : "cursor-pointer hover:bg-surface-sunk"
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          disabled={isMandatory}
+                          checked={selectedPermissions.has(permKey)}
+                          onChange={() => togglePermission(permKey)}
+                          aria-describedby={`perm-${permKey}`}
+                          className="mt-0.5 h-4 w-4 accent-[rgb(var(--color-accent))]"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center gap-1.5 text-[13px] font-medium text-ink">
+                            {permMeta.label}
+                            {isMandatory && <span className="text-[11px] font-normal text-muted">(always on)</span>}
+                          </span>
+                          <span id={`perm-${permKey}`} className="mt-0.5 block text-xs leading-tight text-muted">
+                            {permMeta.description}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="block text-ink-2 font-bold uppercase tracking-wider text-[10px] mb-1">
-              Description (Optional)
-            </label>
-            <textarea
-              rows={2}
-              placeholder="Explain the scope and responsibilities of this role..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-1.5 border border-subtle rounded text-ink focus:border-accent"
-            />
-          </div>
-
-          {/* Permissions Checklist */}
-          <div className="space-y-3 pt-2">
-            <div className="flex items-center justify-between pb-1 border-b border-subtle">
-              <label className="block text-ink-2 font-bold uppercase tracking-wider text-[10px]">
-                Permissions Scheme ({selectedPermissions.size} selected)
-              </label>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={selectAll}
-                  className="text-[11px] font-semibold text-accent hover:underline"
-                >
-                  Select All
-                </button>
-                <span className="text-muted">•</span>
-                <button
-                  type="button"
-                  onClick={clearOptional}
-                  className="text-[11px] font-semibold text-ink-2 hover:text-ink hover:underline"
-                >
-                  Clear Optional
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {permissionCategories.map((cat) => (
-                <div key={cat.category} className="space-y-2">
-                  <div className="text-[11px] font-bold text-ink bg-page px-2 py-1 rounded border border-subtle">
-                    {cat.title}
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {cat.items.map(([permKey, permMeta]) => {
-                      const isMandatory = permKey === "VIEW_PROJECT";
-                      const isChecked = selectedPermissions.has(permKey);
-
-                      return (
-                        <label
-                          key={permKey}
-                          className={`flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors ${
-                            isChecked
-                              ? "bg-accent-soft/40 border-accent/60"
-                              : "border-subtle hover:bg-page/70"
-                          } ${isMandatory ? "opacity-90 cursor-not-allowed" : ""}`}
-                        >
-                          <input
-                            type="checkbox"
-                            disabled={isMandatory}
-                            checked={isChecked}
-                            onChange={() => togglePermission(permKey)}
-                            className="mt-0.5 rounded text-accent focus:ring-accent"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-ink">{permMeta.label}</span>
-                              {isMandatory && (
-                                <span className="text-[9px] font-bold px-1 rounded bg-warning-soft text-warning">
-                                  Required
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[11px] text-muted leading-tight mt-0.5">
-                              {permMeta.description}
-                            </p>
-                          </div>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Modal Footer */}
-          <div className="flex justify-end gap-2.5 pt-3 border-t border-subtle shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-ink-2 hover:bg-surface-sunk rounded font-semibold text-xs transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="bg-accent hover:bg-accent-hover text-accent-fg px-4 py-2 rounded font-semibold text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 shadow-xs"
-            >
-              {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              <span>{isEditing ? "Save Changes" : "Create Role"}</span>
-            </button>
-          </div>
+              </fieldset>
+            ))}
+          </fieldset>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -1057,40 +874,28 @@ function PermissionsMatrixModal({
   const permissions = Object.entries(PERMISSION_DESCRIPTIONS);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in">
-      <div className="bg-surface w-full max-w-4xl rounded-lg shadow-2xl border border-subtle p-6 space-y-4 max-h-[85vh] flex flex-col">
-        <div className="flex items-center justify-between pb-3 border-b border-subtle shrink-0">
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal className="w-5 h-5 text-accent" />
-            <div>
-              <h2 className="text-base font-bold text-ink">Permissions Scheme Matrix</h2>
-              <p className="text-xs text-muted">
-                Detailed access breakdown across standard system roles and custom project roles
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-muted hover:text-ink rounded p-1"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="overflow-auto flex-1 border border-subtle rounded-lg">
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        size="xl"
+        title="Permissions by role"
+        description="What each built-in and custom role can do in this project."
+        footer={<Button onClick={onClose}>Close</Button>}
+      >
+        <div role="region" aria-label="Permissions by role" tabIndex={0} className="overflow-auto rounded-control border border-subtle">
           <table className="w-full text-xs text-left border-collapse">
             <thead>
               <tr className="bg-surface-sunk border-b border-subtle font-bold text-[11px] text-ink sticky top-0 z-10">
-                <th className="px-4 py-3 min-w-[200px]">Permission Category & Action</th>
+                <th scope="col" className="px-4 py-3 min-w-[200px]">Permission</th>
                 {builtInRoles.map((r) => (
-                  <th key={r.key} className="px-3 py-3 text-center min-w-[90px]">
+                  <th key={r.key} scope="col" className="px-3 py-3 text-center min-w-[90px]">
                     {r.name}
                   </th>
                 ))}
                 {customRoles.map((cr) => (
-                  <th key={cr.id} className="px-3 py-3 text-center min-w-[100px]">
+                  <th key={cr.id} scope="col" className="px-3 py-3 text-center min-w-[100px]">
                     <div className="flex items-center justify-center gap-1.5">
                       <span
+                        aria-hidden="true"
                         className="w-2 h-2 rounded-full shrink-0"
                         style={{ backgroundColor: cr.color || "#2a78d6" }}
                       />
@@ -1107,7 +912,7 @@ function PermissionsMatrixModal({
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-ink">{permMeta.label}</span>
-                        <span className="text-[10px] uppercase font-semibold px-1.5 py-px rounded bg-surface-sunk text-ink-2">
+                        <span className="text-[11px] px-1.5 py-px rounded bg-surface-sunk text-ink-2">
                           {permMeta.category}
                         </span>
                       </div>
@@ -1123,11 +928,13 @@ function PermissionsMatrixModal({
                         <td key={key} className="px-3 py-2.5 text-center">
                           {isAllowed ? (
                             <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-success-soft text-success">
-                              <Check className="w-4 h-4" />
+                              <Check className="w-4 h-4" aria-hidden="true" />
+                              <span className="sr-only">Allowed</span>
                             </span>
                           ) : (
                             <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-surface-sunk text-muted">
-                              <X className="w-3.5 h-3.5" />
+                              <X className="w-3.5 h-3.5" aria-hidden="true" />
+                              <span className="sr-only">Not allowed</span>
                             </span>
                           )}
                         </td>
@@ -1146,18 +953,14 @@ function PermissionsMatrixModal({
                       return (
                         <td key={cr.id} className="px-3 py-2.5 text-center">
                           {isAllowed ? (
-                            <span
-                              className="inline-flex items-center justify-center w-6 h-6 rounded-full"
-                              style={{
-                                backgroundColor: `${cr.color || "#2a78d6"}20`,
-                                color: cr.color || "#2a78d6",
-                              }}
-                            >
-                              <Check className="w-4 h-4" />
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-success-soft text-success">
+                              <Check className="w-4 h-4" aria-hidden="true" />
+                              <span className="sr-only">Allowed</span>
                             </span>
                           ) : (
                             <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-surface-sunk text-muted">
-                              <X className="w-3.5 h-3.5" />
+                              <X className="w-3.5 h-3.5" aria-hidden="true" />
+                              <span className="sr-only">Not allowed</span>
                             </span>
                           )}
                         </td>
@@ -1169,16 +972,7 @@ function PermissionsMatrixModal({
             </tbody>
           </table>
         </div>
-
-        <div className="flex justify-end pt-2 shrink-0">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-surface-sunk hover:bg-subtle text-ink font-semibold text-xs rounded transition-colors"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

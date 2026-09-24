@@ -40,6 +40,8 @@ async function setTheme(page: Page, theme: "light" | "dark") {
 
 /** Every check runs in the light theme and again in the dark one. */
 async function expectNoSeriousViolations(page: Page, name: string, include?: string) {
+  // A whole page has one main heading: the page's own, or the breadcrumb's where it has none.
+  if (!include) expect.soft(await page.locator("h1").count(), `${name} should have one h1`).toBe(1);
   await checkWithAxe(page, name, include);
   await setTheme(page, "dark");
   await checkWithAxe(page, `${name} (dark)`, include);
@@ -83,10 +85,9 @@ test.describe.serial("accessibility", () => {
     await expectNoSeriousViolations(page, "Projects");
   });
 
-  test("new layout: Home, Inbox and a project page", async () => {
-    await page.goto("/projects");
-    await page.getByRole("button", { name: /Ada Lovelace/ }).first().click();
-    await page.getByRole("button", { name: "Try the new layout" }).click();
+  test("Home, Inbox and the shell around a page", async () => {
+    // Signed-in people land on Home.
+    await page.goto("/");
     await page.waitForURL(/\/home/);
     await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Assigned to you" })).toBeVisible();
@@ -99,20 +100,33 @@ test.describe.serial("accessibility", () => {
 
     await page.goto("/projects");
     await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toBeVisible();
-    await expectNoSeriousViolations(page, "Projects (new layout)");
+    await expectNoSeriousViolations(page, "Projects in the shell");
 
-    // Back to classic, so a re-run starts from the same place.
+    // The account dialogs and the shortcuts list.
     await page.getByRole("button", { name: /Ada Lovelace/ }).click();
-    // Switching reloads the page; wait for it so the next test starts clean.
-    await Promise.all([page.waitForEvent("framenavigated"), page.getByRole("menuitem", { name: "Use the classic layout" }).click()]);
-    await page.waitForLoadState("load");
+    await page.getByRole("menuitem", { name: /Password/ }).click();
+    await expectNoSeriousViolations(page, "Password and sessions dialog", "[role=dialog]");
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: /Ada Lovelace/ }).click();
+    await page.getByRole("menuitem", { name: /access tokens/i }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "New token" }).click();
+    await expect(page.getByRole("dialog", { name: "New personal access token" })).toBeVisible();
+    await expectNoSeriousViolations(page, "New token dialog", "[role=dialog]");
+    await page.keyboard.press("Escape");
+    await page.locator("body").press("?");
+    await expect(page.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeVisible();
+    await expectNoSeriousViolations(page, "Keyboard shortcuts dialog", "[role=dialog]");
+    await page.keyboard.press("Escape");
   });
 
   test("an issue: its page, the side panel and an old link", async () => {
     await page.goto("/projects/APOLLO/backlog");
     await page.keyboard.press("c");
-    await page.getByPlaceholder("What needs to be done?").fill("Check the issue view");
-    await page.locator("form").getByRole("button", { name: "Create", exact: true }).click();
+    const create = page.getByRole("dialog", { name: "Create issue" });
+    await create.getByRole("textbox", { name: "Title" }).fill("Check the issue view");
+    await expectNoSeriousViolations(page, "Create issue dialog", "[role=dialog]");
+    await create.getByRole("button", { name: "Create", exact: true }).click();
+    await expect(create).toBeHidden();
     await expect(page.getByText("Check the issue view").filter({ visible: true }).first()).toBeVisible();
 
     await page.goto("/projects/APOLLO/issues/APOLLO-1");
@@ -253,10 +267,7 @@ test.describe.serial("accessibility", () => {
   });
 
   test("appearance and phones: the account menu, the tab bar, the first card", async () => {
-    await page.goto("/projects");
-    await page.getByRole("button", { name: /Ada Lovelace/ }).first().click();
-    await page.getByRole("button", { name: "Try the new layout" }).click();
-    await page.waitForURL(/\/home/);
+    await page.goto("/home");
 
     // Theme and density from the account menu apply at once, without a reload.
     await page.getByRole("button", { name: /Ada Lovelace/ }).click();
@@ -304,11 +315,8 @@ test.describe.serial("accessibility", () => {
     await expectNoSeriousViolations(page, "Navigation sheet (phone)");
     await page.keyboard.press("Escape");
 
-    // Back to a desktop and the classic layout for the tests after this one.
+    // Back to a desktop for the tests after this one.
     await page.setViewportSize({ width: 1280, height: 720 });
-    await page.getByRole("button", { name: /Ada Lovelace/ }).click();
-    await Promise.all([page.waitForEvent("framenavigated"), page.getByRole("menuitem", { name: "Use the classic layout" }).click()]);
-    await page.waitForLoadState("load");
   });
 
   test("reports, roadmap and releases", async () => {
@@ -364,11 +372,31 @@ test.describe.serial("accessibility", () => {
     await expect(page.getByLabel("Name")).toHaveValue("Apollo");
 
     const nav = page.getByRole("navigation", { name: "Project settings" });
+    // Each section, and the dialog it opens. (Add member is off: everyone here is already a member.)
+    const dialogs: Record<string, [string, string]> = {
+      Components: ["Create component", "Create component"],
+      "Custom fields": ["Create custom field", "Create custom field"],
+      Roles: ["Create role", "Create role"],
+      Webhooks: ["Create webhook", "Create webhook"],
+    };
     for (const section of ["Components", "Custom fields", "Members", "Roles", "Visibility", "Workflow", "Webhooks"]) {
       await nav.getByRole("button", { name: new RegExp(`^${section}`) }).click();
       await expect(page.getByRole("heading", { level: 2, name: section, exact: true })).toBeVisible();
       await expectNoSeriousViolations(page, `Settings, ${section.toLowerCase()}`);
+      const opens = dialogs[section];
+      if (!opens) continue;
+      await page.getByRole("button", { name: opens[0], exact: true }).first().click();
+      const dialog = page.getByRole("dialog", { name: opens[1] });
+      await expect(dialog).toBeVisible();
+      await expectNoSeriousViolations(page, `${opens[1]} dialog`, "[role=dialog]");
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
     }
+    await nav.getByRole("button", { name: /^Roles/ }).click();
+    await page.getByRole("button", { name: "Compare permissions" }).click();
+    await expectNoSeriousViolations(page, "Permissions by role dialog", "[role=dialog]");
+    await page.keyboard.press("Escape");
+    await nav.getByRole("button", { name: /^Webhooks/ }).click();
     await expect(page).toHaveURL(/section=webhooks/);
 
     await nav.getByRole("button", { name: /^Workflow/ }).click();
@@ -393,6 +421,23 @@ test.describe.serial("accessibility", () => {
     await signedOut.goto("/login");
     await expect(signedOut.getByLabel("Password")).toBeVisible();
     await expectNoSeriousViolations(signedOut, "Sign-in");
+
+    // A public project, as someone who isn't signed in: the same shell, with Sign in in place of Home and Inbox.
+    await page.goto("/projects/APOLLO/settings?section=visibility");
+    await page.getByRole("checkbox", { name: /Anyone with the link/ }).check();
+    const bar = page.getByRole("region", { name: "Unsaved changes" });
+    await bar.getByRole("button", { name: "Save changes" }).click();
+    await expect(bar).toBeHidden();
+
+    await signedOut.goto("/projects/APOLLO/board");
+    const rail = signedOut.getByRole("navigation", { name: "Main" }).first();
+    await expect(signedOut.getByRole("link", { name: "Sign in" }).first()).toBeVisible();
+    await expect(rail.getByRole("link", { name: "Home" })).toHaveCount(0);
+    await expectNoSeriousViolations(signedOut, "Public board, signed out");
+    await signedOut.setViewportSize({ width: 390, height: 844 });
+    const tabs = signedOut.getByRole("navigation", { name: "Main" }).last();
+    await expect(tabs.getByRole("link", { name: "Sign in" })).toBeVisible();
+    await expect(tabs.getByRole("link", { name: "Board" })).toHaveAttribute("aria-current", "page");
     await signedOutContext.close();
   });
 });

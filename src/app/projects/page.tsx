@@ -2,8 +2,6 @@ import React from "react";
 import { redirect } from "next/navigation";
 import { getAllProjectsWithStats, getAllUsers, getProjects } from "@/lib/actions/projects";
 import ProjectsDirectoryView from "@/components/projects/ProjectsDirectoryView";
-import Navbar from "@/components/layout/Navbar";
-import { SearchProvider } from "@/context/SearchContext";
 import { getCurrentUser } from "@/lib/auth/session";
 import ShellPage from "@/components/shell/ShellPage";
 
@@ -22,34 +20,11 @@ export default async function ProjectsPage() {
   // A visitor with nothing to look at is better served by the sign-in screen.
   if (!user && allProjects.length === 0) redirect("/login");
 
-  const defaultProject = allProjects.length > 0 ? allProjects[0] : null;
-
-  if (user?.useNewLayout) {
-    return (
-      <ShellPage projects={allProjects as any} users={users as any}>
-        <div className="flex flex-1 overflow-hidden">
-          <ProjectsDirectoryView initialProjects={projectsWithStats as any} users={users as any} />
-        </div>
-      </ShellPage>
-    );
-  }
-
   return (
-    <SearchProvider>
-      <div className="flex flex-col h-screen w-screen overflow-hidden bg-surface">
-        {defaultProject && (
-          <Navbar
-            projects={allProjects as any}
-            currentProject={defaultProject as any}
-          />
-        )}
-        <main className="flex-1 flex overflow-hidden">
-          <ProjectsDirectoryView
-            initialProjects={projectsWithStats as any}
-            users={users as any}
-          />
-        </main>
+    <ShellPage projects={allProjects as any} users={users as any}>
+      <div className="flex flex-1 overflow-hidden">
+        <ProjectsDirectoryView initialProjects={projectsWithStats as any} users={users as any} />
       </div>
-    </SearchProvider>
+    </ShellPage>
   );
 }

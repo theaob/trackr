@@ -18,8 +18,8 @@ export default async function HomePage() {
   ]);
 
   if (setupNeeded) redirect("/setup");
-  // The redesigned shell starts on Home: your work first, projects below.
-  if (user?.useNewLayout) redirect("/home");
+  // Signed in, you start on Home: your work first, projects below.
+  if (user) redirect("/home");
 
   if (projects.length > 0) {
     redirect(`/projects/${projects[0].key}/board`);

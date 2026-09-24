@@ -483,7 +483,7 @@ export default function ProjectSettingsView({
                 className="bg-accent hover:bg-accent-hover text-accent-fg text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5 shadow-2xs transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
-                Create Custom Field
+                Create custom field
               </button>
             )}
           </div>
@@ -501,7 +501,7 @@ export default function ProjectSettingsView({
                 className="bg-accent hover:bg-accent-hover text-accent-fg text-xs font-semibold px-4 py-2 rounded inline-flex items-center gap-1.5 shadow-2xs"
               >
                 <Plus className="w-3.5 h-3.5" />
-                Add Your First Custom Field
+                Add your first custom field
               </button>
             </div>
           ) : (
@@ -607,7 +607,7 @@ export default function ProjectSettingsView({
                 className="bg-accent hover:bg-accent-hover text-accent-fg text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5 shadow-2xs transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
-                Create Component
+                Create component
               </button>
             )}
           </div>
@@ -626,7 +626,7 @@ export default function ProjectSettingsView({
                   className="bg-accent hover:bg-accent-hover text-accent-fg text-xs font-semibold px-4 py-2 rounded inline-flex items-center gap-1.5 shadow-2xs"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  Add Your First Component
+                  Add your first component
                 </button>
               )}
             </div>
@@ -705,7 +705,7 @@ export default function ProjectSettingsView({
                 className="bg-accent hover:bg-accent-hover text-accent-fg text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5 shadow-2xs transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
-                Create Webhook
+                Create webhook
               </button>
             )}
           </div>
@@ -723,7 +723,7 @@ export default function ProjectSettingsView({
                 className="bg-accent hover:bg-accent-hover text-accent-fg text-xs font-semibold px-4 py-2 rounded inline-flex items-center gap-1.5 shadow-2xs"
               >
                 <Plus className="w-3.5 h-3.5" />
-                Add Your First Webhook
+                Add your first webhook
               </button>
             </div>
           ) : (

@@ -116,7 +116,7 @@ export default function BacklogView({
     setIssues(initialIssues);
   }, [initialIssues]);
 
-  // Handle jira:issue-created custom event
+  // Issues created elsewhere (quick create, the backlog) arrive as trackr:issue-created
   useEffect(() => {
     const handleIssueCreatedEvent = (e: Event) => {
       const customEvent = e as CustomEvent<{

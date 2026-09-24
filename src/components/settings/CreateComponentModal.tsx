@@ -3,7 +3,10 @@
 import React, { useState } from "react";
 import { Component, User } from "@/types";
 import { createComponent } from "@/lib/actions/components";
-import { X, Boxes, Loader2 } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/Button";
+import { Field, Input } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 
 interface CreateComponentModalProps {
   projectId: string;
@@ -67,96 +70,40 @@ export default function CreateComponentModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-150">
-      <div
-        className="bg-surface rounded-none sm:rounded-lg shadow-xl border-0 sm:border border-subtle w-full h-full sm:h-auto max-w-md overflow-hidden flex flex-col max-h-none sm:max-h-[90vh]"
-        onClick={(e) => e.stopPropagation()}
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent
+        title="Create component"
+        description="A component is a part of the project, such as the API or the mobile app, that issues can belong to."
+        footer={
+          <>
+            <Button onClick={handleClose}>Cancel</Button>
+            <Button type="submit" form="component-form" variant="primary" loading={isSubmitting}>
+              Create component
+            </Button>
+          </>
+        }
       >
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-subtle shrink-0">
-          <div className="flex items-center gap-2">
-            <Boxes className="w-4 h-4 text-accent" />
-            <h2 className="text-base font-bold text-ink">Create Component</h2>
-          </div>
-          <button
-            onClick={handleClose}
-            className="text-muted hover:text-ink p-1 rounded hover:bg-surface-sunk transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
+        <form id="component-form" onSubmit={handleSubmit} noValidate className="space-y-4">
           {error && (
-            <div className="p-3 bg-danger/10 border border-danger/30 rounded text-xs text-danger font-medium">
+            <p role="alert" className="rounded-control bg-danger-soft px-3 py-2 text-xs text-danger">
               {error}
-            </div>
+            </p>
           )}
-
-          <div>
-            <label className="block text-xs font-semibold text-ink-2 mb-1">
-              Component Name <span className="text-danger">*</span>
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Backend API, Mobile App, Infrastructure"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-surface border border-subtle rounded focus:border-accent"
-              autoFocus
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-ink-2 mb-1">
-              Description (Optional)
-            </label>
-            <input
-              type="text"
-              placeholder="What this part of the project covers..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-surface border border-subtle rounded focus:border-accent"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-ink-2 mb-1">
-              Component Lead (Optional)
-            </label>
-            <select
+          <Field label="Name" required>
+            <Input placeholder="Backend API, Mobile app, Infrastructure" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+          </Field>
+          <Field label="Description">
+            <Input placeholder="What this part of the project covers" value={description} onChange={(e) => setDescription(e.target.value)} />
+          </Field>
+          <Field label="Lead">
+            <Select
               value={leadId}
-              onChange={(e) => setLeadId(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-surface border border-subtle rounded focus:border-accent"
-            >
-              <option value="">None</option>
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center justify-end gap-2 pt-4 border-t border-subtle">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="text-xs font-medium px-4 py-2 rounded text-ink-2 hover:bg-surface-sunk transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="text-xs font-semibold px-4 py-2 rounded bg-accent text-accent-fg hover:bg-accent-hover disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-xs"
-            >
-              {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Create Component
-            </button>
-          </div>
+              onChange={setLeadId}
+              options={[{ value: "", label: "None" }, ...members.map((m) => ({ value: m.id, label: m.name }))]}
+            />
+          </Field>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

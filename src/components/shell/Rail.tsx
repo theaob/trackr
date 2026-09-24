@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   Home,
+  LogIn,
   Inbox,
   Kanban,
   LayoutGrid,
@@ -98,7 +99,7 @@ function RailLink({ href, icon, label, active, collapsed, trailing, onNavigate, 
 }
 
 /**
- * The left rail of the new layout: the workspace, search, Home and Inbox,
+ * The left rail: the workspace, search, Home and Inbox,
  * then every project you belong to with the current one opened out.
  */
 export default function Rail({
@@ -181,24 +182,28 @@ export default function Rail({
               </>
             )}
           </button>
-          <RailLink
-            href="/home"
-            icon={<Home aria-hidden="true" />}
-            label={collapsed && counts.openIssues > 0 ? `Home, ${counts.openIssues} open issues` : "Home"}
-            active={location.section === "home"}
-            collapsed={collapsed}
-            onNavigate={onNavigate}
-            trailing={<Count value={counts.openIssues} label={`${counts.openIssues} open issues assigned to you`} />}
-          />
-          <RailLink
-            href="/inbox"
-            icon={<Inbox aria-hidden="true" />}
-            label={collapsed && counts.unread > 0 ? `Inbox, ${counts.unread} unread` : "Inbox"}
-            active={location.section === "inbox"}
-            collapsed={collapsed}
-            onNavigate={onNavigate}
-            trailing={<Count value={counts.unread} label={`${counts.unread} unread`} />}
-          />
+          {currentUser && (
+            <>
+            <RailLink
+              href="/home"
+              icon={<Home aria-hidden="true" />}
+              label={collapsed && counts.openIssues > 0 ? `Home, ${counts.openIssues} open issues` : "Home"}
+              active={location.section === "home"}
+              collapsed={collapsed}
+              onNavigate={onNavigate}
+              trailing={<Count value={counts.openIssues} label={`${counts.openIssues} open issues assigned to you`} />}
+            />
+            <RailLink
+              href="/inbox"
+              icon={<Inbox aria-hidden="true" />}
+              label={collapsed && counts.unread > 0 ? `Inbox, ${counts.unread} unread` : "Inbox"}
+              active={location.section === "inbox"}
+              collapsed={collapsed}
+              onNavigate={onNavigate}
+              trailing={<Count value={counts.unread} label={`${counts.unread} unread`} />}
+            />
+            </>
+          )}
         </div>
 
         <div className="flex flex-col gap-0.5">
@@ -301,7 +306,18 @@ export default function Rail({
             <PanelLeftOpen className="h-4 w-4" aria-hidden="true" />
           </button>
         )}
-        <AccountMenu collapsed={collapsed} currentProject={currentProject} />
+        {currentUser ? (
+          <AccountMenu collapsed={collapsed} currentProject={currentProject} />
+        ) : (
+          <RailLink
+            href={`/login?next=${encodeURIComponent(pathname || "/")}`}
+            icon={<LogIn aria-hidden="true" />}
+            label="Sign in"
+            active={false}
+            collapsed={collapsed}
+            onNavigate={onNavigate}
+          />
+        )}
       </div>
     </nav>
   );

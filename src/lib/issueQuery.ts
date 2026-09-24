@@ -277,8 +277,8 @@ export const COLUMNS: { id: ColumnId; label: string; sort?: SortField; required?
   { id: "key", label: "Key", sort: "key", required: true },
   { id: "title", label: "Summary", sort: "title", required: true },
   { id: "status", label: "Status", sort: "status" },
-  // Priority is stored as text, so the database would sort it alphabetically.
-  { id: "priority", label: "Priority" },
+  // Sorted by rank on the server (src/lib/prioritySort.ts), not as text.
+  { id: "priority", label: "Priority", sort: "priority" },
   { id: "points", label: "Points", sort: "points" },
   { id: "assignee", label: "Assignee" },
   { id: "reporter", label: "Reporter" },
@@ -323,7 +323,7 @@ export const BUILT_IN_VIEWS: ViewDefinition[] = [
   {
     id: "preset-high",
     name: "High priority",
-    tql: 'priority in ("HIGHEST", "HIGH") ORDER BY updated DESC',
+    tql: 'priority in ("HIGHEST", "HIGH") ORDER BY priority DESC',
     columns: DEFAULT_COLUMNS,
     builtIn: true,
   },

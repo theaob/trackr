@@ -41,7 +41,6 @@ export interface User {
   canCreateProjects?: boolean;
   isInstanceAdmin?: boolean;
   /** Only on the signed-in user: the redesigned shell, while it is opt-in. */
-  useNewLayout?: boolean;
 }
 
 export interface Comment {

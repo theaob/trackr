@@ -3,7 +3,10 @@
 import React, { useState } from "react";
 import { Webhook, WebhookEvent } from "@/types";
 import { createWebhook, validateWebhookJql } from "@/lib/actions/webhooks";
-import { X, Webhook as WebhookIcon, Check, Loader2, Shield, Filter } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/Button";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { Field, Input } from "@/components/ui/Field";
 
 interface CreateWebhookModalProps {
   projectId: string;
@@ -21,42 +24,42 @@ const AVAILABLE_EVENTS: {
     items: [
       {
         event: "issue:created",
-        label: "Issue Created",
+        label: "Issue created",
         description: "Triggered whenever a new issue is created in the project",
       },
       {
         event: "issue:updated",
-        label: "Issue Updated",
+        label: "Issue updated",
         description: "Triggered on title, description, story points, or general field edits",
       },
       {
         event: "issue:transitioned",
-        label: "Status Transitioned",
+        label: "Status transitioned",
         description: "Triggered when an issue moves between workflow columns",
       },
       {
         event: "issue:assigned",
-        label: "Assignee Changed",
+        label: "Assignee changed",
         description: "Triggered when an issue is assigned or reassigned to a member",
       },
       {
         event: "issue:priority_changed",
-        label: "Priority Changed",
+        label: "Priority changed",
         description: "Triggered when issue priority is adjusted or escalated",
       },
       {
         event: "issue:deleted",
-        label: "Issue Deleted",
+        label: "Issue deleted",
         description: "Triggered when an issue is permanently deleted",
       },
       {
         event: "issue:linked",
-        label: "Issue Linked",
+        label: "Issue linked",
         description: "Triggered when a relationship link (blocks, relates to) is added",
       },
       {
         event: "issue:unlinked",
-        label: "Issue Unlinked",
+        label: "Issue unlinked",
         description: "Triggered when an issue link relationship is removed",
       },
     ],
@@ -66,17 +69,17 @@ const AVAILABLE_EVENTS: {
     items: [
       {
         event: "comment:created",
-        label: "Comment Added",
+        label: "Comment added",
         description: "Triggered whenever someone posts a comment on an issue",
       },
       {
         event: "comment:updated",
-        label: "Comment Edited",
+        label: "Comment edited",
         description: "Triggered when an existing comment is modified",
       },
       {
         event: "comment:deleted",
-        label: "Comment Deleted",
+        label: "Comment deleted",
         description: "Triggered when a comment is removed",
       },
     ],
@@ -86,12 +89,12 @@ const AVAILABLE_EVENTS: {
     items: [
       {
         event: "attachment:created",
-        label: "File Attached",
+        label: "File attached",
         description: "Triggered when a file or screenshot is uploaded to an issue",
       },
       {
         event: "attachment:deleted",
-        label: "Attachment Removed",
+        label: "Attachment removed",
         description: "Triggered when an attached file is deleted",
       },
     ],
@@ -101,12 +104,12 @@ const AVAILABLE_EVENTS: {
     items: [
       {
         event: "worklog:created",
-        label: "Work Logged",
+        label: "Work logged",
         description: "Triggered when spent time is recorded against an issue",
       },
       {
         event: "worklog:deleted",
-        label: "Worklog Removed",
+        label: "Worklog removed",
         description: "Triggered when a logged work entry is deleted",
       },
     ],
@@ -116,27 +119,27 @@ const AVAILABLE_EVENTS: {
     items: [
       {
         event: "sprint:created",
-        label: "Sprint Created",
+        label: "Sprint created",
         description: "Triggered when a new agile sprint is planned",
       },
       {
         event: "sprint:started",
-        label: "Sprint Started",
+        label: "Sprint started",
         description: "Triggered when an agile sprint is activated",
       },
       {
         event: "sprint:updated",
-        label: "Sprint Updated",
+        label: "Sprint updated",
         description: "Triggered when sprint name, goal, or dates are modified",
       },
       {
         event: "sprint:completed",
-        label: "Sprint Completed",
+        label: "Sprint completed",
         description: "Triggered when a sprint is finished and closed",
       },
       {
         event: "sprint:deleted",
-        label: "Sprint Deleted",
+        label: "Sprint deleted",
         description: "Triggered when a sprint is permanently deleted",
       },
     ],
@@ -146,27 +149,27 @@ const AVAILABLE_EVENTS: {
     items: [
       {
         event: "version:created",
-        label: "Release Created",
+        label: "Release created",
         description: "Triggered when a software version is planned",
       },
       {
         event: "version:updated",
-        label: "Release Updated",
+        label: "Release updated",
         description: "Triggered when version details or dates are modified",
       },
       {
         event: "version:released",
-        label: "Release Published",
+        label: "Release published",
         description: "Triggered when a software version is marked as Released",
       },
       {
         event: "version:archived",
-        label: "Release Archived",
+        label: "Release archived",
         description: "Triggered when a version is archived or unarchived",
       },
       {
         event: "version:deleted",
-        label: "Release Deleted",
+        label: "Release deleted",
         description: "Triggered when a software version is deleted",
       },
     ],
@@ -303,239 +306,114 @@ export default function CreateWebhookModal({
     }
   };
 
+  const presets: { label: string; events: WebhookEvent[] }[] = [
+    { label: "All", events: ALL_EVENT_KEYS },
+    { label: "Issues", events: ISSUE_EVENTS },
+    { label: "Transitions", events: TRANSITION_EVENTS },
+    { label: "Sprints and releases", events: AGILE_EVENTS },
+    { label: "None", events: [] },
+  ];
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-150">
-      <div
-        className="bg-surface rounded-none sm:rounded-lg shadow-2xl border-0 sm:border border-subtle w-full h-full sm:h-auto max-w-2xl overflow-hidden flex flex-col max-h-none sm:max-h-[90vh]"
-        onClick={(e) => e.stopPropagation()}
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        size="lg"
+        title="Create webhook"
+        description="Trackr sends an HTTP POST with the event, who did it and what changed."
+        footer={
+          <>
+            <span className="mr-auto text-xs text-muted">
+              {selectedEvents.length} event{selectedEvents.length === 1 ? "" : "s"} chosen
+            </span>
+            <Button onClick={onClose}>Cancel</Button>
+            <Button type="submit" form="webhook-form" variant="primary" loading={isSubmitting}>
+              Create webhook
+            </Button>
+          </>
+        }
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-subtle shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded bg-accent-soft/70 flex items-center justify-center text-accent">
-              <WebhookIcon className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-ink">Create Webhook Trigger</h2>
-              <p className="text-xs text-muted">
-                Send real-time HTTP POST notifications with actor and changelog data.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-muted hover:text-ink p-1 rounded hover:bg-surface-sunk transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
+        <form id="webhook-form" onSubmit={handleSubmit} noValidate className="space-y-4">
           {error && (
-            <div className="p-3 bg-danger/10 border border-danger/30 rounded text-xs text-danger font-medium">
+            <p role="alert" className="rounded-control bg-danger-soft px-3 py-2 text-xs text-danger">
               {error}
-            </div>
+            </p>
           )}
-
-          {/* Webhook Name */}
-          <div>
-            <label className="block text-xs font-semibold text-ink-2 mb-1">
-              Webhook Name <span className="text-danger">*</span>
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Slack Engineering Alerts, Zapier Issue Sync, CI Pipeline"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-surface border border-subtle rounded focus:border-accent"
-              autoFocus
-              required
-            />
-          </div>
-
-          {/* Target URL */}
-          <div>
-            <label className="block text-xs font-semibold text-ink-2 mb-1">
-              Payload Endpoint URL <span className="text-danger">*</span>
-            </label>
-            <input
+          <Field label="Name" required>
+            <Input placeholder="Slack alerts, CI pipeline" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+          </Field>
+          <Field label="URL" required hint="Where the JSON payloads are sent.">
+            <Input
               type="url"
-              placeholder="https://api.yourcompany.com/webhooks or http://localhost:3000/api/mock-webhook-receiver"
+              className="font-mono text-xs"
+              placeholder="https://example.com/webhooks/trackr"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-surface border border-subtle rounded focus:border-accent font-mono text-[11px]"
-              required
             />
-            <p className="text-[11px] text-muted mt-1">
-              The external URL where HTTP POST requests with JSON payloads will be delivered.
-            </p>
-          </div>
-
-          {/* Secret Key (Optional) */}
-          <div>
-            <label className="block text-xs font-semibold text-ink-2 mb-1 flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Shield className="w-3.5 h-3.5 text-accent" />
-                Secret Key (Optional HMAC Signature)
-              </span>
-              <span className="text-[10px] text-muted font-normal">Optional</span>
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. whsec_9a8b7c6d5e4f3a2b1c0d"
-              value={secret}
-              onChange={(e) => setSecret(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-surface border border-subtle rounded focus:border-accent font-mono text-[11px]"
-            />
-            <p className="text-[11px] text-muted mt-1">
-              If provided, payloads will be signed using HMAC SHA-256 and sent in the <code className="text-ink font-semibold">X-Hub-Signature-256</code> header.
-            </p>
-          </div>
-
-          {/* TQL issue filter (optional) */}
-          <div>
-            <label className="block text-xs font-semibold text-ink-2 mb-1 flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Filter className="w-3.5 h-3.5 text-accent" />
-                TQL issue filter (optional)
-              </span>
-              <span className="text-[10px] text-muted font-normal">Optional</span>
-            </label>
-            <input
-              type="text"
-              placeholder='e.g. priority in (HIGH, HIGHEST) AND type = BUG'
+          </Field>
+          <Field
+            label="Secret"
+            hint={
+              <>
+                If set, each payload is signed with HMAC SHA-256 in the <code className="font-mono text-ink">X-Hub-Signature-256</code> header.
+              </>
+            }
+          >
+            <Input className="font-mono text-xs" placeholder="whsec_…" value={secret} onChange={(e) => setSecret(e.target.value)} />
+          </Field>
+          <Field
+            label="Only for issues matching (TQL)"
+            error={jqlError}
+            hint="Issue events are sent only when the issue matches. Leave empty for all issues."
+          >
+            <Input
+              className="font-mono text-xs"
+              placeholder="priority in (HIGH, HIGHEST) AND type = BUG"
               value={jqlFilter}
               onChange={(e) => {
                 setJqlFilter(e.target.value);
                 if (jqlError) setJqlError(null);
               }}
               onBlur={handleValidateJql}
-              className={`w-full text-xs px-3 py-2 bg-surface border rounded font-mono text-[11px] ${
-                jqlError ? "border-danger focus:border-danger" : "border-subtle focus:border-accent"
-              }`}
             />
-            {jqlError ? (
-              <p className="text-[11px] text-danger mt-1 flex items-center gap-1">
-                <span>⚠</span> {jqlError}
-              </p>
-            ) : (
-              <p className="text-[11px] text-muted mt-1">
-                Only deliver issue-related events if the affected issue matches this TQL query.
-              </p>
-            )}
-          </div>
+          </Field>
 
-          {/* Event Triggers */}
-          <div className="pt-2">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-              <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider">
-                Event Triggers ({selectedEvents.length} selected)
-              </label>
-              <div className="flex flex-wrap items-center gap-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setSelectedEvents(ALL_EVENT_KEYS)}
-                  className="text-accent hover:underline font-semibold"
-                >
-                  All Events
-                </button>
-                <span className="text-muted">|</span>
-                <button
-                  type="button"
-                  onClick={() => setSelectedEvents(ISSUE_EVENTS)}
-                  className="text-accent hover:underline"
-                >
-                  Issues
-                </button>
-                <span className="text-muted">|</span>
-                <button
-                  type="button"
-                  onClick={() => setSelectedEvents(TRANSITION_EVENTS)}
-                  className="text-accent hover:underline"
-                >
-                  Transitions
-                </button>
-                <span className="text-muted">|</span>
-                <button
-                  type="button"
-                  onClick={() => setSelectedEvents(AGILE_EVENTS)}
-                  className="text-accent hover:underline"
-                >
-                  Sprints/Releases
-                </button>
-                <span className="text-muted">|</span>
-                <button
-                  type="button"
-                  onClick={() => setSelectedEvents([])}
-                  className="text-muted hover:underline"
-                >
-                  Clear
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-3 bg-page/70 border border-subtle rounded-md p-3 max-h-72 overflow-y-auto">
-              {AVAILABLE_EVENTS.map((category) => (
-                <div key={category.category} className="space-y-1.5">
-                  <div className="text-[11px] font-bold text-ink-2 uppercase tracking-wider pb-1 border-b border-subtle">
-                    {category.category}
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
-                    {category.items.map((item) => {
-                      const isChecked = selectedEvents.includes(item.event);
-                      return (
-                        <label
-                          key={item.event}
-                          className={`flex items-start gap-2 p-2 rounded cursor-pointer border transition-colors ${
-                            isChecked
-                              ? "bg-surface border-accent/60 shadow-2xs"
-                              : "bg-surface/60 border-transparent hover:bg-surface"
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => toggleEvent(item.event)}
-                            className="mt-0.5 w-3.5 h-3.5 rounded text-accent focus:ring-accent border-subtle"
-                          />
-                          <div className="space-y-0.5">
-                            <div className="text-xs font-semibold text-ink">
-                              {item.label}
-                            </div>
-                            <p className="text-[10px] text-muted leading-tight">
-                              {item.description}
-                            </p>
-                          </div>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
+          <fieldset className="space-y-2">
+            <legend className="text-xs font-medium text-ink-2">Events</legend>
+            <div role="group" aria-label="Choose events" className="flex flex-wrap gap-1">
+              {presets.map((p) => (
+                <Button key={p.label} size="sm" variant="ghost" onClick={() => setSelectedEvents(p.events)}>
+                  {p.label}
+                </Button>
               ))}
             </div>
-          </div>
-
-          {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-2 pt-4 border-t border-subtle">
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-xs font-medium px-4 py-2 rounded text-ink-2 hover:bg-surface-sunk transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="text-xs font-semibold px-4 py-2 rounded bg-accent text-accent-fg hover:bg-accent-hover disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-2xs"
-            >
-              {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Create Webhook
-            </button>
-          </div>
+            <div className="max-h-72 space-y-3 overflow-y-auto rounded-control border border-subtle p-3">
+              {AVAILABLE_EVENTS.map((category) => (
+                <fieldset key={category.category} className="space-y-1.5">
+                  <legend className="pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted">{category.category}</legend>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {category.items.map((item) => (
+                      <label key={item.event} className="flex cursor-pointer items-start gap-2 rounded-control p-1.5 hover:bg-surface-sunk">
+                        <Checkbox
+                          className="mt-0.5"
+                          checked={selectedEvents.includes(item.event)}
+                          onChange={() => toggleEvent(item.event)}
+                          aria-describedby={`event-${item.event}`}
+                        />
+                        <span className="space-y-0.5">
+                          <span className="block text-xs font-medium text-ink">{item.label}</span>
+                          <span id={`event-${item.event}`} className="block text-[11px] leading-tight text-muted">
+                            {item.description}
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              ))}
+            </div>
+          </fieldset>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

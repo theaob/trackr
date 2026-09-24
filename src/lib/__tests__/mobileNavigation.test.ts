@@ -1,10 +1,7 @@
-import fs from "fs";
-import path from "path";
 import { describe, expect, it, vi } from "vitest";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import Navbar from "@/components/layout/Navbar";
-import Sidebar from "@/components/layout/Sidebar";
+import TabBar, { activeTab } from "@/components/shell/TabBar";
 import KanbanBoard from "@/components/board/KanbanBoard";
 import IssuesListView, { resolveNextSelectedIssueId } from "@/components/issues/IssuesListView";
 import ProjectsDirectoryView from "@/components/projects/ProjectsDirectoryView";
@@ -154,73 +151,34 @@ describe("Mobile Viewport & Navigation", () => {
     expect(viewport.userScalable).not.toBe(false);
   });
 
-  it("renders mobile menu hamburger button in Navbar when toggle handler is provided", () => {
+  it("puts a tab bar along the bottom on phones, with the current page marked", () => {
     const html = renderToStaticMarkup(
-      React.createElement(Navbar, {
-        projects: [mockProject],
-        currentProject: mockProject,
-        onToggleMobileMenu: vi.fn(),
-      })
+      React.createElement(TabBar, { project: mockProject, unread: 3, onMore: vi.fn() })
     );
 
-    expect(html).toContain("Open navigation menu");
-    expect(html).toContain("md:hidden");
+    expect(html).toMatch(/<nav aria-label="Main" class="[^"]*md:hidden/);
+    for (const label of ["Home", "Board", "Issues", "Inbox", "More"]) expect(html).toContain(label);
+    expect(html).toMatch(/<a aria-current="page"[^>]*href="\/projects\/MOB\/board"/);
+    expect(html).toContain("3<span class=\"sr-only\"> unread</span>");
   });
 
-  it("renders mobile search trigger button in Navbar", () => {
+  it("offers Sign in in place of Home and Inbox when signed out", () => {
     const html = renderToStaticMarkup(
-      React.createElement(Navbar, {
-        projects: [mockProject],
-        currentProject: mockProject,
-      })
+      React.createElement(TabBar, { project: mockProject, unread: 0, signedIn: false, onMore: vi.fn() })
     );
 
-    expect(html).toContain("Search issues");
+    expect(html).toContain("Sign in");
+    expect(html).toContain("/login?next=%2Fprojects%2FTEST%2Fboard");
+    expect(html).not.toContain(">Home<");
+    expect(html).not.toContain(">Inbox<");
   });
 
-  it("renders desktop sidebar with hidden md:flex layout", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(Sidebar, {
-        project: mockProject,
-        isMobileOpen: false,
-        onCloseMobile: vi.fn(),
-      })
-    );
-
-    expect(html).toContain("hidden md:flex");
-    expect(html).not.toContain("md:hidden fixed inset-0 z-50 flex");
-  });
-
-  it("does not render project change button on top bar on mobile", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(Navbar, {
-        projects: [mockProject],
-        currentProject: mockProject,
-      })
-    );
-
-    // Desktop project selector is hidden on mobile screens
-    expect(html).toContain("hidden md:block relative min-w-0");
-    // No mobile project change button rendered on the top bar
-    expect(html).not.toContain('aria-label="Select Project"');
-  });
-
-  it("renders mobile slide-over drawer and backdrop when isMobileOpen is true", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(Sidebar, {
-        project: mockProject,
-        isMobileOpen: true,
-        onCloseMobile: vi.fn(),
-      })
-    );
-
-    // Mobile slide-over container and backdrop
-    expect(html).toContain("md:hidden fixed inset-0 z-50 flex");
-    expect(html).toContain("bg-black/50");
-    expect(html).toContain("Close navigation");
-    expect(html).toContain(">Board<");
-    expect(html).toContain("Backlog");
-    expect(html).toContain("Switch Project");
+  it("maps each page to its tab", () => {
+    expect(activeTab("/home")).toBe("home");
+    expect(activeTab("/inbox")).toBe("inbox");
+    expect(activeTab("/projects/MOB/board")).toBe("board");
+    expect(activeTab("/projects/MOB/issues/MOB-1")).toBe("issues");
+    expect(activeTab("/projects/MOB/backlog")).toBeNull();
   });
 
   it("renders mobile column switcher tab pills and scroll-snapping board container in KanbanBoard", () => {
@@ -374,37 +332,6 @@ describe("Mobile Viewport & Navigation", () => {
     });
   });
 
-  it("hides administrative Project Settings from mobile navigation drawer while keeping it on desktop", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(Sidebar, {
-        project: mockProject,
-        isMobileOpen: true,
-        onCloseMobile: vi.fn(),
-      })
-    );
-
-    // Mobile slide-over drawer section (<aside comes after drawer in DOM) should NOT contain Project Settings
-    const asideIndex = html.indexOf("<aside");
-    const mobileDrawerHtml = html.slice(0, asideIndex);
-    expect(mobileDrawerHtml).not.toContain("Project Settings");
-    expect(mobileDrawerHtml).toContain(">Board<");
-    expect(mobileDrawerHtml).toContain("Backlog");
-
-    // Desktop sidebar section DOES contain Project Settings
-    const desktopSidebarHtml = html.slice(asideIndex);
-    expect(desktopSidebarHtml).toContain("Project Settings");
-  });
-
-  it("hides System Settings on mobile in Navbar user dropdown", () => {
-    const navbarSource = fs.readFileSync(
-      path.resolve(__dirname, "../../components/layout/Navbar.tsx"),
-      "utf-8"
-    );
-
-    // System Settings link container has hidden md:block
-    expect(navbarSource).toContain("hidden md:block py-1 border-b border-subtle");
-    expect(navbarSource).toContain("System Settings");
-  });
 
   it("hides administrative Create Project and Project Settings on mobile in ProjectsDirectoryView", () => {
     const html = renderToStaticMarkup(

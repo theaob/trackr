@@ -10,7 +10,6 @@ export const dynamic = "force-dynamic";
  * to another host after signing in.
  */
 function safeNext(next?: string): string {
-  // /home sends anyone on the classic layout on to /projects, as before.
   if (!next || !next.startsWith("/") || next.startsWith("//")) return "/home";
   return next;
 }

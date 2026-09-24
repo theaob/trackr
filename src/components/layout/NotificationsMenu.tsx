@@ -232,18 +232,16 @@ export default function NotificationsMenu() {
               ))
             )}
           </div>
-          {currentUser.useNewLayout && (
-            <div className="border-t border-subtle px-4 pt-2">
-              <Link
-                prefetch={false}
-                href="/inbox"
-                onClick={() => setIsOpen(false)}
-                className="block rounded py-1 text-center text-xs font-semibold text-accent hover:text-accent-hover"
-              >
-                Open Inbox
-              </Link>
-            </div>
-          )}
+          <div className="border-t border-subtle px-4 pt-2">
+            <Link
+              prefetch={false}
+              href="/inbox"
+              onClick={() => setIsOpen(false)}
+              className="block rounded py-1 text-center text-xs font-semibold text-accent hover:text-accent-hover"
+            >
+              Open Inbox
+            </Link>
+          </div>
         </div>
       )}
     </div>

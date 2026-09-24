@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { Project } from "@/types";
 import { useKeyboardShortcutsContext } from "@/context/KeyboardShortcutsContext";
 import { useShellCounts } from "@/hooks/useShellCounts";
+import { useCurrentUser } from "@/context/UserContext";
 import { Sheet, SheetContent } from "@/components/ui/Dialog";
 import Rail from "./Rail";
 import TopBar from "./TopBar";
@@ -22,14 +23,16 @@ export interface AppShellProps {
 }
 
 /**
- * The new layout: the rail on the left, a slim top bar, and the page. On a
+ * The app's layout: the rail on the left, a slim top bar, and the page. On a
  * phone the rail becomes a tab bar along the bottom, whose More opens the
  * full rail as a sheet.
  */
 export default function AppShell({ projects, currentProject, onCreateIssue, onCreateProject, children }: AppShellProps) {
   const pathname = usePathname();
   const { registerToggleSidebar } = useKeyboardShortcutsContext();
-  const counts = useShellCounts(true);
+  const { currentUser } = useCurrentUser();
+  // Signed-out visitors (public projects) have no Home, Inbox or counts.
+  const counts = useShellCounts(!!currentUser);
   const [collapsed, setCollapsed] = useState(false);
   const [phoneRailOpen, setPhoneRailOpen] = useState(false);
 
@@ -101,7 +104,12 @@ export default function AppShell({ projects, currentProject, onCreateIssue, onCr
         <main id="main-content" tabIndex={-1} className="flex min-h-0 flex-1 flex-col overflow-hidden bg-surface focus-visible:outline-none">
           {children}
         </main>
-        <TabBar project={currentProject ?? projects[0] ?? null} unread={counts.unread} onMore={() => setPhoneRailOpen(true)} />
+        <TabBar
+          project={currentProject ?? projects[0] ?? null}
+          unread={counts.unread}
+          signedIn={!!currentUser}
+          onMore={() => setPhoneRailOpen(true)}
+        />
       </div>
     </div>
   );

@@ -2,9 +2,7 @@
 
 import React, { useState } from "react";
 import { Project, User, Sprint, Issue } from "@/types";
-import Navbar from "./Navbar";
-import Sidebar from "./Sidebar";
-import CreateIssueModal from "@/components/issues/CreateIssueModal";
+import QuickCreateIssue from "@/components/issues/QuickCreateIssue";
 import CreateProjectModal from "@/components/projects/CreateProjectModal";
 import { SearchProvider } from "@/context/SearchContext";
 import { StatusColorsProvider } from "@/context/StatusColorsContext";
@@ -39,10 +37,8 @@ export default function ProjectLayoutClient({
   const permissions = useProjectPermissions(currentProject);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
-  const { registerCreateIssue, registerToggleSidebar } = useKeyboardShortcutsContext();
+  const { registerCreateIssue } = useKeyboardShortcutsContext();
 
   React.useEffect(() => {
     if (!permissions.canCreateIssue) return;
@@ -51,68 +47,31 @@ export default function ProjectLayoutClient({
     });
   }, [registerCreateIssue, permissions.canCreateIssue]);
 
-  const newLayout = !!currentUser?.useNewLayout;
-
-  // The new layout's rail registers its own toggle.
-  React.useEffect(() => {
-    if (newLayout) return;
-    return registerToggleSidebar(() => {
-      setIsSidebarCollapsed((prev) => !prev);
-    });
-  }, [registerToggleSidebar, newLayout]);
-
   const openCreateIssue = permissions.canCreateIssue ? () => setIsCreateModalOpen(true) : undefined;
   const openCreateProject = currentUser?.canCreateProjects ? () => setIsCreateProjectModalOpen(true) : undefined;
 
   return (
     <SearchProvider>
       <StatusColorsProvider statuses={statuses}>
-        {newLayout ? (
-          <AppShell
-            projects={projects}
-            currentProject={currentProject}
-            onCreateIssue={openCreateIssue}
-            onCreateProject={openCreateProject}
-          >
-            {children}
-          </AppShell>
-        ) : (
-          <div className="flex flex-col h-screen w-screen overflow-hidden bg-surface text-ink font-sans antialiased">
-            {/* Top Navbar */}
-            <Navbar
-              projects={projects}
-              currentProject={currentProject}
-              onCreateIssueClick={openCreateIssue}
-              onCreateProjectClick={openCreateProject}
-              onToggleMobileMenu={() => setIsMobileDrawerOpen((prev) => !prev)}
-            />
+        <AppShell
+          projects={projects}
+          currentProject={currentProject}
+          onCreateIssue={openCreateIssue}
+          onCreateProject={openCreateProject}
+        >
+          {children}
+        </AppShell>
 
-            {/* Main Workspace Body: Sidebar + Content */}
-            <div className="flex-1 flex overflow-hidden">
-              <Sidebar
-                project={currentProject}
-                collapsed={isSidebarCollapsed}
-                onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
-                isMobileOpen={isMobileDrawerOpen}
-                onCloseMobile={() => setIsMobileDrawerOpen(false)}
-              />
-              <main className="flex-1 flex flex-col overflow-hidden bg-surface">{children}</main>
-            </div>
-          </div>
-        )}
-
-        {/* Global Create Issue Modal */}
-        {isCreateModalOpen && permissions.canCreateIssue && (
-          <CreateIssueModal
+        {permissions.canCreateIssue && (
+          <QuickCreateIssue
+            open={isCreateModalOpen}
+            onOpenChange={setIsCreateModalOpen}
             project={currentProject}
             allProjects={projects}
             users={users}
             sprints={sprints}
             epics={epics}
-            onClose={() => setIsCreateModalOpen(false)}
-            onIssueCreated={() => {
-              router.refresh();
-            }}
+            onCreated={() => router.refresh()}
           />
         )}
 

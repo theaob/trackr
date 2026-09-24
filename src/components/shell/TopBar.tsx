@@ -25,6 +25,8 @@ export interface TopBarProps {
 export default function TopBar({ currentProject, onCreateIssue }: TopBarProps) {
   const pathname = usePathname();
   const location = shellLocation(pathname);
+  // Home and Inbox take their heading from here; every other page has its own h1.
+  const CurrentPage = location.section === "home" || location.section === "inbox" ? "h1" : "span";
   const { searchQuery, setSearchQuery } = useSearch();
   const { openShortcutsModal, openSpotlight } = useKeyboardShortcutsContext();
   const canFilterPage = filterablePage(pathname) !== null;
@@ -104,9 +106,9 @@ export default function TopBar({ currentProject, onCreateIssue }: TopBarProps) {
               </>
             )}
             <li className="min-w-0">
-              <h1 aria-current="page" className="truncate text-[13px] font-semibold text-ink">
+              <CurrentPage aria-current="page" className="block truncate text-[13px] font-semibold text-ink">
                 {location.title}
-              </h1>
+              </CurrentPage>
             </li>
           </ol>
         </nav>

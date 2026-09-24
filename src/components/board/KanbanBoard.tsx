@@ -10,7 +10,6 @@ import SprintHeader from "./SprintHeader";
 import { ColumnCount, ColumnTitle } from "./KanbanColumn";
 import type { CardMoveOptions } from "./IssueCard";
 import IssuePanel from "@/components/issue/IssuePanel";
-import CreateIssueModal from "@/components/issues/CreateIssueModal";
 import UserAvatar from "@/components/common/UserAvatar";
 import { updateIssueStatusAndOrder, getIssueByKeyOrId, getBoardIssues } from "@/lib/actions/issues";
 import { useCurrentUser } from "@/context/UserContext";
@@ -109,7 +108,6 @@ export default function KanbanBoard({
   });
 
   const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isReleaseModalOpen, setIsReleaseModalOpen] = useState(false);
 
   const boardUnreleasedDoneIssueIds = useMemo(() => {
@@ -246,7 +244,7 @@ export default function KanbanBoard({
     setIssues(initialIssues);
   }, [initialIssues]);
 
-  // Handle jira:issue-created custom event
+  // Issues created elsewhere (quick create, the backlog) arrive as trackr:issue-created
   useEffect(() => {
     const handleIssueCreatedEvent = (e: Event) => {
       const customEvent = e as CustomEvent<{ issue?: Issue }>;
@@ -561,10 +559,6 @@ export default function KanbanBoard({
     }
   };
 
-  const handleIssueCreated = (newIssue: Issue) => {
-    setIssues((prev) => [newIssue, ...prev]);
-  };
-
   const toggleLaneCollapse = (laneId: string) => {
     setCollapsedLanes((prev) => ({ ...prev, [laneId]: !prev[laneId] }));
   };
@@ -822,18 +816,6 @@ export default function KanbanBoard({
         onIssueUpdated={handleIssueUpdated}
         onIssueDeleted={handleIssueDeleted}
       />
-
-      {isCreateModalOpen && (
-        <CreateIssueModal
-          project={project}
-          users={users}
-          sprints={sprints}
-          versions={versions}
-          epics={epics}
-          onClose={() => setIsCreateModalOpen(false)}
-          onIssueCreated={handleIssueCreated}
-        />
-      )}
 
       {/* Edit Sprint Modal */}
       {editingSprint && (

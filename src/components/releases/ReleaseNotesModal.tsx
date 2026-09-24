@@ -4,9 +4,10 @@ import { calendarDateToLocal } from "@/lib/calendarDate";
 import React, { useState, useEffect } from "react";
 import { Version } from "@/types";
 import { getVersionReleaseNotesData } from "@/lib/actions/versions";
+import { Dialog, DialogContent } from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/Button";
+import { Segmented } from "@/components/ui/Segmented";
 import {
-  X,
-  FileText,
   Copy,
   Check,
   Download,
@@ -81,66 +82,41 @@ export default function ReleaseNotesModal({
     URL.revokeObjectURL(url);
   };
 
+  const released = version.releaseDate
+    ? `Released ${calendarDateToLocal(version.releaseDate)?.toLocaleDateString()}`
+    : "Not released yet";
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-      <div
-        className="bg-surface rounded-lg shadow-xl border border-subtle w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()}
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        size="xl"
+        title={`Release notes: ${version.name}`}
+        description={released}
+        footer={
+          <>
+            {data && <span className="mr-auto text-xs text-muted">{data.features.length + data.bugs.length + data.technical.length} issues</span>}
+            <Button onClick={handleDownload} disabled={!data}>
+              <Download className="h-3.5 w-3.5" aria-hidden="true" />
+              Download .md
+            </Button>
+            <Button variant="primary" onClick={handleCopy} disabled={!data}>
+              {copied ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
+              {copied ? "Copied" : "Copy Markdown"}
+            </Button>
+          </>
+        }
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-subtle shrink-0">
-          <div className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-accent" />
-            <div>
-              <h2 className="text-base font-bold text-ink">
-                Release Notes: {version.name}
-              </h2>
-              <p className="text-[11px] text-muted">
-                {version.releaseDate
-                  ? `Released on ${calendarDateToLocal(version.releaseDate)?.toLocaleDateString()}`
-                  : "Unreleased"}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Tab switchers */}
-            <div className="flex items-center bg-surface-sunk p-0.5 rounded border border-subtle">
-              <button
-                onClick={() => setActiveTab("preview")}
-                className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-                  activeTab === "preview"
-                    ? "bg-surface text-accent shadow-xs"
-                    : "text-ink-2 hover:text-ink"
-                }`}
-              >
-                <Eye className="w-3.5 h-3.5" />
-                Preview
-              </button>
-              <button
-                onClick={() => setActiveTab("markdown")}
-                className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-                  activeTab === "markdown"
-                    ? "bg-surface text-accent shadow-xs"
-                    : "text-ink-2 hover:text-ink"
-                }`}
-              >
-                <Code className="w-3.5 h-3.5" />
-                Markdown
-              </button>
-            </div>
-
-            <button
-              onClick={onClose}
-              className="text-muted hover:text-ink p-1 rounded hover:bg-surface-sunk transition-colors ml-2"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+        <div className="mb-4">
+          <Segmented
+            label="Show release notes as"
+            value={activeTab}
+            onChange={setActiveTab}
+            options={[
+              { value: "preview", label: "Preview", icon: <Eye aria-hidden="true" /> },
+              { value: "markdown", label: "Markdown", icon: <Code aria-hidden="true" /> },
+            ]}
+          />
         </div>
-
-        {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-6">
           {isLoading ? (
             <div className="py-20 flex flex-col items-center justify-center text-muted gap-2">
               <Loader2 className="w-6 h-6 animate-spin text-accent" />
@@ -155,6 +131,7 @@ export default function ReleaseNotesModal({
             <div className="relative">
               <textarea
                 readOnly
+                aria-label="Release notes in Markdown"
                 value={data.markdown}
                 className="w-full h-[450px] font-mono text-xs p-4 bg-page border border-subtle rounded-md resize-none leading-relaxed text-ink select-all"
               />
@@ -287,51 +264,7 @@ export default function ReleaseNotesModal({
               )}
             </div>
           )}
-        </div>
-
-        {/* Modal Footer with Actions */}
-        <div className="flex items-center justify-between px-6 py-3.5 border-t border-subtle bg-page shrink-0">
-          <div className="text-xs text-muted">
-            {data && (
-              <span>
-                Total issues included:{" "}
-                <strong>
-                  {data.features.length + data.bugs.length + data.technical.length}
-                </strong>
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleDownload}
-              disabled={!data}
-              className="text-xs font-semibold px-3 py-1.5 rounded border border-subtle bg-surface hover:bg-surface-sunk text-ink transition-colors flex items-center gap-1.5"
-            >
-              <Download className="w-3.5 h-3.5 text-ink-2" />
-              Download .md
-            </button>
-
-            <button
-              onClick={handleCopy}
-              disabled={!data}
-              className="text-xs font-semibold px-3.5 py-1.5 rounded bg-accent text-accent-fg hover:bg-accent-hover transition-colors flex items-center gap-1.5 shadow-xs"
-            >
-              {copied ? (
-                <>
-                  <Check className="w-3.5 h-3.5" />
-                  Copied to Clipboard!
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5" />
-                  Copy Markdown
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

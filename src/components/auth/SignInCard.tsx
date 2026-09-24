@@ -5,36 +5,23 @@ import { User } from "@/types";
 import { useCurrentUser } from "@/context/UserContext";
 import { registerUser, loginWithCredentials, getSsoPublicConfig, isSelfRegistrationOpen } from "@/lib/actions/auth";
 import {
-  Shield,
-  KeyRound,
   UserPlus,
   LogIn,
   CheckCircle2,
   AlertCircle,
-  X,
   Lock,
   Mail,
   User as UserIcon,
-  ShieldCheck,
   Building2,
-  RefreshCw,
   Loader2,
 } from "lucide-react";
 
-interface AuthModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface SignInCardProps {
   onSuccess?: (user: User) => void;
-  /** The dedicated sign-in page renders this with no way to dismiss it. */
-  dismissible?: boolean;
 }
 
-export default function AuthModal({
-  isOpen,
-  onClose,
-  onSuccess,
-  dismissible = true,
-}: AuthModalProps) {
+/** The sign-in page's card: sign in with a password or SSO, or create an account where that's open. */
+export default function SignInCard({ onSuccess }: SignInCardProps) {
   const { setCurrentUser, setUsers, users } = useCurrentUser();
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
 
@@ -54,18 +41,13 @@ export default function AuthModal({
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Fetch SSO Config on open
   useEffect(() => {
-    if (isOpen) {
-      getSsoPublicConfig().then((cfg) => setSsoConfig(cfg));
-      isSelfRegistrationOpen().then((open) => {
-        setRegistrationOpen(open);
-        if (!open) setActiveTab("login");
-      });
-    }
-  }, [isOpen]);
-
-  if (!isOpen) return null;
+    getSsoPublicConfig().then((cfg) => setSsoConfig(cfg));
+    isSelfRegistrationOpen().then((open) => {
+      setRegistrationOpen(open);
+      if (!open) setActiveTab("login");
+    });
+  }, []);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,7 +64,6 @@ export default function AuthModal({
         setUsers(users.some((u) => u.id === loggedInUser.id) ? users : [...users, loggedInUser]);
         setSuccessMsg(`Welcome, ${loggedInUser.name}!`);
         if (onSuccess) onSuccess(loggedInUser);
-        setTimeout(() => onClose(), 1000);
       } else {
         setError(res.error || "Sign-in failed.");
       }
@@ -107,7 +88,6 @@ export default function AuthModal({
         setUsers([...users, newUser]);
         setSuccessMsg(`Account created successfully! Welcome, ${newUser.name}.`);
         if (onSuccess) onSuccess(newUser);
-        setTimeout(() => onClose(), 1200);
       } else {
         setError(res.error || "Failed to create account.");
       }
@@ -130,29 +110,13 @@ export default function AuthModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-      <div className="bg-surface w-full max-w-lg rounded-xl shadow-2xl border border-subtle overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="bg-ink text-surface px-6 py-5 flex items-center justify-between border-b border-ink/80">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-accent/30 border border-accent flex items-center justify-center">
-              <ShieldCheck className="w-5 h-5 text-surface" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold tracking-tight">User Sign In & SSO</h2>
-              <p className="text-xs text-surface/75">
-                Sign in with local credentials or corporate SSO
-              </p>
-            </div>
-          </div>
-          {dismissible && (
-            <button
-              onClick={onClose}
-              className="text-surface/70 hover:text-surface p-1 rounded-md transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          )}
+    <section aria-labelledby="sign-in-title" className="w-full max-w-lg overflow-hidden rounded-card border border-subtle bg-surface shadow-raised">
+      <div>
+        <div className="px-6 pb-1 pt-5">
+          <h1 id="sign-in-title" className="text-lg font-semibold text-ink">
+            {activeTab === "login" ? "Sign in" : "Create an account"}
+          </h1>
+          <p className="text-xs text-ink-2">With your email and password{ssoConfig?.enabled ? ", or your company's single sign-on" : ""}.</p>
         </div>
 
         {/* Tab Navigation */}
@@ -350,6 +314,6 @@ export default function AuthModal({
           )}
         </div>
       </div>
-    </div>
+    </section>
   );
 }

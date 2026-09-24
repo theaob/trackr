@@ -22,6 +22,8 @@ model User {
   // everywhere") invalidates every cookie issued before.
   sessionVersion    Int        @default(0)
   // The redesigned shell (rail, Home, Inbox), opt-in for one release.
+  // No longer read since 0.39.0, when the redesigned layout became the only one.
+  // Kept so upgrading needs no destructive migration.
   useNewLayout      Boolean    @default(false)
   assignedIssues Issue[]       @relation("Assignee")
   reportedIssues Issue[]       @relation("Reporter")

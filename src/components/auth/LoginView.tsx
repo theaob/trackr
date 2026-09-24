@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { AlertCircle } from "lucide-react";
-import AuthModal from "@/components/auth/AuthModal";
+import SignInCard from "@/components/auth/SignInCard";
 import { TrackrLogo } from "@/components/common/TrackrLogo";
 
 export default function LoginView({
@@ -27,22 +27,21 @@ export default function LoginView({
       </Link>
 
       {ssoError && !dismissedError && (
-        <div className="max-w-lg w-full p-3 rounded-md bg-danger-soft border border-danger/30 text-danger text-xs flex items-start gap-2">
+        <div role="alert" className="max-w-lg w-full p-3 rounded-md bg-danger-soft border border-danger/30 text-danger text-xs flex items-start gap-2">
           <AlertCircle className="w-4 h-4 shrink-0 text-danger mt-0.5" />
           <span className="flex-1">{ssoError}</span>
           <button
+            type="button"
+            aria-label="Dismiss"
             onClick={() => setDismissedError(true)}
-            className="text-danger hover:text-danger font-semibold"
+            className="font-semibold text-danger"
           >
             ×
           </button>
         </div>
       )}
 
-      <AuthModal
-        isOpen
-        dismissible={false}
-        onClose={() => {}}
+      <SignInCard
         onSuccess={() => {
           // A full navigation rather than router.replace + refresh: the two
           // race, and the refresh can cancel the pending navigation, leaving

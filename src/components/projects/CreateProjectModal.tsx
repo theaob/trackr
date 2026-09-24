@@ -1,12 +1,17 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { User } from "@/types";
 import { createProject } from "@/lib/actions/projects";
 import { useCurrentUser } from "@/context/UserContext";
 import { useRouter } from "next/navigation";
 import SubmitShortcutHint from "@/components/common/SubmitShortcutHint";
-import { X, FolderPlus, Loader2, ShieldAlert } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
+import UserAvatar from "@/components/common/UserAvatar";
+import { Dialog, DialogContent } from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/Button";
+import { Field, Input, Textarea } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 
 interface CreateProjectModalProps {
   users: User[];
@@ -80,14 +85,6 @@ export default function CreateProjectModal({
     }
   };
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
-
   const handleFormKeyDown = (e: React.KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
       e.preventDefault();
@@ -96,125 +93,61 @@ export default function CreateProjectModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4 overflow-y-auto animate-in fade-in">
-      <div className="bg-surface w-full h-full sm:h-auto max-w-lg rounded-none sm:rounded-lg shadow-2xl border-0 sm:border border-subtle flex flex-col max-h-none sm:max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-subtle">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded bg-accent-soft text-accent flex items-center justify-center font-bold">
-              <FolderPlus className="w-4 h-4" />
-            </div>
-            <h2 className="text-lg font-bold text-ink">Create Project</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-muted hover:text-ink p-1 rounded-md hover:bg-surface-sunk transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="p-4 sm:p-6 space-y-4 text-sm overflow-y-auto flex-1">
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        title="Create project"
+        onKeyDown={handleFormKeyDown}
+        footer={
+          <>
+            <SubmitShortcutHint className="mr-auto hidden sm:inline-flex" />
+            <Button onClick={onClose}>Cancel</Button>
+            <Button type="submit" form="project-form" variant="primary" loading={isSubmitting} disabled={!canCreate}>
+              Create project
+            </Button>
+          </>
+        }
+      >
+        <form id="project-form" onSubmit={handleSubmit} noValidate className="space-y-4">
           {!canCreate && (
-            <div className="p-3 text-xs bg-warning-soft border border-warning/30 text-warning rounded-md font-medium flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-warning shrink-0" />
-              <span>You do not have permission to create projects. Please contact an administrator.</span>
-            </div>
+            <p className="flex items-center gap-2 rounded-control bg-warning-soft px-3 py-2 text-xs text-warning">
+              <ShieldAlert className="h-4 w-4 shrink-0" aria-hidden="true" />
+              You don&apos;t have permission to create projects. Ask an administrator.
+            </p>
           )}
-
           {error && (
-            <div className="p-3 text-xs bg-danger-soft border border-danger/30 text-danger rounded-md font-medium">
+            <p role="alert" className="rounded-control bg-danger-soft px-3 py-2 text-xs text-danger">
               {error}
-            </div>
+            </p>
           )}
-
-          <div>
-            <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
-              Project Name <span className="text-danger">*</span>
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Falcon AI Engine"
-              value={name}
-              onChange={(e) => handleNameChange(e.target.value)}
-              required
-              autoFocus
-              className="w-full px-3 py-2 border border-subtle rounded focus:border-accent text-ink"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
-              Project Key <span className="text-danger">*</span>
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. FALCON"
+          <Field label="Name" required>
+            <Input placeholder="Falcon" value={name} onChange={(e) => handleNameChange(e.target.value)} autoFocus />
+          </Field>
+          <Field label="Key" required hint={`Starts every issue's ID: ${key || "KEY"}-1, ${key || "KEY"}-2.`}>
+            <Input
+              className="font-mono uppercase"
+              placeholder="FALCON"
+              maxLength={10}
               value={key}
               onChange={(e) => {
                 setKeyManuallyEdited(true);
                 setKey(e.target.value.toUpperCase());
               }}
-              required
-              maxLength={10}
-              className="w-full px-3 py-2 border border-subtle rounded focus:border-accent font-mono uppercase text-ink"
             />
-            <p className="text-[11px] text-muted mt-1">
-              Prefix used for all issues in this project (e.g., {key || "KEY"}-1, {key || "KEY"}-2).
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
-              Project Lead
-            </label>
-            <select
+          </Field>
+          <Field label="Lead">
+            <Select
+              searchable
+              searchPlaceholder="Find a person…"
               value={leadId}
-              onChange={(e) => setLeadId(e.target.value)}
-              className="w-full bg-surface border border-subtle rounded px-3 py-2 text-ink focus:border-accent"
-            >
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name} ({u.role})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
-              Description
-            </label>
-            <textarea
-              rows={3}
-              placeholder="What is this project focused on?"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 border border-subtle rounded focus:border-accent text-ink leading-relaxed"
+              onChange={setLeadId}
+              options={users.map((u) => ({ value: u.id, label: u.name, keywords: u.email, icon: <UserAvatar user={u} size="xs" /> }))}
             />
-          </div>
-
-          <div className="pt-4 border-t border-subtle flex items-center justify-end gap-3">
-            <SubmitShortcutHint className="hidden sm:inline-flex mr-1" />
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-ink-2 hover:bg-surface-sunk rounded font-medium transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting || !canCreate}
-              className="bg-accent hover:bg-accent-hover text-accent-fg px-4 py-2 rounded font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
-            >
-              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              <span>Create Project</span>
-            </button>
-          </div>
+          </Field>
+          <Field label="Description">
+            <Textarea rows={3} placeholder="What the project is for" value={description} onChange={(e) => setDescription(e.target.value)} />
+          </Field>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

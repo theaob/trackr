@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useCurrentUser } from "@/context/UserContext";
 import { logout } from "@/lib/actions/auth";
-import { setNewLayout } from "@/lib/actions/preferences";
 
 /**
  * What the account menu can do, shared by the classic navbar and the new
@@ -13,7 +12,6 @@ export function useAccountActions() {
   const { currentUser, users, setCurrentUser, setUsers } = useCurrentUser();
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-  const [switchingLayout, setSwitchingLayout] = useState(false);
 
   const updateAvatar = (avatarUrl: string | null) => {
     if (!currentUser) return;
@@ -62,19 +60,7 @@ export function useAccountActions() {
   };
 
   /** Saves the choice and reloads, so every server-rendered part switches together. */
-  const switchLayout = async (enabled: boolean) => {
-    setSwitchingLayout(true);
-    const res = await setNewLayout(enabled);
-    if (!res.success) {
-      setSwitchingLayout(false);
-      return;
-    }
-    // Home and Inbox only exist in the new layout; elsewhere, stay put.
-    const onNewOnlyPage = /^\/(home|inbox)(\/|$)/.test(window.location.pathname);
-    if (enabled) window.location.assign("/home");
-    else if (onNewOnlyPage) window.location.assign("/projects");
-    else window.location.reload();
-  };
 
-  return { avatarUploading, uploadAvatar, deleteAvatar, signingOut, signOut, switchingLayout, switchLayout };
+
+  return { avatarUploading, uploadAvatar, deleteAvatar, signingOut, signOut };
 }

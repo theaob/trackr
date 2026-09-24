@@ -9,7 +9,7 @@ import AppShell from "./AppShell";
 
 /**
  * A page outside any one project (Home, Inbox, Projects, System settings)
- * in the new layout. `users` enables New project in the rail.
+ * in the shell. `users` enables New project in the rail.
  */
 export default function ShellPage({
   projects,

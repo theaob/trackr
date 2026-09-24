@@ -3,7 +3,6 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import IssueView from "@/components/issue/IssueView";
 import { ToastProvider } from "@/components/ui/Toast";
-import CreateIssueModal from "@/components/issues/CreateIssueModal";
 import IssuesListView from "@/components/issues/IssuesListView";
 import { backlogMoveTargets } from "@/lib/board";
 import { Project, Issue, Sprint, WorkflowStatus } from "@/types";
@@ -302,42 +301,6 @@ describe("Kanban Project Sprint Guardrails", () => {
     it("hides the Sprint picker on an epic even in a Scrum project", () => {
       const html = renderView({ ...scrumIssue, type: "EPIC" }, scrumProject);
       expect(html).not.toContain('aria-label="Sprint"');
-    });
-  });
-
-  describe("CreateIssueModal", () => {
-    it("does not render Sprint dropdown for a Kanban project", () => {
-      const html = renderToStaticMarkup(
-        React.createElement(CreateIssueModal, {
-          project: kanbanProject,
-          allProjects: [kanbanProject, scrumProject],
-          users: [],
-          sprints: [mockSprint],
-          epics: [],
-          onClose: vi.fn(),
-          onIssueCreated: vi.fn(),
-        })
-      );
-
-      expect(html).not.toMatch(/<label[^>]*>\s*Sprint\s*<\/label>/i);
-      expect(html).not.toContain("Sprint 1");
-    });
-
-    it("renders Sprint dropdown for a Scrum project", () => {
-      const html = renderToStaticMarkup(
-        React.createElement(CreateIssueModal, {
-          project: scrumProject,
-          allProjects: [kanbanProject, scrumProject],
-          users: [],
-          sprints: [mockSprint],
-          epics: [],
-          onClose: vi.fn(),
-          onIssueCreated: vi.fn(),
-        })
-      );
-
-      expect(html).toMatch(/<label[^>]*>\s*Sprint\s*<\/label>/i);
-      expect(html).toContain("Sprint 1");
     });
   });
 

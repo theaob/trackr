@@ -116,7 +116,7 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
       where: { id: token.userId },
       // isInstanceAdmin is read for the session only, not added to
       // PUBLIC_USER_SELECT: user lists shouldn't advertise who the admins are.
-      select: { ...PUBLIC_USER_SELECT, isInstanceAdmin: true, useNewLayout: true, sessionVersion: true },
+      select: { ...PUBLIC_USER_SELECT, isInstanceAdmin: true, sessionVersion: true },
     });
     // A cookie from before the last password change or "sign out everywhere".
     if (!user || user.sessionVersion !== token.sessionVersion) return null;

@@ -3,8 +3,9 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Webhook, WebhookDelivery } from "@/types";
 import { getWebhookDeliveries, testWebhook } from "@/lib/actions/webhooks";
+import { Dialog, DialogContent } from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/Button";
 import {
-  X,
   History,
   CheckCircle2,
   AlertCircle,
@@ -87,54 +88,22 @@ export default function WebhookDeliveriesModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-150">
-      <div
-        className="bg-surface rounded-none sm:rounded-lg shadow-2xl border-0 sm:border border-subtle w-full h-full sm:h-auto max-w-4xl overflow-hidden flex flex-col max-h-none sm:max-h-[90vh]"
-        onClick={(e) => e.stopPropagation()}
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        size="xl"
+        title={`Deliveries: ${webhook.name}`}
+        description={<span className="break-all font-mono text-xs">{webhook.url}</span>}
+        footer={
+          <>
+            <Button onClick={onClose}>Close</Button>
+            <Button variant="primary" onClick={handleTestPing} loading={isTesting}>
+              {!isTesting && <Send className="h-3.5 w-3.5" aria-hidden="true" />}
+              Send test ping
+            </Button>
+          </>
+        }
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-subtle shrink-0 bg-surface gap-2">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded bg-accent-soft/70 flex items-center justify-center text-accent shrink-0">
-              <History className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                <h2 className="text-base font-bold text-ink truncate">{webhook.name}</h2>
-                <span className="text-[10px] font-mono px-1.5 sm:px-2 py-0.5 rounded bg-surface-sunk text-ink-2 border border-subtle truncate max-w-[160px] sm:max-w-none">
-                  {webhook.url}
-                </span>
-              </div>
-              <p className="text-xs text-muted truncate">
-                Recent delivery audit logs and response codes
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={handleTestPing}
-              disabled={isTesting}
-              className="bg-accent hover:bg-accent-hover text-accent-fg text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors disabled:opacity-50 shadow-2xs"
-            >
-              {isTesting ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Send className="w-3.5 h-3.5" />
-              )}
-              <span className="hidden sm:inline">{isTesting ? "Sending Ping..." : "Send Test Ping"}</span>
-              <span className="sm:hidden">{isTesting ? "Sending..." : "Test"}</span>
-            </button>
-            <button
-              onClick={onClose}
-              className="text-muted hover:text-ink p-1 rounded hover:bg-surface-sunk transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <div>
           {isLoading ? (
             <div className="py-16 text-center text-xs text-muted flex items-center justify-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin text-accent" />
@@ -144,17 +113,10 @@ export default function WebhookDeliveriesModal({
             <div className="text-center py-16 px-4 border border-dashed border-subtle rounded-lg bg-page">
               <History className="w-8 h-8 text-muted mx-auto mb-2" />
               <h3 className="text-sm font-bold text-ink">No deliveries recorded</h3>
-              <p className="text-xs text-muted max-w-sm mx-auto mt-1 mb-4">
-                This webhook hasn&apos;t received any events yet. You can trigger a test ping to verify the target URL right now.
+              <p className="text-xs text-muted max-w-sm mx-auto mt-1">
+                This webhook hasn&apos;t received any events yet. Send a test ping to check the address.
               </p>
-              <button
-                onClick={handleTestPing}
-                disabled={isTesting}
-                className="bg-accent hover:bg-accent-hover text-accent-fg text-xs font-semibold px-3.5 py-1.5 rounded inline-flex items-center gap-1.5 shadow-2xs"
-              >
-                {isTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                Send Test Ping
-              </button>
+
             </div>
           ) : (
             <div className="space-y-3">
@@ -168,6 +130,7 @@ export default function WebhookDeliveriesModal({
                     {/* Delivery Row Header */}
                     <button
                       type="button"
+                      aria-expanded={isExpanded}
                       onClick={() => toggleExpand(delivery.id)}
                       className="w-full flex items-center justify-between p-3 text-left hover:bg-page/80 transition-colors select-none"
                     >
@@ -256,7 +219,7 @@ export default function WebhookDeliveriesModal({
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

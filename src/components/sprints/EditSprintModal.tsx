@@ -3,7 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { Sprint } from "@/types";
 import { format } from "date-fns";
-import { Calendar, Target, Clock, AlertCircle, X, Loader2, Pencil } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/Button";
+import { Field, Input, Textarea } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 import { updateSprint } from "@/lib/actions/sprints";
 
 interface EditSprintModalProps {
@@ -179,222 +182,89 @@ export default function EditSprintModal({
     }
   };
 
+  const days = (n: number) => `${n} ${n === 1 ? "day" : "days"}`;
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="bg-surface w-full max-w-lg rounded-xl shadow-2xl border border-subtle p-6 space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-subtle">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-accent-soft/50 text-accent">
-              <Pencil className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-ink">Edit Sprint</h2>
-              <p className="text-xs text-muted">
-                Update sprint timeline, dates, and goal / target
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 text-muted hover:text-ink rounded hover:bg-surface-sunk transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {serverError && (
-          <div className="p-3 bg-danger-soft border border-danger/30 rounded-md text-xs text-danger font-medium flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{serverError}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4 text-sm">
-          {/* Sprint Name */}
-          <div>
-            <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
-              Sprint Name <span className="text-danger">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Sprint 1"
-              className="w-full border border-subtle rounded px-3 py-2 text-sm text-ink focus:border-accent font-medium"
-            />
-          </div>
-
-          {/* Duration Selector */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider">
-                Duration
-              </label>
-              {durationMode === "custom" && (
-                <span className="text-xs font-bold text-accent">
-                  Custom: {customDays} {customDays === 1 ? "day" : "days"}
-                </span>
-              )}
-            </div>
-            <select
-              value={durationMode}
-              onChange={(e) => handleDurationChange(e.target.value)}
-              className="w-full border border-subtle rounded px-3 py-2 text-sm text-ink focus:border-accent bg-surface"
-            >
-              <option value="7">1 week (7 days)</option>
-              <option value="14">2 weeks (14 days - Recommended)</option>
-              <option value="21">3 weeks (21 days)</option>
-              <option value="28">4 weeks (28 days)</option>
-              <option value="custom">Custom time span</option>
-            </select>
-          </div>
-
-          {/* Custom Duration Stepper & Quick Presets */}
-          {durationMode === "custom" && (
-            <div className="p-3 bg-accent-soft/40 border border-accent/20 rounded-lg space-y-2.5 animate-in fade-in">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-ink flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-accent" />
-                  Set Custom Number of Days
-                </span>
-                <span className="text-ink-2">Calculates end date automatically</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="relative flex items-center">
-                  <input
-                    type="number"
-                    min={1}
-                    max={180}
-                    value={customDays}
-                    onChange={(e) => handleCustomDaysChange(parseInt(e.target.value, 10) || 1)}
-                    className="w-24 border border-subtle rounded px-3 py-1.5 text-sm font-semibold text-ink focus:border-accent"
-                  />
-                  <span className="ml-2 text-xs font-medium text-ink-2">
-                    {customDays === 1 ? "day" : "days"}
-                  </span>
-                </div>
-
-                {/* Quick Presets */}
-                <div className="flex items-center gap-1 flex-wrap">
-                  {[3, 5, 10, 15, 30, 45].map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => handleCustomDaysChange(d)}
-                      className={`px-2 py-1 text-xs rounded border transition-colors ${
-                        customDays === d
-                          ? "bg-accent text-accent-fg border-accent font-semibold shadow-xs"
-                          : "bg-surface text-ink-2 border-subtle hover:bg-surface-sunk"
-                      }`}
-                    >
-                      {d}d
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Start Date & End Date Grid */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-muted" />
-                Start Date {sprint.status === "ACTIVE" && <span className="text-danger">*</span>}
-              </label>
-              <input
-                type="date"
-                value={startDateStr}
-                onChange={(e) => handleStartDateChange(e.target.value)}
-                className="w-full border border-subtle rounded px-3 py-2 text-sm text-ink focus:border-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-muted" />
-                End Date {sprint.status === "ACTIVE" && <span className="text-danger">*</span>}
-              </label>
-              <input
-                type="date"
-                value={endDateStr}
-                min={startDateStr}
-                onChange={(e) => handleEndDateChange(e.target.value)}
-                className="w-full border border-subtle rounded px-3 py-2 text-sm text-ink focus:border-accent"
-              />
-            </div>
-          </div>
-
-          {/* Date Error */}
-          {dateError && (
-            <div className="p-2.5 bg-danger-soft border border-danger/30 rounded text-xs text-danger font-medium flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{dateError}</span>
-            </div>
-          )}
-
-          {/* Timeline Summary Preview */}
-          {startDateStr && endDateStr && !dateError && (
-            <div className="px-3 py-2 bg-page border border-subtle rounded-md text-xs text-ink-2 flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-muted" />
-                Sprint Timeline:
-              </span>
-              <span className="font-semibold text-ink">
-                {customDays} {customDays === 1 ? "day" : "days"} (
-                {format(new Date(startDateStr + "T00:00:00"), "MMM d, yyyy")} –{" "}
-                {format(new Date(endDateStr + "T00:00:00"), "MMM d, yyyy")})
-              </span>
-            </div>
-          )}
-
-          {/* Sprint Goal / Target */}
-          <div>
-            <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-              <Target className="w-3.5 h-3.5 text-accent" />
-              Sprint Goal / Target
-            </label>
-            <textarea
-              rows={3}
-              value={goal}
-              onChange={(e) => setGoal(e.target.value)}
-              placeholder="What does the team aim to achieve in this sprint?"
-              className="w-full border border-subtle rounded p-2.5 text-sm text-ink focus:border-accent placeholder:text-muted"
-            />
-            <p className="text-[11px] text-muted mt-1">
-              The sprint target is displayed on the board and backlog to align team deliverables.
-            </p>
-          </div>
-
-          {/* Footer Buttons */}
-          <div className="flex justify-end gap-3 pt-3 border-t border-subtle">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="px-4 py-2 border border-subtle rounded text-sm text-ink-2 hover:bg-surface-sunk font-medium transition-colors"
-            >
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        title="Edit sprint"
+        footer={
+          <>
+            <Button onClick={onClose} disabled={isSubmitting}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting || !!dateError}
-              className="px-4 py-2 bg-accent hover:bg-accent-hover text-accent-fg rounded text-sm font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
-            >
-              {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              <span>Update Sprint</span>
-            </button>
+            </Button>
+            <Button type="submit" form="sprint-form" variant="primary" loading={isSubmitting} disabled={!!dateError}>
+              Save sprint
+            </Button>
+          </>
+        }
+      >
+        <form id="sprint-form" onSubmit={handleSubmit} noValidate className="space-y-4">
+          {serverError && (
+            <p role="alert" className="rounded-control bg-danger-soft px-3 py-2 text-xs text-danger">
+              {serverError}
+            </p>
+          )}
+          <Field label="Name" required>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Sprint 1" />
+          </Field>
+
+          <Field label="Length">
+            <Select
+              value={durationMode}
+              onChange={handleDurationChange}
+              options={[
+                { value: "7", label: "1 week" },
+                { value: "14", label: "2 weeks" },
+                { value: "21", label: "3 weeks" },
+                { value: "28", label: "4 weeks" },
+                { value: "custom", label: "Custom", description: durationMode === "custom" ? days(customDays) : undefined },
+              ]}
+            />
+          </Field>
+
+          {durationMode === "custom" && (
+            <div className="flex flex-wrap items-end gap-3">
+              <Field label="Days" className="w-24">
+                <Input
+                  type="number"
+                  min={1}
+                  max={180}
+                  value={customDays}
+                  onChange={(e) => handleCustomDaysChange(parseInt(e.target.value, 10) || 1)}
+                />
+              </Field>
+              <div role="group" aria-label="Common lengths" className="flex flex-wrap gap-1 pb-0.5">
+                {[3, 5, 10, 15, 30, 45].map((d) => (
+                  <Button key={d} size="sm" variant={customDays === d ? "primary" : "secondary"} aria-pressed={customDays === d} onClick={() => handleCustomDaysChange(d)}>
+                    {days(d)}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Start date" required={sprint.status === "ACTIVE"}>
+              <Input type="date" value={startDateStr} onChange={(e) => handleStartDateChange(e.target.value)} />
+            </Field>
+            <Field label="End date" required={sprint.status === "ACTIVE"} error={dateError}>
+              <Input type="date" value={endDateStr} min={startDateStr} onChange={(e) => handleEndDateChange(e.target.value)} />
+            </Field>
           </div>
+
+          {startDateStr && endDateStr && !dateError && (
+            <p className="text-xs text-ink-2">
+              {days(customDays)}: {format(new Date(startDateStr + "T00:00:00"), "MMM d, yyyy")} to{" "}
+              {format(new Date(endDateStr + "T00:00:00"), "MMM d, yyyy")}
+            </p>
+          )}
+
+          <Field label="Goal" hint="Shown on the board and the backlog.">
+            <Textarea rows={3} value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="What the team aims to finish in this sprint" />
+          </Field>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

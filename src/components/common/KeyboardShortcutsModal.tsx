@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { X, Search, Command } from "lucide-react";
+import { Search } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/Dialog";
 
 interface ShortcutItem {
   keys: string[];
@@ -27,8 +28,8 @@ const SHORTCUTS: ShortcutItem[] = [
   { keys: ["g", "e"], description: "Go to Reports", category: "Navigation" },
   { keys: ["g", "s"], description: "Go to Project Settings", category: "Navigation" },
   { keys: ["g", "p"], description: "Go to All Projects", category: "Navigation" },
-  { keys: ["g", "h"], description: "Go to Home (new layout)", category: "Navigation" },
-  { keys: ["g", "n"], description: "Go to Inbox (new layout)", category: "Navigation" },
+  { keys: ["g", "h"], description: "Go to Home", category: "Navigation" },
+  { keys: ["g", "n"], description: "Go to Inbox", category: "Navigation" },
 
   // An open issue
   { keys: ["a"], description: "Change the assignee", category: "Issue" },
@@ -51,20 +52,8 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShor
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    if (!isOpen) {
-      setSearchQuery("");
-      return;
-    }
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
+    if (!isOpen) setSearchQuery("");
+  }, [isOpen]);
 
   const filteredShortcuts = useMemo(() => {
     if (!searchQuery.trim()) return SHORTCUTS;
@@ -87,64 +76,41 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShor
     return map;
   }, [filteredShortcuts]);
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-2xs p-4 animate-in fade-in duration-150"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="shortcuts-dialog-title"
-    >
-      <div className="bg-surface rounded-lg shadow-2xl border border-subtle w-full max-w-xl max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-subtle flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Command className="w-5 h-5 text-accent" />
-            <h2 id="shortcuts-dialog-title" className="text-base font-bold text-ink">
-              Keyboard Shortcuts
-            </h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-muted hover:text-ink hover:bg-surface-sunk rounded-md transition-colors"
-            aria-label="Close keyboard shortcuts"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Search */}
-        <div className="px-6 pt-3 pb-2">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        title="Keyboard shortcuts"
+        description="Shortcuts work whenever you aren't typing in a text field."
+        size="lg"
+        className="h-[min(40rem,calc(100dvh-2rem))]"
+      >
+        <div className="sticky top-0 z-10 -mx-5 bg-surface px-5 pb-3">
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" aria-hidden="true" />
             <input
-              type="text"
+              type="search"
               autoFocus
-              placeholder="Search shortcuts..."
+              aria-label="Search shortcuts"
+              placeholder="Search shortcuts"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-page border border-subtle focus:border-accent focus:bg-surface rounded-md transition-all text-ink placeholder-muted"
+              className="h-8 w-full rounded-control border border-subtle bg-surface pl-8 pr-3 text-[13px] text-ink placeholder:text-muted hover:border-strong focus:border-accent"
             />
           </div>
         </div>
-
         {/* Shortcuts List */}
-        <div className="flex-1 overflow-y-auto px-6 py-3 space-y-5 divide-y divide-subtle">
+        <div className="space-y-5 divide-y divide-subtle">
           {grouped.size === 0 ? (
-            <div className="py-8 text-center text-xs text-muted">
-              No shortcuts found matching &ldquo;{searchQuery}&rdquo;
-            </div>
+            <p role="status" className="py-8 text-center text-xs text-muted">
+              No shortcuts match &ldquo;{searchQuery}&rdquo;
+            </p>
           ) : (
             Array.from(grouped.entries()).map(([category, items], catIdx) => (
               <div key={category} className={catIdx > 0 ? "pt-4" : ""}>
-                <h3 className="text-[11px] font-bold text-ink-2 uppercase tracking-wider mb-2.5">
+                <h3 className="mb-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
                   {category}
                   {category === "Navigation" && (
-                    <span className="text-[10px] font-normal text-muted ml-1.5">
+                    <span className="ml-1.5 font-normal normal-case tracking-normal">
                       (press keys in sequence)
                     </span>
                   )}
@@ -178,15 +144,7 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShor
             ))
           )}
         </div>
-
-        {/* Footer */}
-        <div className="px-6 py-2.5 border-t border-subtle bg-page flex items-center justify-between text-[11px] text-muted">
-          <span>Shortcuts work whenever you are not typing in a text field.</span>
-          <kbd className="px-1.5 py-0.5 text-[10px] bg-surface border border-subtle rounded shadow-2xs">
-            Esc to close
-          </kbd>
-        </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

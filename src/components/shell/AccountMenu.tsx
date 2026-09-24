@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { Camera, ChevronsUpDown, Keyboard, KeyRound, LayoutTemplate, Loader2, LogOut, ShieldCheck, Trash2 } from "lucide-react";
+import { Camera, ChevronsUpDown, Keyboard, KeyRound, Loader2, LogOut, ShieldCheck, Trash2 } from "lucide-react";
 import { useCurrentUser } from "@/context/UserContext";
 import { useKeyboardShortcutsContext } from "@/context/KeyboardShortcutsContext";
 import { useAccountActions } from "@/hooks/useAccountActions";
@@ -22,7 +22,7 @@ export default function AccountMenu({ collapsed, currentProject }: { collapsed: 
   const { currentUser } = useCurrentUser();
   const permissions = useProjectPermissions(currentProject);
   const { openShortcutsModal } = useKeyboardShortcutsContext();
-  const { avatarUploading, uploadAvatar, deleteAvatar, signingOut, signOut, switchingLayout, switchLayout } = useAccountActions();
+  const { avatarUploading, uploadAvatar, deleteAvatar, signingOut, signOut } = useAccountActions();
   const [showTokens, setShowTokens] = useState(false);
   const [showSecurity, setShowSecurity] = useState(false);
   const avatarInput = useRef<HTMLInputElement>(null);
@@ -95,7 +95,7 @@ export default function AccountMenu({ collapsed, currentProject }: { collapsed: 
             Personal access tokens
           </MenuItem>
           <MenuItem icon={<ShieldCheck />} onSelect={() => setShowSecurity(true)}>
-            Password &amp; sessions
+            Password and sessions
           </MenuItem>
           <MenuItem icon={<Keyboard />} shortcut="?" onSelect={openShortcutsModal}>
             Keyboard shortcuts
@@ -103,13 +103,6 @@ export default function AccountMenu({ collapsed, currentProject }: { collapsed: 
           <MenuSeparator />
           <AppearanceMenuItems />
           <MenuSeparator />
-          <MenuItem
-            icon={switchingLayout ? <Loader2 className="animate-spin" /> : <LayoutTemplate />}
-            disabled={switchingLayout}
-            onSelect={() => switchLayout(false)}
-          >
-            Use the classic layout
-          </MenuItem>
           <MenuItem icon={signingOut ? <Loader2 className="animate-spin" /> : <LogOut />} disabled={signingOut} onSelect={signOut}>
             Sign out
           </MenuItem>

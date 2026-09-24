@@ -28,7 +28,7 @@ A modern, full-stack agile project management and issue tracking platform built 
   - Type `APOLLO-12`, or just `12` inside Apollo, to jump straight to an issue.
   - Arrow keys to move, Enter to open, ⌘/Ctrl+Enter for a new tab. `/` still
     filters the board, backlog and issue list in place.
-- 🧭 **New layout (opt-in)**: choose **Try the new layout** in the account menu.
+- 🧭 **Layout**:
   - A rail on the left holds search, Home, Inbox and every project you're on,
     with the current one's pages opened out. `[` collapses it to icons.
   - **Home** shows open issues assigned to you, what's due or overdue this
@@ -43,9 +43,10 @@ A modern, full-stack agile project management and issue tracking platform built 
     Issues, Inbox, More). An issue opens full-screen with its main properties
     as a row of chips, the comment box stays pinned to the bottom, and a
     sideways swipe steps to the previous or next issue.
-  - `g h` goes to Home and `g n` to the Inbox. Switch back any time with
-    **Use the classic layout**.
-- 🌓 **Theme and density**, in the account menu of either layout:
+  - `g h` goes to Home and `g n` to the Inbox.
+  - Visitors to a public project who aren't signed in get the same layout,
+    with **Sign in** in place of Home and Inbox.
+- 🌓 **Theme and density**, in the account menu:
   - **Light**, **Dark** or **Match system**. Every colour comes from theme
     tokens, and the page is drawn in the right theme from the first paint.
   - **Comfortable** or **Compact**: Compact takes padding out of table rows,
@@ -117,6 +118,14 @@ A modern, full-stack agile project management and issue tracking platform built 
   - Bulk actions from the Issues list: select several issues and change their
     status, assignee, priority or fix version, add a label, or delete them
     all at once.
+- ➕ **Create an issue** with `c` or **Create**:
+  - A title, then the properties most issues need as chips: type, assignee,
+    priority and sprint (the active one by default).
+  - The description is one click away, and Tab from the title goes straight
+    into it. **More fields** has story points, dates, fix version, parent epic
+    and custom fields; required custom fields open it by themselves.
+  - ⌘/Ctrl+Enter creates. Tick **Create another** to keep the dialog open,
+    with the same properties, for the next one.
 - 📝 **The issue view**, the same everywhere: in a panel over the board,
   backlog, roadmap and issue table, in the Issues split view, and on the
   issue's own page at `/projects/KEY/issues/KEY-12`, which every link,
@@ -158,7 +167,8 @@ A modern, full-stack agile project management and issue tracking platform built 
     turns it back into chips. Conditions the chips can't show stay as chips
     of their own.
   - **Table**: choose the columns, sort by clicking a header, and switch to a
-    compact density. **Export CSV** downloads the columns on screen.
+    compact density. Priority sorts by rank, Highest to Lowest, not
+    alphabetically; the High priority view is sorted that way too. **Export CSV** downloads the columns on screen.
   - Select rows for bulk actions in the toolbar: status, assignee, priority,
     fix version, add a label, or delete.
   - **Split view**: the list on the left and the issue on the right.
@@ -417,10 +427,12 @@ pages, Home and Inbox, an issue's page and panel, the backlog and the board
 Issues page (its split view, table, views menu and TQL editor, while choosing
 a view, adding a chip, running TQL and saving a view), the reports (each tab,
 and a chart as a table), the roadmap, releases (creating a version, its issues
-and its menu), and every project and system settings section, including the
-unsaved-changes bar and the status colour swatches. Every check runs in the
-light theme and again in the dark one. A 390-pixel phone check signs in to
-the new layout and confirms the tab bar, that the first board card shows
+and its menu), every project and system settings section, including the
+unsaved-changes bar, the status colour swatches and the dialogs they open,
+the create-issue, password, access-token, keyboard-shortcut and permissions
+dialogs, and a public project seen by someone who isn't signed in. Every page
+must have exactly one `h1`, and every check runs in the light theme and again
+in the dark one. A 390-pixel phone check confirms the tab bar, that the first board card shows
 without scrolling, that nothing runs off the side of Home, and the issue's
 property chips; any
 serious or critical finding fails the build. The tests include a check that every

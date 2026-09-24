@@ -4,7 +4,11 @@ import { todayKey } from "@/lib/calendarDate";
 import React, { useState } from "react";
 import { Version } from "@/types";
 import { releaseVersion } from "@/lib/actions/versions";
-import { X, Rocket, AlertTriangle, Calendar, Loader2 } from "lucide-react";
+import { Rocket, AlertTriangle } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/Button";
+import { Field, Input } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 
 interface ReleaseVersionModalProps {
   version: Version;
@@ -77,144 +81,74 @@ export default function ReleaseVersionModal({
     }
   };
 
+  const radio = "h-4 w-4 accent-[rgb(var(--color-accent))]";
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-      <div
-        className="bg-surface rounded-lg shadow-xl border border-subtle w-full max-w-md overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-subtle">
-          <div className="flex items-center gap-2">
-            <Rocket className="w-4 h-4 text-success" />
-            <h2 className="text-base font-bold text-ink">
-              Release Version {version.name}
-            </h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-muted hover:text-ink p-1 rounded hover:bg-surface-sunk transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {error && (
-            <div className="p-3 bg-danger/10 border border-danger/30 rounded text-xs text-danger font-medium">
-              {error}
-            </div>
-          )}
-
-          {/* Release Date */}
-          <div>
-            <label className="block text-xs font-semibold text-ink-2 mb-1 flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-muted" />
-              Release Date
-            </label>
-            <input
-              type="date"
-              value={releaseDate}
-              onChange={(e) => setReleaseDate(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-surface border border-subtle rounded focus:border-accent"
-              required
-            />
-          </div>
-
-          {/* Unresolved Issues Notice */}
-          {unresolvedCount > 0 ? (
-            <div className="p-3 bg-warning/15 border border-warning/40 rounded-md space-y-3">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
-                <div className="text-xs text-ink font-medium">
-                  There {unresolvedCount === 1 ? "is" : "are"}{" "}
-                  <strong>{unresolvedCount} unresolved</strong> issue
-                  {unresolvedCount === 1 ? "" : "s"} in this version.
-                </div>
-              </div>
-
-              <div className="text-xs space-y-2 pt-1 border-t border-warning/30">
-                {availableTargetVersions.length > 0 && (
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="moveAction"
-                      checked={moveAction === "move"}
-                      onChange={() => setMoveAction("move")}
-                      className="text-accent focus:ring-accent"
-                    />
-                    <span>Move unresolved issues to:</span>
-                    <select
-                      value={targetVersionId}
-                      onChange={(e) => {
-                        setTargetVersionId(e.target.value);
-                        setMoveAction("move");
-                      }}
-                      className="ml-auto bg-surface border border-subtle rounded px-2 py-1 text-xs"
-                    >
-                      {availableTargetVersions.map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {v.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="moveAction"
-                    checked={moveAction === "ignore"}
-                    onChange={() => setMoveAction("ignore")}
-                    className="text-accent focus:ring-accent"
-                  />
-                  <span>Keep unresolved issues in {version.name}</span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="moveAction"
-                    checked={moveAction === "clear"}
-                    onChange={() => setMoveAction("clear")}
-                    className="text-accent focus:ring-accent"
-                  />
-                  <span>Unassign version from unresolved issues</span>
-                </label>
-              </div>
-            </div>
-          ) : (
-            <div className="p-3 bg-success/10 border border-success/30 rounded-md text-xs text-success font-semibold flex items-center gap-2">
-              <span>All issues in this version are completed!</span>
-            </div>
-          )}
-
-          {/* Footer */}
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-subtle">
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-xs font-medium px-4 py-2 rounded text-ink-2 hover:bg-surface-sunk transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="text-xs font-semibold px-4 py-2 rounded bg-success text-accent-fg hover:bg-success/90 disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-xs"
-            >
-              {isSubmitting ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Rocket className="w-3.5 h-3.5" />
-              )}
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        title={`Release ${version.name}`}
+        footer={
+          <>
+            <Button onClick={onClose}>Cancel</Button>
+            <Button type="submit" form="release-form" variant="primary" loading={isSubmitting}>
+              {!isSubmitting && <Rocket className="h-3.5 w-3.5" aria-hidden="true" />}
               Release
-            </button>
-          </div>
+            </Button>
+          </>
+        }
+      >
+        <form id="release-form" onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <p role="alert" className="rounded-control bg-danger-soft px-3 py-2 text-xs text-danger">
+              {error}
+            </p>
+          )}
+          <Field label="Release date" required>
+            <Input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
+          </Field>
+
+          {unresolvedCount > 0 ? (
+            <fieldset className="space-y-2 rounded-control border border-warning/40 bg-warning-soft p-3 text-[13px] text-ink">
+              <legend className="sr-only">Unresolved issues</legend>
+              <p className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
+                <span>
+                  {unresolvedCount} issue{unresolvedCount === 1 ? " isn't" : "s aren't"} done yet. What should happen to{" "}
+                  {unresolvedCount === 1 ? "it" : "them"}?
+                </span>
+              </p>
+              {availableTargetVersions.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="flex items-center gap-2">
+                    <input type="radio" name="moveAction" checked={moveAction === "move"} onChange={() => setMoveAction("move")} className={radio} />
+                    Move to
+                  </label>
+                  <Select
+                    aria-label="Version to move them to"
+                    className="w-auto min-w-40"
+                    value={targetVersionId}
+                    onChange={(v) => {
+                      setTargetVersionId(v);
+                      setMoveAction("move");
+                    }}
+                    options={availableTargetVersions.map((v) => ({ value: v.id, label: v.name }))}
+                  />
+                </div>
+              )}
+              <label className="flex items-center gap-2">
+                <input type="radio" name="moveAction" checked={moveAction === "ignore"} onChange={() => setMoveAction("ignore")} className={radio} />
+                Keep them in {version.name}
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="radio" name="moveAction" checked={moveAction === "clear"} onChange={() => setMoveAction("clear")} className={radio} />
+                Remove the version from them
+              </label>
+            </fieldset>
+          ) : (
+            <p className="rounded-control bg-success-soft px-3 py-2 text-[13px] text-success">Every issue in this version is done.</p>
+          )}
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

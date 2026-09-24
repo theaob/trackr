@@ -10,7 +10,6 @@ vi.mock("next/navigation", () => ({
 }));
 // Server actions reach for the database; the rail only needs them to exist.
 vi.mock("@/lib/actions/auth", () => ({ logout: vi.fn() }));
-vi.mock("@/lib/actions/preferences", () => ({ setNewLayout: vi.fn() }));
 vi.mock("@/components/auth/PersonalAccessTokensModal", () => ({ default: () => null }));
 vi.mock("@/components/auth/AccountSecurityModal", () => ({ default: () => null }));
 

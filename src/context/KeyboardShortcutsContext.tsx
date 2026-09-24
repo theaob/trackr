@@ -27,7 +27,7 @@ const KeyboardShortcutsContext = createContext<KeyboardShortcutsContextType>({
 
 export function KeyboardShortcutsProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const currentUserHasNewLayout = !!useCurrentUser().currentUser?.useNewLayout;
+  const signedIn = !!useCurrentUser().currentUser;
   const pathname = usePathname();
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
 
@@ -72,8 +72,6 @@ export function KeyboardShortcutsProvider({ children }: { children: React.ReactN
   const handleNavigate = useCallback(
     (dest: NavigateDestination) => {
       if (dest === "projects" || dest === "home" || dest === "inbox") {
-        // Home and Inbox belong to the new layout; on the classic one they
-        // redirect to Projects.
         router.push(`/${dest}`);
         return;
       }
@@ -139,7 +137,7 @@ export function KeyboardShortcutsProvider({ children }: { children: React.ReactN
             <kbd className="font-mono font-bold bg-surface/15 px-1 py-0.5 rounded">e</kbd> Reports ·{" "}
             <kbd className="font-mono font-bold bg-surface/15 px-1 py-0.5 rounded">s</kbd> Settings ·{" "}
             <kbd className="font-mono font-bold bg-surface/15 px-1 py-0.5 rounded">p</kbd> Projects
-            {currentUserHasNewLayout && (
+            {signedIn && (
               <>
                 {" "}·{" "}
                 <kbd className="font-mono font-bold bg-surface/15 px-1 py-0.5 rounded">h</kbd> Home ·{" "}

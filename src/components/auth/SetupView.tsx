@@ -69,7 +69,7 @@ export default function SetupView() {
             <ShieldCheck className="w-5 h-5 text-surface" />
           </div>
           <div>
-            <h2 className="text-lg font-bold tracking-tight">Welcome to Trackr</h2>
+            <h1 className="text-lg font-bold tracking-tight">Welcome to Trackr</h1>
             <p className="text-xs text-surface/75">
               This instance has no accounts yet. Create the admin account to get started.
             </p>
@@ -85,9 +85,9 @@ export default function SetupView() {
           )}
 
           <div className="space-y-3">
-            <h3 className="text-xs font-bold text-ink-2 uppercase tracking-wider">
+            <h2 className="text-xs font-bold text-ink-2 uppercase tracking-wider">
               Admin account
-            </h3>
+            </h2>
 
             <div>
               <label htmlFor="setup-name" className="block text-xs font-semibold text-ink mb-1">Full name</label>
@@ -144,9 +144,9 @@ export default function SetupView() {
           </div>
 
           <div className="space-y-3 pt-1 border-t border-subtle">
-            <h3 className="text-xs font-bold text-ink-2 uppercase tracking-wider pt-4">
+            <h2 className="text-xs font-bold text-ink-2 uppercase tracking-wider pt-4">
               First project
-            </h3>
+            </h2>
 
             <div>
               <label htmlFor="setup-project-name" className="block text-xs font-semibold text-ink mb-1">Project name</label>

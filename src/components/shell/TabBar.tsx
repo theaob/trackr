@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Inbox, Kanban, ListFilter, Menu } from "lucide-react";
+import { Home, Inbox, Kanban, ListFilter, LogIn, Menu } from "lucide-react";
 import type { Project } from "@/types";
 import { shellLocation } from "@/lib/shell";
 import { cn } from "@/components/ui/cn";
@@ -28,7 +28,18 @@ const item =
  * issues of the project you're in (or your first), Inbox, and More for
  * everything else. It sits above the phone's home indicator.
  */
-export default function TabBar({ project, unread, onMore }: { project?: Project | null; unread: number; onMore: () => void }) {
+export default function TabBar({
+  project,
+  unread,
+  signedIn = true,
+  onMore,
+}: {
+  project?: Project | null;
+  unread: number;
+  /** Signed-out visitors get Sign in in place of Home and Inbox. */
+  signedIn?: boolean;
+  onMore: () => void;
+}) {
   const pathname = usePathname();
   const tab = activeTab(pathname);
   const link = (id: Tab, href: string, label: string, icon: React.ReactNode, badge?: number) => (
@@ -51,10 +62,17 @@ export default function TabBar({ project, unread, onMore }: { project?: Project 
       aria-label="Main"
       className="flex shrink-0 items-stretch border-t border-subtle bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
     >
-      {link("home", "/home", "Home", <Home aria-hidden="true" />)}
+      {signedIn && link("home", "/home", "Home", <Home aria-hidden="true" />)}
       {link("board", project ? `/projects/${project.key}/board` : "/projects", "Board", <Kanban aria-hidden="true" />)}
       {link("issues", project ? `/projects/${project.key}/issues` : "/projects", "Issues", <ListFilter aria-hidden="true" />)}
-      {link("inbox", "/inbox", "Inbox", <Inbox aria-hidden="true" />, unread)}
+      {signedIn ? (
+        link("inbox", "/inbox", "Inbox", <Inbox aria-hidden="true" />, unread)
+      ) : (
+        <Link prefetch={false} href={`/login?next=${encodeURIComponent(pathname || "/")}`} className={item}>
+          <LogIn aria-hidden="true" />
+          Sign in
+        </Link>
+      )}
       <button type="button" onClick={onMore} className={item}>
         <Menu aria-hidden="true" />
         More

@@ -3,7 +3,12 @@
 import React, { useState } from "react";
 import { CustomField, CustomFieldType } from "@/types";
 import { createCustomField } from "@/lib/actions/customFields";
-import { X, Plus, Trash2, Sliders, Loader2 } from "lucide-react";
+import { X } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/Button";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { Field, Input } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 import { CustomFieldIcon } from "@/components/common/CustomFieldRenderer";
 
 interface CreateCustomFieldModalProps {
@@ -14,13 +19,13 @@ interface CreateCustomFieldModalProps {
 }
 
 const FIELD_TYPES: { type: CustomFieldType; label: string; description: string }[] = [
-  { type: "TEXT", label: "Short Text", description: "Single-line text for identifiers, short notes, or names." },
-  { type: "NUMBER", label: "Number", description: "Numeric value for metrics, estimated hours, or sizing." },
-  { type: "SELECT", label: "Single Select Dropdown", description: "Choose one option from a predefined list." },
-  { type: "MULTI_SELECT", label: "Multi-Select Choices", description: "Select multiple options from a predefined list." },
-  { type: "CHECKBOX", label: "Checkbox / Toggle", description: "Boolean flag (e.g. Is Regression, Customer Impact)." },
-  { type: "DATE", label: "Date Picker", description: "Calendar date for deadlines, targets, or milestones." },
-  { type: "URL", label: "Web Link / URL", description: "Clickable URL linking to external docs, dashboards, or PRs." },
+  { type: "TEXT", label: "Short text", description: "One line: an identifier, a short note or a name" },
+  { type: "NUMBER", label: "Number", description: "A metric, estimated hours or a size" },
+  { type: "SELECT", label: "Single choice", description: "One option from a list you set" },
+  { type: "MULTI_SELECT", label: "Multiple choice", description: "Any number of options from a list you set" },
+  { type: "CHECKBOX", label: "Checkbox", description: "Yes or no, such as Regression or Customer impact" },
+  { type: "DATE", label: "Date", description: "A deadline, target or milestone" },
+  { type: "URL", label: "Link", description: "A link to docs, a dashboard or a pull request" },
 ];
 
 export default function CreateCustomFieldModal({
@@ -91,112 +96,54 @@ export default function CreateCustomFieldModal({
     }
   };
 
+  const hasOptions = type === "SELECT" || type === "MULTI_SELECT";
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-150">
-      <div
-        className="bg-surface rounded-none sm:rounded-lg shadow-xl border-0 sm:border border-subtle w-full h-full sm:h-auto max-w-lg overflow-hidden flex flex-col max-h-none sm:max-h-[90vh]"
-        onClick={(e) => e.stopPropagation()}
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        title="Create custom field"
+        description="A field every issue in this project gets, shown with its other properties."
+        footer={
+          <>
+            <Button onClick={onClose}>Cancel</Button>
+            <Button type="submit" form="custom-field-form" variant="primary" loading={isSubmitting}>
+              Create field
+            </Button>
+          </>
+        }
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-subtle shrink-0">
-          <div className="flex items-center gap-2">
-            <Sliders className="w-4 h-4 text-accent" />
-            <h2 className="text-base font-bold text-ink">Create Custom Field</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-muted hover:text-ink p-1 rounded hover:bg-surface-sunk transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
+        <form id="custom-field-form" onSubmit={handleSubmit} noValidate className="space-y-4">
           {error && (
-            <div className="p-3 bg-danger/10 border border-danger/30 rounded text-xs text-danger font-medium">
+            <p role="alert" className="rounded-control bg-danger-soft px-3 py-2 text-xs text-danger">
               {error}
-            </div>
+            </p>
           )}
-
-          {/* Field Name */}
-          <div>
-            <label className="block text-xs font-semibold text-ink-2 mb-1">
-              Field Name <span className="text-danger">*</span>
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Environment, Customer Tier, Estimated Hours"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-surface border border-subtle rounded focus:border-accent"
-              autoFocus
-              required
+          <Field label="Name" required>
+            <Input placeholder="Environment, Customer tier, Estimated hours" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+          </Field>
+          <Field label="Description" hint="Shown under the field, to say what it's for.">
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} />
+          </Field>
+          <Field label="Type">
+            <Select
+              value={type}
+              onChange={(v) => setType(v as CustomFieldType)}
+              options={FIELD_TYPES.map((ft) => ({
+                value: ft.type,
+                label: ft.label,
+                description: ft.description,
+                icon: <CustomFieldIcon type={ft.type} className="h-4 w-4 text-muted" />,
+              }))}
             />
-          </div>
+          </Field>
 
-          {/* Description */}
-          <div>
-            <label className="block text-xs font-semibold text-ink-2 mb-1">
-              Description (Optional)
-            </label>
-            <input
-              type="text"
-              placeholder="Help text explaining this field's purpose..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-surface border border-subtle rounded focus:border-accent"
-            />
-          </div>
-
-          {/* Field Type Selector */}
-          <div>
-            <label className="block text-xs font-semibold text-ink-2 mb-1.5">
-              Field Type
-            </label>
-            <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto border border-subtle rounded-md p-2 bg-page">
-              {FIELD_TYPES.map((ft) => (
-                <label
-                  key={ft.type}
-                  className={`flex items-start gap-2.5 p-2 rounded cursor-pointer border transition-colors ${
-                    type === ft.type
-                      ? "bg-surface border-accent shadow-2xs"
-                      : "border-transparent hover:bg-surface/60"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="fieldType"
-                    value={ft.type}
-                    checked={type === ft.type}
-                    onChange={() => setType(ft.type)}
-                    className="mt-0.5 text-accent focus:ring-accent"
-                  />
-                  <div className="flex-1 space-y-0.5">
-                    <div className="flex items-center gap-1.5 font-semibold text-xs text-ink">
-                      <CustomFieldIcon type={ft.type} />
-                      {ft.label}
-                    </div>
-                    <p className="text-[11px] text-muted leading-tight">
-                      {ft.description}
-                    </p>
-                  </div>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Options for SELECT or MULTI_SELECT */}
-          {(type === "SELECT" || type === "MULTI_SELECT") && (
-            <div className="space-y-2 p-3 bg-page border border-subtle rounded-md">
-              <label className="block text-xs font-semibold text-ink-2">
-                Dropdown Options <span className="text-danger">*</span>
-              </label>
-
+          {hasOptions && (
+            <fieldset className="space-y-2 rounded-control border border-subtle p-3">
+              <legend className="px-1 text-xs font-medium text-ink-2">Options</legend>
               <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="Type an option and press Add..."
+                <Input
+                  aria-label="New option"
+                  placeholder="Type an option, then Add"
                   value={newOptionInput}
                   onChange={(e) => setNewOptionInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -205,72 +152,35 @@ export default function CreateCustomFieldModal({
                       handleAddOption(e);
                     }
                   }}
-                  className="flex-1 text-xs px-2.5 py-1.5 bg-surface border border-subtle rounded focus:border-accent"
                 />
-                <button
-                  type="button"
-                  onClick={handleAddOption}
-                  className="text-xs font-semibold px-3 py-1.5 rounded bg-accent text-accent-fg hover:bg-accent-hover"
-                >
-                  Add
-                </button>
+                <Button onClick={handleAddOption}>Add</Button>
               </div>
-
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {options.map((opt, idx) => (
-                  <span
-                    key={idx}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface border border-subtle rounded-full text-xs font-medium text-ink"
-                  >
-                    <span>{opt}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveOption(idx)}
-                      className="text-muted hover:text-danger"
+              {options.length > 0 && (
+                <ul aria-label="Options" className="flex flex-wrap gap-1.5">
+                  {options.map((opt, idx) => (
+                    <li
+                      key={opt}
+                      className="inline-flex h-7 items-center gap-1 rounded-full border border-subtle bg-surface pl-2.5 pr-1 text-xs text-ink"
                     >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
+                      {opt}
+                      <button
+                        type="button"
+                        aria-label={`Remove ${opt}`}
+                        onClick={() => handleRemoveOption(idx)}
+                        className="grid h-5 w-5 place-items-center rounded-full text-muted hover:bg-surface-sunk hover:text-danger"
+                      >
+                        <X className="h-3 w-3" aria-hidden="true" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </fieldset>
           )}
 
-          {/* Required Checkbox */}
-          <div className="pt-2">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={required}
-                onChange={(e) => setRequired(e.target.checked)}
-                className="w-4 h-4 rounded text-accent focus:ring-accent border-subtle"
-              />
-              <span className="text-xs font-semibold text-ink">
-                Required field (must be specified on issues)
-              </span>
-            </label>
-          </div>
-
-          {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-2 pt-4 border-t border-subtle">
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-xs font-medium px-4 py-2 rounded text-ink-2 hover:bg-surface-sunk transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="text-xs font-semibold px-4 py-2 rounded bg-accent text-accent-fg hover:bg-accent-hover disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-xs"
-            >
-              {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Create Field
-            </button>
-          </div>
+          <Checkbox label="Required: every issue must have a value" checked={required} onChange={(e) => setRequired(e.target.checked)} />
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

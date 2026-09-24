@@ -2,6 +2,8 @@
 
 import { issueHref } from "@/lib/issueUrls";
 import prisma from "@/lib/db";
+import type { Prisma } from "@prisma/client";
+import { priorityPage } from "@/lib/prioritySort";
 import { IssueStatus, IssueType, PriorityLevel, WebhookActor, WebhookChangelogItem } from "@/types";
 import { revalidatePath } from "next/cache";
 import { triggerWebhooks } from "./webhooks";
@@ -500,34 +502,60 @@ export async function getPaginatedIssues(params: PaginatedIssuesParams) {
     const pageSize = Math.min(100, Math.max(10, params.pageSize || 50));
     const skip = (page - 1) * pageSize;
 
-    const [issues, totalCount] = await prisma.$transaction([
-      prisma.issue.findMany({
-        where,
-        include: {
-          project: true,
-          assignee: USER_SELECT,
-          reporter: USER_SELECT,
-          version: true,
-          sprint: { select: { id: true, name: true, status: true } },
-          parent: {
-            select: {
-              id: true,
-              key: true,
-              title: true,
-              type: true,
-            },
-          },
-          // Comment and activity threads are loaded by the issue view, not
-          // eagerly for every row of the table.
-          _count: { select: { comments: true } },
-          ...LABELS_INCLUDE,
+    const include = {
+      project: true,
+      assignee: USER_SELECT,
+      reporter: USER_SELECT,
+      version: true,
+      sprint: { select: { id: true, name: true, status: true } },
+      parent: {
+        select: {
+          id: true,
+          key: true,
+          title: true,
+          type: true,
         },
-        orderBy,
-        skip,
-        take: pageSize,
-      }),
-      prisma.issue.count({ where }),
-    ]);
+      },
+      // Comment and activity threads are loaded by the issue view, not
+      // eagerly for every row of the table.
+      _count: { select: { comments: true } },
+      ...LABELS_INCLUDE,
+    } satisfies Prisma.IssueInclude;
+
+    // Priority is text; sorting it in the database would be alphabetical.
+    const order: Record<string, "asc" | "desc">[] = Array.isArray(orderBy)
+      ? orderBy
+      : Object.keys(orderBy).length > 0
+        ? [orderBy]
+        : [];
+    const priorityDirection = order[0] && Object.keys(order[0])[0] === "priority" ? order[0].priority : null;
+
+    let issues;
+    let totalCount: number;
+    if (priorityDirection) {
+      const then = order.length > 1 ? order.slice(1) : [{ createdAt: "desc" as const }];
+      const groups = await prisma.issue.groupBy({ by: ["priority"], where, _count: { _all: true } });
+      const counts = Object.fromEntries(groups.map((g) => [g.priority, g._count._all]));
+      totalCount = groups.reduce((sum, g) => sum + g._count._all, 0);
+      const slices = priorityPage(counts, priorityDirection, skip, pageSize);
+      const parts = await prisma.$transaction(
+        slices.map((slice) =>
+          prisma.issue.findMany({
+            where: { AND: [where, { priority: slice.priority }] },
+            include,
+            orderBy: then,
+            skip: slice.skip,
+            take: slice.take,
+          })
+        )
+      );
+      issues = parts.flat();
+    } else {
+      [issues, totalCount] = await prisma.$transaction([
+        prisma.issue.findMany({ where, include, orderBy, skip, take: pageSize }),
+        prisma.issue.count({ where }),
+      ]);
+    }
 
     const totalPages = Math.ceil(totalCount / pageSize);
 
