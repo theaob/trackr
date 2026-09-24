@@ -34,7 +34,10 @@ test.describe.serial("accessibility", () => {
   let page: Page;
 
   test.beforeAll(async ({ browser }, testInfo) => {
-    context = await browser.newContext({ baseURL: testInfo.project.use.baseURL });
+    // Menus and dialogs fade in; with reduced motion the app skips that, so
+    // axe never catches one half transparent and reports contrast the
+    // finished page doesn't have.
+    context = await browser.newContext({ baseURL: testInfo.project.use.baseURL, reducedMotion: "reduce" });
     page = await context.newPage();
   });
 
@@ -45,6 +48,7 @@ test.describe.serial("accessibility", () => {
   test("setup", async () => {
     await page.goto("/setup");
     await expect(page.getByRole("heading", { name: /Welcome/ })).toBeVisible();
+    expect(await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(true);
     await expectNoSeriousViolations(page, "Setup");
 
     await page.getByLabel("Full name").fill("Ada Lovelace");
