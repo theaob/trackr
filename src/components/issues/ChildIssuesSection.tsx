@@ -215,11 +215,11 @@ export default function ChildIssuesSection({
 
             <div className="flex items-center gap-2 sm:gap-3 text-[11px] shrink-0">
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span className="w-2 h-2 rounded-full bg-success"></span>
                 {doneCount} Done
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                <span className="w-2 h-2 rounded-full bg-accent"></span>
                 {inProgressCount} In Progress
               </span>
               <span className="flex items-center gap-1">
@@ -234,14 +234,14 @@ export default function ChildIssuesSection({
             {donePct > 0 && (
               <div
                 style={{ width: `${donePct}%` }}
-                className="bg-emerald-500 h-full transition-all duration-300"
+                className="bg-success h-full transition-all duration-300"
                 title={`${doneCount} Done (${donePct}%)`}
               />
             )}
             {inProgressPct > 0 && (
               <div
                 style={{ width: `${inProgressPct}%` }}
-                className="bg-blue-500 h-full transition-all duration-300"
+                className="bg-accent h-full transition-all duration-300"
                 title={`${inProgressCount} In Progress (${inProgressPct}%)`}
               />
             )}
@@ -258,7 +258,7 @@ export default function ChildIssuesSection({
 
       {/* Link Existing Issue Popover/Dropdown */}
       {isLinking && (
-        <div className="bg-white border border-accent/40 ring-1 ring-accent/20 rounded-md p-3 space-y-2 shadow-sm animate-in fade-in-50 duration-150">
+        <div className="bg-surface border border-accent/40 ring-1 ring-accent/20 rounded-md p-3 space-y-2 shadow-sm animate-in fade-in-50 duration-150">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-ink flex items-center gap-1.5">
               <Search className="w-3.5 h-3.5 text-accent" />
@@ -329,7 +329,7 @@ export default function ChildIssuesSection({
       {isCreating && (
         <form
           onSubmit={handleCreateChild}
-          className="bg-white border border-accent/40 ring-1 ring-accent/20 rounded-md p-3 space-y-2.5 shadow-sm animate-in fade-in-50 duration-150"
+          className="bg-surface border border-accent/40 ring-1 ring-accent/20 rounded-md p-3 space-y-2.5 shadow-sm animate-in fade-in-50 duration-150"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-ink">
@@ -353,7 +353,7 @@ export default function ChildIssuesSection({
               <select
                 value={newType}
                 onChange={(e) => setNewType(e.target.value as IssueType)}
-                className="bg-white border border-subtle rounded px-2 py-1 text-xs text-ink focus:border-accent font-medium shrink-0"
+                className="bg-surface border border-subtle rounded px-2 py-1 text-xs text-ink focus:border-accent font-medium shrink-0"
               >
                 <option value="STORY">Story</option>
                 <option value="TASK">Task</option>
@@ -386,13 +386,13 @@ export default function ChildIssuesSection({
             </button>
           </div>
 
-          {createError && <p className="text-[11px] text-rose-600 font-medium">{createError}</p>}
+          {createError && <p className="text-[11px] text-danger font-medium">{createError}</p>}
         </form>
       )}
 
       {/* Child Issues List / Table */}
       {totalCount > 0 ? (
-        <div className="border border-subtle rounded-md overflow-hidden divide-y divide-subtle bg-white min-w-0">
+        <div className="border border-subtle rounded-md overflow-hidden divide-y divide-subtle bg-surface min-w-0">
           {children.map((child) => {
             const isDone = doneStatusNames.includes(child.status);
             return (
@@ -465,7 +465,7 @@ export default function ChildIssuesSection({
                         type="button"
                         disabled={unlinkingId === child.id}
                         onClick={() => handleUnlink(child.id)}
-                        className="p-1 text-muted hover:text-rose-600 rounded hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-all"
+                        className="p-1 text-muted hover:text-danger rounded hover:bg-danger-soft opacity-0 group-hover:opacity-100 transition-all"
                         title={isEpic ? "Unlink from epic" : "Unlink subtask"}
                       >
                         {unlinkingId === child.id ? (

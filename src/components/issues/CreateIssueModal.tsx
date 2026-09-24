@@ -202,7 +202,7 @@ export default function CreateIssueModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-0 sm:p-4 overflow-y-auto animate-in fade-in">
-      <div className="bg-white w-full max-w-2xl h-full sm:h-auto sm:max-h-[90vh] rounded-none sm:rounded-lg shadow-2xl border border-subtle flex flex-col overflow-hidden">
+      <div className="bg-surface w-full max-w-2xl h-full sm:h-auto sm:max-h-[90vh] rounded-none sm:rounded-lg shadow-2xl border border-subtle flex flex-col overflow-hidden">
         {/* Modal Header */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-subtle">
           <h2 className="text-lg font-bold text-ink">Create Issue</h2>
@@ -215,8 +215,8 @@ export default function CreateIssueModal({
         </div>
 
         {!permissions.canCreateIssue && (
-          <div className="bg-amber-50 border-b border-amber-200 px-4 sm:px-6 py-2.5 flex items-center gap-2 text-xs text-amber-800">
-            <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+          <div className="bg-warning-soft border-b border-warning/30 px-4 sm:px-6 py-2.5 flex items-center gap-2 text-xs text-warning">
+            <ShieldAlert className="w-4 h-4 text-warning shrink-0" />
             <span>You do not have permission to create issues in this project.</span>
           </div>
         )}
@@ -224,7 +224,7 @@ export default function CreateIssueModal({
         {/* Modal Form */}
         <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-sm">
           {error && (
-            <div className="p-3 text-xs bg-rose-50 border border-rose-200 text-rose-700 rounded-md font-medium">
+            <div className="p-3 text-xs bg-danger-soft border border-danger/30 text-danger rounded-md font-medium">
               {error}
             </div>
           )}
@@ -239,7 +239,7 @@ export default function CreateIssueModal({
                 <select
                   value={selectedProjectId}
                   onChange={(e) => setSelectedProjectId(e.target.value)}
-                  className="w-full bg-white border border-subtle rounded px-3 py-2 text-ink font-medium focus:border-accent"
+                  className="w-full bg-surface border border-subtle rounded px-3 py-2 text-ink font-medium focus:border-accent"
                 >
                   {allProjects.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -262,7 +262,7 @@ export default function CreateIssueModal({
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value as IssueType)}
-                  className="w-full bg-white border border-subtle rounded pl-9 pr-3 py-2 text-ink focus:border-accent"
+                  className="w-full bg-surface border border-subtle rounded pl-9 pr-3 py-2 text-ink focus:border-accent"
                 >
                   <option value="STORY">Story</option>
                   <option value="TASK">Task</option>
@@ -279,7 +279,7 @@ export default function CreateIssueModal({
           {/* Summary / Title */}
           <div>
             <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
-              Summary <span className="text-rose-500">*</span>
+              Summary <span className="text-danger">*</span>
             </label>
             <input
               type="text"
@@ -318,7 +318,7 @@ export default function CreateIssueModal({
                 <select
                   value={priority}
                   onChange={(e) => setPriority(e.target.value as PriorityLevel)}
-                  className="w-full bg-white border border-subtle rounded pl-9 pr-3 py-2 text-ink focus:border-accent"
+                  className="w-full bg-surface border border-subtle rounded pl-9 pr-3 py-2 text-ink focus:border-accent"
                 >
                   <option value="HIGHEST">Highest</option>
                   <option value="HIGH">High</option>
@@ -383,7 +383,7 @@ export default function CreateIssueModal({
               <select
                 value={assigneeId}
                 onChange={(e) => setAssigneeId(e.target.value)}
-                className="w-full bg-white border border-subtle rounded px-3 py-2 text-ink focus:border-accent"
+                className="w-full bg-surface border border-subtle rounded px-3 py-2 text-ink focus:border-accent"
               >
                 <option value="">Automatic (Unassigned)</option>
                 {users.map((u) => (
@@ -402,7 +402,7 @@ export default function CreateIssueModal({
                 <select
                   value={sprintId}
                   onChange={(e) => setSprintId(e.target.value)}
-                  className="w-full bg-white border border-subtle rounded px-3 py-2 text-ink focus:border-accent"
+                  className="w-full bg-surface border border-subtle rounded px-3 py-2 text-ink focus:border-accent"
                 >
                   <option value="">Backlog (No Sprint)</option>
                   {projectSprints.map((s) => (
@@ -424,7 +424,7 @@ export default function CreateIssueModal({
               <select
                 value={versionId}
                 onChange={(e) => setVersionId(e.target.value)}
-                className="w-full bg-white border border-subtle rounded px-3 py-2 text-ink focus:border-accent"
+                className="w-full bg-surface border border-subtle rounded px-3 py-2 text-ink focus:border-accent"
               >
                 <option value="">None (Unassigned)</option>
                 {projectVersions.map((v) => (
@@ -445,7 +445,7 @@ export default function CreateIssueModal({
               <select
                 value={parentId}
                 onChange={(e) => setParentId(e.target.value)}
-                className="w-full bg-white border border-subtle rounded px-3 py-2 text-ink focus:border-accent"
+                className="w-full bg-surface border border-subtle rounded px-3 py-2 text-ink focus:border-accent"
               >
                 <option value="">None</option>
                 {epics.map((epic) => (
@@ -470,7 +470,7 @@ export default function CreateIssueModal({
                 {customFields.map((field) => (
                   <div key={field.id} className="space-y-1">
                     <label className="block text-xs font-semibold text-ink-2">
-                      {field.name} {field.required && <span className="text-rose-500">*</span>}
+                      {field.name} {field.required && <span className="text-danger">*</span>}
                     </label>
                     <CustomFieldRenderer
                       field={field}

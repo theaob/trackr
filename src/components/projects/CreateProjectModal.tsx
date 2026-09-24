@@ -97,7 +97,7 @@ export default function CreateProjectModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4 overflow-y-auto animate-in fade-in">
-      <div className="bg-white w-full h-full sm:h-auto max-w-lg rounded-none sm:rounded-lg shadow-2xl border-0 sm:border border-subtle flex flex-col max-h-none sm:max-h-[90vh] overflow-hidden">
+      <div className="bg-surface w-full h-full sm:h-auto max-w-lg rounded-none sm:rounded-lg shadow-2xl border-0 sm:border border-subtle flex flex-col max-h-none sm:max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-subtle">
           <div className="flex items-center gap-2">
@@ -117,21 +117,21 @@ export default function CreateProjectModal({
         {/* Form */}
         <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="p-4 sm:p-6 space-y-4 text-sm overflow-y-auto flex-1">
           {!canCreate && (
-            <div className="p-3 text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded-md font-medium flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+            <div className="p-3 text-xs bg-warning-soft border border-warning/30 text-warning rounded-md font-medium flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-warning shrink-0" />
               <span>You do not have permission to create projects. Please contact an administrator.</span>
             </div>
           )}
 
           {error && (
-            <div className="p-3 text-xs bg-rose-50 border border-rose-200 text-rose-700 rounded-md font-medium">
+            <div className="p-3 text-xs bg-danger-soft border border-danger/30 text-danger rounded-md font-medium">
               {error}
             </div>
           )}
 
           <div>
             <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
-              Project Name <span className="text-rose-500">*</span>
+              Project Name <span className="text-danger">*</span>
             </label>
             <input
               type="text"
@@ -146,7 +146,7 @@ export default function CreateProjectModal({
 
           <div>
             <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
-              Project Key <span className="text-rose-500">*</span>
+              Project Key <span className="text-danger">*</span>
             </label>
             <input
               type="text"
@@ -172,7 +172,7 @@ export default function CreateProjectModal({
             <select
               value={leadId}
               onChange={(e) => setLeadId(e.target.value)}
-              className="w-full bg-white border border-subtle rounded px-3 py-2 text-ink focus:border-accent"
+              className="w-full bg-surface border border-subtle rounded px-3 py-2 text-ink focus:border-accent"
             >
               {users.map((u) => (
                 <option key={u.id} value={u.id}>

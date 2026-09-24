@@ -161,7 +161,7 @@ export default function UsersSettingsTab() {
     >
       <span
         aria-hidden="true"
-        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-surface shadow-sm ring-0 transition duration-200 ease-in-out ${
           on ? "translate-x-4" : "translate-x-0"
         } flex items-center justify-center`}
       >
@@ -185,7 +185,7 @@ export default function UsersSettingsTab() {
   return (
     <div className="space-y-6">
       {/* Informational Banner */}
-      <div className="bg-white border border-subtle rounded-lg p-5 shadow-2xs">
+      <div className="bg-surface border border-subtle rounded-lg p-5 shadow-2xs">
         <div className="flex items-start gap-4">
           <div className="w-10 h-10 rounded-lg bg-accent-soft text-accent flex items-center justify-center shrink-0">
             <FolderPlus className="w-5 h-5" />
@@ -205,7 +205,7 @@ export default function UsersSettingsTab() {
               <span className="text-muted">•</span>
               <span className="text-muted">
                 Allowed Creators:{" "}
-                <strong className="text-emerald-700 font-semibold">{creatorsCount}</strong>
+                <strong className="text-success font-semibold">{creatorsCount}</strong>
               </span>
               <span className="text-muted">•</span>
               <span className="text-muted">
@@ -220,7 +220,7 @@ export default function UsersSettingsTab() {
       </div>
 
       {/* Self-registration */}
-      <div className="bg-white border border-subtle rounded-lg p-5 flex items-start justify-between gap-4">
+      <div className="bg-surface border border-subtle rounded-lg p-5 flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h2 className="text-sm font-bold text-ink">Account creation</h2>
           <p className="text-xs text-ink-2 mt-1 leading-relaxed">
@@ -247,14 +247,14 @@ export default function UsersSettingsTab() {
         <div
           className={`p-3.5 rounded-lg border text-xs flex items-center gap-2.5 animate-in fade-in ${
             message.type === "success"
-              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-              : "bg-red-50 text-red-800 border-red-200"
+              ? "bg-success-soft text-success border-success/30"
+              : "bg-danger-soft text-danger border-danger/30"
           }`}
         >
           {message.type === "success" ? (
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
           ) : (
-            <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+            <AlertCircle className="w-4 h-4 text-danger shrink-0" />
           )}
           <span>{message.text}</span>
         </div>
@@ -269,13 +269,13 @@ export default function UsersSettingsTab() {
             placeholder="Search by name, email, or role..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-subtle rounded-md focus:border-accent focus:ring-1 focus:ring-accent transition-all placeholder:text-muted"
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-surface border border-subtle rounded-md focus:border-accent focus:ring-1 focus:ring-accent transition-all placeholder:text-muted"
           />
         </div>
       </div>
 
       {/* Users List */}
-      <div className="bg-white border border-subtle rounded-lg overflow-hidden shadow-2xs">
+      <div className="bg-surface border border-subtle rounded-lg overflow-hidden shadow-2xs">
         {loading ? (
           <div className="p-8 flex items-center justify-center gap-2 text-xs text-muted">
             <Loader2 className="w-4 h-4 animate-spin text-accent" />
@@ -331,12 +331,12 @@ export default function UsersSettingsTab() {
                   <div className="col-span-3 flex items-center justify-end gap-2">
                     <span
                       className={`hidden md:inline-flex items-center gap-1 text-[11px] font-medium ${
-                        hasPerm ? "text-emerald-700" : "text-muted"
+                        hasPerm ? "text-success" : "text-muted"
                       }`}
                     >
                       {hasPerm ? (
                         <>
-                          <Unlock className="w-3 h-3 text-emerald-600" />
+                          <Unlock className="w-3 h-3 text-success" />
                           <span>Allowed</span>
                         </>
                       ) : (
@@ -349,7 +349,7 @@ export default function UsersSettingsTab() {
                     {renderSwitch({
                       on: hasPerm,
                       busy: isUpdating,
-                      onColor: "bg-emerald-600",
+                      onColor: "bg-success",
                       label: `Allow ${user.name} to create projects`,
                       onClick: () => handleTogglePermission(user),
                     })}

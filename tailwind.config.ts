@@ -35,6 +35,12 @@ const config: Config = {
       },
       spacing: {
         "4.5": "1.125rem",
+        // Density tokens (globals.css): smaller under data-density="compact".
+        row: "var(--row)",
+        "row-tight": "var(--row-tight)",
+        "list-row": "var(--list-row)",
+        "card-x": "var(--card-x)",
+        "card-y": "var(--card-y)",
       },
       colors: {
         // Semantic tokens (see globals.css): components ask for a role, never a hex value.
@@ -54,6 +60,7 @@ const config: Config = {
         success: { DEFAULT: token("success"), soft: token("success-soft") },
         warning: { DEFAULT: token("warning"), soft: token("warning-soft") },
         check: token("check"),
+        epic: { DEFAULT: token("epic"), soft: token("epic-soft") },
         series: { 1: token("series-1"), "1-soft": token("series-1-soft"), 2: token("series-2"), 3: token("series-3") },
       },
     },

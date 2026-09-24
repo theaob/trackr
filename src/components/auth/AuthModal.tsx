@@ -131,7 +131,7 @@ export default function AuthModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl border border-subtle overflow-hidden flex flex-col">
+      <div className="bg-surface w-full max-w-lg rounded-xl shadow-2xl border border-subtle overflow-hidden flex flex-col">
         {/* Header */}
         <div className="bg-ink text-surface px-6 py-5 flex items-center justify-between border-b border-ink/80">
           <div className="flex items-center gap-3">
@@ -187,15 +187,15 @@ export default function AuthModal({
         {/* Content Body */}
         <div className="p-6 flex-1 overflow-y-auto">
           {error && (
-            <div className="mb-4 p-3 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+            <div className="mb-4 p-3 rounded-md bg-danger-soft border border-danger/30 text-danger text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-danger" />
               <span>{error}</span>
             </div>
           )}
 
           {successMsg && (
-            <div className="mb-4 p-3 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+            <div className="mb-4 p-3 rounded-md bg-success-soft border border-success/30 text-success text-xs flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-success" />
               <span>{successMsg}</span>
             </div>
           )}
@@ -250,7 +250,7 @@ export default function AuthModal({
                 <>
                   <div className="relative py-2 flex items-center justify-center">
                     <div className="border-t border-subtle w-full absolute"></div>
-                    <span className="bg-white px-3 text-[11px] text-muted relative font-medium">or</span>
+                    <span className="bg-surface px-3 text-[11px] text-muted relative font-medium">or</span>
                   </div>
 
                   <button
@@ -259,7 +259,7 @@ export default function AuthModal({
                     disabled={loading}
                     className="w-full py-2 bg-ink hover:bg-ink/90 text-surface text-xs font-semibold rounded-md flex items-center justify-center gap-2 border border-ink transition-colors"
                   >
-                    <Building2 className="w-4 h-4 text-emerald-400" />
+                    <Building2 className="w-4 h-4 text-success" />
                     <span>Sign in with {ssoConfig?.providerName || "Corporate SSO"}</span>
                   </button>
                 </>
@@ -328,7 +328,7 @@ export default function AuthModal({
                   id="auth-register-role"
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-subtle rounded-md focus:border-accent text-ink bg-white"
+                  className="w-full px-3 py-2 text-xs border border-subtle rounded-md focus:border-accent text-ink bg-surface"
                 >
                   <option value="Developer">Developer</option>
                   <option value="Senior Developer">Senior Developer</option>

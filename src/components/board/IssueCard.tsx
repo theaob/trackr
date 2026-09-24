@@ -79,14 +79,14 @@ export default function IssueCard({
               }
             }}
             className={cn(
-              "cursor-pointer select-none rounded-card border bg-surface p-3 pr-9 text-left shadow-raised transition-[border-color,box-shadow] duration-150",
+              "cursor-pointer select-none rounded-card border bg-surface px-card-x py-card-y pr-9 text-left shadow-raised transition-[border-color,box-shadow] duration-150",
               "hover:border-strong",
               snapshot.isDragging ? "border-accent shadow-overlay" : "border-subtle"
             )}
           >
             {issue.parent && (
               <span
-                className="mb-1.5 inline-block max-w-full truncate rounded-[4px] bg-purple-100 px-1.5 py-0.5 text-[11px] font-medium text-purple-800"
+                className="mb-1.5 inline-block max-w-full truncate rounded-[4px] bg-epic-soft px-1.5 py-0.5 text-[11px] font-medium text-epic"
                 title={`Epic: ${issue.parent.title || issue.parent.key}`}
               >
                 {issue.parent.title || issue.parent.key}

@@ -20,7 +20,7 @@ export function SprintProgressBar({ progress, className }: { progress: SprintPro
 
   return (
     <span className={cn("flex items-center gap-2", className)}>
-      <span aria-hidden="true" className="flex h-1.5 w-28 overflow-hidden rounded-full bg-surface-sunk">
+      <span aria-hidden="true" className="hidden h-1.5 w-28 overflow-hidden rounded-full bg-surface-sunk sm:flex">
         <span className="h-full bg-success" style={{ width: `${pct(part.DONE)}%` }} />
         <span className="h-full bg-accent" style={{ width: `${pct(part.IN_PROGRESS)}%` }} />
       </span>
@@ -34,7 +34,9 @@ export function SprintProgressBar({ progress, className }: { progress: SprintPro
 
 /**
  * The board's heading in one line: the sprint's name, its dates and days
- * left, and its progress, with the goal underneath in muted text.
+ * left, and its progress, with the goal underneath in muted text. On a phone
+ * it folds to the name, the time left and the points, so the first card
+ * shows without scrolling.
  */
 export default function SprintHeader({
   sprint,
@@ -48,23 +50,28 @@ export default function SprintHeader({
   const left = sprintTimeLeft(sprint.endDate);
   return (
     <div className="flex flex-col gap-0.5">
-      <div className="flex min-h-9 flex-wrap items-center gap-x-3 gap-y-1">
-        <h1 className="text-lg font-semibold tracking-tight text-ink">{sprint.name}</h1>
+      <div className="flex min-h-9 items-center gap-x-3 gap-y-1 sm:flex-wrap">
+        <h1 className="min-w-0 truncate text-base font-semibold tracking-tight text-ink sm:text-lg">{sprint.name}</h1>
         {sprint.startDate && sprint.endDate && (
-          <span className="whitespace-nowrap text-xs text-ink-2" suppressHydrationWarning>
-            {format(new Date(sprint.startDate), "MMM d")} – {format(new Date(sprint.endDate), "MMM d")}
+          <span className="shrink-0 whitespace-nowrap text-xs text-ink-2" suppressHydrationWarning>
+            <span className="hidden sm:inline">
+              {format(new Date(sprint.startDate), "MMM d")} – {format(new Date(sprint.endDate), "MMM d")}
+            </span>
             {left && (
               <>
-                <span aria-hidden="true"> · </span>
+                <span aria-hidden="true" className="hidden sm:inline">
+                  {" "}
+                  ·{" "}
+                </span>
                 <span className={cn("font-medium", left.includes("over") ? "text-danger" : "text-ink")}>{left}</span>
               </>
             )}
           </span>
         )}
-        {progress.totalIssues > 0 && <SprintProgressBar progress={progress} />}
+        {progress.totalIssues > 0 && <SprintProgressBar progress={progress} className="shrink-0" />}
         {actions && <div className="ml-auto flex items-center gap-1">{actions}</div>}
       </div>
-      {sprint.goal && <p className="text-xs text-ink-2">{sprint.goal}</p>}
+      {sprint.goal && <p className="hidden text-xs text-ink-2 sm:block">{sprint.goal}</p>}
     </div>
   );
 }

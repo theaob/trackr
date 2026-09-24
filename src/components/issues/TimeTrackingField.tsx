@@ -112,7 +112,7 @@ function EstimateInput({
         }}
         className="w-full px-1.5 py-0.5 text-xs border border-accent rounded text-ink"
       />
-      {error && <p className="text-[10px] text-rose-600 mt-0.5">{error}</p>}
+      {error && <p className="text-[10px] text-danger mt-0.5">{error}</p>}
     </div>
   );
 }
@@ -240,13 +240,13 @@ export default function TimeTrackingField({
         <div className="mb-2">
           <div className="w-full h-1.5 bg-subtle rounded-full overflow-hidden flex">
             {loggedPct > 0 && (
-              <div className={overrun ? "bg-rose-500" : "bg-accent"} style={{ width: `${loggedPct}%` }} />
+              <div className={overrun ? "bg-danger" : "bg-accent"} style={{ width: `${loggedPct}%` }} />
             )}
             {remainingPct > 0 && <div className="bg-strong" style={{ width: `${remainingPct}%` }} />}
           </div>
           <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-[11px] text-ink-2">
             <span>
-              <span className={`font-semibold ${overrun ? "text-rose-600" : "text-ink"}`}>
+              <span className={`font-semibold ${overrun ? "text-danger" : "text-ink"}`}>
                 {formatDuration(loggedSeconds)}
               </span>{" "}
               logged
@@ -298,7 +298,7 @@ export default function TimeTrackingField({
           onSubmit={handleLogWork}
           className="mt-2 p-2.5 border border-subtle rounded-md bg-page/70 space-y-1.5"
         >
-          {logError && <p className="text-[11px] text-rose-600 font-medium">{logError}</p>}
+          {logError && <p className="text-[11px] text-danger font-medium">{logError}</p>}
           <div className="flex items-center gap-2">
             <input
               type="text"
@@ -369,7 +369,7 @@ export default function TimeTrackingField({
                   onClick={() => handleDeleteWorklog(w.id)}
                   disabled={deletingId === w.id}
                   title="Delete worklog"
-                  className="text-muted hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+                  className="text-muted hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
                 >
                   {deletingId === w.id ? (
                     <Loader2 className="w-3 h-3 animate-spin" />

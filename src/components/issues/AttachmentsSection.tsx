@@ -37,7 +37,7 @@ function AttachmentTile({
   const url = attachmentUrl(attachment.id);
 
   return (
-    <div className="group relative flex flex-col rounded-md border border-subtle bg-white overflow-hidden hover:border-subtle transition-colors">
+    <div className="group relative flex flex-col rounded-md border border-subtle bg-surface overflow-hidden hover:border-subtle transition-colors">
       <a
         href={url}
         target="_blank"
@@ -72,7 +72,7 @@ function AttachmentTile({
           href={url}
           download={attachment.fileName}
           title="Download"
-          className="p-1 rounded bg-white/90 text-ink-2 hover:text-accent border border-subtle shadow-xs"
+          className="p-1 rounded bg-surface/90 text-ink-2 hover:text-accent border border-subtle shadow-xs"
         >
           <Download className="w-3 h-3" />
         </a>
@@ -82,7 +82,7 @@ function AttachmentTile({
             onClick={() => onDelete(attachment.id)}
             disabled={deleting}
             title="Delete"
-            className="p-1 rounded bg-white/90 text-ink-2 hover:text-rose-600 border border-subtle shadow-xs disabled:opacity-50"
+            className="p-1 rounded bg-surface/90 text-ink-2 hover:text-danger border border-subtle shadow-xs disabled:opacity-50"
           >
             {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
           </button>

@@ -5,6 +5,7 @@ import { UserProvider } from "@/context/UserContext";
 import { KeyboardShortcutsProvider } from "@/context/KeyboardShortcutsContext";
 import { ToastProvider } from "@/components/ui/Toast";
 import { getCurrentUser } from "@/lib/auth/session";
+import { APPEARANCE_SCRIPT } from "@/lib/appearance";
 
 // Downloaded at build time and served from this origin: self-hosted installs
 // make no request to Google. latin-ext covers Turkish and other European text.
@@ -45,8 +46,13 @@ export default async function RootLayout({
   const sessionUser = await getCurrentUser();
 
   return (
-    <html lang="en" className={`${plexSans.variable} ${plexMono.variable}`}>
-      <body className="font-sans antialiased text-ink bg-white">
+    // The theme script sets data-theme and data-density before the first paint;
+    // the server can't know them, so React is told not to compare them.
+    <html lang="en" className={`${plexSans.variable} ${plexMono.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: APPEARANCE_SCRIPT }} />
+      </head>
+      <body className="font-sans antialiased text-ink bg-page">
         <UserProvider sessionUser={sessionUser}>
           <ToastProvider>
             <KeyboardShortcutsProvider>{children}</KeyboardShortcutsProvider>

@@ -138,12 +138,12 @@ export default function SsoSettingsTab() {
   }
 
   return (
-    <div className="bg-white rounded-lg border border-subtle p-6 space-y-6">
+    <div className="bg-surface rounded-lg border border-subtle p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-subtle gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-lg bg-purple-100 text-purple-800 border border-purple-200">
-            <Building2 className="w-6 h-6 text-purple-700" />
+          <div className="p-2.5 rounded-lg bg-accent-soft text-accent border border-accent/30">
+            <Building2 className="w-6 h-6 text-accent" />
           </div>
           <div>
             <h2 className="text-base font-bold text-ink">
@@ -159,18 +159,18 @@ export default function SsoSettingsTab() {
           <span
             className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
               config.enabled
-                ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                : "bg-gray-100 text-gray-700 border-gray-300"
+                ? "bg-success-soft text-success border-success/30"
+                : "bg-surface-sunk text-ink-2 border-subtle"
             }`}
           >
             {config.enabled ? "SSO Active" : "SSO Disabled"}
           </span>
           {config.configured ? (
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-blue-50 text-blue-800 border-blue-200">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-accent-soft text-accent border-accent/30">
               Keys Configured
             </span>
           ) : (
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-amber-50 text-amber-800 border-amber-200">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-warning-soft text-warning border-warning/30">
               Key Required
             </span>
           )}
@@ -181,14 +181,14 @@ export default function SsoSettingsTab() {
         <div
           className={`p-3 rounded-md text-xs flex items-center gap-2 border ${
             msg.type === "success"
-              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-              : "bg-rose-50 text-rose-800 border-rose-200"
+              ? "bg-success-soft text-success border-success/30"
+              : "bg-danger-soft text-danger border-danger/30"
           }`}
         >
           {msg.type === "success" ? (
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
           ) : (
-            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            <AlertCircle className="w-4 h-4 text-danger shrink-0" />
           )}
           <span>{msg.text}</span>
         </div>
@@ -258,13 +258,13 @@ export default function SsoSettingsTab() {
         </div>
 
         {/* Token Verification Keys */}
-        <div className="p-4 bg-purple-50/50 border border-purple-200 rounded-lg space-y-4">
+        <div className="p-4 bg-accent-soft/50 border border-accent/30 rounded-lg space-y-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-purple-700 shrink-0" />
+              <ShieldCheck className="w-5 h-5 text-accent shrink-0" />
               <div>
-                <h4 className="font-bold text-purple-900">Token Signature Verification Key</h4>
-                <p className="text-[11px] text-purple-700 mt-0.5">
+                <h4 className="font-bold text-accent">Token Signature Verification Key</h4>
+                <p className="text-[11px] text-accent mt-0.5">
                   The key used to verify incoming ID token signatures. Provide an X.509 PEM certificate for RS256, or a client secret for HS256. At least one key must be provided to enable SSO.
                 </p>
               </div>
@@ -272,9 +272,9 @@ export default function SsoSettingsTab() {
           </div>
 
           <div>
-            <label htmlFor="sso-certificate" className="block font-semibold text-purple-900 mb-1 flex items-center justify-between">
+            <label htmlFor="sso-certificate" className="block font-semibold text-accent mb-1 flex items-center justify-between">
               <span>X.509 PEM Certificate (RS256)</span>
-              <span className="text-[10px] text-purple-700 font-normal">
+              <span className="text-[10px] text-accent font-normal">
                 -----BEGIN CERTIFICATE----- ... -----END CERTIFICATE-----
               </span>
             </label>
@@ -284,15 +284,15 @@ export default function SsoSettingsTab() {
               value={config.certificate || ""}
               onChange={(e) => setConfig({ ...config, certificate: e.target.value })}
               placeholder="-----BEGIN CERTIFICATE-----&#10;MIIDdTCCAl2gAwIBAgILBAAAAAABFUzAVTANBgkqhkiG9w0BAQsFADBLMQswCQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEUMSAwHgYDVQQDExdFbnRlcnByaXNlIFNlc3Npb24gQ0E...&#10;-----END CERTIFICATE-----"
-              className="w-full px-3 py-2 border border-purple-300 rounded-md focus:border-purple-600 text-purple-950 font-mono text-[10px] bg-white"
+              className="w-full px-3 py-2 border border-accent/30 rounded-md focus:border-accent text-accent font-mono text-[10px] bg-surface"
             />
           </div>
 
           <div>
-            <label htmlFor="sso-secret" className="block font-semibold text-purple-900 mb-1 flex items-center justify-between">
+            <label htmlFor="sso-secret" className="block font-semibold text-accent mb-1 flex items-center justify-between">
               <span>Client Secret (HS256)</span>
               {config.hasClientSecret && (
-                <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
+                <span className="text-[10px] text-success font-semibold flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3" />
                   Stored (leave blank to keep)
                 </span>
@@ -309,12 +309,12 @@ export default function SsoSettingsTab() {
                     ? "Leave empty to keep current client secret"
                     : "Enter client secret for HS256 token verification"
                 }
-                className="w-full px-3 py-2 pr-9 border border-purple-300 rounded-md focus:border-purple-600 text-purple-950 font-mono text-[11px] bg-white"
+                className="w-full px-3 py-2 pr-9 border border-accent/30 rounded-md focus:border-accent text-accent font-mono text-[11px] bg-surface"
               />
               <button
                 type="button"
                 onClick={() => setShowSecret(!showSecret)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-purple-700 hover:text-purple-900"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-accent hover:text-accent"
                 title={showSecret ? "Hide secret" : "Show secret"}
               >
                 {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -365,7 +365,7 @@ export default function SsoSettingsTab() {
               id="sso-default-role"
               value={config.defaultRole || "Developer"}
               onChange={(e) => setConfig({ ...config, defaultRole: e.target.value })}
-              className="w-full px-3 py-1.5 border border-subtle rounded-md focus:border-accent text-ink bg-white"
+              className="w-full px-3 py-1.5 border border-subtle rounded-md focus:border-accent text-ink bg-surface"
             >
               <option value="Developer">Developer</option>
               <option value="QA Lead">QA Lead</option>

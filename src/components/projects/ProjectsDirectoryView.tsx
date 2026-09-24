@@ -67,7 +67,7 @@ export default function ProjectsDirectoryView({
   return (
     <div className="flex-1 flex flex-col h-full overflow-y-auto bg-page/50">
       {/* Header */}
-      <div className="bg-white border-b border-subtle px-4 sm:px-8 py-4 sm:py-6 shrink-0">
+      <div className="bg-surface border-b border-subtle px-4 sm:px-8 py-4 sm:py-6 shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 max-w-7xl mx-auto">
           <div>
             <h1 className="text-2xl font-bold text-ink tracking-tight">Projects</h1>
@@ -96,7 +96,7 @@ export default function ProjectsDirectoryView({
               placeholder="Search projects by name or key..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-surface-sunk hover:bg-subtle focus:bg-white border border-transparent focus:border-accent rounded-md transition-all text-ink"
+              className="w-full pl-9 pr-3 py-1.5 text-xs bg-surface-sunk hover:bg-subtle focus:bg-surface border border-transparent focus:border-accent rounded-md transition-all text-ink"
             />
           </div>
         </div>
@@ -105,7 +105,7 @@ export default function ProjectsDirectoryView({
       {/* Project Cards Grid */}
       <div className="p-4 sm:p-8 max-w-7xl mx-auto w-full">
         {filteredProjects.length === 0 ? (
-          <div className="p-12 text-center bg-white rounded-lg border border-subtle">
+          <div className="p-12 text-center bg-surface rounded-lg border border-subtle">
             <FolderGit2 className="w-10 h-10 text-muted mx-auto mb-3" />
             <h3 className="text-base font-bold text-ink">No projects found</h3>
             <p className="text-xs text-muted mt-1">
@@ -119,7 +119,7 @@ export default function ProjectsDirectoryView({
             {filteredProjects.map((project) => (
               <div
                 key={project.id}
-                className="bg-white rounded-lg border border-subtle hover:border-accent hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group"
+                className="bg-surface rounded-lg border border-subtle hover:border-accent hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group"
               >
                 <div className="p-5">
                   {/* Top: Icon + Name + Key */}

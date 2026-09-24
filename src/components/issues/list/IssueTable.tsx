@@ -14,7 +14,8 @@ import { formatCalendarDate } from "@/lib/calendarDate";
 import { isOverdue } from "@/lib/dueDate";
 import { prettifyStatusName } from "@/lib/workflowDisplay";
 
-export type Density = "comfortable" | "compact";
+export type { Density } from "@/lib/appearance";
+import type { Density } from "@/lib/appearance";
 
 const PRIORITY_NAMES: Record<string, string> = { HIGHEST: "Highest", HIGH: "High", MEDIUM: "Medium", LOW: "Low", LOWEST: "Lowest" };
 const WIDTH: Partial<Record<ColumnId, string>> = {
@@ -77,7 +78,8 @@ export default function IssueTable({
   const shown = COLUMNS.filter((c) => columns.includes(c.id));
   const allSelected = issues.length > 0 && issues.every((i) => selectedIds.has(i.id));
   const someSelected = issues.some((i) => selectedIds.has(i.id));
-  const cell = density === "compact" ? "h-8 px-2 text-xs" : "h-10 px-2.5 text-[13px]";
+  // Row height comes from the density setting (--row); text stays the same size.
+  const cell = "h-row px-2.5 text-[13px]";
 
   const render = (issue: Issue, id: ColumnId) => {
     switch (id) {

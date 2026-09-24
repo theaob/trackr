@@ -94,7 +94,7 @@ export default function CreateCustomFieldModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-150">
       <div
-        className="bg-white rounded-none sm:rounded-lg shadow-xl border-0 sm:border border-subtle w-full h-full sm:h-auto max-w-lg overflow-hidden flex flex-col max-h-none sm:max-h-[90vh]"
+        className="bg-surface rounded-none sm:rounded-lg shadow-xl border-0 sm:border border-subtle w-full h-full sm:h-auto max-w-lg overflow-hidden flex flex-col max-h-none sm:max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -129,7 +129,7 @@ export default function CreateCustomFieldModal({
               placeholder="e.g. Environment, Customer Tier, Estimated Hours"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-subtle rounded focus:border-accent"
+              className="w-full text-xs px-3 py-2 bg-surface border border-subtle rounded focus:border-accent"
               autoFocus
               required
             />
@@ -145,7 +145,7 @@ export default function CreateCustomFieldModal({
               placeholder="Help text explaining this field's purpose..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-subtle rounded focus:border-accent"
+              className="w-full text-xs px-3 py-2 bg-surface border border-subtle rounded focus:border-accent"
             />
           </div>
 
@@ -160,8 +160,8 @@ export default function CreateCustomFieldModal({
                   key={ft.type}
                   className={`flex items-start gap-2.5 p-2 rounded cursor-pointer border transition-colors ${
                     type === ft.type
-                      ? "bg-white border-accent shadow-2xs"
-                      : "border-transparent hover:bg-white/60"
+                      ? "bg-surface border-accent shadow-2xs"
+                      : "border-transparent hover:bg-surface/60"
                   }`}
                 >
                   <input
@@ -205,7 +205,7 @@ export default function CreateCustomFieldModal({
                       handleAddOption(e);
                     }
                   }}
-                  className="flex-1 text-xs px-2.5 py-1.5 bg-white border border-subtle rounded focus:border-accent"
+                  className="flex-1 text-xs px-2.5 py-1.5 bg-surface border border-subtle rounded focus:border-accent"
                 />
                 <button
                   type="button"
@@ -220,7 +220,7 @@ export default function CreateCustomFieldModal({
                 {options.map((opt, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-subtle rounded-full text-xs font-medium text-ink"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface border border-subtle rounded-full text-xs font-medium text-ink"
                   >
                     <span>{opt}</span>
                     <button

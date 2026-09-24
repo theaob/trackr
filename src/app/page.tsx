@@ -31,7 +31,7 @@ export default async function HomePage() {
     <div className="flex h-screen w-screen items-center justify-center p-4">
       <div className="text-center">
         <h1 className="text-xl font-bold">No Projects Found</h1>
-        <p className="text-sm text-gray-500 mt-2">
+        <p className="text-sm text-muted mt-2">
           You are not a member of any project yet. Create one, or ask an
           administrator to add you.
         </p>

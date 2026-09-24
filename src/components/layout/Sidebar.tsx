@@ -113,7 +113,7 @@ export default function Sidebar({
           {/* Drawer Sheet */}
           <div className="relative w-72 max-w-[80vw] bg-page border-r border-subtle flex flex-col h-full z-10 shadow-2xl animate-in slide-in-from-left duration-200">
             {/* Drawer Header */}
-            <div className="h-14 px-4 border-b border-subtle flex items-center justify-between bg-white shrink-0">
+            <div className="h-14 px-4 border-b border-subtle flex items-center justify-between bg-surface shrink-0">
               <div className="flex items-center gap-2">
                 <TrackrLogo size="sm" />
                 <span className="text-xs font-bold text-muted uppercase tracking-wider">
@@ -209,7 +209,7 @@ export default function Sidebar({
         {/* Collapse Toggle Handle */}
         <button
           onClick={toggleCollapse}
-          className="absolute -right-3.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-white border border-subtle rounded-full flex items-center justify-center text-ink-2 hover:text-ink hover:bg-surface-sunk shadow-sm transition-all z-20"
+          className="absolute -right-3.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-surface border border-subtle rounded-full flex items-center justify-center text-ink-2 hover:text-ink hover:bg-surface-sunk shadow-sm transition-all z-20"
           title={collapsed ? "Expand sidebar ([)" : "Collapse sidebar ([)"}
         >
           {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}

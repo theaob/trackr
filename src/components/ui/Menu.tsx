@@ -73,6 +73,20 @@ export function MenuCheckboxItem({ className, children, ...props }: React.Compon
   );
 }
 
+export const MenuRadioGroup = RadixMenu.RadioGroup;
+
+/** One choice of several, like Light, Dark or Match system. */
+export function MenuRadioItem({ className, children, ...props }: React.ComponentProps<typeof RadixMenu.RadioItem>) {
+  return (
+    <RadixMenu.RadioItem className={cn(ITEM, "pl-8", className)} {...props}>
+      <RadixMenu.ItemIndicator className="absolute left-2 inline-flex">
+        <Check className="h-4 w-4 text-accent" aria-hidden="true" />
+      </RadixMenu.ItemIndicator>
+      {children}
+    </RadixMenu.RadioItem>
+  );
+}
+
 export function MenuLabel({ className, ...props }: React.ComponentProps<typeof RadixMenu.Label>) {
   return <RadixMenu.Label className={cn("px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted", className)} {...props} />;
 }

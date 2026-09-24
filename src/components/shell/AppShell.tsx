@@ -8,6 +8,7 @@ import { useShellCounts } from "@/hooks/useShellCounts";
 import { Sheet, SheetContent } from "@/components/ui/Dialog";
 import Rail from "./Rail";
 import TopBar from "./TopBar";
+import TabBar from "./TabBar";
 
 const COLLAPSED_KEY = "trackr:rail-collapsed";
 
@@ -22,7 +23,8 @@ export interface AppShellProps {
 
 /**
  * The new layout: the rail on the left, a slim top bar, and the page. On a
- * phone the rail opens as a sheet from the top bar's menu button.
+ * phone the rail becomes a tab bar along the bottom, whose More opens the
+ * full rail as a sheet.
  */
 export default function AppShell({ projects, currentProject, onCreateIssue, onCreateProject, children }: AppShellProps) {
   const pathname = usePathname();
@@ -96,9 +98,10 @@ export default function AppShell({ projects, currentProject, onCreateIssue, onCr
 
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar currentProject={currentProject} onCreateIssue={onCreateIssue} onOpenRail={() => setPhoneRailOpen(true)} />
-        <main id="main-content" tabIndex={-1} className="flex flex-1 flex-col overflow-hidden bg-surface focus-visible:outline-none">
+        <main id="main-content" tabIndex={-1} className="flex min-h-0 flex-1 flex-col overflow-hidden bg-surface focus-visible:outline-none">
           {children}
         </main>
+        <TabBar project={currentProject ?? projects[0] ?? null} unread={counts.unread} onMore={() => setPhoneRailOpen(true)} />
       </div>
     </div>
   );

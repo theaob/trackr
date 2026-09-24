@@ -18,42 +18,8 @@ export const GUIDE = tokenColor("muted");
 export const NEUTRAL = tokenColor("ink-2");
 export const SURFACE = tokenColor("surface");
 
-/** A small group of toggle buttons: the unit, the time window, chart or table. */
-export function Segmented<T extends string>({
-  label,
-  options,
-  value,
-  onChange,
-}: {
-  label: string;
-  options: { value: T; label: string; icon?: React.ReactNode }[];
-  value: T;
-  onChange: (value: T) => void;
-}) {
-  return (
-    <div
-      role="group"
-      aria-label={label}
-      className="inline-flex items-center gap-0.5 rounded-control border border-subtle bg-surface-sunk p-0.5"
-    >
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          aria-pressed={value === o.value}
-          onClick={() => onChange(o.value)}
-          className={cn(
-            "inline-flex h-7 items-center gap-1.5 rounded-[4px] px-2.5 text-xs font-medium transition-colors [&_svg]:h-3.5 [&_svg]:w-3.5",
-            value === o.value ? "bg-surface text-ink shadow-raised" : "text-ink-2 hover:text-ink"
-          )}
-        >
-          {o.icon}
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}
+import { Segmented } from "@/components/ui/Segmented";
+export { Segmented };
 
 export interface Figure {
   label: string;

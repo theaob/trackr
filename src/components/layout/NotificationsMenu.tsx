@@ -122,13 +122,13 @@ export default function NotificationsMenu() {
 
       {/* Notifications Dropdown Panel */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white border border-subtle rounded-lg shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2">
+        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-surface border border-subtle rounded-lg shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2">
           {/* Header */}
           <div className="px-4 py-2 border-b border-subtle flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-ink">Notifications</h3>
               {unreadCount > 0 && (
-                <span className="text-[11px] bg-rose-100 text-rose-700 font-bold px-2 py-0.5 rounded-full">
+                <span className="text-[11px] bg-danger-soft text-danger font-bold px-2 py-0.5 rounded-full">
                   {unreadCount} new
                 </span>
               )}
@@ -151,7 +151,7 @@ export default function NotificationsMenu() {
               onClick={() => setFilter("all")}
               className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
                 filter === "all"
-                  ? "bg-white text-accent font-bold shadow-xs border border-subtle"
+                  ? "bg-surface text-accent font-bold shadow-xs border border-subtle"
                   : "text-ink-2 hover:text-ink"
               }`}
             >
@@ -161,7 +161,7 @@ export default function NotificationsMenu() {
               onClick={() => setFilter("unread")}
               className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
                 filter === "unread"
-                  ? "bg-white text-accent font-bold shadow-xs border border-subtle"
+                  ? "bg-surface text-accent font-bold shadow-xs border border-subtle"
                   : "text-ink-2 hover:text-ink"
               }`}
             >

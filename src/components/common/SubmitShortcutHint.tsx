@@ -6,7 +6,7 @@ import { useModKeyLabel } from "@/hooks/useModKeyLabel";
 // <kbd> defaults to a monospace font, which draws ⌘ tiny and off-centre.
 const KEYCAP =
   "inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 font-sans font-semibold leading-none " +
-  "text-ink-2 bg-white border border-subtle border-b-2 rounded";
+  "text-ink-2 bg-surface border border-subtle border-b-2 rounded";
 
 /** "Press ⌘ Enter to submit" (Ctrl on Windows/Linux) for a modal footer. */
 export default function SubmitShortcutHint({ className = "" }: { className?: string }) {

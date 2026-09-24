@@ -7,7 +7,7 @@ import AxeBuilder from "@axe-core/playwright";
 
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
-async function expectNoSeriousViolations(page: Page, name: string, include?: string) {
+async function checkWithAxe(page: Page, name: string, include?: string) {
   const builder = new AxeBuilder({ page }).withTags(WCAG_TAGS);
   if (include) builder.include(include);
   const results = await builder.analyze();
@@ -27,6 +27,23 @@ async function expectNoSeriousViolations(page: Page, name: string, include?: str
   if (minor.length) console.log(`${name}: ${minor.length} minor finding(s)\n${report(minor)}`);
   // Soft, so one run reports every page rather than stopping at the first.
   expect.soft(report(blocking), `${name} has serious accessibility problems`).toBe("");
+}
+
+/** Switches the page's theme the way the account menu does, without a reload. */
+async function setTheme(page: Page, theme: "light" | "dark") {
+  await page.evaluate((t) => {
+    localStorage.setItem("trackr:theme", t);
+    window.dispatchEvent(new Event("trackr:appearance"));
+  }, theme);
+  await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+}
+
+/** Every check runs in the light theme and again in the dark one. */
+async function expectNoSeriousViolations(page: Page, name: string, include?: string) {
+  await checkWithAxe(page, name, include);
+  await setTheme(page, "dark");
+  await checkWithAxe(page, `${name} (dark)`, include);
+  await setTheme(page, "light");
 }
 
 test.describe.serial("accessibility", () => {
@@ -233,6 +250,65 @@ test.describe.serial("accessibility", () => {
     await page.reload();
     await expect(page.getByRole("button", { name: /Mine, newest first/ })).toBeVisible();
     await expect(page.getByRole("list", { name: "Issues" }).getByText("Check the issue view")).toBeVisible();
+  });
+
+  test("appearance and phones: the account menu, the tab bar, the first card", async () => {
+    await page.goto("/projects");
+    await page.getByRole("button", { name: /Ada Lovelace/ }).first().click();
+    await page.getByRole("button", { name: "Try the new layout" }).click();
+    await page.waitForURL(/\/home/);
+
+    // Theme and density from the account menu apply at once, without a reload.
+    await page.getByRole("button", { name: /Ada Lovelace/ }).click();
+    await page.getByRole("menuitemradio", { name: "Dark" }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await page.getByRole("menuitemradio", { name: "Compact" }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-density", "compact");
+    await expectNoSeriousViolations(page, "Account menu");
+    await page.getByRole("menuitemradio", { name: "Comfortable" }).click();
+    await page.getByRole("menuitemradio", { name: "Match system" }).click();
+    await page.keyboard.press("Escape");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+
+    // A 390-pixel phone: the rail is a tab bar and the first card shows without scrolling.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/home");
+    const assigned = page.getByRole("region", { name: "Assigned to you" });
+    await expect(assigned).toBeVisible();
+    // Nothing runs off the side of the phone.
+    expect((await assigned.boundingBox())!.x + (await assigned.boundingBox())!.width).toBeLessThanOrEqual(390);
+    await expectNoSeriousViolations(page, "Home (phone)");
+
+    await page.goto("/projects/APOLLO/board");
+    const tabs = page.getByRole("navigation", { name: "Main" });
+    await expect(tabs.getByRole("link", { name: "Board" })).toHaveAttribute("aria-current", "page");
+    const firstCard = page.locator('[data-rfd-draggable-id]').first();
+    await expect(firstCard).toBeVisible();
+    const box = await firstCard.boundingBox();
+    const bar = await tabs.boundingBox();
+    expect(box && bar && box.y + box.height <= bar.y).toBe(true);
+    await expectNoSeriousViolations(page, "Board (phone)");
+
+    await page.goto("/projects/APOLLO/issues/APOLLO-1");
+    const chips = page.getByRole("group", { name: "Main properties" });
+    await expect(chips).toBeVisible();
+    await expect(page.getByRole("complementary", { name: "Properties" })).toBeHidden();
+    await expectNoSeriousViolations(page, "Issue (phone)");
+    await chips.getByRole("button", { name: /^Status:/ }).click();
+    await expect(page.getByRole("complementary", { name: "Properties" })).toBeVisible();
+    await expect(page.getByRole("listbox")).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await tabs.getByRole("button", { name: "More" }).click();
+    await expect(page.getByRole("dialog", { name: "Navigation" })).toBeVisible();
+    await expectNoSeriousViolations(page, "Navigation sheet (phone)");
+    await page.keyboard.press("Escape");
+
+    // Back to a desktop and the classic layout for the tests after this one.
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.getByRole("button", { name: /Ada Lovelace/ }).click();
+    await Promise.all([page.waitForEvent("framenavigated"), page.getByRole("menuitem", { name: "Use the classic layout" }).click()]);
+    await page.waitForLoadState("load");
   });
 
   test("reports, roadmap and releases", async () => {

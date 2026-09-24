@@ -36,7 +36,7 @@ export default async function ProjectsPage() {
 
   return (
     <SearchProvider>
-      <div className="flex flex-col h-screen w-screen overflow-hidden bg-white">
+      <div className="flex flex-col h-screen w-screen overflow-hidden bg-surface">
         {defaultProject && (
           <Navbar
             projects={allProjects as any}

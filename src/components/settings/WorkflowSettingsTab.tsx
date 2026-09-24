@@ -242,7 +242,7 @@ export default function WorkflowSettingsTab({
   return (
     <div className="space-y-8 w-full">
       {error && (
-        <div className="p-3 text-xs bg-rose-50 border border-rose-200 text-rose-700 rounded-md font-medium">
+        <div className="p-3 text-xs bg-danger-soft border border-danger/30 text-danger rounded-md font-medium">
           {error}
         </div>
       )}
@@ -268,7 +268,7 @@ export default function WorkflowSettingsTab({
 
         <div className="border border-subtle rounded-lg divide-y divide-subtle overflow-hidden">
           {statuses.map((status, index) => (
-            <div key={status.id} className="flex items-center gap-3 px-3 py-2.5 bg-white">
+            <div key={status.id} className="flex items-center gap-3 px-3 py-2.5 bg-surface">
               <div className="flex shrink-0 items-center">
                 <button
                   disabled={!canManage || index === 0}
@@ -311,7 +311,7 @@ export default function WorkflowSettingsTab({
                 onChange={(e) =>
                   handleFieldChange(status, { category: e.target.value as WorkflowStatusCategory })
                 }
-                className="text-[11px] bg-white border border-subtle rounded px-1.5 py-1 text-ink disabled:opacity-60 shrink-0"
+                className="text-[11px] bg-surface border border-subtle rounded px-1.5 py-1 text-ink disabled:opacity-60 shrink-0"
               >
                 {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -351,7 +351,7 @@ export default function WorkflowSettingsTab({
                 <button
                   onClick={() => handleDelete(status)}
                   disabled={busyId === status.id}
-                  className="p-1 text-muted hover:text-rose-600 hover:bg-rose-50 rounded shrink-0"
+                  className="p-1 text-muted hover:text-danger hover:bg-danger-soft rounded shrink-0"
                   title="Delete status"
                 >
                   {busyId === status.id ? (
@@ -381,7 +381,7 @@ export default function WorkflowSettingsTab({
             <select
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value as WorkflowStatusCategory)}
-              className="text-xs bg-white border border-subtle rounded px-2 py-1.5 text-ink"
+              className="text-xs bg-surface border border-subtle rounded px-2 py-1.5 text-ink"
             >
               {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -431,7 +431,7 @@ export default function WorkflowSettingsTab({
               onClick={() => setTransitionViewMode("graph")}
               className={`px-3 py-1 rounded font-semibold flex items-center gap-1.5 transition-colors ${
                 transitionViewMode === "graph"
-                  ? "bg-white text-accent shadow-2xs"
+                  ? "bg-surface text-accent shadow-2xs"
                   : "text-ink-2 hover:text-ink"
               }`}
             >
@@ -443,7 +443,7 @@ export default function WorkflowSettingsTab({
               onClick={() => setTransitionViewMode("matrix")}
               className={`px-3 py-1 rounded font-semibold flex items-center gap-1.5 transition-colors ${
                 transitionViewMode === "matrix"
-                  ? "bg-white text-accent shadow-2xs"
+                  ? "bg-surface text-accent shadow-2xs"
                   : "text-ink-2 hover:text-ink"
               }`}
             >
@@ -485,7 +485,7 @@ export default function WorkflowSettingsTab({
               <tbody>
                 {statuses.map((from) => (
                   <tr key={from.id}>
-                    <td className="sticky left-0 bg-white px-3 py-2 font-semibold text-ink border-b border-subtle whitespace-nowrap">
+                    <td className="sticky left-0 bg-surface px-3 py-2 font-semibold text-ink border-b border-subtle whitespace-nowrap">
                       {prettifyStatusName(from.name)}
                     </td>
                     {statuses.map((to) => {

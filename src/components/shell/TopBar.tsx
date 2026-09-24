@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HelpCircle, ListFilter, Menu, Plus, Search, X } from "lucide-react";
+import { HelpCircle, ListFilter, Plus, Search, X } from "lucide-react";
 import type { Project } from "@/types";
 import { useSearch } from "@/context/SearchContext";
 import { useKeyboardShortcutsContext } from "@/context/KeyboardShortcutsContext";
@@ -17,11 +17,12 @@ import { cn } from "@/components/ui/cn";
 export interface TopBarProps {
   currentProject?: Project | null;
   onCreateIssue?: () => void;
-  onOpenRail: () => void;
+  /** Kept for callers; on phones the tab bar's More opens the rail now. */
+  onOpenRail?: () => void;
 }
 
 /** Where you are, and what you can do here. Everything else lives in the rail. */
-export default function TopBar({ currentProject, onCreateIssue, onOpenRail }: TopBarProps) {
+export default function TopBar({ currentProject, onCreateIssue }: TopBarProps) {
   const pathname = usePathname();
   const location = shellLocation(pathname);
   const { searchQuery, setSearchQuery } = useSearch();
@@ -72,8 +73,6 @@ export default function TopBar({ currentProject, onCreateIssue, onOpenRail }: To
   return (
     <header className="relative z-30 shrink-0 border-b border-subtle bg-surface">
       <div className="flex h-12 items-center gap-2 px-3 sm:px-4">
-        <IconButton label="Open navigation" icon={<Menu />} onClick={onOpenRail} className="-ml-1 md:hidden" />
-
         <nav aria-label="Breadcrumb" className="min-w-0 flex-1">
           <ol className="flex min-w-0 items-center gap-1.5 text-[13px]">
             {project && (
@@ -129,7 +128,7 @@ export default function TopBar({ currentProject, onCreateIssue, onOpenRail }: To
             <Plus className="h-3.5 w-3.5" aria-hidden="true" />
             <span className="hidden sm:inline">New issue</span>
             <span className="sr-only sm:hidden">New issue</span>
-            <kbd aria-hidden="true" className="hidden rounded bg-white/20 px-1 font-mono text-[10px] sm:inline">
+            <kbd aria-hidden="true" className="hidden rounded bg-accent-fg/20 px-1 font-mono text-[10px] sm:inline">
               C
             </kbd>
           </Button>

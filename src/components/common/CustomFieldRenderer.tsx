@@ -25,16 +25,16 @@ export function parseFieldOptions(optionsStr: string | null | undefined): string
 export function CustomFieldIcon({ type, className = "w-3.5 h-3.5" }: { type: CustomFieldType; className?: string }) {
   switch (type) {
     case "NUMBER":
-      return <Hash className={`${className} text-amber-500`} />;
+      return <Hash className={`${className} text-warning`} />;
     case "SELECT":
     case "MULTI_SELECT":
       return <List className={`${className} text-accent`} />;
     case "CHECKBOX":
-      return <CheckSquare className={`${className} text-emerald-500`} />;
+      return <CheckSquare className={`${className} text-success`} />;
     case "DATE":
-      return <Calendar className={`${className} text-purple-500`} />;
+      return <Calendar className={`${className} text-accent`} />;
     case "URL":
-      return <LinkIcon className={`${className} text-sky-500`} />;
+      return <LinkIcon className={`${className} text-accent`} />;
     case "TEXT":
     default:
       return <Type className={`${className} text-muted`} />;
@@ -63,11 +63,11 @@ export default function CustomFieldRenderer({
           <span
             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold ${
               isChecked
-                ? "bg-emerald-100 text-emerald-800"
+                ? "bg-success-soft text-success"
                 : "bg-surface-sunk text-ink-2"
             }`}
           >
-            {isChecked ? <Check className="w-3 h-3 text-emerald-600" /> : null}
+            {isChecked ? <Check className="w-3 h-3 text-success" /> : null}
             {isChecked ? "Yes" : "No"}
           </span>
         );
@@ -152,7 +152,7 @@ export default function CustomFieldRenderer({
         <select
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
-          className="w-full bg-white border border-subtle rounded px-2.5 py-1.5 text-xs text-ink focus:border-accent"
+          className="w-full bg-surface border border-subtle rounded px-2.5 py-1.5 text-xs text-ink focus:border-accent"
         >
           <option value="">None (Select an option)</option>
           {options.map((opt, idx) => (
@@ -194,7 +194,7 @@ export default function CustomFieldRenderer({
                   className={`text-xs px-2.5 py-1 rounded-full border transition-all flex items-center gap-1 ${
                     isSelected
                       ? "bg-accent text-accent-fg border-accent font-semibold shadow-2xs"
-                      : "bg-white text-ink-2 border-subtle hover:bg-surface-sunk"
+                      : "bg-surface text-ink-2 border-subtle hover:bg-surface-sunk"
                   }`}
                 >
                   {isSelected && <Check className="w-3 h-3" />}
@@ -212,7 +212,7 @@ export default function CustomFieldRenderer({
           type="date"
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
-          className="w-full bg-white border border-subtle rounded px-2.5 py-1.5 text-xs text-ink focus:border-accent"
+          className="w-full bg-surface border border-subtle rounded px-2.5 py-1.5 text-xs text-ink focus:border-accent"
         />
       );
 
@@ -224,7 +224,7 @@ export default function CustomFieldRenderer({
           placeholder="0"
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
-          className="w-full bg-white border border-subtle rounded px-2.5 py-1.5 text-xs text-ink focus:border-accent font-mono"
+          className="w-full bg-surface border border-subtle rounded px-2.5 py-1.5 text-xs text-ink focus:border-accent font-mono"
         />
       );
 
@@ -235,7 +235,7 @@ export default function CustomFieldRenderer({
           placeholder="https://..."
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
-          className="w-full bg-white border border-subtle rounded px-2.5 py-1.5 text-xs text-ink focus:border-accent"
+          className="w-full bg-surface border border-subtle rounded px-2.5 py-1.5 text-xs text-ink focus:border-accent"
         />
       );
 
@@ -247,7 +247,7 @@ export default function CustomFieldRenderer({
           placeholder={`Enter ${field.name.toLowerCase()}...`}
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
-          className="w-full bg-white border border-subtle rounded px-2.5 py-1.5 text-xs text-ink focus:border-accent"
+          className="w-full bg-surface border border-subtle rounded px-2.5 py-1.5 text-xs text-ink focus:border-accent"
         />
       );
   }

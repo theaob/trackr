@@ -9,7 +9,8 @@ A modern, full-stack agile project management and issue tracking platform built 
 - 📋 **Board**:
   - One column per workflow status, sharing the width equally: four fit on a
     1280-pixel screen, and only boards with more statuses scroll. On a phone,
-    one column at a time with a switcher.
+    one full-width column at a time: swipe or use the status switcher, and the
+    sprint header folds to one line so the first card shows straight away.
   - A one-line sprint header: name, dates, days left and a progress bar split
     into done, in progress and to do, with the goal underneath.
   - Move a card by dragging it, with the keyboard (Space to lift, arrows,
@@ -38,8 +39,19 @@ A modern, full-stack agile project management and issue tracking platform built 
   - In ⌘K search, an empty query shows recently viewed issues, and `→` on an
     issue opens its actions: open, assign to me, move to any status the
     workflow allows, copy the link.
+  - On a phone the rail becomes a tab bar along the bottom (Home, Board,
+    Issues, Inbox, More). An issue opens full-screen with its main properties
+    as a row of chips, the comment box stays pinned to the bottom, and a
+    sideways swipe steps to the previous or next issue.
   - `g h` goes to Home and `g n` to the Inbox. Switch back any time with
     **Use the classic layout**.
+- 🌓 **Theme and density**, in the account menu of either layout:
+  - **Light**, **Dark** or **Match system**. Every colour comes from theme
+    tokens, and the page is drawn in the right theme from the first paint.
+  - **Comfortable** or **Compact**: Compact takes padding out of table rows,
+    backlog rows, board cards, Home and the Inbox; text stays the same size.
+    The Issues table's density button changes the same setting.
+  - Both are remembered per browser.
 - 🔁 **Custom Workflows, per project**:
   - Add, rename, reorder, recolor, or delete statuses; the board shows one column per
     non-backlog status, in the order you set.
@@ -406,7 +418,11 @@ Issues page (its split view, table, views menu and TQL editor, while choosing
 a view, adding a chip, running TQL and saving a view), the reports (each tab,
 and a chart as a table), the roadmap, releases (creating a version, its issues
 and its menu), and every project and system settings section, including the
-unsaved-changes bar and the status colour swatches; any
+unsaved-changes bar and the status colour swatches. Every check runs in the
+light theme and again in the dark one. A 390-pixel phone check signs in to
+the new layout and confirms the tab bar, that the first board card shows
+without scrolling, that nothing runs off the side of Home, and the issue's
+property chips; any
 serious or critical finding fails the build. The tests include a check that every
 Tailwind class used under `src/` actually generates CSS, since Tailwind skips
 unknown classes silently.

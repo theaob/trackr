@@ -97,7 +97,7 @@ export default function BacklogRow({
           }}
           data-selected={selected || undefined}
           className={cn(
-            "group flex min-h-10 cursor-pointer flex-wrap items-center gap-x-2 border-b border-subtle bg-surface px-2 py-1 text-[13px] transition-colors last:border-b-0 hover:bg-surface-sunk sm:flex-nowrap sm:py-0",
+            "group flex min-h-row cursor-pointer flex-wrap items-center gap-x-2 border-b border-subtle bg-surface px-2 py-1 text-[13px] transition-colors last:border-b-0 hover:bg-surface-sunk sm:flex-nowrap sm:py-0",
             "data-[selected]:bg-accent-soft",
             snapshot.isDragging && "rounded-control border border-accent shadow-overlay",
             pending && "opacity-60"
@@ -144,7 +144,7 @@ export default function BacklogRow({
 
           {issue.parent && (
             <span
-              className="hidden max-w-[160px] shrink-0 truncate rounded-[4px] bg-purple-100 px-1.5 py-0.5 text-[11px] font-medium text-purple-800 md:inline"
+              className="hidden max-w-[160px] shrink-0 truncate rounded-[4px] bg-epic-soft px-1.5 py-0.5 text-[11px] font-medium text-epic md:inline"
               title={`Epic: ${issue.parent.title}`}
             >
               {issue.parent.title}

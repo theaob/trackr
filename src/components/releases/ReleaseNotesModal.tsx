@@ -84,7 +84,7 @@ export default function ReleaseNotesModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
       <div
-        className="bg-white rounded-lg shadow-xl border border-subtle w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
+        className="bg-surface rounded-lg shadow-xl border border-subtle w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -110,7 +110,7 @@ export default function ReleaseNotesModal({
                 onClick={() => setActiveTab("preview")}
                 className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1.5 transition-colors ${
                   activeTab === "preview"
-                    ? "bg-white text-accent shadow-xs"
+                    ? "bg-surface text-accent shadow-xs"
                     : "text-ink-2 hover:text-ink"
                 }`}
               >
@@ -121,7 +121,7 @@ export default function ReleaseNotesModal({
                 onClick={() => setActiveTab("markdown")}
                 className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1.5 transition-colors ${
                   activeTab === "markdown"
-                    ? "bg-white text-accent shadow-xs"
+                    ? "bg-surface text-accent shadow-xs"
                     : "text-ink-2 hover:text-ink"
                 }`}
               >
@@ -188,10 +188,10 @@ export default function ReleaseNotesModal({
               {data.features.length > 0 && (
                 <div className="space-y-2.5">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-ink-2 flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    <Sparkles className="w-4 h-4 text-warning" />
                     Features & Enhancements ({data.features.length})
                   </h4>
-                  <ul className="divide-y divide-subtle border border-subtle rounded-lg overflow-hidden bg-white text-xs">
+                  <ul className="divide-y divide-subtle border border-subtle rounded-lg overflow-hidden bg-surface text-xs">
                     {data.features.map((issue) => (
                       <li key={issue.id} className="p-3 flex items-start justify-between gap-3 hover:bg-page">
                         <div className="space-y-0.5">
@@ -225,7 +225,7 @@ export default function ReleaseNotesModal({
                     <Bug className="w-4 h-4 text-danger" />
                     Bug Fixes ({data.bugs.length})
                   </h4>
-                  <ul className="divide-y divide-subtle border border-subtle rounded-lg overflow-hidden bg-white text-xs">
+                  <ul className="divide-y divide-subtle border border-subtle rounded-lg overflow-hidden bg-surface text-xs">
                     {data.bugs.map((issue) => (
                       <li key={issue.id} className="p-3 flex items-start justify-between gap-3 hover:bg-page">
                         <div className="flex items-center gap-1.5">
@@ -250,7 +250,7 @@ export default function ReleaseNotesModal({
                     <Wrench className="w-4 h-4 text-ink-2" />
                     Technical Improvements & Subtasks ({data.technical.length})
                   </h4>
-                  <ul className="divide-y divide-subtle border border-subtle rounded-lg overflow-hidden bg-white text-xs">
+                  <ul className="divide-y divide-subtle border border-subtle rounded-lg overflow-hidden bg-surface text-xs">
                     {data.technical.map((issue) => (
                       <li key={issue.id} className="p-3 flex items-start justify-between gap-3 hover:bg-page">
                         <div className="flex items-center gap-1.5">
@@ -306,7 +306,7 @@ export default function ReleaseNotesModal({
             <button
               onClick={handleDownload}
               disabled={!data}
-              className="text-xs font-semibold px-3 py-1.5 rounded border border-subtle bg-white hover:bg-surface-sunk text-ink transition-colors flex items-center gap-1.5"
+              className="text-xs font-semibold px-3 py-1.5 rounded border border-subtle bg-surface hover:bg-surface-sunk text-ink transition-colors flex items-center gap-1.5"
             >
               <Download className="w-3.5 h-3.5 text-ink-2" />
               Download .md

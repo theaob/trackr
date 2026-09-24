@@ -69,7 +69,7 @@ export default function CreateComponentModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-150">
       <div
-        className="bg-white rounded-none sm:rounded-lg shadow-xl border-0 sm:border border-subtle w-full h-full sm:h-auto max-w-md overflow-hidden flex flex-col max-h-none sm:max-h-[90vh]"
+        className="bg-surface rounded-none sm:rounded-lg shadow-xl border-0 sm:border border-subtle w-full h-full sm:h-auto max-w-md overflow-hidden flex flex-col max-h-none sm:max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-subtle shrink-0">
@@ -101,7 +101,7 @@ export default function CreateComponentModal({
               placeholder="e.g. Backend API, Mobile App, Infrastructure"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-subtle rounded focus:border-accent"
+              className="w-full text-xs px-3 py-2 bg-surface border border-subtle rounded focus:border-accent"
               autoFocus
               required
             />
@@ -116,7 +116,7 @@ export default function CreateComponentModal({
               placeholder="What this part of the project covers..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-subtle rounded focus:border-accent"
+              className="w-full text-xs px-3 py-2 bg-surface border border-subtle rounded focus:border-accent"
             />
           </div>
 
@@ -127,7 +127,7 @@ export default function CreateComponentModal({
             <select
               value={leadId}
               onChange={(e) => setLeadId(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-subtle rounded focus:border-accent"
+              className="w-full text-xs px-3 py-2 bg-surface border border-subtle rounded focus:border-accent"
             >
               <option value="">None</option>
               {members.map((m) => (

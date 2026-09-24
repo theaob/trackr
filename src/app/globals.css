@@ -6,8 +6,8 @@
  * Design tokens. Components ask for a role (bg-surface, text-muted,
  * border-subtle), never a hex value, so a theme is just a new set of values.
  * Colours are space-separated RGB channels so Tailwind's opacity modifiers
- * (bg-accent/10) work. The dark set is defined now and switched on by
- * data-theme="dark"; nothing sets it yet.
+ * (bg-accent/10) work. The dark set is switched on by data-theme="dark", which
+ * a script in <head> sets from the account menu's choice or the system's.
  */
 :root {
   --color-page: 247 248 250;
@@ -30,6 +30,9 @@
   --color-warning: 154 103 0;
   --color-warning-soft: 255 247 225;
   --color-check: 22 163 74;
+  /* Epics: their tags and badges. */
+  --color-epic: 109 62 214;
+  --color-epic-soft: 243 238 255;
   /* Chart series, from the data-viz reference palette (validated for colour
      blindness in both themes). 1 is the main measure; 1-soft its lighter,
      same-hue partner (committed next to completed). */
@@ -37,6 +40,13 @@
   --color-series-1-soft: 134 182 239;
   --color-series-2: 235 104 52;
   --color-series-3: 27 175 122;
+
+  /* Density: Compact takes padding out of rows and cards; text stays the same size. */
+  --row: 40px;
+  --row-tight: 36px;
+  --list-row: 44px;
+  --card-x: 12px;
+  --card-y: 10px;
 
   --radius-control: 6px;
   --radius-card: 8px;
@@ -56,7 +66,8 @@
   --color-border-strong: 58 67 82;
   --color-ink: 230 233 239;
   --color-ink-2: 169 178 193;
-  --color-muted: 128 138 155;
+  /* #8E98A9: at least 4.5:1 on every dark surface, the raised selection grey included. */
+  --color-muted: 142 152 169;
   --color-accent: 124 156 255;
   --color-accent-hover: 152 178 255;
   --color-accent-soft: 30 40 70;
@@ -68,6 +79,8 @@
   --color-warning: 240 190 80;
   --color-warning-soft: 52 40 12;
   --color-check: 74 222 128;
+  --color-epic: 190 165 255;
+  --color-epic-soft: 44 33 72;
   --color-series-1: 57 135 229;
   --color-series-1-soft: 24 79 149;
   --color-series-2: 217 89 38;
@@ -79,9 +92,17 @@
   color-scheme: dark;
 }
 
+:root[data-density="compact"] {
+  --row: 32px;
+  --row-tight: 30px;
+  --list-row: 36px;
+  --card-x: 10px;
+  --card-y: 6px;
+}
+
 body {
   color: rgb(var(--color-ink));
-  background: #ffffff;
+  background: rgb(var(--color-page));
 }
 
 /*
@@ -113,12 +134,12 @@ select:focus-visible,
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c7d0;
+  background: rgb(var(--color-border-strong));
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #8993a4;
+  background: rgb(var(--color-muted));
 }
 
 /* Open/close animations (tailwindcss-animate) are decoration only; skip them
@@ -128,4 +149,12 @@ select:focus-visible,
   .animate-out {
     animation: none !important;
   }
+}
+
+/* A row that scrolls sideways (chips, column tabs) without a visible bar. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

@@ -38,7 +38,8 @@ import { StatusLozenge } from "@/components/ui/StatusLozenge";
 import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/components/ui/cn";
 import FilterBar, { type FilterOptions } from "./list/FilterBar";
-import IssueTable, { type Density } from "./list/IssueTable";
+import IssueTable from "./list/IssueTable";
+import { useAppearance } from "@/hooks/useAppearance";
 import ViewsMenu from "./list/ViewsMenu";
 import {
   BUILT_IN_VIEWS,
@@ -91,7 +92,6 @@ export function resolveNextSelectedIssueId(prevId: string | null, issues: { id: 
   return issues.some((i) => i.id === prevId) ? prevId : null;
 }
 
-const DENSITY_KEY = "trackr:issues-density";
 const PRIORITIES: PriorityLevel[] = ["HIGHEST", "HIGH", "MEDIUM", "LOW", "LOWEST"];
 /** Sorting a column for the first time: newest first for dates, A to Z otherwise. */
 const FIRST_DIRECTION: Record<SortField, "ASC" | "DESC"> = {
@@ -170,18 +170,8 @@ export default function IssuesListView({
   const [isLoading, setIsLoading] = useState(false);
 
   const [viewMode, setViewMode] = useState<"split" | "table">("split");
-  const [density, setDensity] = useState<Density>("comfortable");
-  useEffect(() => {
-    try {
-      if (window.localStorage.getItem(DENSITY_KEY) === "compact") setDensity("compact");
-    } catch {}
-  }, []);
-  const changeDensity = (next: Density) => {
-    setDensity(next);
-    try {
-      window.localStorage.setItem(DENSITY_KEY, next);
-    } catch {}
-  };
+  // Density is the account menu's setting; the toolbar button changes it too.
+  const { density, setDensity: changeDensity } = useAppearance();
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);

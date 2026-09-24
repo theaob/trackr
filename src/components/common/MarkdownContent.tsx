@@ -53,7 +53,7 @@ function buildComponents(users: User[]): Components {
           src={src}
           alt={alt || "Image"}
           loading="lazy"
-          className="max-w-full max-h-[480px] h-auto rounded-md border border-subtle my-2 object-contain bg-white shadow-xs cursor-pointer hover:border-accent transition-colors"
+          className="max-w-full max-h-[480px] h-auto rounded-md border border-subtle my-2 object-contain bg-surface shadow-xs cursor-pointer hover:border-accent transition-colors"
           onClick={() => {
             if (typeof src === "string") window.open(src, "_blank", "noopener,noreferrer");
           }}

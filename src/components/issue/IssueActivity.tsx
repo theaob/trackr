@@ -133,7 +133,11 @@ export default function IssueActivity({ data }: { data: IssueData }) {
 
       {filter !== "history" &&
         (permissions.canAddComment && currentUser ? (
-          <form onSubmit={post} className="flex items-start gap-3">
+          // On a phone the box stays pinned to the bottom until you reach it.
+          <form
+            onSubmit={post}
+            className="flex items-start gap-3 max-md:sticky max-md:bottom-0 max-md:z-10 max-md:-mx-4 max-md:border-t max-md:border-subtle max-md:bg-surface max-md:px-4 max-md:pb-[max(0.5rem,env(safe-area-inset-bottom))] max-md:pt-2"
+          >
             <UserAvatar user={currentUser} size="md" />
             <div className="min-w-0 flex-1">
               <MentionInput

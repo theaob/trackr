@@ -63,7 +63,7 @@ export default function SetupView() {
     <div className="min-h-screen w-full bg-surface-sunk flex flex-col items-center justify-center gap-6 p-4">
       <TrackrLogo size="lg" />
 
-      <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl border border-subtle overflow-hidden flex flex-col">
+      <div className="bg-surface w-full max-w-lg rounded-xl shadow-2xl border border-subtle overflow-hidden flex flex-col">
         <div className="bg-ink text-surface px-6 py-5 flex items-center gap-3 border-b border-ink/80">
           <div className="w-9 h-9 rounded-lg bg-accent/30 border border-accent flex items-center justify-center">
             <ShieldCheck className="w-5 h-5 text-surface" />
@@ -78,8 +78,8 @@ export default function SetupView() {
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5 text-sm">
           {error && (
-            <div className="p-3 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+            <div className="p-3 rounded-md bg-danger-soft border border-danger/30 text-danger text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-danger" />
               <span>{error}</span>
             </div>
           )}

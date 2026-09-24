@@ -306,7 +306,7 @@ export default function CreateWebhookModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-150">
       <div
-        className="bg-white rounded-none sm:rounded-lg shadow-2xl border-0 sm:border border-subtle w-full h-full sm:h-auto max-w-2xl overflow-hidden flex flex-col max-h-none sm:max-h-[90vh]"
+        className="bg-surface rounded-none sm:rounded-lg shadow-2xl border-0 sm:border border-subtle w-full h-full sm:h-auto max-w-2xl overflow-hidden flex flex-col max-h-none sm:max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -348,7 +348,7 @@ export default function CreateWebhookModal({
               placeholder="e.g. Slack Engineering Alerts, Zapier Issue Sync, CI Pipeline"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-subtle rounded focus:border-accent"
+              className="w-full text-xs px-3 py-2 bg-surface border border-subtle rounded focus:border-accent"
               autoFocus
               required
             />
@@ -364,7 +364,7 @@ export default function CreateWebhookModal({
               placeholder="https://api.yourcompany.com/webhooks or http://localhost:3000/api/mock-webhook-receiver"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-subtle rounded focus:border-accent font-mono text-[11px]"
+              className="w-full text-xs px-3 py-2 bg-surface border border-subtle rounded focus:border-accent font-mono text-[11px]"
               required
             />
             <p className="text-[11px] text-muted mt-1">
@@ -386,7 +386,7 @@ export default function CreateWebhookModal({
               placeholder="e.g. whsec_9a8b7c6d5e4f3a2b1c0d"
               value={secret}
               onChange={(e) => setSecret(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-subtle rounded focus:border-accent font-mono text-[11px]"
+              className="w-full text-xs px-3 py-2 bg-surface border border-subtle rounded focus:border-accent font-mono text-[11px]"
             />
             <p className="text-[11px] text-muted mt-1">
               If provided, payloads will be signed using HMAC SHA-256 and sent in the <code className="text-ink font-semibold">X-Hub-Signature-256</code> header.
@@ -411,7 +411,7 @@ export default function CreateWebhookModal({
                 if (jqlError) setJqlError(null);
               }}
               onBlur={handleValidateJql}
-              className={`w-full text-xs px-3 py-2 bg-white border rounded font-mono text-[11px] ${
+              className={`w-full text-xs px-3 py-2 bg-surface border rounded font-mono text-[11px] ${
                 jqlError ? "border-danger focus:border-danger" : "border-subtle focus:border-accent"
               }`}
             />
@@ -489,8 +489,8 @@ export default function CreateWebhookModal({
                           key={item.event}
                           className={`flex items-start gap-2 p-2 rounded cursor-pointer border transition-colors ${
                             isChecked
-                              ? "bg-white border-accent/60 shadow-2xs"
-                              : "bg-white/60 border-transparent hover:bg-white"
+                              ? "bg-surface border-accent/60 shadow-2xs"
+                              : "bg-surface/60 border-transparent hover:bg-surface"
                           }`}
                         >
                           <input

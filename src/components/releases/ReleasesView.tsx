@@ -43,7 +43,7 @@ interface ReleasesViewProps {
 
 type Filter = VersionStatus | "ALL";
 const EMPTY_COUNTS = { total: 0, done: 0, inProgress: 0, todo: 0, storyPoints: 0, completedStoryPoints: 0 };
-const cell = "h-11 border-b border-subtle px-2.5 text-[13px]";
+const cell = "h-list-row border-b border-subtle px-2.5 text-[13px]";
 
 function VersionStatusLozenge({ version }: { version: Version }) {
   if (version.status === "RELEASED") return <StatusLozenge label="Released" token="success" />;

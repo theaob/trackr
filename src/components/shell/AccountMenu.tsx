@@ -12,6 +12,7 @@ import AccountSecurityModal from "@/components/auth/AccountSecurityModal";
 import { Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } from "@/components/ui/Menu";
 import { cn } from "@/components/ui/cn";
 import type { Project } from "@/types";
+import AppearanceMenuItems from "./AppearanceMenuItems";
 
 /**
  * The foot of the rail: who is signed in, and everything about their account.
@@ -99,6 +100,8 @@ export default function AccountMenu({ collapsed, currentProject }: { collapsed: 
           <MenuItem icon={<Keyboard />} shortcut="?" onSelect={openShortcutsModal}>
             Keyboard shortcuts
           </MenuItem>
+          <MenuSeparator />
+          <AppearanceMenuItems />
           <MenuSeparator />
           <MenuItem
             icon={switchingLayout ? <Loader2 className="animate-spin" /> : <LayoutTemplate />}

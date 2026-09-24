@@ -89,11 +89,11 @@ export default function WebhookDeliveriesModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-150">
       <div
-        className="bg-white rounded-none sm:rounded-lg shadow-2xl border-0 sm:border border-subtle w-full h-full sm:h-auto max-w-4xl overflow-hidden flex flex-col max-h-none sm:max-h-[90vh]"
+        className="bg-surface rounded-none sm:rounded-lg shadow-2xl border-0 sm:border border-subtle w-full h-full sm:h-auto max-w-4xl overflow-hidden flex flex-col max-h-none sm:max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-subtle shrink-0 bg-white gap-2">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-subtle shrink-0 bg-surface gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded bg-accent-soft/70 flex items-center justify-center text-accent shrink-0">
               <History className="w-4 h-4" />
@@ -163,7 +163,7 @@ export default function WebhookDeliveriesModal({
                 return (
                   <div
                     key={delivery.id}
-                    className="border border-subtle rounded-md overflow-hidden bg-white shadow-2xs text-xs"
+                    className="border border-subtle rounded-md overflow-hidden bg-surface shadow-2xs text-xs"
                   >
                     {/* Delivery Row Header */}
                     <button
@@ -179,13 +179,13 @@ export default function WebhookDeliveriesModal({
                         )}
 
                         {delivery.success ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-success-soft text-success border border-success/30">
+                            <CheckCircle2 className="w-3 h-3 text-success" />
                             {delivery.status} OK
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
-                            <AlertCircle className="w-3 h-3 text-rose-600" />
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-danger-soft text-danger border border-danger/30">
+                            <AlertCircle className="w-3 h-3 text-danger" />
                             {delivery.status ? `${delivery.status} Error` : "Failed"}
                           </span>
                         )}
@@ -209,7 +209,7 @@ export default function WebhookDeliveriesModal({
                     {isExpanded && (
                       <div className="p-4 bg-page/70 border-t border-subtle space-y-3">
                         {delivery.error && (
-                          <div className="p-2.5 bg-rose-50 border border-rose-200 rounded text-xs text-rose-700 font-medium">
+                          <div className="p-2.5 bg-danger-soft border border-danger/30 rounded text-xs text-danger font-medium">
                             <span className="font-bold">Error: </span>
                             {delivery.error}
                           </div>

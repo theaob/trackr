@@ -80,7 +80,7 @@ export default function ReleaseVersionModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
       <div
-        className="bg-white rounded-lg shadow-xl border border-subtle w-full max-w-md overflow-hidden flex flex-col"
+        className="bg-surface rounded-lg shadow-xl border border-subtle w-full max-w-md overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -117,7 +117,7 @@ export default function ReleaseVersionModal({
               type="date"
               value={releaseDate}
               onChange={(e) => setReleaseDate(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-subtle rounded focus:border-accent"
+              className="w-full text-xs px-3 py-2 bg-surface border border-subtle rounded focus:border-accent"
               required
             />
           </div>
@@ -126,7 +126,7 @@ export default function ReleaseVersionModal({
           {unresolvedCount > 0 ? (
             <div className="p-3 bg-warning/15 border border-warning/40 rounded-md space-y-3">
               <div className="flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
                 <div className="text-xs text-ink font-medium">
                   There {unresolvedCount === 1 ? "is" : "are"}{" "}
                   <strong>{unresolvedCount} unresolved</strong> issue
@@ -151,7 +151,7 @@ export default function ReleaseVersionModal({
                         setTargetVersionId(e.target.value);
                         setMoveAction("move");
                       }}
-                      className="ml-auto bg-white border border-subtle rounded px-2 py-1 text-xs"
+                      className="ml-auto bg-surface border border-subtle rounded px-2 py-1 text-xs"
                     >
                       {availableTargetVersions.map((v) => (
                         <option key={v.id} value={v.id}>

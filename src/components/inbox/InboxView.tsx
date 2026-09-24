@@ -137,7 +137,7 @@ export default function InboxView({ initial, initialUnread }: InboxViewProps) {
                       type="button"
                       onClick={() => open(notification)}
                       className={cn(
-                        "flex w-full items-start gap-3 py-3 pl-4 pr-12 text-left transition-colors hover:bg-surface-sunk",
+                        "flex w-full items-start gap-3 py-card-y pl-4 pr-12 text-left transition-colors hover:bg-surface-sunk",
                         !notification.read && "bg-accent-soft/40"
                       )}
                     >

@@ -21,33 +21,33 @@ export const ISSUE_TYPE_CONFIG: Record<
 > = {
   STORY: {
     label: "Story",
-    bg: "bg-emerald-50",
-    text: "text-emerald-700",
-    border: "border-emerald-200",
+    bg: "bg-success-soft",
+    text: "text-success",
+    border: "border-success/30",
   },
   BUG: {
     label: "Bug",
-    bg: "bg-rose-50",
-    text: "text-rose-700",
-    border: "border-rose-200",
+    bg: "bg-danger-soft",
+    text: "text-danger",
+    border: "border-danger/30",
   },
   TASK: {
     label: "Task",
-    bg: "bg-blue-50",
-    text: "text-blue-700",
-    border: "border-blue-200",
+    bg: "bg-accent-soft",
+    text: "text-accent",
+    border: "border-accent/30",
   },
   EPIC: {
     label: "Epic",
-    bg: "bg-purple-50",
-    text: "text-purple-700",
-    border: "border-purple-200",
+    bg: "bg-epic-soft",
+    text: "text-epic",
+    border: "border-epic/30",
   },
   SUBTASK: {
     label: "Subtask",
-    bg: "bg-sky-50",
-    text: "text-sky-700",
-    border: "border-sky-200",
+    bg: "bg-accent-soft",
+    text: "text-accent",
+    border: "border-accent/30",
   },
 };
 
@@ -66,7 +66,7 @@ export function IssueTypeIcon({
         return (
           <span
             title="Epic"
-            className="inline-flex items-center justify-center p-0.5 rounded bg-purple-100 text-purple-700 shrink-0"
+            className="inline-flex items-center justify-center p-0.5 rounded bg-epic-soft text-epic shrink-0"
           >
             <Layers className={className} />
           </span>
@@ -75,7 +75,7 @@ export function IssueTypeIcon({
         return (
           <span
             title="Story"
-            className="inline-flex items-center justify-center p-0.5 rounded bg-emerald-100 text-emerald-700 shrink-0"
+            className="inline-flex items-center justify-center p-0.5 rounded bg-success-soft text-success shrink-0"
           >
             <Bookmark className={className} />
           </span>
@@ -84,7 +84,7 @@ export function IssueTypeIcon({
         return (
           <span
             title="Bug"
-            className="inline-flex items-center justify-center p-0.5 rounded bg-rose-100 text-rose-600 shrink-0"
+            className="inline-flex items-center justify-center p-0.5 rounded bg-danger-soft text-danger shrink-0"
           >
             <CircleAlert className={className} />
           </span>
@@ -93,7 +93,7 @@ export function IssueTypeIcon({
         return (
           <span
             title="Subtask"
-            className="inline-flex items-center justify-center p-0.5 rounded bg-sky-100 text-sky-600 shrink-0"
+            className="inline-flex items-center justify-center p-0.5 rounded bg-accent-soft text-accent shrink-0"
           >
             <GitCommit className={className} />
           </span>
@@ -103,7 +103,7 @@ export function IssueTypeIcon({
         return (
           <span
             title="Task"
-            className="inline-flex items-center justify-center p-0.5 rounded bg-blue-100 text-blue-600 shrink-0"
+            className="inline-flex items-center justify-center p-0.5 rounded bg-accent-soft text-accent shrink-0"
           >
             <CheckSquare className={className} />
           </span>
@@ -172,32 +172,32 @@ export function PriorityIcon({
   switch (priority) {
     case "HIGHEST":
       return (
-        <span title="Highest Priority" className="text-red-600 inline-flex items-center">
+        <span title="Highest Priority" className="text-danger inline-flex items-center">
           <ChevronsUp className={className} />
         </span>
       );
     case "HIGH":
       return (
-        <span title="High Priority" className="text-orange-500 inline-flex items-center">
+        <span title="High Priority" className="text-warning inline-flex items-center">
           <ChevronUp className={className} />
         </span>
       );
     case "MEDIUM":
       return (
-        <span title="Medium Priority" className="text-amber-500 inline-flex items-center">
+        <span title="Medium Priority" className="text-warning inline-flex items-center">
           <Equal className={className} />
         </span>
       );
     case "LOW":
       return (
-        <span title="Low Priority" className="text-blue-500 inline-flex items-center">
+        <span title="Low Priority" className="text-accent inline-flex items-center">
           <ChevronDown className={className} />
         </span>
       );
     case "LOWEST":
     default:
       return (
-        <span title="Lowest Priority" className="text-slate-400 inline-flex items-center">
+        <span title="Lowest Priority" className="text-muted inline-flex items-center">
           <ChevronsDown className={className} />
         </span>
       );
@@ -220,19 +220,19 @@ export function StatusBadge({
   const getBadgeStyle = () => {
     switch (safeStatus) {
       case "BACKLOG":
-        return "bg-slate-100 text-slate-700 border-slate-200";
+        return "bg-surface-sunk text-ink-2 border-subtle";
       case "TODO":
-        return "bg-slate-100 text-slate-800 border-slate-300 font-semibold";
+        return "bg-surface-sunk text-ink border-subtle font-semibold";
       case "IN_PROGRESS":
-        return "bg-blue-50 text-blue-700 border-blue-200 font-semibold";
+        return "bg-accent-soft text-accent border-accent/30 font-semibold";
       case "IN_REVIEW":
-        return "bg-purple-50 text-purple-700 border-purple-200 font-semibold";
+        return "bg-epic-soft text-epic border-epic/30 font-semibold";
       case "DONE":
-        return "bg-emerald-50 text-emerald-700 border-emerald-200 font-semibold";
+        return "bg-success-soft text-success border-success/30 font-semibold";
       default:
         // A custom status with no known styling: generic unless a workflow
         // color was supplied, in which case inline styles below take over.
-        return "bg-gray-100 text-gray-700 border-gray-200 font-semibold";
+        return "bg-surface-sunk text-ink-2 border-subtle font-semibold";
     }
   };
 

@@ -99,7 +99,7 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShor
       aria-modal="true"
       aria-labelledby="shortcuts-dialog-title"
     >
-      <div className="bg-white rounded-lg shadow-2xl border border-subtle w-full max-w-xl max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+      <div className="bg-surface rounded-lg shadow-2xl border border-subtle w-full max-w-xl max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="px-6 py-4 border-b border-subtle flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -127,7 +127,7 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShor
               placeholder="Search shortcuts..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-page border border-subtle focus:border-accent focus:bg-white rounded-md transition-all text-ink placeholder-muted"
+              className="w-full pl-9 pr-3 py-1.5 text-xs bg-page border border-subtle focus:border-accent focus:bg-surface rounded-md transition-all text-ink placeholder-muted"
             />
           </div>
         </div>
@@ -182,7 +182,7 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShor
         {/* Footer */}
         <div className="px-6 py-2.5 border-t border-subtle bg-page flex items-center justify-between text-[11px] text-muted">
           <span>Shortcuts work whenever you are not typing in a text field.</span>
-          <kbd className="px-1.5 py-0.5 text-[10px] bg-white border border-subtle rounded shadow-2xs">
+          <kbd className="px-1.5 py-0.5 text-[10px] bg-surface border border-subtle rounded shadow-2xs">
             Esc to close
           </kbd>
         </div>

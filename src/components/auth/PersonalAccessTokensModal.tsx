@@ -168,19 +168,19 @@ export default function PersonalAccessTokensModal({
       return { label: "Revoked", color: "bg-subtle text-ink-2" };
     }
     if (t.expiresAt && new Date(t.expiresAt) < new Date()) {
-      return { label: "Expired", color: "bg-amber-100 text-amber-800 border border-amber-300" };
+      return { label: "Expired", color: "bg-warning-soft text-warning border border-warning/30" };
     }
-    return { label: "Active", color: "bg-emerald-100 text-emerald-800 border border-emerald-300" };
+    return { label: "Active", color: "bg-success-soft text-success border border-success/30" };
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
       <div
-        className="bg-white rounded-lg shadow-2xl border border-subtle w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="bg-surface rounded-lg shadow-2xl border border-subtle w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-subtle bg-white shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-subtle bg-surface shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-md bg-accent-soft/70 flex items-center justify-center text-accent">
               <KeyRound className="w-4 h-4" />
@@ -242,7 +242,7 @@ export default function PersonalAccessTokensModal({
                   </button>
                 </div>
               ) : (
-                <div className="border border-subtle rounded-lg overflow-hidden bg-white shadow-2xs">
+                <div className="border border-subtle rounded-lg overflow-hidden bg-surface shadow-2xs">
                   <table className="min-w-full divide-y divide-subtle text-left text-xs">
                     <thead className="bg-page font-semibold text-ink-2">
                       <tr>
@@ -295,7 +295,7 @@ export default function PersonalAccessTokensModal({
                                   <button
                                     onClick={() => handleRevoke(token.id, token.name)}
                                     title="Revoke Token"
-                                    className="p-1 rounded text-muted hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                                    className="p-1 rounded text-muted hover:text-warning hover:bg-warning-soft transition-colors"
                                   >
                                     <Ban className="w-3.5 h-3.5" />
                                   </button>
@@ -356,7 +356,7 @@ export default function PersonalAccessTokensModal({
                   placeholder="e.g. GitHub Actions CI, VS Code Trackr, Data Export Script"
                   value={tokenName}
                   onChange={(e) => setTokenName(e.target.value)}
-                  className="w-full text-xs px-3 py-2 bg-white border border-subtle rounded focus:border-accent"
+                  className="w-full text-xs px-3 py-2 bg-surface border border-subtle rounded focus:border-accent"
                   autoFocus
                   required
                 />
@@ -373,7 +373,7 @@ export default function PersonalAccessTokensModal({
                 <select
                   value={expirationDays}
                   onChange={(e) => setExpirationDays(parseInt(e.target.value, 10))}
-                  className="w-full text-xs px-3 py-2 bg-white border border-subtle rounded focus:border-accent"
+                  className="w-full text-xs px-3 py-2 bg-surface border border-subtle rounded focus:border-accent"
                 >
                   {EXPIRATION_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -382,8 +382,8 @@ export default function PersonalAccessTokensModal({
                   ))}
                 </select>
                 {expirationDays === 0 && (
-                  <div className="mt-2 flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded text-[11px] text-amber-800">
-                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="mt-2 flex items-start gap-2 p-2.5 bg-warning-soft border border-warning/30 rounded text-[11px] text-warning">
+                    <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
                     <span>
                       Tokens with no expiration date present a security risk if exposed or leaked. We recommend setting an expiration date.
                     </span>
@@ -415,8 +415,8 @@ export default function PersonalAccessTokensModal({
           {/* VIEW 3: TOKEN CREATED SUCCESS SCREEN */}
           {view === "created" && newlyCreatedToken && (
             <div className="space-y-5 max-w-xl mx-auto">
-              <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-300 rounded-md text-amber-900 text-xs">
-                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+              <div className="flex items-center gap-2 p-3 bg-warning-soft border border-warning/30 rounded-md text-warning text-xs">
+                <AlertTriangle className="w-5 h-5 text-warning shrink-0" />
                 <div>
                   <span className="font-bold">Important:</span> Make sure to copy your personal access token now. You won’t be able to see it again!
                 </div>
@@ -440,7 +440,7 @@ export default function PersonalAccessTokensModal({
                   >
                     {hasCopied ? (
                       <>
-                        <Check className="w-3.5 h-3.5 text-emerald-300" />
+                        <Check className="w-3.5 h-3.5 text-success" />
                         <span>Copied!</span>
                       </>
                     ) : (
@@ -487,7 +487,7 @@ export default function PersonalAccessTokensModal({
                     className="absolute top-2.5 right-2.5 bg-ink hover:bg-ink-2 text-surface text-[10px] px-2 py-1 rounded flex items-center gap-1 transition-colors"
                   >
                     {hasCopiedCurl ? (
-                      <Check className="w-3 h-3 text-emerald-400" />
+                      <Check className="w-3 h-3 text-success" />
                     ) : (
                       <Copy className="w-3 h-3" />
                     )}

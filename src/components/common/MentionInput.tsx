@@ -317,7 +317,7 @@ const MentionInput = forwardRef<HTMLTextAreaElement | HTMLInputElement, MentionI
       )}
 
       {isUploadingImage && (
-        <div className="absolute right-2 bottom-2 pointer-events-none flex items-center gap-1.5 text-[11px] text-accent bg-white/95 px-2 py-1 rounded shadow-xs border border-accent/30 font-medium">
+        <div className="absolute right-2 bottom-2 pointer-events-none flex items-center gap-1.5 text-[11px] text-accent bg-surface/95 px-2 py-1 rounded shadow-xs border border-accent/30 font-medium">
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
           <span>Uploading image...</span>
         </div>
@@ -325,7 +325,7 @@ const MentionInput = forwardRef<HTMLTextAreaElement | HTMLInputElement, MentionI
 
       {/* Floating Mention Suggestions Dropdown */}
       {isOpen && filteredUsers.length > 0 && (
-        <div className="absolute left-0 top-full mt-1 w-72 max-h-56 overflow-y-auto bg-white border border-subtle rounded-lg shadow-xl py-1 z-50 animate-in fade-in zoom-in-95">
+        <div className="absolute left-0 top-full mt-1 w-72 max-h-56 overflow-y-auto bg-surface border border-subtle rounded-lg shadow-xl py-1 z-50 animate-in fade-in zoom-in-95">
           <div className="px-3 py-1.5 border-b border-subtle flex items-center justify-between text-[11px] font-bold text-muted uppercase tracking-wider">
             <span>Mention someone</span>
             <span className="text-[10px] lowercase font-normal">

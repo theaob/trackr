@@ -27,12 +27,12 @@ export default function LoginView({
       </Link>
 
       {ssoError && !dismissedError && (
-        <div className="max-w-lg w-full p-3 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+        <div className="max-w-lg w-full p-3 rounded-md bg-danger-soft border border-danger/30 text-danger text-xs flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0 text-danger mt-0.5" />
           <span className="flex-1">{ssoError}</span>
           <button
             onClick={() => setDismissedError(true)}
-            className="text-rose-500 hover:text-rose-700 font-semibold"
+            className="text-danger hover:text-danger font-semibold"
           >
             ×
           </button>

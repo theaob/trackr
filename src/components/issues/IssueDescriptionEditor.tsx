@@ -458,7 +458,7 @@ export default function IssueDescriptionEditor({
               <HelpCircle className="w-3.5 h-3.5" />
             </button>
             {showCheatsheet && (
-              <div className="absolute right-0 top-full mt-1 w-72 bg-white border border-subtle rounded-lg shadow-xl z-50 py-2 animate-in fade-in zoom-in-95">
+              <div className="absolute right-0 top-full mt-1 w-72 bg-surface border border-subtle rounded-lg shadow-xl z-50 py-2 animate-in fade-in zoom-in-95">
                 <div className="px-3 py-1.5 border-b border-subtle text-[11px] font-bold text-muted uppercase tracking-wider">
                   Markdown Cheatsheet
                 </div>
@@ -502,7 +502,7 @@ export default function IssueDescriptionEditor({
 
       {/* Formatting Toolbar (visible only in Write tab) */}
       {activeTab === "write" && (
-        <div className="flex items-center flex-wrap gap-0.5 px-2 py-1 border-b border-subtle bg-white">
+        <div className="flex items-center flex-wrap gap-0.5 px-2 py-1 border-b border-subtle bg-surface">
           {toolbarActions.map((item, idx) => {
             if (item === "separator") {
               return (
@@ -527,7 +527,7 @@ export default function IssueDescriptionEditor({
                     <ChevronDown className="w-3 h-3" />
                   </button>
                   {showHeadingMenu && (
-                    <div className="absolute left-0 top-full mt-1 w-48 bg-white border border-subtle rounded-lg shadow-xl z-50 py-1 animate-in fade-in zoom-in-95">
+                    <div className="absolute left-0 top-full mt-1 w-48 bg-surface border border-subtle rounded-lg shadow-xl z-50 py-1 animate-in fade-in zoom-in-95">
                       <button
                         type="button"
                         tabIndex={-1}
@@ -663,7 +663,7 @@ export default function IssueDescriptionEditor({
       <>
         {label}
         <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-6">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+          <div className="bg-surface rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-subtle bg-page">
               <h3 className="text-sm font-semibold text-ink">
                 Edit Description

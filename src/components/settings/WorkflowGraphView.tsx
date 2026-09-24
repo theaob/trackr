@@ -476,9 +476,9 @@ export default function WorkflowGraphView({
   const selectedStatus = selectedStatusId ? statusMap.get(selectedStatusId) : null;
 
   return (
-    <div className="flex flex-col h-full w-full bg-slate-50/50 rounded-lg border border-subtle overflow-hidden select-none">
+    <div className="flex flex-col h-full w-full bg-surface-sunk/50 rounded-lg border border-subtle overflow-hidden select-none">
       {/* Top Toolbar */}
-      <div className="h-11 px-4 border-b border-subtle bg-white flex items-center justify-between gap-3 shrink-0 z-20">
+      <div className="h-11 px-4 border-b border-subtle bg-surface flex items-center justify-between gap-3 shrink-0 z-20">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 text-xs text-ink-2">
             <GitBranch className="w-3.5 h-3.5 text-accent" />
@@ -506,7 +506,7 @@ export default function WorkflowGraphView({
         {/* Action Controls */}
         <div className="flex items-center gap-2">
           {/* Zoom controls */}
-          <div className="flex items-center border border-subtle rounded bg-white overflow-hidden text-xs">
+          <div className="flex items-center border border-subtle rounded bg-surface overflow-hidden text-xs">
             <button
               type="button"
               onClick={handleZoomOut}
@@ -537,10 +537,10 @@ export default function WorkflowGraphView({
           <button
             type="button"
             onClick={handleAutoArrange}
-            className="px-2.5 py-1 text-xs font-semibold text-ink-2 bg-white border border-subtle hover:bg-surface-sunk rounded flex items-center gap-1.5 transition-colors shadow-2xs"
+            className="px-2.5 py-1 text-xs font-semibold text-ink-2 bg-surface border border-subtle hover:bg-surface-sunk rounded flex items-center gap-1.5 transition-colors shadow-2xs"
             title="Auto-arrange status cards into columns"
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <Sparkles className="w-3.5 h-3.5 text-warning" />
             <span className="hidden sm:inline">Auto-Arrange</span>
           </button>
 
@@ -892,12 +892,12 @@ export default function WorkflowGraphView({
                 }}
                 onMouseDown={(e) => handleNodeMouseDown(e, status.id)}
                 onClick={(e) => handleTargetNodeClick(e, status.id)}
-                className={`absolute rounded-lg border-2 bg-white shadow-xs transition-shadow cursor-move z-20 select-none ${
+                className={`absolute rounded-lg border-2 bg-surface shadow-xs transition-shadow cursor-move z-20 select-none ${
                   style.border
                 } ${
                   isSelected ? "ring-2 ring-accent ring-offset-2 border-accent shadow-md" : ""
                 } ${
-                  isConnectSource ? "ring-2 ring-accent bg-blue-50/50" : ""
+                  isConnectSource ? "ring-2 ring-accent bg-accent-soft/50" : ""
                 } ${
                   isDragging ? "opacity-90 shadow-xl" : ""
                 } ${
@@ -922,7 +922,7 @@ export default function WorkflowGraphView({
 
                   {isAllIncoming ? (
                     <span
-                      className="text-[9px] font-bold text-accent bg-blue-100/90 border border-accent/30 px-1.5 py-px rounded flex items-center gap-0.5 shrink-0"
+                      className="text-[9px] font-bold text-accent bg-accent-soft/90 border border-accent/30 px-1.5 py-px rounded flex items-center gap-0.5 shrink-0"
                       title="Issues in any status can transition directly to this status (General Start)"
                     >
                       <Sparkles className="w-2.5 h-2.5 text-accent" />
@@ -995,7 +995,7 @@ export default function WorkflowGraphView({
 
       {/* Selected Status Inspector Drawer / Panel */}
       {selectedStatus && (
-        <div className="border-t border-subtle bg-white p-4 shrink-0 z-30 animate-in slide-in-from-bottom-2 duration-150">
+        <div className="border-t border-subtle bg-surface p-4 shrink-0 z-30 animate-in slide-in-from-bottom-2 duration-150">
           <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-subtle">
             <div className="flex items-center gap-2.5">
               <span
@@ -1011,7 +1011,7 @@ export default function WorkflowGraphView({
                     {selectedStatus.category}
                   </span>
                   {globalTransitionStatusIds.has(selectedStatus.id) && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-accent border border-accent/30 flex items-center gap-1">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-accent-soft text-accent border border-accent/30 flex items-center gap-1">
                       <Sparkles className="w-3 h-3 text-accent" />
                       General Start
                     </span>
@@ -1033,7 +1033,7 @@ export default function WorkflowGraphView({
                   disabled={globalTransitionStatusIds.has(selectedStatus.id)}
                   className={`px-3 py-1 text-xs font-semibold rounded border flex items-center gap-1.5 transition-colors ${
                     globalTransitionStatusIds.has(selectedStatus.id)
-                      ? "text-emerald-700 bg-emerald-50 border-emerald-300 cursor-default opacity-90"
+                      ? "text-success bg-success-soft border-success/30 cursor-default opacity-90"
                       : "text-accent bg-accent/10 hover:bg-accent/20 border-accent/30 cursor-pointer"
                   }`}
                   title={
@@ -1042,7 +1042,7 @@ export default function WorkflowGraphView({
                       : "Allow all other statuses to transition to this status"
                   }
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-success" />
                   <span>
                     {globalTransitionStatusIds.has(selectedStatus.id)
                       ? "All can transition here (Active)"
@@ -1055,7 +1055,7 @@ export default function WorkflowGraphView({
                 <button
                   type="button"
                   onClick={() => onClearTransitions(selectedStatus.id)}
-                  className="px-2.5 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50 rounded border border-rose-200 transition-colors"
+                  className="px-2.5 py-1 text-xs font-medium text-danger hover:bg-danger-soft rounded border border-danger/30 transition-colors"
                   title="Remove all transitions for this status"
                 >
                   Clear Transitions
@@ -1094,7 +1094,7 @@ export default function WorkflowGraphView({
                         className={`px-2.5 py-1 rounded-full text-xs font-medium border flex items-center gap-1.5 transition-colors ${
                           isAllowed
                             ? "bg-accent text-accent-fg border-accent font-semibold shadow-2xs"
-                            : "bg-white text-ink-2 border-subtle hover:border-accent hover:text-accent"
+                            : "bg-surface text-ink-2 border-subtle hover:border-accent hover:text-accent"
                         } disabled:opacity-50`}
                       >
                         {isAllowed && <Check className="w-3 h-3" />}
@@ -1108,7 +1108,7 @@ export default function WorkflowGraphView({
             {/* Incoming Transitions */}
             <div>
               <div className="text-[11px] font-bold text-ink-2 uppercase tracking-wider mb-2 flex items-center gap-1">
-                <ArrowRight className="w-3 h-3 text-emerald-600 rotate-180" />
+                <ArrowRight className="w-3 h-3 text-success rotate-180" />
                 Can transition FROM:
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -1124,8 +1124,8 @@ export default function WorkflowGraphView({
                         onClick={() => onToggleTransition(source.id, selectedStatus.id, !isAllowed)}
                         className={`px-2.5 py-1 rounded-full text-xs font-medium border flex items-center gap-1.5 transition-colors ${
                           isAllowed
-                            ? "bg-emerald-600 text-white border-emerald-600 font-semibold shadow-2xs"
-                            : "bg-white text-ink-2 border-subtle hover:border-emerald-600 hover:text-emerald-700"
+                            ? "bg-success text-accent-fg border-success font-semibold shadow-2xs"
+                            : "bg-surface text-ink-2 border-subtle hover:border-success hover:text-success"
                         } disabled:opacity-50`}
                       >
                         {isAllowed && <Check className="w-3 h-3" />}
@@ -1140,10 +1140,10 @@ export default function WorkflowGraphView({
       )}
 
       {/* Canvas Footer Legend */}
-      <div className="px-4 py-2 bg-slate-50 border-t border-subtle flex flex-wrap items-center justify-between text-[11px] text-muted gap-2 shrink-0">
+      <div className="px-4 py-2 bg-surface-sunk border-t border-subtle flex flex-wrap items-center justify-between text-[11px] text-muted gap-2 shrink-0">
         <div className="flex flex-wrap items-center gap-4">
           <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-slate-400" />
+            <span className="w-2 h-2 rounded-full bg-strong" />
             To Do
           </span>
           <span className="flex items-center gap-1">
@@ -1151,13 +1151,13 @@ export default function WorkflowGraphView({
             In Progress
           </span>
           <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="w-2 h-2 rounded-full bg-success" />
             Done
           </span>
           <span className="text-muted">|</span>
           <span className="flex items-center gap-1.5 font-medium text-ink">
-            <span className="w-3.5 h-3.5 rounded-full bg-slate-900 flex items-center justify-center">
-              <span className="w-1.5 h-1.5 rounded-full bg-white" />
+            <span className="w-3.5 h-3.5 rounded-full bg-ink flex items-center justify-center">
+              <span className="w-1.5 h-1.5 rounded-full bg-surface" />
             </span>
             General Start (from any status)
           </span>

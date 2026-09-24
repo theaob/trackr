@@ -77,7 +77,7 @@ export default function ProjectLayoutClient({
             {children}
           </AppShell>
         ) : (
-          <div className="flex flex-col h-screen w-screen overflow-hidden bg-white text-ink font-sans antialiased">
+          <div className="flex flex-col h-screen w-screen overflow-hidden bg-surface text-ink font-sans antialiased">
             {/* Top Navbar */}
             <Navbar
               projects={projects}
@@ -96,7 +96,7 @@ export default function ProjectLayoutClient({
                 isMobileOpen={isMobileDrawerOpen}
                 onCloseMobile={() => setIsMobileDrawerOpen(false)}
               />
-              <main className="flex-1 flex flex-col overflow-hidden bg-white">{children}</main>
+              <main className="flex-1 flex flex-col overflow-hidden bg-surface">{children}</main>
             </div>
           </div>
         )}

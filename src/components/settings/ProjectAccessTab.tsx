@@ -539,7 +539,7 @@ function AddMemberModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in">
-      <div className="bg-white w-full max-w-lg rounded-lg shadow-2xl border border-subtle p-6 space-y-4 max-h-[90vh] flex flex-col">
+      <div className="bg-surface w-full max-w-lg rounded-lg shadow-2xl border border-subtle p-6 space-y-4 max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between pb-2 border-b border-subtle shrink-0">
           <div className="flex items-center gap-2">
             <UserPlus className="w-5 h-5 text-accent" />
@@ -563,7 +563,7 @@ function AddMemberModal({
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 text-xs overflow-y-auto pr-1">
             {errorMessage && (
-              <div className="p-2.5 rounded bg-red-50 border border-red-200 text-red-700 text-xs font-medium flex items-center gap-2">
+              <div className="p-2.5 rounded bg-danger-soft border border-danger/30 text-danger text-xs font-medium flex items-center gap-2">
                 <Info className="w-4 h-4 shrink-0" />
                 <span>{errorMessage}</span>
               </div>
@@ -851,7 +851,7 @@ function CreateEditRoleModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in">
-      <div className="bg-white w-full max-w-2xl rounded-lg shadow-2xl border border-subtle p-6 space-y-4 max-h-[90vh] flex flex-col">
+      <div className="bg-surface w-full max-w-2xl rounded-lg shadow-2xl border border-subtle p-6 space-y-4 max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-subtle shrink-0">
           <div className="flex items-center gap-2">
@@ -876,7 +876,7 @@ function CreateEditRoleModal({
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="space-y-4 text-xs overflow-y-auto pr-1 flex-1">
           {errorMessage && (
-            <div className="p-2.5 rounded bg-red-50 border border-red-200 text-red-700 text-xs font-medium flex items-center gap-2">
+            <div className="p-2.5 rounded bg-danger-soft border border-danger/30 text-danger text-xs font-medium flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>{errorMessage}</span>
             </div>
@@ -886,7 +886,7 @@ function CreateEditRoleModal({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="sm:col-span-2">
               <label className="block text-ink-2 font-bold uppercase tracking-wider text-[10px] mb-1">
-                Role Name <span className="text-red-500">*</span>
+                Role Name <span className="text-danger">*</span>
               </label>
               <input
                 type="text"
@@ -907,7 +907,7 @@ function CreateEditRoleModal({
                   type="color"
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
-                  className="w-9 h-9 p-0.5 rounded border border-subtle cursor-pointer bg-white"
+                  className="w-9 h-9 p-0.5 rounded border border-subtle cursor-pointer bg-surface"
                 />
                 <div className="flex flex-wrap gap-1">
                   {PRESET_ROLE_COLORS.map((c) => (
@@ -984,7 +984,7 @@ function CreateEditRoleModal({
                           key={permKey}
                           className={`flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors ${
                             isChecked
-                              ? "bg-blue-50/40 border-accent/60"
+                              ? "bg-accent-soft/40 border-accent/60"
                               : "border-subtle hover:bg-page/70"
                           } ${isMandatory ? "opacity-90 cursor-not-allowed" : ""}`}
                         >
@@ -999,7 +999,7 @@ function CreateEditRoleModal({
                             <div className="flex items-center gap-1.5">
                               <span className="font-bold text-ink">{permMeta.label}</span>
                               {isMandatory && (
-                                <span className="text-[9px] font-bold px-1 rounded bg-amber-100 text-amber-800">
+                                <span className="text-[9px] font-bold px-1 rounded bg-warning-soft text-warning">
                                   Required
                                 </span>
                               )}
@@ -1058,7 +1058,7 @@ function PermissionsMatrixModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in">
-      <div className="bg-white w-full max-w-4xl rounded-lg shadow-2xl border border-subtle p-6 space-y-4 max-h-[85vh] flex flex-col">
+      <div className="bg-surface w-full max-w-4xl rounded-lg shadow-2xl border border-subtle p-6 space-y-4 max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between pb-3 border-b border-subtle shrink-0">
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="w-5 h-5 text-accent" />
@@ -1122,7 +1122,7 @@ function PermissionsMatrixModal({
                       return (
                         <td key={key} className="px-3 py-2.5 text-center">
                           {isAllowed ? (
-                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700">
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-success-soft text-success">
                               <Check className="w-4 h-4" />
                             </span>
                           ) : (

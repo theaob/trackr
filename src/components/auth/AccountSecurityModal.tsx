@@ -72,12 +72,12 @@ export default function AccountSecurityModal({ isOpen, onClose }: AccountSecurit
       onClick={close}
     >
       <div
-        className="bg-white rounded-lg shadow-2xl border border-subtle w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]"
+        className="bg-surface rounded-lg shadow-2xl border border-subtle w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-labelledby="account-security-title"
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-subtle bg-white shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-subtle bg-surface shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-md bg-accent-soft/70 flex items-center justify-center text-accent">
               <ShieldCheck className="w-4 h-4" />
@@ -133,12 +133,12 @@ export default function AccountSecurityModal({ isOpen, onClose }: AccountSecurit
               required
             />
             {passwordError && (
-              <p className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded px-2.5 py-1.5">
+              <p className="text-xs text-danger bg-danger-soft border border-danger/30 rounded px-2.5 py-1.5">
                 {passwordError}
               </p>
             )}
             {passwordChanged && (
-              <p className="text-xs text-emerald-700 flex items-center gap-1.5">
+              <p className="text-xs text-success flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5" /> Password changed. Other devices have been signed out.
               </p>
             )}

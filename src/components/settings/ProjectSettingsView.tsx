@@ -296,10 +296,10 @@ export default function ProjectSettingsView({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto px-4 sm:px-8 py-4 sm:py-6 bg-white">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto px-4 sm:px-8 py-4 sm:py-6 bg-surface">
       {/* Mobile Notice: Administrative features are desktop-only */}
       <div className="md:hidden flex-1 flex flex-col items-center justify-center py-12 px-4 text-center">
-        <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shadow-2xs mb-4">
+        <div className="w-14 h-14 rounded-2xl bg-warning-soft border border-warning/30 flex items-center justify-center text-warning shadow-2xs mb-4">
           <Monitor className="w-7 h-7" />
         </div>
         <h2 className="text-base font-bold text-ink mb-1.5">
@@ -505,7 +505,7 @@ export default function ProjectSettingsView({
               </button>
             </div>
           ) : (
-            <div className="border border-subtle rounded-lg overflow-x-auto bg-white shadow-2xs">
+            <div className="border border-subtle rounded-lg overflow-x-auto bg-surface shadow-2xs">
               <table className="min-w-full divide-y divide-subtle text-left text-xs">
                 <thead className="bg-page font-semibold text-ink-2">
                   <tr>
@@ -631,7 +631,7 @@ export default function ProjectSettingsView({
               )}
             </div>
           ) : (
-            <div className="border border-subtle rounded-lg overflow-x-auto bg-white shadow-2xs">
+            <div className="border border-subtle rounded-lg overflow-x-auto bg-surface shadow-2xs">
               <table className="min-w-full divide-y divide-subtle text-left text-xs">
                 <thead className="bg-page font-semibold text-ink-2">
                   <tr>
@@ -727,7 +727,7 @@ export default function ProjectSettingsView({
               </button>
             </div>
           ) : (
-            <div className="border border-subtle rounded-lg overflow-x-auto bg-white shadow-2xs">
+            <div className="border border-subtle rounded-lg overflow-x-auto bg-surface shadow-2xs">
               <table className="min-w-full divide-y divide-subtle text-left text-xs">
                 <thead className="bg-page font-semibold text-ink-2">
                   <tr>
@@ -794,11 +794,11 @@ export default function ProjectSettingsView({
                             onClick={() => handleToggleWebhook(wh.id, wh.enabled)}
                             className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
                               wh.enabled
-                                ? "bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200"
+                                ? "bg-success-soft text-success border border-success/30 hover:bg-success-soft"
                                 : "bg-surface-sunk text-ink-2 border border-subtle hover:bg-subtle"
                             }`}
                           >
-                            <span className={`w-1.5 h-1.5 rounded-full ${wh.enabled ? "bg-emerald-500" : "bg-strong"}`} />
+                            <span className={`w-1.5 h-1.5 rounded-full ${wh.enabled ? "bg-success" : "bg-strong"}`} />
                             {wh.enabled ? "Active" : "Paused"}
                           </button>
                         </td>
@@ -808,8 +808,8 @@ export default function ProjectSettingsView({
                               <span
                                 className={`text-[10px] font-semibold px-2 py-0.5 rounded animate-in fade-in ${
                                   result.success
-                                    ? "bg-emerald-100 text-emerald-800"
-                                    : "bg-rose-100 text-rose-800"
+                                    ? "bg-success-soft text-success"
+                                    : "bg-danger-soft text-danger"
                                 }`}
                               >
                                 {result.success ? `HTTP ${result.status} (${result.durationMs}ms)` : `Failed (${result.status})`}

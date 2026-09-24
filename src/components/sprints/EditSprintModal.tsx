@@ -186,7 +186,7 @@ export default function EditSprintModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl border border-subtle p-6 space-y-4">
+      <div className="bg-surface w-full max-w-lg rounded-xl shadow-2xl border border-subtle p-6 space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-subtle">
           <div className="flex items-center gap-2">
@@ -210,7 +210,7 @@ export default function EditSprintModal({
         </div>
 
         {serverError && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-md text-xs text-danger font-medium flex items-center gap-2">
+          <div className="p-3 bg-danger-soft border border-danger/30 rounded-md text-xs text-danger font-medium flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{serverError}</span>
           </div>
@@ -247,7 +247,7 @@ export default function EditSprintModal({
             <select
               value={durationMode}
               onChange={(e) => handleDurationChange(e.target.value)}
-              className="w-full border border-subtle rounded px-3 py-2 text-sm text-ink focus:border-accent bg-white"
+              className="w-full border border-subtle rounded px-3 py-2 text-sm text-ink focus:border-accent bg-surface"
             >
               <option value="7">1 week (7 days)</option>
               <option value="14">2 weeks (14 days - Recommended)</option>
@@ -292,7 +292,7 @@ export default function EditSprintModal({
                       className={`px-2 py-1 text-xs rounded border transition-colors ${
                         customDays === d
                           ? "bg-accent text-accent-fg border-accent font-semibold shadow-xs"
-                          : "bg-white text-ink-2 border-subtle hover:bg-surface-sunk"
+                          : "bg-surface text-ink-2 border-subtle hover:bg-surface-sunk"
                       }`}
                     >
                       {d}d
@@ -335,7 +335,7 @@ export default function EditSprintModal({
 
           {/* Date Error */}
           {dateError && (
-            <div className="p-2.5 bg-red-50 border border-red-200 rounded text-xs text-danger font-medium flex items-center gap-2">
+            <div className="p-2.5 bg-danger-soft border border-danger/30 rounded text-xs text-danger font-medium flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{dateError}</span>
             </div>

@@ -57,7 +57,7 @@ function IssueRow({ issue, trailing }: { issue: HomeIssue; trailing?: React.Reac
       <Link
         prefetch={false}
         href={spotlightIssueHref(issue.projectKey, issue.key)}
-        className="flex min-h-11 items-center gap-3 px-4 py-2 transition-colors hover:bg-surface-sunk"
+        className="flex min-h-list-row items-center gap-3 px-4 py-2 transition-colors hover:bg-surface-sunk"
       >
         <IssueTypeIcon type={issue.type as IssueType} className="h-4 w-4 shrink-0" />
         <span className="w-20 shrink-0 font-mono text-xs text-ink-2">{issue.key}</span>
@@ -101,7 +101,7 @@ export default function HomeView({ data, projects }: { data: HomeData; projects:
           </h2>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
           <Card
             id="home-assigned"
             title="Assigned to you"
@@ -181,7 +181,7 @@ export default function HomeView({ data, projects }: { data: HomeData; projects:
                       <Link
                         prefetch={false}
                         href={spotlightIssueHref(item.projectKey, item.key)}
-                        className="flex min-h-10 items-center gap-3 px-4 py-2 transition-colors hover:bg-surface-sunk"
+                        className="flex min-h-row items-center gap-3 px-4 py-1.5 transition-colors hover:bg-surface-sunk"
                       >
                         <span className="w-20 shrink-0 font-mono text-xs text-ink-2">{item.key}</span>
                         <span className="min-w-0 flex-1 truncate text-[13px] text-ink">{item.title}</span>
@@ -209,7 +209,7 @@ export default function HomeView({ data, projects }: { data: HomeData; projects:
               You aren&apos;t on any project yet. Browse all projects, or ask an administrator to add you.
             </div>
           ) : (
-            <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {myProjects.map((project) => (
                 <li key={project.id}>
                   <Link

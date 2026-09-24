@@ -117,12 +117,12 @@ export default function IssueLinksSection({
 
       {adding && (
         <div className="mb-3 p-3 border border-subtle rounded-md bg-page/70 space-y-2 min-w-0">
-          {error && <div className="text-[11px] text-rose-600 font-medium">{error}</div>}
+          {error && <div className="text-[11px] text-danger font-medium">{error}</div>}
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 min-w-0">
             <select
               value={linkType}
               onChange={(e) => setLinkType(e.target.value as IssueLinkType)}
-              className="bg-white border border-subtle rounded px-2 py-1.5 text-xs text-ink focus:border-accent shrink-0"
+              className="bg-surface border border-subtle rounded px-2 py-1.5 text-xs text-ink focus:border-accent shrink-0"
             >
               {ISSUE_LINK_TYPES.map((t) => (
                 <option key={t} value={t}>
@@ -161,7 +161,7 @@ export default function IssueLinksSection({
           )}
 
           {results.length > 0 && (
-            <div className="border border-subtle rounded divide-y divide-subtle max-h-48 overflow-y-auto bg-white min-w-0">
+            <div className="border border-subtle rounded divide-y divide-subtle max-h-48 overflow-y-auto bg-surface min-w-0">
               {results.map((r) => (
                 <button
                   key={r.id}
@@ -185,7 +185,7 @@ export default function IssueLinksSection({
           {rows.map((row) => (
             <div
               key={`${row.linkId}-${row.direction}`}
-              className="flex items-center gap-2 px-2.5 py-1.5 border border-subtle rounded-md bg-white hover:border-subtle group min-w-0"
+              className="flex items-center gap-2 px-2.5 py-1.5 border border-subtle rounded-md bg-surface hover:border-subtle group min-w-0"
             >
               <button
                 type="button"
@@ -207,7 +207,7 @@ export default function IssueLinksSection({
               {canEdit && (
                 <button
                   onClick={() => handleRemove(row.linkId)}
-                  className="opacity-0 group-hover:opacity-100 p-1 text-muted hover:text-rose-600 hover:bg-rose-50 rounded transition-opacity shrink-0"
+                  className="opacity-0 group-hover:opacity-100 p-1 text-muted hover:text-danger hover:bg-danger-soft rounded transition-opacity shrink-0"
                   title="Remove link"
                 >
                   <X className="w-3.5 h-3.5" />

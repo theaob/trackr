@@ -84,7 +84,7 @@ export default function KanbanColumn({
     <section
       ref={columnRef}
       aria-label={showHeader ? title : undefined}
-      className="flex max-h-full w-[85vw] max-w-[340px] shrink-0 snap-center flex-col rounded-card bg-surface-sunk p-2 md:w-auto md:max-w-none md:shrink md:min-w-0"
+      className="flex max-h-full w-[calc(100vw-1.5rem)] shrink-0 snap-center snap-always sm:w-[calc(100vw-3rem)] flex-col rounded-card bg-surface-sunk p-2 md:w-auto md:max-w-none md:shrink md:min-w-0"
     >
       {showHeader && (
         <div className="flex h-8 items-center justify-between gap-2 px-1.5">

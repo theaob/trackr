@@ -98,7 +98,7 @@ export function Switch({
       <span
         aria-hidden="true"
         className={cn(
-          "pointer-events-none block h-4 w-4 rounded-full bg-white shadow-raised transition-transform duration-150 motion-reduce:transition-none",
+          "pointer-events-none block h-4 w-4 rounded-full bg-surface shadow-raised transition-transform duration-150 motion-reduce:transition-none",
           isOn ? "translate-x-4" : "translate-x-0.5"
         )}
       />

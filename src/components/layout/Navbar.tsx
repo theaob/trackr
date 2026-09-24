@@ -1,5 +1,7 @@
 "use client";
 
+import { useAppearance } from "@/hooks/useAppearance";
+import { Segmented } from "@/components/ui/Segmented";
 import React, { useState, useRef, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -121,10 +123,10 @@ export default function Navbar({
   };
 
   return (
-    <header className="h-14 border-b border-subtle bg-white px-3 sm:px-4 flex items-center justify-between select-none z-30 relative shadow-sm">
+    <header className="h-14 border-b border-subtle bg-surface px-3 sm:px-4 flex items-center justify-between select-none z-30 relative shadow-sm">
       {/* Full-width Mobile Search Bar Overlay */}
       {isMobileSearchOpen && (
-        <div className="md:hidden absolute inset-0 bg-white z-50 px-3 flex items-center gap-2 border-b border-subtle animate-in fade-in slide-in-from-top-1">
+        <div className="md:hidden absolute inset-0 bg-surface z-50 px-3 flex items-center gap-2 border-b border-subtle animate-in fade-in slide-in-from-top-1">
           <Search className="w-4 h-4 text-accent shrink-0" />
           <input
             autoFocus
@@ -197,7 +199,7 @@ export default function Navbar({
           </button>
 
           {showProjectMenu && (
-            <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-subtle rounded-md shadow-lg py-1 z-50 animate-in fade-in slide-in-from-top-1">
+            <div className="absolute top-full left-0 mt-1 w-64 bg-surface border border-subtle rounded-md shadow-lg py-1 z-50 animate-in fade-in slide-in-from-top-1">
               <div className="px-3 py-2 text-[11px] font-semibold text-ink-2 uppercase tracking-wider border-b border-subtle">
                 Recent Projects
               </div>
@@ -291,7 +293,7 @@ export default function Navbar({
               placeholder="Filter issues..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-8 py-1.5 text-sm bg-surface-sunk hover:bg-subtle focus:bg-white border border-transparent focus:border-accent rounded transition-all text-ink"
+              className="w-full pl-9 pr-8 py-1.5 text-sm bg-surface-sunk hover:bg-subtle focus:bg-surface border border-transparent focus:border-accent rounded transition-all text-ink"
             />
             {!searchQuery && (
               <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono font-semibold text-muted bg-subtle/60 border border-subtle rounded px-1.5 py-0.5 pointer-events-none">
@@ -312,7 +314,7 @@ export default function Navbar({
         >
           <Search className="w-4 h-4 shrink-0" />
           {!canFilterPage && <span className="flex-1 text-left truncate">Search Trackr...</span>}
-          <kbd className="text-xs font-sans font-semibold text-muted bg-white/70 border border-subtle rounded px-1.5 leading-5 whitespace-nowrap">
+          <kbd className="text-xs font-sans font-semibold text-muted bg-surface/70 border border-subtle rounded px-1.5 leading-5 whitespace-nowrap">
             {searchShortcut}
           </kbd>
         </button>
@@ -361,7 +363,7 @@ export default function Navbar({
           )}
 
           {currentUser && showUserMenu && (
-            <div ref={userMenuRef} className="absolute right-0 top-full mt-1 w-72 bg-white border border-subtle rounded-md shadow-xl py-1 z-50 animate-in fade-in">
+            <div ref={userMenuRef} className="absolute right-0 top-full mt-1 w-72 bg-surface border border-subtle rounded-md shadow-xl py-1 z-50 animate-in fade-in">
               <div className="px-3 py-2 border-b border-subtle">
                 <p className="text-xs font-bold text-ink">{currentUser?.name}</p>
                 <p className="text-[11px] text-ink-2">{currentUser?.email}</p>
@@ -454,7 +456,7 @@ export default function Navbar({
                     <button
                       onClick={deleteAvatar}
                       disabled={avatarUploading}
-                      className="p-2 text-muted hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                      className="p-2 text-muted hover:text-danger hover:bg-danger-soft rounded transition-colors disabled:opacity-50"
                       title="Remove avatar"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -501,6 +503,10 @@ export default function Navbar({
                 </div>
               )}
 
+              <div className="space-y-2 border-b border-subtle px-3 py-2.5">
+                <ClassicAppearance />
+              </div>
+
               <div className="py-1 border-b border-subtle">
                 <button
                   onClick={() => switchLayout(true)}
@@ -546,3 +552,36 @@ export default function Navbar({
   );
 }
 
+/** Theme and density in the classic layout's account menu. */
+function ClassicAppearance() {
+  const { theme, density, setTheme, setDensity } = useAppearance();
+  return (
+    <>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs text-ink-2">Theme</span>
+        <Segmented
+          label="Theme"
+          value={theme}
+          onChange={setTheme}
+          options={[
+            { value: "light", label: "Light" },
+            { value: "dark", label: "Dark" },
+            { value: "system", label: "System" },
+          ]}
+        />
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs text-ink-2">Density</span>
+        <Segmented
+          label="Density"
+          value={density}
+          onChange={setDensity}
+          options={[
+            { value: "comfortable", label: "Comfortable" },
+            { value: "compact", label: "Compact" },
+          ]}
+        />
+      </div>
+    </>
+  );
+}

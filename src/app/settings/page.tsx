@@ -40,7 +40,7 @@ export default async function SettingsPage() {
 
   return (
     <SearchProvider>
-      <div className="flex flex-col h-screen w-screen overflow-hidden bg-white text-ink font-sans antialiased">
+      <div className="flex flex-col h-screen w-screen overflow-hidden bg-surface text-ink font-sans antialiased">
         <Navbar
           projects={allProjects as any}
           currentProject={defaultProject as any}

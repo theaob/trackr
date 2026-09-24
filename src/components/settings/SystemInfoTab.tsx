@@ -37,7 +37,7 @@ export default function SystemInfoTab({ systemInfo }: SystemInfoTabProps) {
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Version Badge Card */}
-        <div className="bg-white rounded-lg border border-subtle p-4 shadow-2xs">
+        <div className="bg-surface rounded-lg border border-subtle p-4 shadow-2xs">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-accent-soft/50 flex items-center justify-center text-accent shrink-0">
               <Package className="w-5 h-5" />
@@ -53,17 +53,17 @@ export default function SystemInfoTab({ systemInfo }: SystemInfoTabProps) {
           </div>
           <div className="mt-3 pt-3 border-t border-subtle flex items-center justify-between text-xs text-ink-2">
             <span>Release</span>
-            <span className="inline-flex items-center gap-1 font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full text-[11px]">
-              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+            <span className="inline-flex items-center gap-1 font-medium text-success bg-success-soft px-2 py-0.5 rounded-full text-[11px]">
+              <CheckCircle2 className="w-3 h-3 text-success" />
               Stable
             </span>
           </div>
         </div>
 
         {/* Build & Git Commit Card */}
-        <div className="bg-white rounded-lg border border-subtle p-4 shadow-2xs">
+        <div className="bg-surface rounded-lg border border-subtle p-4 shadow-2xs">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-accent-soft flex items-center justify-center text-accent shrink-0">
               <GitCommit className="w-5 h-5" />
             </div>
             <div className="min-w-0">
@@ -81,7 +81,7 @@ export default function SystemInfoTab({ systemInfo }: SystemInfoTabProps) {
                   className="p-1 text-muted hover:text-ink hover:bg-surface-sunk rounded transition-colors"
                 >
                   {copiedCommit ? (
-                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <Check className="w-3.5 h-3.5 text-success" />
                   ) : (
                     <Copy className="w-3.5 h-3.5" />
                   )}
@@ -98,9 +98,9 @@ export default function SystemInfoTab({ systemInfo }: SystemInfoTabProps) {
         </div>
 
         {/* Server Uptime Card */}
-        <div className="bg-white rounded-lg border border-subtle p-4 shadow-2xs">
+        <div className="bg-surface rounded-lg border border-subtle p-4 shadow-2xs">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-success-soft flex items-center justify-center text-success shrink-0">
               <Activity className="w-5 h-5" />
             </div>
             <div>
@@ -114,8 +114,8 @@ export default function SystemInfoTab({ systemInfo }: SystemInfoTabProps) {
           </div>
           <div className="mt-3 pt-3 border-t border-subtle flex items-center justify-between text-xs text-ink-2">
             <span>Status</span>
-            <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-700 text-[11px]">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="inline-flex items-center gap-1.5 font-semibold text-success text-[11px]">
+              <span className="w-2 h-2 rounded-full bg-success" />
               Operational
             </span>
           </div>
@@ -123,7 +123,7 @@ export default function SystemInfoTab({ systemInfo }: SystemInfoTabProps) {
       </div>
 
       {/* Details Table: Environment & Runtime Details */}
-      <div className="bg-white rounded-lg border border-subtle overflow-hidden shadow-2xs">
+      <div className="bg-surface rounded-lg border border-subtle overflow-hidden shadow-2xs">
         <div className="px-5 py-3.5 bg-page border-b border-subtle flex items-center gap-2">
           <Server className="w-4 h-4 text-ink-2" />
           <h2 className="text-xs font-bold text-ink uppercase tracking-wider">
@@ -199,7 +199,7 @@ export default function SystemInfoTab({ systemInfo }: SystemInfoTabProps) {
       </div>
 
       {/* Instance Summary Statistics */}
-      <div className="bg-white rounded-lg border border-subtle overflow-hidden shadow-2xs">
+      <div className="bg-surface rounded-lg border border-subtle overflow-hidden shadow-2xs">
         <div className="px-5 py-3.5 bg-page border-b border-subtle flex items-center gap-2">
           <FolderKanban className="w-4 h-4 text-ink-2" />
           <h2 className="text-xs font-bold text-ink uppercase tracking-wider">
@@ -209,7 +209,7 @@ export default function SystemInfoTab({ systemInfo }: SystemInfoTabProps) {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-subtle p-4">
           <div className="flex items-center gap-3 p-3">
-            <div className="w-9 h-9 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-accent-soft text-accent flex items-center justify-center shrink-0">
               <FolderKanban className="w-4 h-4" />
             </div>
             <div>
@@ -223,7 +223,7 @@ export default function SystemInfoTab({ systemInfo }: SystemInfoTabProps) {
           </div>
 
           <div className="flex items-center gap-3 p-3">
-            <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-warning-soft text-warning flex items-center justify-center shrink-0">
               <FileText className="w-4 h-4" />
             </div>
             <div>
@@ -237,7 +237,7 @@ export default function SystemInfoTab({ systemInfo }: SystemInfoTabProps) {
           </div>
 
           <div className="flex items-center gap-3 p-3">
-            <div className="w-9 h-9 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-accent-soft text-accent flex items-center justify-center shrink-0">
               <Users className="w-4 h-4" />
             </div>
             <div>

@@ -292,7 +292,7 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
             </span>
           )}
           {/* A white backing keeps the lozenge readable on the highlighted row. */}
-          <span className={`hidden sm:inline-flex shrink-0 rounded ${isActive ? "bg-white" : ""}`}>
+          <span className={`hidden sm:inline-flex shrink-0 rounded ${isActive ? "bg-surface" : ""}`}>
             <StatusBadge status={issue.status} color={issue.statusColor} className="max-w-[9rem]" />
           </span>
           {actionsHint(isActive)}
@@ -491,7 +491,7 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
         role="dialog"
         aria-modal="true"
         aria-label="Search issues, pages and projects"
-        className="w-full max-w-[680px] rounded-2xl bg-white/95 sm:bg-white/85 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_24px_80px_rgba(9,30,66,0.30),0_2px_8px_rgba(9,30,66,0.12)] ring-1 ring-black/10 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+        className="w-full max-w-[680px] rounded-2xl bg-surface/95 sm:bg-surface/85 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_24px_80px_rgba(9,30,66,0.30),0_2px_8px_rgba(9,30,66,0.12)] ring-1 ring-black/10 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
       >
         <div className="flex items-center gap-3 px-4 h-14">
           {actionsFor ? (
@@ -579,7 +579,7 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
           </div>
         )}
 
-        <div className="hidden sm:flex items-center gap-4 px-4 h-9 border-t border-black/5 text-xs text-ink-2 bg-white/40">
+        <div className="hidden sm:flex items-center gap-4 px-4 h-9 border-t border-black/5 text-xs text-ink-2 bg-surface/40">
           <span className="flex items-center gap-1.5">
             <Keys keys={["↑", "↓"]} active={false} /> to move
           </span>

@@ -19,6 +19,7 @@ import { cn } from "@/components/ui/cn";
 import { issueHref } from "@/lib/issueUrls";
 import { issueShortcutFor } from "@/lib/issueActivity";
 import IssueProperties, { type PickerName } from "./IssueProperties";
+import PropertyChips from "./PropertyChips";
 import IssueActivity from "./IssueActivity";
 import { useIssueData, type IssueContext } from "./useIssueData";
 
@@ -248,9 +249,30 @@ export default function IssueView({
 
   const TitleTag = variant === "page" ? "h1" : "h2";
   const layout = GRID[variant];
+  // On a phone the property list starts folded behind a row of chips.
+  const [allProperties, setAllProperties] = useState(false);
+  // On a phone, swiping sideways steps to the previous or next issue.
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    swipeStart.current = { x: t.clientX, y: t.clientY };
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const start = swipeStart.current;
+    swipeStart.current = null;
+    if (!start || !nav || window.matchMedia("(min-width: 768px)").matches) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    // A deliberate sideways swipe, not a scroll or a tap; not inside a text field.
+    if (Math.abs(dx) < 80 || Math.abs(dy) > Math.abs(dx) / 2) return;
+    if ((e.target as HTMLElement).closest("input, textarea, [contenteditable=true], [role=group]")) return;
+    if (dx < 0 && nav.index < nav.total - 1) nav.onNext?.();
+    if (dx > 0 && nav.index > 0) nav.onPrev?.();
+  };
 
   return (
-    <div ref={rootRef} className="flex min-h-0 flex-col">
+    <div ref={rootRef} className="flex min-h-0 flex-col" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       {/* Header: where the issue sits, and what you can do with it */}
       <div
         className={cn(
@@ -290,8 +312,8 @@ export default function IssueView({
         </nav>
 
         {nav && nav.total > 1 && nav.index >= 0 && (
-          <div className="flex shrink-0 items-center gap-0.5">
-            <span className="mr-1 hidden font-mono text-[11px] text-ink-2 sm:inline">
+          <div className="hidden shrink-0 items-center gap-0.5 md:flex">
+            <span className="mr-1 font-mono text-[11px] text-ink-2">
               {nav.index + 1} of {nav.total}
             </span>
             <IconButton
@@ -362,7 +384,7 @@ export default function IssueView({
             href={href}
             aria-label="Open as page"
             title="Open as page"
-            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-control text-ink-2 transition-colors hover:bg-surface-sunk hover:text-ink [&_svg]:h-4 [&_svg]:w-4"
+            className="hidden h-7 w-7 shrink-0 md:inline-flex items-center justify-center rounded-control text-ink-2 transition-colors hover:bg-surface-sunk hover:text-ink [&_svg]:h-4 [&_svg]:w-4"
           >
             <Maximize2 aria-hidden="true" />
           </Link>
@@ -419,7 +441,20 @@ export default function IssueView({
         </div>
 
         <div className={cn("grid grid-cols-1 gap-6", layout.grid)}>
-          <aside aria-label="Properties" className={cn("order-first border-b border-subtle pb-4", layout.aside)}>
+          <div className="order-first md:hidden">
+            <PropertyChips
+              data={data}
+              onOpen={(picker) => {
+                setAllProperties(true);
+                // Once the list is on screen, open the chip's picker.
+                if (picker) setTimeout(() => setOpenPicker(picker), 0);
+              }}
+            />
+          </div>
+          <aside
+            aria-label="Properties"
+            className={cn("order-first border-b border-subtle pb-4", !allProperties && "max-md:hidden", layout.aside)}
+          >
             <IssueProperties data={data} openPicker={openPicker} onOpenPickerChange={setOpenPicker} />
           </aside>
 

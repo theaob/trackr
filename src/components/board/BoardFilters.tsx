@@ -104,7 +104,7 @@ export default function BoardFilters({ users, filters, onChange, groupBy, onSele
   const people = users.filter((u) => filters.assigneeIds.includes(u.id)).map((u) => u.name.split(/\s+/)[0]);
 
   return (
-    <div role="group" aria-label="Filters" className="flex flex-wrap items-center gap-2 py-2.5">
+    <div role="group" aria-label="Filters" className="no-scrollbar flex items-center gap-2 overflow-x-auto py-2.5 sm:flex-wrap sm:overflow-visible">
       {currentUser && (
         <button
           type="button"

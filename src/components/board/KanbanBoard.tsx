@@ -747,7 +747,7 @@ export default function KanbanBoard({
                       ref={(el) => {
                         columnRefs.current[col.id] = el;
                       }}
-                      className="flex h-9 w-[85vw] max-w-[340px] shrink-0 snap-center items-center justify-between gap-2 rounded-card bg-surface-sunk px-3 md:w-auto md:max-w-none md:min-w-0"
+                      className="flex h-9 w-[calc(100vw-1.5rem)] shrink-0 snap-center snap-always sm:w-[calc(100vw-3rem)] items-center justify-between gap-2 rounded-card bg-surface-sunk px-3 md:w-auto md:max-w-none md:min-w-0"
                     >
                       <h3 className="min-w-0">
                         <ColumnTitle title={col.title} color={col.color} />
