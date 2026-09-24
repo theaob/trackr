@@ -195,7 +195,7 @@ export default function UsersSettingsTab() {
           <div className="flex-1">
             <h2 className="text-sm font-bold text-ink">Instance Permissions</h2>
             <p className="text-xs text-ink-2 mt-1 leading-relaxed">
-              Choose who can create new projects, and who administers this Trackr instance.
+              Choose who can create new projects, and who administers this Tamam instance.
               Instance administrators manage SSO, global webhooks and these permissions; SSO controls how every
               account signs in, so grant it only to people you trust with every account.
             </p>

@@ -275,10 +275,13 @@ test.describe.serial("accessibility", () => {
     await page.getByRole("button", { name: /Ada Lovelace/ }).click();
     await page.getByRole("menuitemradio", { name: "Dark" }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    // Compact is the default until someone picks Comfortable.
+    await expect(page.getByRole("menuitemradio", { name: "Compact" })).toHaveAttribute("aria-checked", "true");
+    await page.getByRole("menuitemradio", { name: "Comfortable" }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-density", "comfortable");
+    await expectNoSeriousViolations(page, "Account menu");
     await page.getByRole("menuitemradio", { name: "Compact" }).click();
     await expect(page.locator("html")).toHaveAttribute("data-density", "compact");
-    await expectNoSeriousViolations(page, "Account menu");
-    await page.getByRole("menuitemradio", { name: "Comfortable" }).click();
     await page.getByRole("menuitemradio", { name: "Match system" }).click();
     await page.keyboard.press("Escape");
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
@@ -344,14 +347,20 @@ test.describe.serial("accessibility", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Roadmap" })).toBeVisible();
     await expectNoSeriousViolations(page, "Roadmap");
 
-    await page.goto("/projects/APOLLO/releases");
-    await expect(page.getByRole("heading", { level: 1, name: "Releases" })).toBeVisible();
-    await page.getByRole("button", { name: "Create version" }).first().click();
+    // ⌘K's "Create release" goes to Releases with the dialog open.
+    await page.keyboard.press("ControlOrMeta+k");
+    const search = page.getByRole("dialog", { name: "Search issues, pages and projects" });
+    await search.getByRole("combobox").fill("create release");
+    await search.getByRole("option", { name: /Create release/ }).click();
+    await page.waitForURL(/\/projects\/APOLLO\/releases/);
     const create = page.getByRole("dialog", { name: "Create version" });
+    await expect(create).toBeVisible();
     await create.getByLabel("Name").fill("1.0");
     await expectNoSeriousViolations(page, "Create version dialog", "[role=dialog]");
     await create.getByRole("button", { name: "Create version" }).click();
     await expect(create).toBeHidden();
+    await expect(page.getByRole("heading", { level: 1, name: "Releases" })).toBeVisible();
+    await expect(page).not.toHaveURL(/create=1/);
     await expect(page.getByRole("cell", { name: "1.0", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Show the issues in 1.0" }).click();
     await expectNoSeriousViolations(page, "Releases");

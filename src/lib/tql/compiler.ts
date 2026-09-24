@@ -174,7 +174,7 @@ export class TQLCompiler {
         if (u === "TO_DO") return "TODO";
         return u;
       });
-      // In Trackr, WorkflowStatusCategory is TODO, IN_PROGRESS, DONE
+      // In Tamam, WorkflowStatusCategory is TODO, IN_PROGRESS, DONE
       // We can map default names
       const categoryToStatuses: Record<string, string[]> = {
         TODO: ["TODO", "Backlog", "To Do", "Open"],

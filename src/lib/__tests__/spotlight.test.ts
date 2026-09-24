@@ -30,7 +30,7 @@ vi.mock("@/lib/auth/session", async () => {
 });
 
 import prisma from "@/lib/db";
-import { getSpotlightProjects, searchSpotlightIssues } from "@/lib/actions/search";
+import { getSpotlightProjects, searchSpotlightIssues, searchSpotlightPeople } from "@/lib/actions/search";
 import {
   buildSpotlightDestinations,
   filterablePage,
@@ -38,8 +38,10 @@ import {
   issueKeyForQuery,
   projectKeyFromPath,
   rankDestinations,
+  personMatches,
   rankIssueMatches,
   spotlightIssueHref,
+  spotlightPersonHref,
 } from "@/lib/spotlight";
 
 const PROJECTS = [
@@ -130,6 +132,20 @@ describe("helpers", () => {
   });
 });
 
+describe("people", () => {
+  it("matches the start of any word of the name", () => {
+    expect(personMatches("Grace Hopper", "hop")).toBe(true);
+    expect(personMatches("Grace Hopper", "g h")).toBe(true);
+    expect(personMatches("Grace Hopper", "race")).toBe(false);
+  });
+
+  it("links to the issues assigned to them", () => {
+    const href = spotlightPersonHref("APOLLO", "u42");
+    expect(href.startsWith("/projects/APOLLO/issues?tql=")).toBe(true);
+    expect(decodeURIComponent(href.split("tql=")[1])).toBe('project = "APOLLO" AND assignee = "u42" ORDER BY updated DESC');
+  });
+});
+
 describe("server search", () => {
   let memberId: string;
   let outsiderId: string;
@@ -191,6 +207,21 @@ describe("server search", () => {
     }
     session.userId = memberId;
     expect((await getSpotlightProjects()).map((p) => p.key)).toEqual(["OSS", "SEC"]);
+  });
+
+  it("finds people on the caller's project teams, by name only", async () => {
+    const secret = await prisma.project.findUniqueOrThrow({ where: { key: "SEC" } });
+    const tess = await prisma.user.create({ data: { name: "Tess Teammate", email: "tess@x.dev" } });
+    await prisma.projectMember.create({ data: { projectId: secret.id, userId: tess.id, role: "MEMBER" } });
+
+    session.userId = memberId;
+    expect((await searchSpotlightPeople("tes")).map((p) => p.name)).toEqual(["Tess Teammate"]);
+    expect(await searchSpotlightPeople("tess@x.dev")).toEqual([]);
+    // Outsiders share no team, and signed-out visitors find nobody.
+    for (const who of [outsiderId, null]) {
+      session.userId = who;
+      expect(await searchSpotlightPeople("tess")).toEqual([]);
+    }
   });
 
   it("treats % and _ as plain characters and ignores empty queries", async () => {

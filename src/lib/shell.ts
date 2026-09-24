@@ -43,7 +43,7 @@ export function shellLocation(pathname: string | null | undefined): ShellLocatio
   if (path === "/inbox") return { section: "inbox", title: "Inbox" };
   if (path === "/projects") return { section: "projects", title: "Projects" };
   if (path === "/settings") return { section: "system-settings", title: "System settings" };
-  return { section: "other", title: "Trackr" };
+  return { section: "other", title: "Tamam" };
 }
 
 /** Two letters for a project's square in the rail. */

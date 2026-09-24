@@ -7,7 +7,7 @@ import InboxView from "@/components/inbox/InboxView";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Inbox · Trackr" };
+export const metadata = { title: "Inbox · Tamam" };
 
 export default async function InboxPage() {
   const user = await requirePageUser("/inbox");

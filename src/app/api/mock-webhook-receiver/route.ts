@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const event = request.headers.get("x-trackr-event") || "unknown";
+    const event = (request.headers.get("x-tamam-event") ?? request.headers.get("x-trackr-event")) || "unknown";
     const body = await request.json();
 
     return NextResponse.json({

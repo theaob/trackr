@@ -49,7 +49,7 @@ export async function createPersonalAccessToken(params: {
     const userId = user.id;
     const rawToken = generateRawToken();
     const tokenHash = hashToken(rawToken);
-    const tokenPrefix = rawToken.slice(0, TOKEN_DISPLAY_PREFIX_LENGTH); // e.g. "trackr_pat_ab123"
+    const tokenPrefix = rawToken.slice(0, TOKEN_DISPLAY_PREFIX_LENGTH); // e.g. "tamam_pat_ab123"
     const lastFour = rawToken.slice(-4);
 
     const expiresAt =

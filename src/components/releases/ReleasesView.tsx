@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Archive,
@@ -179,6 +180,19 @@ export default function ReleasesView({ project, initialVersions }: ReleasesViewP
 
   const count = (s: VersionStatus) => versions.filter((v) => v.status === s).length;
   const canManage = permissions.canManageVersions;
+
+  // ?create=1 (from ⌘K's "Create release") opens the dialog once, then leaves the address.
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const wantsCreate = searchParams?.get("create") === "1";
+  useEffect(() => {
+    if (!wantsCreate) return;
+    if (canManage) openCreate(null);
+    router.replace(pathname ?? "", { scroll: false });
+    // Only when the address asks for it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantsCreate]);
 
   return (
     <div className="flex h-full flex-1 flex-col overflow-hidden bg-page">

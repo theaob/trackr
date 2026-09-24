@@ -64,7 +64,7 @@ const nextConfig = {
     GIT_COMMIT: commitHash,
     NEXT_PUBLIC_GIT_COMMIT: commitHash,
   },
-  // Trackr never uses next/image. Leaving the optimizer on only exposes
+  // Tamam never uses next/image. Leaving the optimizer on only exposes
   // /_next/image, which has had serious advisories of its own.
   images: { unoptimized: true },
   async headers() {
@@ -72,7 +72,7 @@ const nextConfig = {
       {
         source: "/:path*",
         headers: [
-          // Nothing legitimate frames Trackr; refusing it stops clickjacking.
+          // Nothing legitimate frames Tamam; refusing it stops clickjacking.
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

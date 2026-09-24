@@ -1,6 +1,5 @@
 "use server";
 
-import { issueHref } from "@/lib/issueUrls";
 import prisma from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { priorityPage } from "@/lib/prioritySort";
@@ -21,7 +20,7 @@ import {
   canModerateProject,
 } from "@/lib/auth/guards";
 import { getCurrentUser } from "@/lib/auth/session";
-import { findMentionedUsers } from "@/lib/mentions";
+import { notifyMentions } from "@/lib/mentions";
 import { createIssueWithKey } from "@/lib/issueKeys";
 import { attachStatusColors } from "@/lib/statusColorLookup";
 import { planColumnOrder } from "@/lib/boardOrder";
@@ -738,33 +737,12 @@ export async function createIssue(data: {
       [reporterId]
     );
 
-    const mentioned = await findMentionedUsers(data.projectId, data.description || "", {
-      exclude: [reporterId, data.assigneeId],
+    await notifyMentions({
+      issue: { id: newIssue.id, key: newIssue.key, projectId: data.projectId, projectKey: project.key },
+      text: data.description,
+      actor: { id: reporterId, name: user.name },
+      where: "description",
     });
-
-    if (mentioned.length > 0) {
-      const snippet = (data.description || "").slice(0, 60);
-      const ellipsis = (data.description || "").length > 60 ? "..." : "";
-
-      await prisma.notification.createMany({
-        data: mentioned.map((mUser) => ({
-          userId: mUser.id,
-          title: `Mentioned in ${newIssue.key}`,
-          message: `You were mentioned in ${newIssue.key}: "${snippet}${ellipsis}"`,
-          link: issueHref(project.key, newIssue.key),
-        })),
-      });
-
-      await prisma.activityLog.createMany({
-        data: mentioned.map((mUser) => ({
-          issueId: newIssue.id,
-          userId: reporterId,
-          action: "MENTIONED",
-          field: "description",
-          newValue: mUser.name,
-        })),
-      });
-    }
 
     revalidateProjectRoutes(project.key);
 
@@ -1042,40 +1020,15 @@ export async function updateIssue(
         );
       }
 
-      // Notify project members newly mentioned in the description.
-      if (
-        data.description !== undefined &&
-        data.description !== existing.description &&
-        data.description
-      ) {
-        const mentioned = await findMentionedUsers(projectId, data.description, {
-          exclude: [actorId, existing.assigneeId],
+      // People newly mentioned in the description hear about it.
+      if (data.description !== undefined && data.description !== existing.description && data.description) {
+        await notifyMentions({
+          issue: { id, key: existing.key, projectId, projectKey: existing.project.key },
+          text: data.description,
           previousText: existing.description,
+          actor: { id: actorId, name: user.name },
+          where: "description",
         });
-
-        if (mentioned.length > 0) {
-          const snippet = data.description.slice(0, 60);
-          const ellipsis = data.description.length > 60 ? "..." : "";
-
-          await prisma.notification.createMany({
-            data: mentioned.map((mUser) => ({
-              userId: mUser.id,
-              title: `Mentioned in ${existing.key}`,
-              message: `You were mentioned in ${existing.key}: "${snippet}${ellipsis}"`,
-              link: issueHref(existing.project.key, existing.key),
-            })),
-          });
-
-          await prisma.activityLog.createMany({
-            data: mentioned.map((mUser) => ({
-              issueId: id,
-              userId: actorId,
-              action: "MENTIONED",
-              field: "description",
-              newValue: mUser.name,
-            })),
-          });
-        }
       }
     }
 

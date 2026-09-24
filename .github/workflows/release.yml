@@ -179,7 +179,10 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
+          # Published as tamam, and as trackr too until 0.44.0 so existing
+          # installs that pull the old name keep getting updates.
           images: |
+            ${{ format('{0}/tamam', secrets.DOCKERHUB_USERNAME) }}
             ${{ secrets.DOCKERHUB_REPO || format('{0}/trackr', secrets.DOCKERHUB_USERNAME) }}
             ghcr.io/${{ github.repository }}
           tags: |

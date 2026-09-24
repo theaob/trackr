@@ -20,7 +20,7 @@ function read(key: string): string | null {
 /** The theme and density choices, and setters that apply them at once. */
 export function useAppearance() {
   const [theme, setThemeState] = useState<ThemeChoice>("system");
-  const [density, setDensityState] = useState<Density>("comfortable");
+  const [density, setDensityState] = useState<Density>("compact");
 
   useEffect(() => {
     const sync = () => {

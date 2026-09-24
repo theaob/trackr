@@ -7,7 +7,7 @@ import HomeView from "@/components/home/HomeView";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Home · Trackr" };
+export const metadata = { title: "Home · Tamam" };
 
 export default async function HomePage() {
   const user = await requirePageUser("/home");

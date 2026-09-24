@@ -29,10 +29,12 @@ import {
 import { useCurrentUser } from "@/context/UserContext";
 import { useModKeyLabel } from "@/hooks/useModKeyLabel";
 import { IssueTypeIcon, StatusBadge } from "@/components/common/IssueIcons";
+import UserAvatar from "@/components/common/UserAvatar";
 import {
   getSpotlightIssueActions,
   getSpotlightProjects,
   searchSpotlightIssues,
+  searchSpotlightPeople,
   type SpotlightIssueActions,
 } from "@/lib/actions/search";
 import { updateIssue } from "@/lib/actions/issues";
@@ -43,6 +45,7 @@ import {
   PAGE_SHORTCUTS,
   SpotlightDestination,
   SpotlightIssue,
+  SpotlightPerson,
   SpotlightProject,
   buildSpotlightDestinations,
   filterablePage,
@@ -51,6 +54,7 @@ import {
   projectKeyFromPath,
   rankDestinations,
   spotlightIssueHref,
+  spotlightPersonHref,
 } from "@/lib/spotlight";
 import type { IssueType } from "@/types";
 
@@ -141,6 +145,7 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
   const [query, setQuery] = useState("");
   const [projects, setProjects] = useState<SpotlightProject[]>(cachedProjects);
   const [issues, setIssues] = useState<SpotlightIssue[]>([]);
+  const [people, setPeople] = useState<SpotlightPerson[]>([]);
   const [searching, setSearching] = useState(false);
   const [active, setActive] = useState(0);
   const searchSeq = useRef(0);
@@ -176,15 +181,18 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
     if (!q || actionsFor) {
       searchSeq.current++;
       setIssues([]);
+      setPeople([]);
       setSearching(false);
       return;
     }
     setSearching(true);
     const seq = ++searchSeq.current;
     const timer = setTimeout(() => {
-      searchSpotlightIssues(q, currentProjectKey)
-        .then((results) => {
-          if (searchSeq.current === seq) setIssues(results);
+      Promise.all([searchSpotlightIssues(q, currentProjectKey), searchSpotlightPeople(q)])
+        .then(([issueResults, peopleResults]) => {
+          if (searchSeq.current !== seq) return;
+          setIssues(issueResults);
+          setPeople(peopleResults);
         })
         .finally(() => {
           if (searchSeq.current === seq) setSearching(false);
@@ -317,6 +325,22 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
       ),
     });
 
+    const personRow = (person: SpotlightPerson, projectKey: string): Row => ({
+      id: `person:${person.id}`,
+      href: spotlightPersonHref(projectKey, person.id),
+      render: (isActive) => (
+        <>
+          <span className="w-7 flex justify-center shrink-0">
+            <UserAvatar user={person} size="xs" />
+          </span>
+          <span className="min-w-0 flex-1 truncate font-medium">{person.name}</span>
+          <span className={`hidden sm:inline text-xs shrink-0 ${isActive ? "text-accent-fg/80" : "text-muted"}`}>
+            Assigned issues
+          </span>
+        </>
+      ),
+    });
+
     const actionRow = (id: string, label: React.ReactNode, icon: React.ReactNode, run: () => void, keys?: string[]): Row => ({
       id,
       run,
@@ -344,8 +368,15 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
     }
     const lower = q.toLowerCase();
     const offers = (...phrases: string[]) => !q || phrases.some((p) => p.startsWith(lower));
-    if (onCreateIssue && offers("create issue", "new issue")) {
+    if (onCreateIssue && offers("create issue", "new issue", "issue")) {
       actions.push(actionRow("action:create", "Create issue", <Plus className="w-4 h-4" />, onCreateIssue, ["C"]));
+    }
+    if (currentUser && currentProjectKey && offers("create release", "new release", "release", "create version", "new version", "version")) {
+      actions.push({
+        ...actionRow("action:create-release", "Create release", <Rocket className="w-4 h-4" />, () => {}),
+        run: undefined,
+        href: `/projects/${encodeURIComponent(currentProjectKey)}/releases?create=1`,
+      });
     }
     if (offers("keyboard shortcuts", "shortcuts", "help")) {
       actions.push(actionRow("action:shortcuts", "Keyboard shortcuts", <Keyboard className="w-4 h-4" />, onShowShortcuts, ["?"]));
@@ -412,12 +443,15 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
       result.push({ label: "Projects", rows: ranked.filter((d) => d.kind === "project").slice(0, 4).map(destinationRow) });
       result.push({ label: "Pages", rows: ranked.filter((d) => d.kind === "page").slice(0, 6).map(destinationRow) });
       if (!exactKey) result.push(issueGroup);
+      // A person opens the issues assigned to them, here or in the first project.
+      const peopleProject = currentProjectKey ?? projects[0]?.key;
+      if (peopleProject) result.push({ label: "People", rows: people.map((p) => personRow(p, peopleProject)) });
       result.push({ label: "Actions", rows: actions });
     }
     return result.filter((g) => g.rows.length > 0);
     // runIssueUpdate and toast only close over stable values.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, issues, destinations, currentProjectKey, filterable, onCreateIssue, onShowShortcuts, actionsFor, issueActions, recent, modKey, currentUser]);
+  }, [q, issues, people, projects, destinations, currentProjectKey, filterable, onCreateIssue, onShowShortcuts, actionsFor, issueActions, recent, modKey, currentUser]);
 
   const rows = useMemo(() => groups.flatMap((g) => g.rows), [groups]);
   const activeIndex = rows.length === 0 ? -1 : Math.min(active, rows.length - 1);

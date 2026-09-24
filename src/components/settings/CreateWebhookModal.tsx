@@ -319,7 +319,7 @@ export default function CreateWebhookModal({
       <DialogContent
         size="lg"
         title="Create webhook"
-        description="Trackr sends an HTTP POST with the event, who did it and what changed."
+        description="Tamam sends an HTTP POST with the event, who did it and what changed."
         footer={
           <>
             <span className="mr-auto text-xs text-muted">
@@ -345,7 +345,7 @@ export default function CreateWebhookModal({
             <Input
               type="url"
               className="font-mono text-xs"
-              placeholder="https://example.com/webhooks/trackr"
+              placeholder="https://example.com/webhooks/tamam"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
             />

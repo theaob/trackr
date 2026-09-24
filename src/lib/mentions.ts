@@ -1,5 +1,5 @@
 import prisma from "@/lib/db";
-import { PUBLIC_USER_SELECT } from "@/lib/auth/publicUser";
+import { issueHref } from "@/lib/issueUrls";
 
 /**
  * Escape a string for literal use inside a regular expression.
@@ -37,10 +37,11 @@ export function mentionsUser(text: string, name: string): boolean {
 }
 
 /**
- * Users mentioned in `text` who can actually see the project.
+ * Users mentioned in `text` who can open the issue: the project lead, its
+ * members, and on a project published to anonymous viewers, everyone.
  *
- * Scoped to project members rather than the whole user table: mentioning a
- * stranger should not notify them about an issue they cannot open.
+ * Nobody who can't open the issue is told about it, since the notice quotes
+ * the text.
  */
 export async function findMentionedUsers(
   projectId: string,
@@ -51,21 +52,68 @@ export async function findMentionedUsers(
 
   const excluded = new Set(options.exclude?.filter(Boolean) as string[]);
 
-  const members = await prisma.projectMember.findMany({
-    where: { projectId },
-    select: { user: { select: PUBLIC_USER_SELECT } },
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { leadId: true, allowAnonymousViewers: true },
   });
+  if (!project) return [];
 
-  return members
-    .map((m) => m.user)
-    .filter((user) => {
-      if (excluded.has(user.id)) return false;
-      if (!mentionsUser(text, user.name)) return false;
-      // On an edit, only notify for mentions that are newly added.
-      if (options.previousText && mentionsUser(options.previousText, user.name)) {
-        return false;
-      }
-      return true;
-    })
-    .map((user) => ({ id: user.id, name: user.name }));
+  const candidates: MentionCandidate[] = project.allowAnonymousViewers
+    ? await prisma.user.findMany({ select: { id: true, name: true } })
+    : await prisma.user.findMany({
+        where: {
+          OR: [{ projectMembers: { some: { projectId } } }, ...(project.leadId ? [{ id: project.leadId }] : [])],
+        },
+        select: { id: true, name: true },
+      });
+
+  return candidates.filter((user) => {
+    if (excluded.has(user.id)) return false;
+    if (!mentionsUser(text, user.name)) return false;
+    // On an edit, only mentions that are new count.
+    if (options.previousText && mentionsUser(options.previousText, user.name)) return false;
+    return true;
+  });
+}
+
+/**
+ * Tells everyone mentioned in a comment or description, and records it in the
+ * issue's history. Only the author is left out: the assignee, the reporter and
+ * watchers all get the mention itself. Returns who was notified.
+ */
+export async function notifyMentions({
+  issue,
+  text,
+  previousText,
+  actor,
+  where,
+}: {
+  issue: { id: string; key: string; projectId: string; projectKey: string };
+  text: string | null | undefined;
+  previousText?: string | null;
+  actor: { id: string; name: string };
+  where: "comment" | "description";
+}): Promise<string[]> {
+  const mentioned = await findMentionedUsers(issue.projectId, text ?? "", { exclude: [actor.id], previousText });
+  if (mentioned.length === 0) return [];
+
+  const snippet = `${(text ?? "").slice(0, 60)}${(text ?? "").length > 60 ? "..." : ""}`;
+  await prisma.notification.createMany({
+    data: mentioned.map((user) => ({
+      userId: user.id,
+      title: where === "comment" ? `Mentioned in a comment on ${issue.key}` : `Mentioned in ${issue.key}`,
+      message: `${actor.name} mentioned you: "${snippet}"`,
+      link: issueHref(issue.projectKey, issue.key),
+    })),
+  });
+  await prisma.activityLog.createMany({
+    data: mentioned.map((user) => ({
+      issueId: issue.id,
+      userId: actor.id,
+      action: "MENTIONED",
+      field: where,
+      newValue: user.name,
+    })),
+  });
+  return mentioned.map((user) => user.id);
 }

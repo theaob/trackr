@@ -6,6 +6,8 @@
 export type ThemeChoice = "light" | "dark" | "system";
 export type Density = "comfortable" | "compact";
 
+// Browser-stored keys keep their names from before the rename to Tamam, so
+// everyone's choices survive the upgrade.
 export const THEME_KEY = "trackr:theme";
 export const DENSITY_KEY = "trackr:density";
 /** Fired on window when either changes, so every control showing it updates. */
@@ -15,8 +17,9 @@ export function readTheme(value: string | null | undefined): ThemeChoice {
   return value === "light" || value === "dark" ? value : "system";
 }
 
+/** Compact unless someone chose Comfortable. */
 export function readDensity(value: string | null | undefined): Density {
-  return value === "compact" ? "compact" : "comfortable";
+  return value === "comfortable" ? "comfortable" : "compact";
 }
 
 /** The theme to draw: "system" follows the operating system. */
@@ -36,6 +39,6 @@ export const APPEARANCE_SCRIPT = `(function(){try{var d=document.documentElement
   THEME_KEY
 )});d.dataset.theme=c==="light"||c==="dark"?c:m.matches?"dark":"light";d.dataset.density=s.getItem(${JSON.stringify(
   DENSITY_KEY
-)})==="compact"?"compact":"comfortable";window.getComputedStyle(d).color;setTimeout(function(){n.remove()},0)}a();m.addEventListener("change",a);window.addEventListener(${JSON.stringify(
+)})==="comfortable"?"comfortable":"compact";window.getComputedStyle(d).color;setTimeout(function(){n.remove()},0)}a();m.addEventListener("change",a);window.addEventListener(${JSON.stringify(
   APPEARANCE_EVENT
 )},a)}catch(e){}})();`;

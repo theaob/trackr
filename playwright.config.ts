@@ -26,7 +26,7 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       DATABASE_URL: "file:./e2e.db",
-      TRACKR_DATA_DIR: "./e2e-data",
+      TAMAM_DATA_DIR: "./e2e-data",
       AUTH_SECRET: "e2e-only-secret-e2e-only-secret-e2e-only-secret",
     },
   },

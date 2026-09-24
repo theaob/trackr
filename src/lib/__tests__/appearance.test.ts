@@ -11,12 +11,13 @@ function runScript(systemDark: boolean) {
 }
 
 describe("appearance", () => {
-  it("reads stored choices, defaulting to the system theme and comfortable rows", () => {
+  it("reads stored choices, defaulting to the system theme and compact rows", () => {
     expect(readTheme("dark")).toBe("dark");
     expect(readTheme("purple")).toBe("system");
     expect(readTheme(null)).toBe("system");
-    expect(readDensity("compact")).toBe("compact");
-    expect(readDensity(undefined)).toBe("comfortable");
+    expect(readDensity("comfortable")).toBe("comfortable");
+    expect(readDensity(undefined)).toBe("compact");
+    expect(readDensity("roomy")).toBe("compact");
     expect(resolveTheme("system", true)).toBe("dark");
     expect(resolveTheme("light", true)).toBe("light");
   });
@@ -25,13 +26,13 @@ describe("appearance", () => {
     localStorage.clear();
     const systemListeners = runScript(true);
     expect(document.documentElement.dataset.theme).toBe("dark");
-    expect(document.documentElement.dataset.density).toBe("comfortable");
+    expect(document.documentElement.dataset.density).toBe("compact");
 
     localStorage.setItem(THEME_KEY, "light");
-    localStorage.setItem(DENSITY_KEY, "compact");
+    localStorage.setItem(DENSITY_KEY, "comfortable");
     window.dispatchEvent(new Event(APPEARANCE_EVENT));
     expect(document.documentElement.dataset.theme).toBe("light");
-    expect(document.documentElement.dataset.density).toBe("compact");
+    expect(document.documentElement.dataset.density).toBe("comfortable");
     expect(systemListeners).toHaveLength(1);
   });
 });

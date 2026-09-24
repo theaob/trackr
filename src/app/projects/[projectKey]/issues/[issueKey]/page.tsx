@@ -21,7 +21,7 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { issueKey } = await params;
   const issue = await loadIssue(decodeURIComponent(issueKey));
-  return { title: issue ? `${issue.key}: ${issue.title} · Trackr` : "Issue · Trackr" };
+  return { title: issue ? `${issue.key}: ${issue.title} · Tamam` : "Issue · Tamam" };
 }
 
 /** An issue on its own page: what links, notifications and "Open as page" lead to. */

@@ -207,7 +207,7 @@ export default function PersonalAccessTokensModal({
       <DialogContent
         size={view === "list" ? "xl" : "md"}
         title={titles[view]}
-        description={view === "list" ? "Tokens let scripts, integrations and developer tools use the Trackr API as you." : undefined}
+        description={view === "list" ? "Tokens let scripts, integrations and developer tools use the Tamam API as you." : undefined}
         footer={footers[view]}
       >
         {view === "list" && (
@@ -231,7 +231,7 @@ export default function PersonalAccessTokensModal({
               <div className="rounded-card border border-dashed border-subtle px-4 py-12 text-center">
                 <KeyRound className="mx-auto mb-2 h-8 w-8 text-muted" aria-hidden="true" />
                 <p className="text-[13px] font-medium text-ink">No tokens yet</p>
-                <p className="mx-auto mt-1 max-w-sm text-xs text-muted">Create one to use the Trackr API from your editor, CI or scripts.</p>
+                <p className="mx-auto mt-1 max-w-sm text-xs text-muted">Create one to use the Tamam API from your editor, CI or scripts.</p>
               </div>
             ) : (
               <div className="overflow-x-auto rounded-control border border-subtle">

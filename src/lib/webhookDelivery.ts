@@ -11,7 +11,7 @@ const systemResolver: Resolver = (hostname) => dns.lookup(hostname, { all: true 
 
 export const BLOCKED_ADDRESS_ERROR =
   "Webhook URLs may not point at loopback, link-local or private addresses. " +
-  "Set TRACKR_ALLOW_PRIVATE_WEBHOOKS=1 to allow them.";
+  "Set TAMAM_ALLOW_PRIVATE_WEBHOOKS=1 to allow them.";
 
 /**
  * A connection-time DNS lookup that refuses internal addresses.

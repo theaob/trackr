@@ -25,7 +25,7 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Trackr - Agile Project Management",
+  title: "Tamam",
   description: "High-performance agile project management and issue tracking platform",
 };
 
@@ -48,7 +48,7 @@ export default async function RootLayout({
   return (
     // The theme script sets data-theme and data-density before the first paint;
     // the server can't know them, so React is told not to compare them.
-    <html lang="en" className={`${plexSans.variable} ${plexMono.variable}`} suppressHydrationWarning>
+    <html lang="en" data-density="compact" className={`${plexSans.variable} ${plexMono.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: APPEARANCE_SCRIPT }} />
       </head>

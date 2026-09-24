@@ -1,6 +1,5 @@
 "use server";
 
-import { issueHref } from "@/lib/issueUrls";
 import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { triggerWebhooks } from "./webhooks";
@@ -12,7 +11,7 @@ import {
   toActionError,
   canModerateProject,
 } from "@/lib/auth/guards";
-import { findMentionedUsers } from "@/lib/mentions";
+import { notifyMentions } from "@/lib/mentions";
 import { issueLink, notifyUsers, notifyWatchers } from "@/lib/notify";
 
 
@@ -63,41 +62,20 @@ export async function addComment(
       link: issueLink(issue.project.key, issue.key),
     };
 
-    // The assignee and reporter hear about every comment but their own.
-    await notifyUsers(projectId, [issue.assigneeId, issue.reporterId], commentNotice, [actorId]);
-
-    // Notify project members mentioned in the comment.
-    const mentioned = await findMentionedUsers(projectId, content, {
-      exclude: [actorId, issue.assigneeId, issue.reporterId],
+    // Everyone mentioned hears about it as a mention, the assignee and
+    // reporter included; the assignee and reporter otherwise hear about every
+    // comment but their own.
+    const mentioned = await notifyMentions({
+      issue: { id: issueId, key: issue.key, projectId, projectKey: issue.project.key },
+      text: content,
+      actor: { id: actorId, name: comment.author.name },
+      where: "comment",
     });
-
-    if (mentioned.length > 0) {
-      const snippet = content.slice(0, 60);
-      const ellipsis = content.length > 60 ? "..." : "";
-
-      await prisma.notification.createMany({
-        data: mentioned.map((mUser) => ({
-          userId: mUser.id,
-          title: `Mentioned in comment on ${issue.key}`,
-          message: `${comment.author.name} mentioned you: "${snippet}${ellipsis}"`,
-          link: issueHref(issue.project.key, issue.key),
-        })),
-      });
-
-      await prisma.activityLog.createMany({
-        data: mentioned.map((mUser) => ({
-          issueId,
-          userId: actorId,
-          action: "MENTIONED",
-          field: "comment",
-          newValue: mUser.name,
-        })),
-      });
-    }
+    await notifyUsers(projectId, [issue.assigneeId, issue.reporterId], commentNotice, [actorId, ...mentioned]);
 
     await notifyWatchers(
       issueId,
-      [actorId, issue.assigneeId, issue.reporterId, ...mentioned.map((m) => m.id)],
+      [actorId, issue.assigneeId, issue.reporterId, ...mentioned],
       commentNotice.title,
       commentNotice.message,
       commentNotice.link
@@ -152,6 +130,15 @@ export async function updateComment(commentId: string, content: string) {
       where: { id: commentId },
       data: { content: content.trim() },
       include: { author: { select: DISPLAY_USER_SELECT } },
+    });
+
+    // People added to the comment by this edit hear about it too.
+    await notifyMentions({
+      issue: { id: comment.issueId, key: comment.issue.key, projectId, projectKey: comment.issue.project.key },
+      text: content.trim(),
+      previousText: comment.content,
+      actor: { id: user.id, name: user.name },
+      where: "comment",
     });
 
     await prisma.activityLog.create({

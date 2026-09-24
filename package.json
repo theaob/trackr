@@ -1,6 +1,6 @@
 {
-  "name": "trackr",
-  "version": "0.40.0",
+  "name": "tamam",
+  "version": "0.41.0",
   "private": true,
   "scripts": {
     "dev": "next dev",

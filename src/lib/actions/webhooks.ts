@@ -14,6 +14,7 @@ import {
 import { getCurrentUser } from "@/lib/auth/session";
 import { checkWebhookUrl } from "@/lib/webhookUrl";
 import { postWebhook } from "@/lib/webhookDelivery";
+import { webhookHeaders } from "@/lib/webhookHeaders";
 import { TQLParser } from "@/lib/tql/parser";
 import { TQLCompiler } from "@/lib/tql/compiler";
 
@@ -252,12 +253,7 @@ async function deliverWebhook(
   const payloadString = JSON.stringify(payload);
 
   const deliveryId = crypto.randomUUID();
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "User-Agent": "Trackr-Webhook-Engine/1.0",
-    "X-Trackr-Event": event,
-    "X-Trackr-Delivery": deliveryId,
-  };
+  const headers = webhookHeaders(event, deliveryId);
 
   if (webhook.secret) {
     headers["X-Hub-Signature-256"] = computeHmacSignature(webhook.secret, payloadString);
@@ -518,7 +514,7 @@ export async function testWebhook(webhookId: string): Promise<{
       actor,
       changelog: null,
       data: {
-        message: "This is a test webhook trigger from Trackr",
+        message: "This is a test webhook trigger from Tamam",
         webhookId: webhook.id,
         webhookName: webhook.name,
         jqlFilter: webhook.jqlFilter,

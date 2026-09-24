@@ -1,10 +1,10 @@
 import type { MetadataRoute } from "next";
 
-// Lets browsers install Trackr as an app with the proper icon.
+// Lets browsers install Tamam as an app with the proper icon.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Trackr",
-    short_name: "Trackr",
+    name: "Tamam",
+    short_name: "Tamam",
     start_url: "/projects",
     display: "standalone",
     background_color: "#F7F8FA",

@@ -2,7 +2,7 @@
 /**
  * Set or reset a user's password.
  *
- * Trackr used to accept any password for an account with no password hash.
+ * Early versions (as Trackr) accepted any password for an account with no password hash.
  * That is refused now, so a database created before passwords existed cannot
  * be signed into until an operator sets one here.
  *
@@ -118,7 +118,7 @@ async function main() {
   if (args.length === 0 || args[0] === "--help" || args[0] === "-h") {
     console.log(
       [
-        "Set or reset a Trackr password.",
+        "Set or reset a Tamam password.",
         "",
         "  npm run set-password -- --list                show accounts and whether they have a password",
         "  npm run set-password -- <email>               set a generated password, printed once",

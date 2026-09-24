@@ -32,7 +32,7 @@ COPY . .
 
 # Prepare two template databases: an empty one (schema only) that a fresh
 # install boots from by default, sending people to /setup to create the real
-# admin account, and a seeded one used only when TRACKR_SEED_DEMO=1 opts in.
+# admin account, and a seeded one used only when TAMAM_SEED_DEMO=1 opts in.
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_URL="file:/app/prisma/template.db"
 RUN node ./node_modules/prisma/build/index.js db push --skip-generate

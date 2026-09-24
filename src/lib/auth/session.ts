@@ -7,6 +7,7 @@ import prisma from "@/lib/db";
 import { dataDir } from "@/lib/paths";
 import { PUBLIC_USER_SELECT, SessionUser } from "@/lib/auth/publicUser";
 import { ensureInstanceAdminExists } from "@/lib/auth/instanceAdmin";
+import { settingOn } from "@/lib/env";
 
 export { PUBLIC_USER_SELECT };
 export type { SessionUser };
@@ -137,11 +138,11 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
  * certificate) or has TLS terminated by a reverse proxy in front of it. A
  * cookie marked Secure is silently dropped by the browser on any non-HTTPS
  * origin other than localhost, which looks like sign-in "not sticking" --
- * every request after it comes back anonymous. TRACKR_TRUST_PROXY opts into
+ * every request after it comes back anonymous. TAMAM_TRUST_PROXY opts into
  * trusting X-Forwarded-Proto from a reverse proxy that terminates TLS.
  */
 async function isSecureRequest(): Promise<boolean> {
-  if (process.env.TRACKR_TRUST_PROXY !== "1") return false;
+  if (!settingOn("TRUST_PROXY")) return false;
   try {
     return (await headers()).get("x-forwarded-proto") === "https";
   } catch {

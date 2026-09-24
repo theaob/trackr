@@ -266,7 +266,7 @@ export default function TQLQueryBar({
       <Dialog open={showHelpModal} onOpenChange={setShowHelpModal}>
         <DialogContent
           size="lg"
-          title="TQL, Trackr's query language"
+          title="TQL, Tamam's query language"
           description="Pick an example to start from, or combine fields with AND, OR and NOT."
           footer={<Button onClick={() => setShowHelpModal(false)}>Done</Button>}
         >

@@ -27,7 +27,7 @@ import { useKeyboardShortcutsContext } from "@/context/KeyboardShortcutsContext"
 import { useModKeyLabel } from "@/hooks/useModKeyLabel";
 import { PROJECT_PAGES, type SpotlightPageId } from "@/lib/spotlight";
 import { isProjectMember, projectInitials, projectPageTitle, shellLocation } from "@/lib/shell";
-import { TrackrLogoIcon } from "@/components/common/TrackrLogo";
+import { TamamLogoIcon } from "@/components/common/TamamLogo";
 import { cn } from "@/components/ui/cn";
 import AccountMenu from "./AccountMenu";
 import { Tooltip } from "@/components/ui/Popover";
@@ -142,10 +142,10 @@ export default function Rail({
           href="/home"
           onClick={onNavigate}
           className="flex min-w-0 items-center gap-2 rounded-control"
-          aria-label={collapsed ? "Trackr home" : undefined}
+          aria-label={collapsed ? "Tamam home" : undefined}
         >
-          <TrackrLogoIcon size={24} />
-          {!collapsed && <span className="truncate text-[15px] font-semibold tracking-tight text-ink">Trackr</span>}
+          <TamamLogoIcon size={24} />
+          {!collapsed && <span className="truncate text-[15px] font-semibold tracking-tight text-ink">tamam</span>}
         </Link>
         {!collapsed && onToggleCollapsed && (
           <Tooltip content="Collapse sidebar ([)">

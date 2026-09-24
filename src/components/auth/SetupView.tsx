@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { completeSetup } from "@/lib/actions/setup";
-import { TrackrLogo } from "@/components/common/TrackrLogo";
+import { TamamLogo } from "@/components/common/TamamLogo";
 import {
   ShieldCheck,
   User as UserIcon,
@@ -61,7 +61,7 @@ export default function SetupView() {
 
   return (
     <div className="min-h-screen w-full bg-surface-sunk flex flex-col items-center justify-center gap-6 p-4">
-      <TrackrLogo size="lg" />
+      <TamamLogo size="lg" />
 
       <div className="bg-surface w-full max-w-lg rounded-xl shadow-2xl border border-subtle overflow-hidden flex flex-col">
         <div className="bg-ink text-surface px-6 py-5 flex items-center gap-3 border-b border-ink/80">
@@ -69,7 +69,7 @@ export default function SetupView() {
             <ShieldCheck className="w-5 h-5 text-surface" />
           </div>
           <div>
-            <h1 className="text-lg font-bold tracking-tight">Welcome to Trackr</h1>
+            <h1 className="text-lg font-bold tracking-tight">Welcome to Tamam</h1>
             <p className="text-xs text-surface/75">
               This instance has no accounts yet. Create the admin account to get started.
             </p>

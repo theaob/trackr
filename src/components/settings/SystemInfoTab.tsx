@@ -140,7 +140,7 @@ export default function SystemInfoTab({ systemInfo }: SystemInfoTabProps) {
               <Package className="w-3.5 h-3.5 text-muted" />
               Application Name
             </div>
-            <div className="sm:col-span-2 font-medium text-ink">Trackr</div>
+            <div className="sm:col-span-2 font-medium text-ink">Tamam</div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 px-5 py-3 items-center">

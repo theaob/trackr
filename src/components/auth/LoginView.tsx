@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { AlertCircle } from "lucide-react";
 import SignInCard from "@/components/auth/SignInCard";
-import { TrackrLogo } from "@/components/common/TrackrLogo";
+import { TamamLogo } from "@/components/common/TamamLogo";
 
 export default function LoginView({
   ssoError,
@@ -17,7 +17,7 @@ export default function LoginView({
 
   return (
     <div className="min-h-screen w-full bg-surface-sunk flex flex-col items-center justify-center gap-6 p-4">
-      <TrackrLogo size="lg" />
+      <TamamLogo size="lg" />
 
       <Link prefetch={false}
         href="/projects"

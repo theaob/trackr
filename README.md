@@ -1,6 +1,6 @@
-# Trackr
+# Tamam
 
-A modern, full-stack agile project management and issue tracking platform built with **Next.js 15**, **React 19**, **TypeScript**, **Tailwind CSS**, and **SQLite with Prisma ORM**.
+*Formerly Trackr.* Tamam is Turkish for "done". A modern, full-stack agile project management and issue tracking platform built with **Next.js 15**, **React 19**, **TypeScript**, **Tailwind CSS**, and **SQLite with Prisma ORM**.
 
 ---
 
@@ -25,6 +25,10 @@ A modern, full-stack agile project management and issue tracking platform built 
   - A Spotlight-style panel that finds issues by key or title across every project
     you can see, any page of any project ("orion backlog", "burndown"), and the
     projects themselves.
+  - **People** on your project teams, by name: choosing one opens the issues
+    assigned to them. Comment text isn't searched.
+  - **Create issue** and **Create release** (which opens Releases with the new
+    version dialog) are there as actions.
   - Type `APOLLO-12`, or just `12` inside Apollo, to jump straight to an issue.
   - Arrow keys to move, Enter to open, ⌘/Ctrl+Enter for a new tab. `/` still
     filters the board, backlog and issue list in place.
@@ -35,7 +39,9 @@ A modern, full-stack agile project management and issue tracking platform built 
     week, issues you opened recently (kept in your browser only), and your
     projects. It's where you land after signing in.
   - **Inbox** lists every notification by day, with All/Unread and
-    mark-as-read; the bell stays as a quick preview.
+    mark-as-read; the bell stays as a quick preview. Every @mention of you
+    arrives there, in a comment (including when a comment is edited to add
+    you) or a description, whether or not you watch the issue.
   - In ⌘K search, an empty query shows recently viewed issues, and `→` on an
     issue opens its actions: open, assign to me, move to any status the
     workflow allows, copy the link.
@@ -49,9 +55,9 @@ A modern, full-stack agile project management and issue tracking platform built 
 - 🌓 **Theme and density**, in the account menu:
   - **Light**, **Dark** or **Match system**. Every colour comes from theme
     tokens, and the page is drawn in the right theme from the first paint.
-  - **Comfortable** or **Compact**: Compact takes padding out of table rows,
-    backlog rows, board cards, Home and the Inbox; text stays the same size.
-    The Issues table's density button changes the same setting.
+  - **Compact** (the default) or **Comfortable**: Compact takes padding out of
+    table rows, backlog rows, board cards, Home and the Inbox; text stays the
+    same size. The Issues table's density button changes the same setting.
   - Both are remembered per browser.
 - ♿ **Keyboard and screen readers**:
   - Every dialog is labelled, keeps focus inside, closes with Escape and gives
@@ -224,8 +230,8 @@ blank instance? Seed it explicitly:
 npm run db:seed
 ```
 
-The demo accounts all share the password **`trackr-demo`** (override at seed
-time with `TRACKR_SEED_PASSWORD`):
+The demo accounts all share the password **`tamam-demo`** (override at seed
+time with `TAMAM_SEED_PASSWORD`):
 
 | Account | Email | Project role |
 | --- | --- | --- |
@@ -251,11 +257,14 @@ npm start
 | --- | --- | --- |
 | `DATABASE_URL` | `file:./dev.db` | Prisma SQLite connection string. |
 | `AUTH_SECRET` | generated | Signs session cookies; 32+ characters. Generate with `openssl rand -hex 32`. When unset, a random secret is written to `<data dir>/.session-secret` on first use, so sessions survive restarts but not a new volume. |
-| `TRACKR_DATA_DIR` | `./data` | Where avatars, issue attachments, and the generated session secret live. |
-| `TRACKR_ALLOW_PRIVATE_WEBHOOKS` | `0` | Set to `1` to let webhooks target loopback, link-local and private addresses. Off by default so a webhook cannot be pointed at internal services. The bundled `/api/mock-webhook-receiver` (development only; production builds answer 404) is on localhost, so trying it out needs this set. |
-| `TRACKR_TRUST_PROXY` | `0` | Set to `1` only when a reverse proxy in front of Trackr terminates HTTPS and forwards `X-Forwarded-Proto: https`. This marks the session cookie `Secure`, which browsers require for HTTPS but silently reject on plain HTTP from anywhere but `localhost`. Leave unset for a direct `http://` deployment (e.g. `docker run -p 3000:3000` with no proxy) — enabling it there breaks sign-in. It also makes Trackr trust `X-Forwarded-For`, which turns on per-client-address limits for failed sign-ins and API tokens; the per-account sign-in limit applies either way. |
-| `TRACKR_SEED_PASSWORD` | `trackr-demo` | Password given to the demo accounts by `db:seed`. |
-| `TRACKR_SEED_DEMO` | `0` | Docker only. Set to `1` to boot a fresh container from the seeded demo dataset instead of an empty database + setup wizard. Ignored once a database already exists. |
+| `TAMAM_DATA_DIR` | `./data` | Where avatars, issue attachments, and the generated session secret live. |
+| `TAMAM_ALLOW_PRIVATE_WEBHOOKS` | `0` | Set to `1` to let webhooks target loopback, link-local and private addresses. Off by default so a webhook cannot be pointed at internal services. The bundled `/api/mock-webhook-receiver` (development only; production builds answer 404) is on localhost, so trying it out needs this set. |
+| `TAMAM_TRUST_PROXY` | `0` | Set to `1` only when a reverse proxy in front of Tamam terminates HTTPS and forwards `X-Forwarded-Proto: https`. This marks the session cookie `Secure`, which browsers require for HTTPS but silently reject on plain HTTP from anywhere but `localhost`. Leave unset for a direct `http://` deployment (e.g. `docker run -p 3000:3000` with no proxy) — enabling it there breaks sign-in. It also makes Tamam trust `X-Forwarded-For`, which turns on per-client-address limits for failed sign-ins and API tokens; the per-account sign-in limit applies either way. |
+| `TAMAM_SEED_PASSWORD` | `tamam-demo` | Password given to the demo accounts by `db:seed`. |
+| `TAMAM_SEED_DEMO` | `0` | Docker only. Set to `1` to boot a fresh container from the seeded demo dataset instead of an empty database + setup wizard. Ignored once a database already exists. |
+
+Every setting also answers to its name from before the rename, `TRACKR_*`, so
+an existing install needs no changes; if both are set, `TAMAM_*` wins.
 
 ### 4. Database Management
 - **Database Schema Push**: `node ./node_modules/prisma/build/index.js db push`
@@ -272,27 +281,32 @@ docker compose up -d
 ```
 Open [http://localhost:3000](http://localhost:3000) and complete the setup wizard
 to create the admin account. Data is automatically persisted in the `trackr_data`
-volume. Prefer the demo dataset instead? Set `TRACKR_SEED_DEMO=1` before the
+volume (the name from before the rename, kept so upgrades find their data).
+Prefer the demo dataset instead? Set `TAMAM_SEED_DEMO=1` before the
 first start (see the Configuration table above) — it only takes effect while
 the database doesn't exist yet.
 
 ### Run with Docker CLI
 ```bash
 # Build the image locally
-docker build -t trackr:latest .
+docker build -t tamam:latest .
 
 # Run the container with persistent storage
-docker run -d -p 3000:3000 -v trackr_data:/app/data --name trackr-app trackr:latest
+docker run -d -p 3000:3000 -v tamam_data:/app/data --name tamam tamam:latest
 ```
 
 ### Pull & Run from Docker Hub
 ```bash
-docker run -d -p 3000:3000 -v trackr_data:/app/data --name trackr-app <DOCKERHUB_USERNAME>/trackr:latest
+docker run -d -p 3000:3000 -v tamam_data:/app/data --name tamam <DOCKERHUB_USERNAME>/tamam:latest
 ```
+
+The image is also published as `<DOCKERHUB_USERNAME>/trackr` until 0.44.0, so an
+install that pulls the old name keeps getting updates. Switching to `tamam`
+only needs the image name changed; keep your existing volume.
 
 ### Pull & Run from GitHub Container Registry (GHCR)
 ```bash
-docker run -d -p 3000:3000 -v trackr_data:/app/data --name trackr-app ghcr.io/theaob/trackr:latest
+docker run -d -p 3000:3000 -v tamam_data:/app/data --name tamam ghcr.io/theaob/trackr:latest
 ```
 
 ---
@@ -303,13 +317,13 @@ Whenever the version is bumped in `package.json` and pushed to `main` (or a `v*`
 1. Detects the new version and ensures it hasn't been released yet.
 2. Creates a formal **GitHub Release** with auto-generated release notes and changelog.
 3. Builds a `linux/amd64` Docker image.
-4. Pushes the versioned images to **Docker Hub** (`:latest`, `:<version>`, `:<major>.<minor>`) and **GHCR**.
+4. Pushes the versioned images to **Docker Hub** as `tamam` and, until 0.44.0, `trackr` (`:latest`, `:<version>`, `:<major>.<minor>`), and to **GHCR**.
 
 ### Required GitHub Secrets
 To enable Docker Hub publishing, add the following secrets in GitHub (**Settings > Secrets and variables > Actions**):
 - `DOCKERHUB_USERNAME`: Your Docker Hub username.
 - `DOCKERHUB_TOKEN`: Your Docker Hub Personal Access Token.
-- `DOCKERHUB_REPO` *(optional)*: Defaults to `<DOCKERHUB_USERNAME>/trackr`.
+- `DOCKERHUB_REPO` *(optional)*: The old-name repository, published until 0.44.0. Defaults to `<DOCKERHUB_USERNAME>/trackr`. The new one is always `<DOCKERHUB_USERNAME>/tamam`.
 
 ### Releasing a New Version
 ```bash
@@ -358,7 +372,8 @@ npm run set-password -- alex.chen@acme.dev      # generate one, printed once; en
 npm run set-password -- alex.chen@acme.dev 'a good password'
 ```
 
-Or inside a running container:
+Or inside a running container (`trackr-app` with the bundled compose file,
+otherwise the name you gave it):
 
 ```bash
 docker exec -it trackr-app node scripts/set-password.cjs --list
@@ -387,13 +402,33 @@ A few other changes are worth knowing about when upgrading:
 - **Set `AUTH_SECRET`.** Without it, a secret is generated into the data
   directory; replacing that directory signs everyone out.
 
+## ⬆️ Trackr is now Tamam
+
+0.41.0 renames the product to Tamam. Nothing needs changing to upgrade, and
+nobody is signed out:
+
+- **Settings**: `TAMAM_*` environment variables, with the `TRACKR_*` names still
+  accepted.
+- **Docker image**: published as `tamam`, and as `trackr` until 0.44.0. The
+  bundled compose file keeps its service, container (`trackr-app`) and volume
+  (`trackr_data`) names, so `docker compose up` replaces the running container
+  and keeps its data.
+- **Webhooks**: `X-Tamam-*` headers, with the `X-Trackr-*` ones still sent until
+  0.44.0 (see below).
+- **API tokens**: new tokens start `tamam_pat_`; existing `trackr_pat_` tokens
+  keep working.
+- **Kept as they were**: session and SSO cookies, and the theme, density and
+  other choices remembered in each browser.
+- **Demo data**: the seeded demo accounts' password is now `tamam-demo`;
+  databases seeded before keep theirs.
+
 ## ⬆️ Webhook headers
 
-Every delivery carries `X-Trackr-Event` and `X-Trackr-Delivery`. The old
-`X-Jira-Event` and `X-Jira-Delivery` copies, deprecated in 0.32.0, are **no
-longer sent from 0.34.0**: a receiver that still reads them must switch to the
-`X-Trackr-*` names. Webhook filters use TQL, Trackr's query
-language, with the same syntax as before.
+Every delivery carries `X-Tamam-Event` and `X-Tamam-Delivery`, and the user
+agent `Tamam-Webhook-Engine/1.0`. The `X-Trackr-Event` and `X-Trackr-Delivery`
+names from before the rename are **still sent until 0.44.0**; switch receivers
+to the `X-Tamam-*` names before then. (The `X-Jira-*` copies stopped in 0.34.0.)
+Webhook filters use TQL, Tamam's query language.
 
 ## 🔒 Single Sign-On (OIDC)
 
@@ -462,7 +497,7 @@ Bump the version with `npm version patch --no-git-tag-version` so
 - **Framework**: Next.js 15 (App Router) on React 19
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS on design tokens (CSS variables in `src/app/globals.css`)
-- **Type**: IBM Plex Sans and Plex Mono, served from Trackr's own origin
+- **Type**: IBM Plex Sans and Plex Mono, served from Tamam's own origin
 - **UI primitives**: `src/components/ui`, with behaviour from Radix UI
 - **Icons**: Lucide React
 - **Drag and Drop**: `@hello-pangea/dnd`

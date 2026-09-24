@@ -3,15 +3,18 @@ import {
   TOKEN_DISPLAY_PREFIX_LENGTH,
   TOKEN_PREFIX,
   generateRawToken,
+  hasTokenPrefix,
   hashToken,
 } from "@/lib/auth/tokens";
 
 describe("personal access tokens", () => {
-  it("carries the Trackr prefix, not the old Jira one", () => {
+  it("carries the Tamam prefix, and still recognises tokens made as Trackr", () => {
     const token = generateRawToken();
-    expect(TOKEN_PREFIX).toBe("trackr_pat_");
-    expect(token.startsWith("trackr_pat_")).toBe(true);
-    expect(token.startsWith("jira_pat_")).toBe(false);
+    expect(TOKEN_PREFIX).toBe("tamam_pat_");
+    expect(token.startsWith("tamam_pat_")).toBe(true);
+    expect(hasTokenPrefix(token)).toBe(true);
+    expect(hasTokenPrefix("trackr_pat_0123456789abcdef")).toBe(true);
+    expect(hasTokenPrefix("jira_pat_0123456789abcdef")).toBe(false);
   });
 
   it("has 48 hex characters of entropy after the prefix", () => {

@@ -237,7 +237,7 @@ export default function SsoSettingsTab() {
               type="text"
               value={config.clientId || ""}
               onChange={(e) => setConfig({ ...config, clientId: e.target.value })}
-              placeholder="trackr-client-id"
+              placeholder="tamam-client-id"
               className="w-full px-3 py-2 border border-subtle rounded-md focus:border-accent text-ink font-mono text-[11px]"
             />
           </div>

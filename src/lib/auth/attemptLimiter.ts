@@ -1,9 +1,11 @@
+import { settingOn } from "@/lib/env";
+
 /**
  * Counts recent failures per key (an account, a client address) and refuses
  * further attempts once a key has failed `maxFailures` times within
  * `windowMs`. Only failures count, so normal use never trips it.
  *
- * In-memory by design: Trackr runs as a single process on SQLite, so there
+ * In-memory by design: Tamam runs as a single process on SQLite, so there
  * is no second instance to share counts with. The number of tracked keys is
  * capped so that guessing at random emails or addresses can't grow memory
  * without bound; the least recently failing keys are dropped first.
@@ -50,13 +52,13 @@ export class AttemptLimiter {
 
 /**
  * The client's address from forwarding headers, or null when it can't be
- * trusted. Without a reverse proxy vouching for them (TRACKR_TRUST_PROXY=1,
+ * trusted. Without a reverse proxy vouching for them (TAMAM_TRUST_PROXY=1,
  * the same switch the session cookie's Secure flag uses) these headers are
  * whatever the client chose to send, so they're ignored.
  */
 export function clientAddressFrom(
   headers: { get(name: string): string | null },
-  trustProxy = process.env.TRACKR_TRUST_PROXY === "1"
+  trustProxy = settingOn("TRUST_PROXY")
 ): string | null {
   if (!trustProxy) return null;
   const forwarded = headers.get("x-forwarded-for")?.split(",")[0]?.trim();

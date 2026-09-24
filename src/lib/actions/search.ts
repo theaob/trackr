@@ -2,19 +2,47 @@
 
 import prisma from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
-import { accessibleProjectIds, checkProjectPermission } from "@/lib/auth/guards";
+import { accessibleProjectIds, checkProjectPermission, teamProjectIds } from "@/lib/auth/guards";
 import { allowedNextStatusNames } from "@/lib/workflowDisplay";
 import { attachStatusColors } from "@/lib/statusColorLookup";
 import {
   SPOTLIGHT_MAX_QUERY,
   SpotlightIssue,
+  SpotlightPerson,
   SpotlightProject,
   issueKeyForQuery,
+  personMatches,
   matchesEveryWord,
   rankIssueMatches,
 } from "@/lib/spotlight";
 
 const RESULTS = 8;
+
+/**
+ * People for the ⌘K panel: those on a project team with the caller (lead or
+ * member), matched by name only. Anonymous visitors find nobody.
+ */
+export async function searchSpotlightPeople(query: string): Promise<SpotlightPerson[]> {
+  const q = typeof query === "string" ? query.trim().slice(0, SPOTLIGHT_MAX_QUERY) : "";
+  if (!q) return [];
+  try {
+    const user = await getCurrentUser();
+    if (!user) return [];
+    const projectIds = Array.from(await teamProjectIds(user.id));
+    if (projectIds.length === 0) return [];
+    const people = await prisma.user.findMany({
+      where: {
+        OR: [{ projectMembers: { some: { projectId: { in: projectIds } } } }, { ledProjects: { some: { id: { in: projectIds } } } }],
+      },
+      select: { id: true, name: true, avatarUrl: true },
+      orderBy: { name: "asc" },
+    });
+    return people.filter((p) => personMatches(p.name, q)).slice(0, 5);
+  } catch (error) {
+    console.error("Failed to search people:", error);
+    return [];
+  }
+}
 
 /** The projects the ⌘K panel can jump to: the ones the caller can read. */
 export async function getSpotlightProjects(): Promise<SpotlightProject[]> {

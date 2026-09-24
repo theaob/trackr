@@ -1,5 +1,6 @@
 import dns from "dns/promises";
 import net from "net";
+import { settingOn } from "@/lib/env";
 
 /**
  * Webhook URLs are operator-supplied but reach out from inside the network, so
@@ -7,11 +8,11 @@ import net from "net";
  * useful: loopback, link-local (including the cloud metadata address), and
  * private space.
  *
- * Set TRACKR_ALLOW_PRIVATE_WEBHOOKS=1 to permit them, for deployments whose
+ * Set TAMAM_ALLOW_PRIVATE_WEBHOOKS=1 to permit them, for deployments whose
  * receivers genuinely live on the same private network.
  */
 export function privateWebhooksAllowed(): boolean {
-  return process.env.TRACKR_ALLOW_PRIVATE_WEBHOOKS === "1";
+  return settingOn("ALLOW_PRIVATE_WEBHOOKS");
 }
 
 export function isBlockedAddress(address: string): boolean {
@@ -107,7 +108,7 @@ export async function checkWebhookUrl(rawUrl: string): Promise<UrlCheckResult> {
       ok: false,
       error:
         "Webhook URLs may not point at loopback, link-local or private addresses. " +
-        "Set TRACKR_ALLOW_PRIVATE_WEBHOOKS=1 to allow them.",
+        "Set TAMAM_ALLOW_PRIVATE_WEBHOOKS=1 to allow them.",
     };
   }
 

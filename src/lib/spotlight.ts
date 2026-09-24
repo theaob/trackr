@@ -4,6 +4,7 @@
  */
 
 import { issueHref } from "@/lib/issueUrls";
+import { emptyFilters, queryToTQL } from "@/lib/issueQuery";
 
 export type SpotlightPageId =
   | "board"
@@ -261,4 +262,27 @@ export function projectKeyFromPath(pathname: string | null | undefined): string 
 export function filterablePage(pathname: string | null | undefined): "board" | "backlog" | "issues" | null {
   const match = pathname?.match(/^\/projects\/[^/]+\/(board|backlog|issues)(?:\/|$)/);
   return match ? (match[1] as "board" | "backlog" | "issues") : null;
+}
+
+/** A person the ⌘K panel can find: someone on a project team with the caller. */
+export interface SpotlightPerson {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+}
+
+/** Where a person leads: the issues assigned to them, in the project given. */
+export function spotlightPersonHref(projectKey: string, personId: string): string {
+  const filters = { ...emptyFilters(projectKey), assignee: [personId] };
+  return `/projects/${encodeURIComponent(projectKey)}/issues?tql=${encodeURIComponent(queryToTQL({ filters, sort: { field: "updated", direction: "DESC" } }))}`;
+}
+
+/** Every word of the query starts a word of the name. */
+export function personMatches(name: string, query: string): boolean {
+  const parts = name.toLowerCase().split(/\s+/);
+  return query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((w) => parts.some((p) => p.startsWith(w)));
 }

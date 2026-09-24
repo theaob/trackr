@@ -1,11 +1,13 @@
 import path from "path";
+import { setting } from "@/lib/env";
 
 /**
  * Writable data directory. Matches the volume mounted at /app/data by the
  * Docker image; falls back to ./data for local development.
  */
 export function dataDir(): string {
-  if (process.env.TRACKR_DATA_DIR) return process.env.TRACKR_DATA_DIR;
+  const configured = setting("DATA_DIR");
+  if (configured) return configured;
   return path.join(process.cwd(), "data");
 }
 

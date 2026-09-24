@@ -3,12 +3,19 @@ import prisma from "@/lib/db";
 import { PUBLIC_USER_SELECT, SessionUser } from "@/lib/auth/publicUser";
 
 /**
- * Marks a string as a Trackr personal access token.
+ * Marks a string as a Tamam personal access token.
  *
  * Secret scanners key off a fixed prefix like this, and validation rejects
  * anything without it before touching the database.
  */
-export const TOKEN_PREFIX = "trackr_pat_";
+export const TOKEN_PREFIX = "tamam_pat_";
+
+/** Tokens created before the rename to Tamam, which keep working. */
+export const LEGACY_TOKEN_PREFIX = "trackr_pat_";
+
+export function hasTokenPrefix(token: string): boolean {
+  return token.startsWith(TOKEN_PREFIX) || token.startsWith(LEGACY_TOKEN_PREFIX);
+}
 
 /** How much of a token is stored in the clear, for display: prefix + 5 chars. */
 export const TOKEN_DISPLAY_PREFIX_LENGTH = TOKEN_PREFIX.length + 5;
@@ -40,7 +47,7 @@ export async function validatePersonalAccessToken(
   rawToken: string
 ): Promise<TokenValidationResult> {
   try {
-    if (!rawToken || !rawToken.startsWith(TOKEN_PREFIX)) {
+    if (!rawToken || !hasTokenPrefix(rawToken)) {
       return { valid: false, error: "Invalid token format" };
     }
 

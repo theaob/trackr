@@ -6,9 +6,10 @@ const prisma = new PrismaClient();
 
 /**
  * Demo accounts need a real credential: sign-in fails closed for users with no
- * password hash. Override with TRACKR_SEED_PASSWORD; change it after seeding.
+ * password hash. Override with TAMAM_SEED_PASSWORD (or the older
+ * TRACKR_SEED_PASSWORD); change it after seeding.
  */
-const SEED_PASSWORD = process.env.TRACKR_SEED_PASSWORD || "trackr-demo";
+const SEED_PASSWORD = process.env.TAMAM_SEED_PASSWORD || process.env.TRACKR_SEED_PASSWORD || "tamam-demo";
 
 // Mirrors the format in src/lib/auth/password.ts.
 function hashPassword(password: string): string {

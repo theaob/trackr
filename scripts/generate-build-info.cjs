@@ -41,4 +41,4 @@ const buildInfo = {
 
 const targetPath = path.join(__dirname, "..", "build-info.json");
 fs.writeFileSync(targetPath, JSON.stringify(buildInfo, null, 2) + "\n");
-console.log(`[Trackr] Generated build-info.json: version=${buildInfo.version}, commitHash=${buildInfo.commitHash}`);
+console.log(`[Tamam] Generated build-info.json: version=${buildInfo.version}, commitHash=${buildInfo.commitHash}`);
