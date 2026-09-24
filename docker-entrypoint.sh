@@ -7,8 +7,7 @@ chown -R nextjs:nodejs /app/data
 
 FRESH_DATABASE=0
 SEEDED_DEMO=0
-# TAMAM_* settings; the TRACKR_* names from before the rename still work.
-SEED_DEMO="${TAMAM_SEED_DEMO:-$TRACKR_SEED_DEMO}"
+SEED_DEMO="${TAMAM_SEED_DEMO:-0}"
 
 # If database does not exist, copy from a template. By default that template
 # is empty and the app boots into /setup to create the real admin account;
@@ -57,7 +56,7 @@ if command -v sqlite3 >/dev/null 2>&1 && [ -f /app/data/dev.db ]; then
       echo "==> [Tamam] ========================== ACTION NEEDED =========================="
       echo "             No account in this database has a password, so sign-in is not"
       echo "             possible yet. Set one from a shell in this container:"
-      echo "               docker exec -it trackr-app node scripts/set-password.cjs <email>"
+      echo "               docker exec -it tamam-app node scripts/set-password.cjs <email>"
       echo "             =========================================================================="
     fi
   fi

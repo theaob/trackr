@@ -8,7 +8,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 // against a throwaway database. Only the cookie jar and headers are faked, so
 // one test can play two browsers.
 const dbFile = vi.hoisted(() => {
-  const file = `${process.env.TMPDIR || "/tmp"}/trackr-account-${process.pid}-${Date.now()}.db`;
+  const file = `${process.env.TMPDIR || "/tmp"}/tamam-account-${process.pid}-${Date.now()}.db`;
   process.env.DATABASE_URL = `file:${file}`;
   process.env.AUTH_SECRET = "x".repeat(48);
   return file;
@@ -50,7 +50,7 @@ function idToken(claims: Record<string, unknown>) {
   const now = Math.floor(Date.now() / 1000);
   const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
   const body = Buffer.from(
-    JSON.stringify({ iss: "https://idp.example.com", aud: "trackr", exp: now + 300, iat: now, ...claims })
+    JSON.stringify({ iss: "https://idp.example.com", aud: "tamam", exp: now + 300, iat: now, ...claims })
   ).toString("base64url");
   const sig = crypto.createHmac("sha256", SECRET).update(`${header}.${body}`).digest("base64url");
   return `${header}.${body}.${sig}`;
@@ -76,7 +76,7 @@ beforeAll(async () => {
       id: "default",
       enabled: true,
       issuerUrl: "https://idp.example.com",
-      clientId: "trackr",
+      clientId: "tamam",
       clientSecret: SECRET,
     },
   });
@@ -113,7 +113,7 @@ describe("sessions can be revoked (AUDIT-18)", () => {
     const now = Math.floor(Date.now() / 1000);
     const payload = Buffer.from(JSON.stringify({ uid: userId, iat: now, exp: now + 60 })).toString("base64url");
     const sig = crypto.createHmac("sha256", process.env.AUTH_SECRET!).update(payload).digest("base64url");
-    useBrowser(new Map([["trackr_session", `v1.${payload}.${sig}`]]));
+    useBrowser(new Map([["tamam_session", `v1.${payload}.${sig}`]]));
     expect((await getCurrentUser())?.id).toBe(userId);
 
     await prisma.user.update({ where: { id: userId }, data: { sessionVersion: 1 } });

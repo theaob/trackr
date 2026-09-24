@@ -129,7 +129,7 @@ export default function ChildIssuesSection({
     if (res.success && res.issue) {
       if (typeof window !== "undefined") {
         window.dispatchEvent(
-          new CustomEvent("trackr:issue-created", { detail: { issue: res.issue } })
+          new CustomEvent("tamam:issue-created", { detail: { issue: res.issue } })
         );
       }
       onChildAdded(res.issue as unknown as Issue);

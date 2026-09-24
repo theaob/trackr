@@ -4,7 +4,7 @@ import path from "path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 const dbFile = vi.hoisted(() => {
-  const file = `${process.env.TMPDIR || "/tmp"}/trackr-history-paging-${process.pid}-${Date.now()}.db`;
+  const file = `${process.env.TMPDIR || "/tmp"}/tamam-history-paging-${process.pid}-${Date.now()}.db`;
   process.env.DATABASE_URL = `file:${file}`;
   return file;
 });
@@ -16,7 +16,7 @@ vi.mock("@/lib/auth/session", async () => {
   const { default: prisma } = await import("@/lib/db");
   return {
     PUBLIC_USER_SELECT,
-    SESSION_COOKIE: "trackr_session",
+    SESSION_COOKIE: "tamam_session",
     startSession: vi.fn(),
     endSession: vi.fn(),
     getCurrentUser: vi.fn(async () =>

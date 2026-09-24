@@ -1,36 +1,34 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { setting, settingOn } from "@/lib/env";
 
-const names = ["TAMAM_TRUST_PROXY", "TRACKR_TRUST_PROXY"];
 afterEach(() => {
-  for (const n of names) delete process.env[n];
+  delete process.env.TAMAM_TRUST_PROXY;
 });
 
-describe("settings after the rename to Tamam", () => {
-  it("reads TAMAM_*, falls back to TRACKR_*, and prefers TAMAM_* when both are set", () => {
+describe("settings", () => {
+  it("reads TAMAM_*", () => {
     expect(setting("TRUST_PROXY")).toBeUndefined();
-    process.env.TRACKR_TRUST_PROXY = "1";
+    process.env.TAMAM_TRUST_PROXY = "1";
     expect(settingOn("TRUST_PROXY")).toBe(true);
     process.env.TAMAM_TRUST_PROXY = "0";
     expect(settingOn("TRUST_PROXY")).toBe(false);
   });
 
-  it("treats an empty TAMAM_* as unset, as the compose file passes both", () => {
+  it("treats an empty value as unset", () => {
     process.env.TAMAM_TRUST_PROXY = "";
-    process.env.TRACKR_TRUST_PROXY = "1";
-    expect(settingOn("TRUST_PROXY")).toBe(true);
+    expect(setting("TRUST_PROXY")).toBeUndefined();
   });
 });
 
-describe("webhook headers after the rename", () => {
-  it("sends the Tamam names and, for now, the Trackr ones too", async () => {
+describe("webhook headers", () => {
+  it("sends the Tamam names only", async () => {
     const { webhookHeaders } = await import("@/lib/webhookHeaders");
-    expect(webhookHeaders("issue:created", "d1")).toMatchObject({
+    const headers = webhookHeaders("issue:created", "d1");
+    expect(headers).toMatchObject({
       "User-Agent": "Tamam-Webhook-Engine/1.0",
       "X-Tamam-Event": "issue:created",
       "X-Tamam-Delivery": "d1",
-      "X-Trackr-Event": "issue:created",
-      "X-Trackr-Delivery": "d1",
     });
+    expect(Object.keys(headers).filter((h) => !/^(Content-Type|User-Agent|X-Tamam-)/.test(h))).toEqual([]);
   });
 });

@@ -12,7 +12,7 @@ import { settingOn } from "@/lib/env";
 export { PUBLIC_USER_SELECT };
 export type { SessionUser };
 
-export const SESSION_COOKIE = "trackr_session";
+export const SESSION_COOKIE = "tamam_session";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
 const SECRET_FILE = ".session-secret";
 

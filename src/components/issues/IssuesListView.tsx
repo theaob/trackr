@@ -275,8 +275,8 @@ export default function IssuesListView({
       setIssues((prev) => (prev.some((i) => i.id === created.id) ? prev : [created, ...prev]));
       setTotalCount((n) => n + 1);
     };
-    window.addEventListener("trackr:issue-created", onCreated);
-    return () => window.removeEventListener("trackr:issue-created", onCreated);
+    window.addEventListener("tamam:issue-created", onCreated);
+    return () => window.removeEventListener("tamam:issue-created", onCreated);
   }, [query.filters.projectKey, projectIdFor]);
 
   // ---- Views -------------------------------------------------------------------

@@ -6,12 +6,10 @@
 export type ThemeChoice = "light" | "dark" | "system";
 export type Density = "comfortable" | "compact";
 
-// Browser-stored keys keep their names from before the rename to Tamam, so
-// everyone's choices survive the upgrade.
-export const THEME_KEY = "trackr:theme";
-export const DENSITY_KEY = "trackr:density";
+export const THEME_KEY = "tamam:theme";
+export const DENSITY_KEY = "tamam:density";
 /** Fired on window when either changes, so every control showing it updates. */
-export const APPEARANCE_EVENT = "trackr:appearance";
+export const APPEARANCE_EVENT = "tamam:appearance";
 
 export function readTheme(value: string | null | undefined): ThemeChoice {
   return value === "light" || value === "dark" ? value : "system";

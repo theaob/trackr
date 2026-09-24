@@ -32,8 +32,8 @@ async function checkWithAxe(page: Page, name: string, include?: string) {
 /** Switches the page's theme the way the account menu does, without a reload. */
 async function setTheme(page: Page, theme: "light" | "dark") {
   await page.evaluate((t) => {
-    localStorage.setItem("trackr:theme", t);
-    window.dispatchEvent(new Event("trackr:appearance"));
+    localStorage.setItem("tamam:theme", t);
+    window.dispatchEvent(new Event("tamam:appearance"));
   }, theme);
   await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
 }

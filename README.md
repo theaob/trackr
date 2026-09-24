@@ -263,9 +263,6 @@ npm start
 | `TAMAM_SEED_PASSWORD` | `tamam-demo` | Password given to the demo accounts by `db:seed`. |
 | `TAMAM_SEED_DEMO` | `0` | Docker only. Set to `1` to boot a fresh container from the seeded demo dataset instead of an empty database + setup wizard. Ignored once a database already exists. |
 
-Every setting also answers to its name from before the rename, `TRACKR_*`, so
-an existing install needs no changes; if both are set, `TAMAM_*` wins.
-
 ### 4. Database Management
 - **Database Schema Push**: `node ./node_modules/prisma/build/index.js db push`
 - **Re-seed Demo Data**: `node ./node_modules/tsx/dist/cli.mjs prisma/seed.ts`
@@ -280,8 +277,9 @@ an existing install needs no changes; if both are set, `TAMAM_*` wins.
 docker compose up -d
 ```
 Open [http://localhost:3000](http://localhost:3000) and complete the setup wizard
-to create the admin account. Data is automatically persisted in the `trackr_data`
-volume (the name from before the rename, kept so upgrades find their data).
+to create the admin account. Data is automatically persisted in the `tamam_data`
+volume. Coming from Trackr? Copy the old volume first; see
+[Upgrading from Trackr](#️-upgrading-from-trackr).
 Prefer the demo dataset instead? Set `TAMAM_SEED_DEMO=1` before the
 first start (see the Configuration table above) — it only takes effect while
 the database doesn't exist yet.
@@ -300,13 +298,9 @@ docker run -d -p 3000:3000 -v tamam_data:/app/data --name tamam tamam:latest
 docker run -d -p 3000:3000 -v tamam_data:/app/data --name tamam <DOCKERHUB_USERNAME>/tamam:latest
 ```
 
-The image is also published as `<DOCKERHUB_USERNAME>/trackr` until 0.44.0, so an
-install that pulls the old name keeps getting updates. Switching to `tamam`
-only needs the image name changed; keep your existing volume.
-
 ### Pull & Run from GitHub Container Registry (GHCR)
 ```bash
-docker run -d -p 3000:3000 -v tamam_data:/app/data --name tamam ghcr.io/theaob/trackr:latest
+docker run -d -p 3000:3000 -v tamam_data:/app/data --name tamam ghcr.io/theaob/tamam:latest
 ```
 
 ---
@@ -317,13 +311,13 @@ Whenever the version is bumped in `package.json` and pushed to `main` (or a `v*`
 1. Detects the new version and ensures it hasn't been released yet.
 2. Creates a formal **GitHub Release** with auto-generated release notes and changelog.
 3. Builds a `linux/amd64` Docker image.
-4. Pushes the versioned images to **Docker Hub** as `tamam` and, until 0.44.0, `trackr` (`:latest`, `:<version>`, `:<major>.<minor>`), and to **GHCR**.
+4. Pushes the versioned images to **Docker Hub** as `tamam` (`:latest`, `:<version>`, `:<major>.<minor>`), and to **GHCR** as `ghcr.io/<owner>/tamam`.
 
 ### Required GitHub Secrets
 To enable Docker Hub publishing, add the following secrets in GitHub (**Settings > Secrets and variables > Actions**):
 - `DOCKERHUB_USERNAME`: Your Docker Hub username.
 - `DOCKERHUB_TOKEN`: Your Docker Hub Personal Access Token.
-- `DOCKERHUB_REPO` *(optional)*: The old-name repository, published until 0.44.0. Defaults to `<DOCKERHUB_USERNAME>/trackr`. The new one is always `<DOCKERHUB_USERNAME>/tamam`.
+- `DOCKERHUB_REPO` *(optional)*: The Docker Hub repository to push to. Defaults to `<DOCKERHUB_USERNAME>/tamam`.
 
 ### Releasing a New Version
 ```bash
@@ -372,12 +366,12 @@ npm run set-password -- alex.chen@acme.dev      # generate one, printed once; en
 npm run set-password -- alex.chen@acme.dev 'a good password'
 ```
 
-Or inside a running container (`trackr-app` with the bundled compose file,
+Or inside a running container (`tamam-app` with the bundled compose file,
 otherwise the name you gave it):
 
 ```bash
-docker exec -it trackr-app node scripts/set-password.cjs --list
-docker exec -it trackr-app node scripts/set-password.cjs alex.chen@acme.dev
+docker exec -it tamam-app node scripts/set-password.cjs --list
+docker exec -it tamam-app node scripts/set-password.cjs alex.chen@acme.dev
 ```
 
 Re-seeding (`npm run db:seed`) also works, but it **deletes all existing
@@ -402,33 +396,55 @@ A few other changes are worth knowing about when upgrading:
 - **Set `AUTH_SECRET`.** Without it, a secret is generated into the data
   directory; replacing that directory signs everyone out.
 
-## ⬆️ Trackr is now Tamam
+## ⬆️ Upgrading from Trackr
 
-0.41.0 renames the product to Tamam. Nothing needs changing to upgrade, and
-nobody is signed out:
+0.41.0 renamed the product to Tamam and kept the Trackr names working. 0.42.0
+removes them, so upgrading from any earlier version is a clean break:
 
-- **Settings**: `TAMAM_*` environment variables, with the `TRACKR_*` names still
-  accepted.
-- **Docker image**: published as `tamam`, and as `trackr` until 0.44.0. The
-  bundled compose file keeps its service, container (`trackr-app`) and volume
-  (`trackr_data`) names, so `docker compose up` replaces the running container
-  and keeps its data.
-- **Webhooks**: `X-Tamam-*` headers, with the `X-Trackr-*` ones still sent until
-  0.44.0 (see below).
-- **API tokens**: new tokens start `tamam_pat_`; existing `trackr_pat_` tokens
-  keep working.
-- **Kept as they were**: session and SSO cookies, and the theme, density and
-  other choices remembered in each browser.
-- **Demo data**: the seeded demo accounts' password is now `tamam-demo`;
-  databases seeded before keep theirs.
+- **Everyone is signed out once.** The session and SSO cookies are now
+  `tamam_session` and `tamam_sso_state`.
+- **Settings are read only as `TAMAM_*`.** Rename every `TRACKR_*` variable
+  (`TRACKR_DATA_DIR`, `TRACKR_TRUST_PROXY`, `TRACKR_ALLOW_PRIVATE_WEBHOOKS`,
+  `TRACKR_SEED_DEMO`, `TRACKR_SEED_PASSWORD`); the old names are ignored. A
+  non-Docker install that set `TRACKR_DATA_DIR` must set `TAMAM_DATA_DIR` or it
+  will look for its avatars, attachments and session secret in `./data`.
+- **API tokens starting `trackr_pat_` are refused.** Create new ones from the
+  account menu, **Personal access tokens**; they start `tamam_pat_`.
+- **Webhooks carry only `X-Tamam-Event` and `X-Tamam-Delivery`.** Receivers
+  still reading `X-Trackr-*` must switch first.
+- **The Docker image is published only as `tamam`** (`<DOCKERHUB_USERNAME>/tamam`
+  and `ghcr.io/theaob/tamam`); the `trackr` images get no further updates.
+- **Theme, density, the collapsed rail and recent issues** are remembered under
+  new keys, so each browser starts from the defaults once.
+
+### Moving a Docker Compose install
+
+The bundled compose file now names its service `tamam`, its container
+`tamam-app` and its volume `tamam_data`. Started as is, it comes up with an
+empty database, so copy the old volume across first:
+
+```bash
+docker compose down          # with the old compose file: stops trackr-app
+git pull                     # or fetch the new docker-compose.yml
+docker compose create        # creates tamam-app and an empty tamam_data volume
+docker volume ls             # both volumes carry the Compose project name as a prefix
+docker run --rm -v <project>_trackr_data:/from -v <project>_tamam_data:/to \
+  alpine cp -a /from/. /to/
+docker compose up -d
+```
+
+`<project>` is the Compose project name, by default the name of the directory
+holding `docker-compose.yml`. Once Tamam is running with your data, remove the
+old volume with `docker volume rm <project>_trackr_data`.
+
+A `docker run` install only needs the image name changed to `tamam`; keep
+passing your existing volume with `-v`.
 
 ## ⬆️ Webhook headers
 
 Every delivery carries `X-Tamam-Event` and `X-Tamam-Delivery`, and the user
-agent `Tamam-Webhook-Engine/1.0`. The `X-Trackr-Event` and `X-Trackr-Delivery`
-names from before the rename are **still sent until 0.44.0**; switch receivers
-to the `X-Tamam-*` names before then. (The `X-Jira-*` copies stopped in 0.34.0.)
-Webhook filters use TQL, Tamam's query language.
+agent `Tamam-Webhook-Engine/1.0`. Webhook filters use TQL, Tamam's query
+language.
 
 ## 🔒 Single Sign-On (OIDC)
 

@@ -8,7 +8,7 @@ import {
 } from "@/lib/shell";
 
 /** Fired on window after the list changes, so Home and search can refresh. */
-export const RECENT_ISSUES_EVENT = "trackr:recent-issues";
+export const RECENT_ISSUES_EVENT = "tamam:recent-issues";
 
 /**
  * Recently opened issues live in this browser only: they are a convenience,

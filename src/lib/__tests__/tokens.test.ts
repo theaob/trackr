@@ -8,12 +8,12 @@ import {
 } from "@/lib/auth/tokens";
 
 describe("personal access tokens", () => {
-  it("carries the Tamam prefix, and still recognises tokens made as Trackr", () => {
+  it("carries the Tamam prefix", () => {
     const token = generateRawToken();
     expect(TOKEN_PREFIX).toBe("tamam_pat_");
     expect(token.startsWith("tamam_pat_")).toBe(true);
     expect(hasTokenPrefix(token)).toBe(true);
-    expect(hasTokenPrefix("trackr_pat_0123456789abcdef")).toBe(true);
+    expect(hasTokenPrefix("other_pat_0123456789abcdef")).toBe(false);
     expect(hasTokenPrefix("jira_pat_0123456789abcdef")).toBe(false);
   });
 

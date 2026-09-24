@@ -6,7 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 // A custom role granted Project Admin can moderate other people's content,
 // exactly like the built-in Administrator; one without it can't.
 const dbFile = vi.hoisted(() => {
-  const file = `${process.env.TMPDIR || "/tmp"}/trackr-moderation-${process.pid}-${Date.now()}.db`;
+  const file = `${process.env.TMPDIR || "/tmp"}/tamam-moderation-${process.pid}-${Date.now()}.db`;
   process.env.DATABASE_URL = `file:${file}`;
   return file;
 });
@@ -18,7 +18,7 @@ vi.mock("@/lib/auth/session", async () => {
   const { default: prisma } = await import("@/lib/db");
   return {
     PUBLIC_USER_SELECT,
-    SESSION_COOKIE: "trackr_session",
+    SESSION_COOKIE: "tamam_session",
     startSession: vi.fn(),
     endSession: vi.fn(),
     getCurrentUser: vi.fn(async () =>

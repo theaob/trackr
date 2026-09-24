@@ -66,7 +66,7 @@ interface SpotlightSearchProps {
 }
 
 /** Sent to the navbar, which owns the board/backlog/issues filter box. */
-export const FILTER_PAGE_EVENT = "trackr:filter-page";
+export const FILTER_PAGE_EVENT = "tamam:filter-page";
 
 const PAGE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   board: Kanban,

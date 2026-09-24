@@ -116,7 +116,7 @@ export default function BacklogView({
     setIssues(initialIssues);
   }, [initialIssues]);
 
-  // Issues created elsewhere (quick create, the backlog) arrive as trackr:issue-created
+  // Issues created elsewhere (quick create, the backlog) arrive as tamam:issue-created
   useEffect(() => {
     const handleIssueCreatedEvent = (e: Event) => {
       const customEvent = e as CustomEvent<{
@@ -141,9 +141,9 @@ export default function BacklogView({
       });
     };
 
-    window.addEventListener("trackr:issue-created", handleIssueCreatedEvent);
+    window.addEventListener("tamam:issue-created", handleIssueCreatedEvent);
     return () => {
-      window.removeEventListener("trackr:issue-created", handleIssueCreatedEvent);
+      window.removeEventListener("tamam:issue-created", handleIssueCreatedEvent);
     };
   }, [project.id]);
 
@@ -800,7 +800,7 @@ export default function BacklogView({
       );
       if (typeof window !== "undefined") {
         window.dispatchEvent(
-          new CustomEvent("trackr:issue-created", {
+          new CustomEvent("tamam:issue-created", {
             detail: { issue: createdIssue, source: "backlog-inline", tempId },
           })
         );

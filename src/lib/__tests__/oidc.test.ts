@@ -20,7 +20,7 @@ const now = () => Math.floor(Date.now() / 1000);
 function claims(overrides: Record<string, unknown> = {}) {
   return {
     iss: "https://idp.example.com",
-    aud: "trackr-client",
+    aud: "tamam-client",
     sub: "subject-1",
     email: "person@example.com",
     exp: now() + 300,
@@ -34,7 +34,7 @@ describe("verifyIdToken", () => {
     const result = verifyIdToken(sign(claims({ nonce: "n1" })), {
       clientSecret: SECRET,
       expectedIssuer: "https://idp.example.com",
-      expectedAudience: "trackr-client",
+      expectedAudience: "tamam-client",
       expectedNonce: "n1",
     });
     expect(result.valid).toBe(true);
@@ -91,7 +91,7 @@ describe("verifyIdToken", () => {
     expect(
       verifyIdToken(sign(claims({ aud: "other-client" })), {
         clientSecret: SECRET,
-        expectedAudience: "trackr-client",
+        expectedAudience: "tamam-client",
       }).valid
     ).toBe(false);
 
@@ -104,9 +104,9 @@ describe("verifyIdToken", () => {
   });
 
   it("accepts an audience array containing the client id", () => {
-    const result = verifyIdToken(sign(claims({ aud: ["other", "trackr-client"] })), {
+    const result = verifyIdToken(sign(claims({ aud: ["other", "tamam-client"] })), {
       clientSecret: SECRET,
-      expectedAudience: "trackr-client",
+      expectedAudience: "tamam-client",
     });
     expect(result.valid).toBe(true);
   });

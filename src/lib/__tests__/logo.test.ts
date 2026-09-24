@@ -10,7 +10,6 @@ describe("TamamLogo", () => {
   it("shows the mark and the lowercase wordmark, without the retired tagline", () => {
     const html = renderToStaticMarkup(React.createElement(TamamLogo));
     expect(html).toContain(">tamam<");
-    expect(html).not.toContain("Trackr");
     expect(html).not.toContain("Project OS");
   });
 

@@ -1,4 +1,4 @@
-export const SSO_STATE_COOKIE = "trackr_sso_state";
+export const SSO_STATE_COOKIE = "tamam_sso_state";
 
 /** The login attempt is short-lived and must never be readable from script. */
 export function ssoStateCookieOptions() {

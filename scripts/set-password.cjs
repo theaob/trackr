@@ -2,7 +2,7 @@
 /**
  * Set or reset a user's password.
  *
- * Early versions (as Trackr) accepted any password for an account with no password hash.
+ * Early versions accepted any password for an account with no password hash.
  * That is refused now, so a database created before passwords existed cannot
  * be signed into until an operator sets one here.
  *
@@ -13,7 +13,7 @@
  * Plain CommonJS with no build step or dev dependency, so it also runs inside
  * the production container:
  *
- *   docker exec -it trackr-app node scripts/set-password.cjs <email>
+ *   docker exec -it tamam-app node scripts/set-password.cjs <email>
  *
  * NOTE: the hash format below is duplicated from src/lib/auth/password.ts,
  * which is the source of truth. src/lib/__tests__/password.test.ts asserts the

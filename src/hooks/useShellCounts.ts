@@ -6,7 +6,7 @@ import { getMyOpenIssueCount } from "@/lib/actions/home";
 import { getUnreadNotificationCount } from "@/lib/actions/notifications";
 
 /** Fired on window when something changes a count the rail shows. */
-export const SHELL_COUNTS_EVENT = "trackr:counts-changed";
+export const SHELL_COUNTS_EVENT = "tamam:counts-changed";
 
 export function notifyShellCountsChanged() {
   if (typeof window !== "undefined") window.dispatchEvent(new Event(SHELL_COUNTS_EVENT));

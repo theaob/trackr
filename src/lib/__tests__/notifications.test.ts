@@ -5,7 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 
 // Who hears about what: runs the real actions against a throwaway database.
 const dbFile = vi.hoisted(() => {
-  const file = `${process.env.TMPDIR || "/tmp"}/trackr-notify-${process.pid}-${Date.now()}.db`;
+  const file = `${process.env.TMPDIR || "/tmp"}/tamam-notify-${process.pid}-${Date.now()}.db`;
   process.env.DATABASE_URL = `file:${file}`;
   return file;
 });
@@ -17,7 +17,7 @@ vi.mock("@/lib/auth/session", async () => {
   const { default: prisma } = await import("@/lib/db");
   return {
     PUBLIC_USER_SELECT,
-    SESSION_COOKIE: "trackr_session",
+    SESSION_COOKIE: "tamam_session",
     startSession: vi.fn(),
     endSession: vi.fn(),
     getCurrentUser: vi.fn(async () =>

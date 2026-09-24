@@ -244,7 +244,7 @@ export default function KanbanBoard({
     setIssues(initialIssues);
   }, [initialIssues]);
 
-  // Issues created elsewhere (quick create, the backlog) arrive as trackr:issue-created
+  // Issues created elsewhere (quick create, the backlog) arrive as tamam:issue-created
   useEffect(() => {
     const handleIssueCreatedEvent = (e: Event) => {
       const customEvent = e as CustomEvent<{ issue?: Issue }>;
@@ -256,9 +256,9 @@ export default function KanbanBoard({
       });
     };
 
-    window.addEventListener("trackr:issue-created", handleIssueCreatedEvent);
+    window.addEventListener("tamam:issue-created", handleIssueCreatedEvent);
     return () => {
-      window.removeEventListener("trackr:issue-created", handleIssueCreatedEvent);
+      window.removeEventListener("tamam:issue-created", handleIssueCreatedEvent);
     };
   }, [project.id]);
 

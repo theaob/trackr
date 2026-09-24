@@ -96,7 +96,7 @@ export function parseRecentIssues(raw: string | null | undefined): RecentIssue[]
 
 /** Per account, so two people sharing a browser don't see each other's history. */
 export function recentIssuesStorageKey(userId: string): string {
-  return `trackr:recent-issues:${userId}`;
+  return `tamam:recent-issues:${userId}`;
 }
 
 // ---- Home: due dates ------------------------------------------------------------

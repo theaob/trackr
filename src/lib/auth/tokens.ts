@@ -10,11 +10,8 @@ import { PUBLIC_USER_SELECT, SessionUser } from "@/lib/auth/publicUser";
  */
 export const TOKEN_PREFIX = "tamam_pat_";
 
-/** Tokens created before the rename to Tamam, which keep working. */
-export const LEGACY_TOKEN_PREFIX = "trackr_pat_";
-
 export function hasTokenPrefix(token: string): boolean {
-  return token.startsWith(TOKEN_PREFIX) || token.startsWith(LEGACY_TOKEN_PREFIX);
+  return token.startsWith(TOKEN_PREFIX);
 }
 
 /** How much of a token is stored in the clear, for display: prefix + 5 chars. */

@@ -11,7 +11,7 @@ import Rail from "./Rail";
 import TopBar from "./TopBar";
 import TabBar from "./TabBar";
 
-const COLLAPSED_KEY = "trackr:rail-collapsed";
+const COLLAPSED_KEY = "tamam:rail-collapsed";
 
 export interface AppShellProps {
   /** Projects for the rail; it shows the ones you belong to. */

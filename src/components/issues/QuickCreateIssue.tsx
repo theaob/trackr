@@ -209,7 +209,7 @@ export default function QuickCreateIssue({
     setSubmitting(false);
 
     const issue = res.issue as Issue;
-    window.dispatchEvent(new CustomEvent("trackr:issue-created", { detail: { issue } }));
+    window.dispatchEvent(new CustomEvent("tamam:issue-created", { detail: { issue } }));
     onCreated?.(issue);
     toast({ title: `Created ${issue.key}`, description: issue.title, tone: "success" });
 

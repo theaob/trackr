@@ -1,13 +1,10 @@
 services:
-  # The service, container and volume keep their names from before the rename
-  # to Tamam, so `docker compose up` replaces the running container and keeps
-  # its data instead of starting a second one beside it.
-  trackr:
+  tamam:
     build:
       context: .
       dockerfile: Dockerfile
     image: tamam:latest
-    container_name: trackr-app
+    container_name: tamam-app
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -18,25 +15,20 @@ services:
       # Signs session cookies. Generate with: openssl rand -hex 32
       # Without it a secret is generated into the data volume on first start.
       - AUTH_SECRET=${AUTH_SECRET:-}
-      # The settings below are each passed under their TAMAM_* name and the
-      # TRACKR_* name from before the rename; TAMAM_* wins when both are set.
       # Set to 1 only if your webhook receivers live on a private network.
-      - TAMAM_ALLOW_PRIVATE_WEBHOOKS=${TAMAM_ALLOW_PRIVATE_WEBHOOKS:-}
-      - TRACKR_ALLOW_PRIVATE_WEBHOOKS=${TRACKR_ALLOW_PRIVATE_WEBHOOKS:-0}
+      - TAMAM_ALLOW_PRIVATE_WEBHOOKS=${TAMAM_ALLOW_PRIVATE_WEBHOOKS:-0}
       # Set to 1 to boot a fresh instance with seeded demo data instead of an
       # empty database + setup wizard. Ignored once a database already exists.
-      - TAMAM_SEED_DEMO=${TAMAM_SEED_DEMO:-}
-      - TRACKR_SEED_DEMO=${TRACKR_SEED_DEMO:-0}
+      - TAMAM_SEED_DEMO=${TAMAM_SEED_DEMO:-0}
       # Set to 1 only if a reverse proxy in front of this container terminates
       # HTTPS and forwards X-Forwarded-Proto: https. Leave at 0 for this
       # compose file's default of exposing port 3000 directly over HTTP --
       # enabling it without a proxy breaks sign-in (the session cookie would
       # be marked Secure and get dropped over plain HTTP).
-      - TAMAM_TRUST_PROXY=${TAMAM_TRUST_PROXY:-}
-      - TRACKR_TRUST_PROXY=${TRACKR_TRUST_PROXY:-0}
+      - TAMAM_TRUST_PROXY=${TAMAM_TRUST_PROXY:-0}
     volumes:
-      - trackr_data:/app/data
+      - tamam_data:/app/data
 
 volumes:
-  trackr_data:
+  tamam_data:
     driver: local

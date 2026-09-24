@@ -75,14 +75,14 @@ const FIFTEEN_MINUTES = 15 * 60 * 1000;
 
 // Kept on globalThis so a dev-server reload doesn't wipe the counts.
 const limiters = globalThis as unknown as {
-  trackrSignInByAccount?: AttemptLimiter;
-  trackrSignInByClient?: AttemptLimiter;
-  trackrTokenByClient?: AttemptLimiter;
+  tamamSignInByAccount?: AttemptLimiter;
+  tamamSignInByClient?: AttemptLimiter;
+  tamamTokenByClient?: AttemptLimiter;
 };
 
 /** Per account: stops guessing one person's password, wherever it comes from. */
-export const signInByAccount = (limiters.trackrSignInByAccount ??= new AttemptLimiter(10, FIFTEEN_MINUTES));
+export const signInByAccount = (limiters.tamamSignInByAccount ??= new AttemptLimiter(10, FIFTEEN_MINUTES));
 /** Per client address (when known): stops one client guessing across accounts. */
-export const signInByClient = (limiters.trackrSignInByClient ??= new AttemptLimiter(30, FIFTEEN_MINUTES));
+export const signInByClient = (limiters.tamamSignInByClient ??= new AttemptLimiter(30, FIFTEEN_MINUTES));
 /** Per client address (when known): invalid API tokens. */
-export const tokenByClient = (limiters.trackrTokenByClient ??= new AttemptLimiter(30, FIFTEEN_MINUTES));
+export const tokenByClient = (limiters.tamamTokenByClient ??= new AttemptLimiter(30, FIFTEEN_MINUTES));
