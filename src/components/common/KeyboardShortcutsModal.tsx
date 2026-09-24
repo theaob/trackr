@@ -12,7 +12,8 @@ interface ShortcutItem {
 const SHORTCUTS: ShortcutItem[] = [
   // Global
   { keys: ["c"], description: "Create an issue", category: "Global" },
-  { keys: ["/"], description: "Focus quick search", category: "Global" },
+  { keys: ["⌘ / Ctrl", "K"], description: "Search issues, pages and projects", category: "Global" },
+  { keys: ["/"], description: "Filter the board, backlog or issue list (search elsewhere)", category: "Global" },
   { keys: ["?"], description: "Open keyboard shortcuts cheat sheet", category: "Global" },
   { keys: ["["], description: "Toggle sidebar collapsed/expanded", category: "Global" },
   { keys: ["Esc"], description: "Close active modal, dropdown, or blur search", category: "Global" },

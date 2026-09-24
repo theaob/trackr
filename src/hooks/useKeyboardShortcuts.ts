@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import { isSpotlightShortcut } from "@/lib/spotlight";
 
 export function isInputElement(target: EventTarget | null): boolean {
   if (!target) return false;
@@ -17,6 +18,7 @@ export interface KeyboardShortcutHandlers {
   onToggleSidebar?: () => void;
   onOpenHelp?: () => void;
   onFocusSearch?: () => void;
+  onOpenSpotlight?: () => void;
   onCloseModal?: () => void;
   onNavigate?: (destination: "board" | "backlog" | "issues" | "roadmap" | "releases" | "reports" | "settings" | "projects") => void;
 }
@@ -44,6 +46,14 @@ export function useKeyboardShortcuts({ enabled = true, handlers }: UseKeyboardSh
     if (!enabled) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // ⌘K / Ctrl+K opens search from anywhere, even while typing, as Spotlight does.
+      if (isSpotlightShortcut(e)) {
+        e.preventDefault();
+        clearSequence();
+        handlersRef.current.onOpenSpotlight?.();
+        return;
+      }
+
       // Ignore if modified with Ctrl/Meta/Alt (unless it's a specific combination)
       if (e.metaKey || e.ctrlKey || e.altKey) {
         return;

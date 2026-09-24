@@ -35,6 +35,9 @@ import UserAvatar from "@/components/common/UserAvatar";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
 import { resolveUserProjectRole } from "@/lib/permissions";
 import { logout } from "@/lib/actions/auth";
+import { useModKeyLabel } from "@/hooks/useModKeyLabel";
+import { filterablePage } from "@/lib/spotlight";
+import { FILTER_PAGE_EVENT } from "@/components/common/SpotlightSearch";
 
 interface NavbarProps {
   projects: Project[];
@@ -55,7 +58,11 @@ export default function Navbar({
   const { currentUser, users, setCurrentUser, setUsers } = useCurrentUser();
   const permissions = useProjectPermissions(currentProject);
   const { searchQuery, setSearchQuery } = useSearch();
-  const { openShortcutsModal } = useKeyboardShortcutsContext();
+  const { openShortcutsModal, openSpotlight } = useKeyboardShortcutsContext();
+  const modKey = useModKeyLabel();
+  const searchShortcut = modKey === "⌘" ? "⌘K" : `${modKey} K`;
+  // Only the board, backlog and issue list read the filter box.
+  const canFilterPage = filterablePage(pathname) !== null;
 
   const accessibleProjects = useMemo(
     () => projects.filter((proj) => resolveUserProjectRole(currentUser?.id, proj) !== null),
@@ -74,6 +81,18 @@ export default function Navbar({
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const projectMenuRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // "Filter … for" in the ⌘K panel fills in the filter box.
+  useEffect(() => {
+    const applyFilter = (event: Event) => {
+      const query = (event as CustomEvent<{ query?: string }>).detail?.query ?? "";
+      setSearchQuery(query);
+      // On a phone the filter box is hidden until opened; show what's filtering.
+      if (window.matchMedia("(max-width: 767px)").matches) setIsMobileSearchOpen(true);
+    };
+    window.addEventListener(FILTER_PAGE_EVENT, applyFilter);
+    return () => window.removeEventListener(FILTER_PAGE_EVENT, applyFilter);
+  }, [setSearchQuery]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -304,33 +323,52 @@ export default function Navbar({
       {/* Right side: Search & User Controls */}
       <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
 
-        {/* Mobile Search Toggle */}
+        {/* Mobile: search issues, pages and projects */}
         <button
           type="button"
-          onClick={() => setIsMobileSearchOpen(true)}
+          onClick={openSpotlight}
           className="md:hidden p-2 text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-100 rounded-full transition-colors"
-          aria-label="Open search"
+          aria-label="Search issues, pages and projects"
         >
           <Search className="w-4 h-4" />
         </button>
 
-        {/* Desktop Quick Search */}
-        <div className="hidden md:block relative w-64">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500 pointer-events-none" />
-          <input
-            id="global-search-input"
-            type="text"
-            placeholder="Search issues, keys..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-8 py-1.5 text-sm bg-jira-gray-100 hover:bg-jira-gray-200 focus:bg-white border border-transparent focus:border-jira-blue rounded transition-all outline-none text-jira-navy"
-          />
-          {!searchQuery && (
-            <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono font-semibold text-jira-gray-400 bg-jira-gray-200/60 border border-jira-gray-300 rounded px-1.5 py-0.5 pointer-events-none">
-              /
-            </kbd>
-          )}
-        </div>
+        {/* Desktop: the page filter where there's something to filter, and search everywhere */}
+        {canFilterPage && (
+          <div className="hidden md:block relative w-56">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-jira-gray-500 pointer-events-none" />
+            <input
+              id="global-search-input"
+              type="text"
+              aria-label="Filter issues on this page"
+              placeholder="Filter issues..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-8 py-1.5 text-sm bg-jira-gray-100 hover:bg-jira-gray-200 focus:bg-white border border-transparent focus:border-jira-blue rounded transition-all outline-none text-jira-navy"
+            />
+            {!searchQuery && (
+              <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono font-semibold text-jira-gray-400 bg-jira-gray-200/60 border border-jira-gray-300 rounded px-1.5 py-0.5 pointer-events-none">
+                /
+              </kbd>
+            )}
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={openSpotlight}
+          title={`Search issues, pages and projects (${searchShortcut})`}
+          aria-label="Search issues, pages and projects"
+          aria-keyshortcuts="Meta+K Control+K"
+          className={`hidden md:flex items-center gap-2 h-8 rounded text-sm text-jira-gray-500 bg-jira-gray-100 hover:bg-jira-gray-200 hover:text-jira-navy border border-transparent transition-colors ${
+            canFilterPage ? "px-2.5" : "w-64 pl-3 pr-2"
+          }`}
+        >
+          <Search className="w-4 h-4 shrink-0" />
+          {!canFilterPage && <span className="flex-1 text-left truncate">Search Trackr...</span>}
+          <kbd className="text-xs font-sans font-semibold text-jira-gray-500 bg-white/70 border border-jira-gray-300 rounded px-1.5 leading-5 whitespace-nowrap">
+            {searchShortcut}
+          </kbd>
+        </button>
 
         {/* Help & Notification icons */}
         <button

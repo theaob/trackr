@@ -10,6 +10,13 @@ A modern, full-stack agile project management and issue tracking platform built 
   - Drag-and-drop issues across columns (`To Do`, `In Progress`, `In Review`, `Done` by default).
   - Real-time column WIP limits & warning badges.
   - Immediate optimistic drag updates with persistent server synchronization.
+- 🔎 **Search everything with ⌘K** (Ctrl+K on Windows and Linux):
+  - A Spotlight-style panel that finds issues by key or title across every project
+    you can see, any page of any project ("orion backlog", "burndown"), and the
+    projects themselves.
+  - Type `APOLLO-12`, or just `12` inside Apollo, to jump straight to an issue.
+  - Arrow keys to move, Enter to open, ⌘/Ctrl+Enter for a new tab. `/` still
+    filters the board, backlog and issue list in place.
 - 🔁 **Custom Workflows, per project**:
   - Add, rename, reorder, recolor, or delete statuses; the board shows one column per
     non-backlog status, in the order you set.

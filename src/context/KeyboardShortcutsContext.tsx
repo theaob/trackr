@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useRef, useCallback } from 
 import { useRouter, usePathname } from "next/navigation";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import KeyboardShortcutsModal from "@/components/common/KeyboardShortcutsModal";
+import SpotlightSearch from "@/components/common/SpotlightSearch";
 
 interface KeyboardShortcutsContextType {
   isShortcutsModalOpen: boolean;
@@ -11,6 +12,7 @@ interface KeyboardShortcutsContextType {
   closeShortcutsModal: () => void;
   registerCreateIssue: (fn: () => void) => () => void;
   registerToggleSidebar: (fn: () => void) => () => void;
+  openSpotlight: () => void;
 }
 
 const KeyboardShortcutsContext = createContext<KeyboardShortcutsContextType>({
@@ -19,6 +21,7 @@ const KeyboardShortcutsContext = createContext<KeyboardShortcutsContextType>({
   closeShortcutsModal: () => {},
   registerCreateIssue: () => () => {},
   registerToggleSidebar: () => () => {},
+  openSpotlight: () => {},
 });
 
 export function KeyboardShortcutsProvider({ children }: { children: React.ReactNode }) {
@@ -46,6 +49,17 @@ export function KeyboardShortcutsProvider({ children }: { children: React.ReactN
   const openShortcutsModal = useCallback(() => setIsShortcutsModalOpen(true), []);
   const closeShortcutsModal = useCallback(() => setIsShortcutsModalOpen(false), []);
 
+  // The ⌘K panel. There's nothing to search before signing in or during setup.
+  const [spotlight, setSpotlight] = useState<{ canCreateIssue: boolean } | null>(null);
+  const spotlightAvailable = !pathname?.startsWith("/login") && !pathname?.startsWith("/setup");
+  const openSpotlight = useCallback(() => {
+    if (!spotlightAvailable) return;
+    setIsShortcutsModalOpen(false);
+    setSpotlight({ canCreateIssue: !!createIssueHandlerRef.current });
+  }, [spotlightAvailable]);
+  const closeSpotlight = useCallback(() => setSpotlight(null), []);
+  const createIssueFromSpotlight = useCallback(() => createIssueHandlerRef.current?.(), []);
+
   // Extract current project key from pathname if present
   const projectKey = React.useMemo(() => {
     if (!pathname) return null;
@@ -68,13 +82,16 @@ export function KeyboardShortcutsProvider({ children }: { children: React.ReactN
     [router, projectKey]
   );
 
+  // "/" focuses the page's filter box where there is one, and opens search elsewhere.
   const handleFocusSearch = useCallback(() => {
     const input = document.getElementById("global-search-input") as HTMLInputElement | null;
-    if (input) {
+    if (input && input.offsetParent !== null) {
       input.focus();
       input.select();
+    } else {
+      openSpotlight();
     }
-  }, []);
+  }, [openSpotlight]);
 
   const { activeSequence } = useKeyboardShortcuts({
     handlers: {
@@ -82,6 +99,7 @@ export function KeyboardShortcutsProvider({ children }: { children: React.ReactN
       onToggleSidebar: () => toggleSidebarHandlerRef.current?.(),
       onOpenHelp: openShortcutsModal,
       onFocusSearch: handleFocusSearch,
+      onOpenSpotlight: openSpotlight,
       onCloseModal: closeShortcutsModal,
       onNavigate: handleNavigate,
     },
@@ -95,6 +113,7 @@ export function KeyboardShortcutsProvider({ children }: { children: React.ReactN
         closeShortcutsModal,
         registerCreateIssue,
         registerToggleSidebar,
+        openSpotlight,
       }}
     >
       {children}
@@ -122,6 +141,14 @@ export function KeyboardShortcutsProvider({ children }: { children: React.ReactN
 
       {/* Keyboard Shortcuts Cheat Sheet Modal */}
       <KeyboardShortcutsModal isOpen={isShortcutsModalOpen} onClose={closeShortcutsModal} />
+
+      {spotlight && (
+        <SpotlightSearch
+          onClose={closeSpotlight}
+          onCreateIssue={spotlight.canCreateIssue ? createIssueFromSpotlight : undefined}
+          onShowShortcuts={openShortcutsModal}
+        />
+      )}
     </KeyboardShortcutsContext.Provider>
   );
 }
