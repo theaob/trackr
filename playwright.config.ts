@@ -14,6 +14,9 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${PORT}`,
     trace: "retain-on-failure",
+    // Menus and dialogs fade in; without this, axe can catch them half
+    // transparent and report contrast the finished page doesn't have.
+    reducedMotion: "reduce",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
