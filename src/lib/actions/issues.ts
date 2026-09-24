@@ -508,6 +508,7 @@ export async function getPaginatedIssues(params: PaginatedIssuesParams) {
           assignee: USER_SELECT,
           reporter: USER_SELECT,
           version: true,
+          sprint: { select: { id: true, name: true, status: true } },
           parent: {
             select: {
               id: true,
@@ -516,7 +517,7 @@ export async function getPaginatedIssues(params: PaginatedIssuesParams) {
               type: true,
             },
           },
-          // Comment and activity threads are loaded by the detail modal, not
+          // Comment and activity threads are loaded by the issue view, not
           // eagerly for every row of the table.
           _count: { select: { comments: true } },
           ...LABELS_INCLUDE,

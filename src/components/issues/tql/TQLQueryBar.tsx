@@ -1,17 +1,10 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useMemo } from "react";
-import {
-  Search,
-  Check,
-  AlertCircle,
-  Code2,
-  HelpCircle,
-  X,
-  Sparkles,
-  ArrowRight,
-  Filter,
-} from "lucide-react";
+import { Search, Check, AlertCircle, Code2, HelpCircle, X, Sparkles, Filter } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Dialog, DialogContent } from "@/components/ui/Dialog";
+import { cn } from "@/components/ui/cn";
 import { TQLParser } from "@/lib/tql/parser";
 import { getTQLCompletions, TQLSuggestion, TQLAutocompleteContext } from "@/lib/tql/autocomplete";
 
@@ -138,275 +131,178 @@ export default function TQLQueryBar({
     setCursorPos(target.selectionStart || 0);
   };
 
-  return (
-    <div className="relative flex flex-col gap-1.5 w-full">
-      {/* Top bar with input & actions */}
-      <div className="flex items-center gap-2">
-        {/* Main Query Bar */}
-        <div className="relative flex-1 flex items-center">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-jira-gray-500 pointer-events-none">
-            <Code2 className="w-4 h-4 text-jira-blue" />
-          </div>
+  const listboxId = "tql-suggestions";
+  const open = showSuggestions && suggestions.length > 0;
+  const EXAMPLES = [
+    { q: 'project = "APOLLO" AND status = "IN_PROGRESS"', desc: "Everything in Apollo that's in progress" },
+    { q: "type in (Bug, Story) AND priority in (High, Highest)", desc: "High-priority bugs and stories" },
+    { q: "assignee = currentUser() AND statusCategory != Done", desc: "My open issues, across projects" },
+    { q: "assignee is EMPTY AND sprint in openSprints()", desc: "Unassigned work in active sprints" },
+    { q: "created >= -7d ORDER BY created DESC", desc: "Created in the last 7 days, newest first" },
+    { q: 'summary ~ "memory leak" OR description ~ "crash"', desc: "A phrase in titles or descriptions" },
+  ];
 
+  return (
+    <div className="relative flex w-full flex-col gap-1.5">
+      <div className="flex items-center gap-2">
+        <div className="relative flex flex-1 items-center">
+          <Code2 className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden="true" />
           <input
             ref={inputRef}
             type="text"
+            role="combobox"
+            aria-label="TQL query"
+            aria-autocomplete="list"
+            aria-expanded={open}
+            aria-controls={open ? listboxId : undefined}
+            aria-activedescendant={open ? `${listboxId}-${selectedIndex}` : undefined}
+            aria-invalid={!!query.trim() && !parseResult.success}
+            spellCheck={false}
             value={query}
             onChange={handleInputChange}
             onSelect={handleInputSelect}
             onFocus={() => setShowSuggestions(true)}
             onKeyDown={handleKeyDown}
-            placeholder='e.g. project = "APOLLO" AND status = "In Progress" AND assignee = currentUser() ORDER BY priority DESC'
-            className={`w-full pl-9 pr-24 py-1.5 text-xs font-mono bg-white border rounded shadow-2xs transition-all ${
-              !query.trim()
-                ? "border-jira-gray-300 focus:border-jira-blue"
-                : parseResult.success
-                ? "border-emerald-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200"
-                : "border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-200"
-            }`}
-          />
-
-          {/* Inline Actions & Syntax Indicator */}
-          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-            {query.trim() && (
-              <>
-                {parseResult.success ? (
-                  <span
-                    title="Valid query syntax"
-                    className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 cursor-default"
-                  >
-                    <Check className="w-3 h-3 text-emerald-600" />
-                    <span className="hidden sm:inline">Valid TQL</span>
-                  </span>
-                ) : (
-                  <span
-                    title={parseResult.error.message}
-                    className="flex items-center gap-1 text-[11px] font-semibold text-red-600 bg-red-50 px-1.5 py-0.5 rounded border border-red-200 cursor-help"
-                  >
-                    <AlertCircle className="w-3 h-3 text-red-500" />
-                    <span className="hidden sm:inline">Syntax Error</span>
-                  </span>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    onChange("");
-                    setShowSuggestions(false);
-                    inputRef.current?.focus();
-                  }}
-                  className="p-1 text-jira-gray-400 hover:text-jira-gray-700 rounded transition-colors"
-                  title="Clear query"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </>
+            placeholder='e.g. status = "IN_PROGRESS" AND assignee = currentUser() ORDER BY updated DESC'
+            className={cn(
+              "h-8 w-full rounded-control border bg-surface pl-8 pr-40 font-mono text-xs text-ink placeholder:text-muted",
+              !query.trim() ? "border-subtle focus:border-accent" : parseResult.success ? "border-success focus:border-success" : "border-danger"
             )}
-
+          />
+          <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
+            {query.trim() &&
+              (parseResult.success ? (
+                <span className="hidden items-center gap-1 rounded-full bg-success-soft px-2 text-[11px] font-medium leading-5 text-success sm:inline-flex">
+                  <Check className="h-3 w-3" aria-hidden="true" />
+                  Valid TQL
+                </span>
+              ) : (
+                <span className="hidden items-center gap-1 rounded-full bg-danger-soft px-2 text-[11px] font-medium leading-5 text-danger sm:inline-flex">
+                  <AlertCircle className="h-3 w-3" aria-hidden="true" />
+                  Error
+                </span>
+              ))}
+            {query.trim() && (
+              <button
+                type="button"
+                onClick={() => {
+                  onChange("");
+                  setShowSuggestions(false);
+                  inputRef.current?.focus();
+                }}
+                aria-label="Clear the query"
+                className="inline-flex h-6 w-6 items-center justify-center rounded-control text-muted hover:bg-surface-sunk hover:text-ink"
+              >
+                <X className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setShowHelpModal(true)}
-              className="p-1 text-jira-gray-400 hover:text-jira-blue rounded transition-colors"
-              title="TQL syntax guide (?)"
+              aria-label="TQL syntax guide"
+              className="inline-flex h-6 w-6 items-center justify-center rounded-control text-muted hover:bg-surface-sunk hover:text-ink"
             >
-              <HelpCircle className="w-3.5 h-3.5" />
+              <HelpCircle className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           </div>
         </div>
 
-        {/* Search Execute Button */}
-        <button
-          type="button"
-          onClick={onSearch}
-          disabled={isLoading || (!parseResult.success && !!query.trim())}
-          className="px-3.5 py-1.5 bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold rounded flex items-center gap-1.5 transition-colors shadow-2xs disabled:opacity-50 shrink-0 cursor-pointer"
-        >
-          <Search className="w-3.5 h-3.5" />
-          <span>Search</span>
-        </button>
-
-        {/* Switch to Basic Mode */}
+        <Button variant="primary" size="sm" onClick={onSearch} disabled={isLoading || (!parseResult.success && !!query.trim())}>
+          <Search className="h-3.5 w-3.5" aria-hidden="true" />
+          Search
+        </Button>
         {onSwitchToBasic && (
-          <button
-            type="button"
-            onClick={onSwitchToBasic}
-            className="px-2.5 py-1.5 bg-jira-gray-100 hover:bg-jira-gray-200 text-jira-gray-700 text-xs font-medium rounded flex items-center gap-1 transition-colors shrink-0"
-            title="Switch to visual filter dropdowns"
-          >
-            <Filter className="w-3.5 h-3.5 text-jira-gray-600" />
-            <span>Basic</span>
-          </button>
+          <Button size="sm" onClick={onSwitchToBasic} title="Show this query as filter chips">
+            <Filter className="h-3.5 w-3.5" aria-hidden="true" />
+            Filters
+          </Button>
         )}
       </div>
 
-      {/* Syntax Error Banner */}
       {!parseResult.success && query.trim() && (
-        <div className="flex items-center gap-2 px-3 py-1 bg-red-50 border border-red-200 rounded text-xs text-red-700 animate-in fade-in">
-          <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
-          <span>
-            <strong>Syntax Error:</strong> {parseResult.error.message}
-          </span>
-        </div>
+        <p className="flex items-center gap-1.5 text-xs text-danger">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          {parseResult.error.message}
+        </p>
       )}
 
-      {/* Autocomplete Suggestions Popover */}
-      {showSuggestions && suggestions.length > 0 && (
-        <div
-          ref={popoverRef}
-          className="absolute left-0 top-full mt-1 w-96 max-h-64 overflow-y-auto bg-white border border-jira-gray-300 rounded-md shadow-xl py-1 z-50 animate-in fade-in slide-in-from-top-1"
-        >
-          <div className="px-3 py-1 text-[10px] font-bold text-jira-gray-500 uppercase tracking-wider border-b border-jira-gray-100 flex items-center justify-between">
+      {open && (
+        <div ref={popoverRef} className="absolute left-0 top-full z-50 mt-1 w-[26rem] max-w-full rounded-card border border-subtle bg-surface py-1 shadow-overlay">
+          <p className="flex items-center justify-between border-b border-subtle px-3 pb-1 text-[11px] text-ink-2">
             <span className="flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-jira-blue" /> Suggestions
+              <Sparkles className="h-3 w-3" aria-hidden="true" /> Suggestions
             </span>
-            <span className="text-jira-gray-400 font-mono text-[9px]">Tab / Enter to select</span>
-          </div>
-
-          {suggestions.map((item, index) => {
-            const isSelected = index === selectedIndex;
-            return (
-              <button
+            <span>Tab or Enter to use</span>
+          </p>
+          <ul id={listboxId} role="listbox" aria-label="Suggestions" className="max-h-64 overflow-y-auto">
+            {suggestions.map((item, index) => (
+              <li
                 key={`${item.label}-${index}`}
-                type="button"
+                id={`${listboxId}-${index}`}
+                role="option"
+                aria-selected={index === selectedIndex}
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleApplySuggestion(item)}
                 onMouseEnter={() => setSelectedIndex(index)}
-                className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between transition-colors ${
-                  isSelected ? "bg-jira-blue-light/70 text-jira-blue" : "hover:bg-jira-gray-100 text-jira-navy"
-                }`}
+                className={cn(
+                  "flex min-h-8 cursor-default items-center justify-between gap-2 px-3 text-xs",
+                  index === selectedIndex ? "bg-surface-sunk" : undefined
+                )}
               >
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-[9px] font-bold px-1.5 py-px rounded uppercase ${
-                      item.type === "field"
-                        ? "bg-blue-100 text-blue-700"
-                        : item.type === "operator"
-                        ? "bg-amber-100 text-amber-800"
-                        : item.type === "function"
-                        ? "bg-purple-100 text-purple-800 font-mono"
-                        : item.type === "value"
-                        ? "bg-emerald-100 text-emerald-800 font-mono"
-                        : "bg-jira-gray-200 text-jira-gray-700"
-                    }`}
-                  >
-                    {item.type}
-                  </span>
-                  <span className="font-semibold font-mono">{item.label}</span>
-                </div>
-                <span className="text-[11px] text-jira-gray-500 truncate max-w-[160px]">{item.detail}</span>
-              </button>
-            );
-          })}
+                <span className="flex items-center gap-2">
+                  <span className="w-16 shrink-0 text-[11px] text-ink-2">{item.type}</span>
+                  <span className="font-mono text-ink">{item.label}</span>
+                </span>
+                <span className="max-w-[12rem] truncate text-[11px] text-ink-2">{item.detail}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
-      {/* TQL syntax help */}
-      {showHelpModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-start sm:items-center justify-center overflow-y-auto p-0 sm:p-4">
-          <div className="bg-white border border-jira-gray-300 sm:rounded-lg shadow-2xl max-w-2xl w-full min-h-full sm:min-h-0 sm:max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between gap-2 px-4 py-3 sm:px-6 border-b border-jira-gray-200 shrink-0">
-              <div className="flex items-center gap-2 min-w-0">
-                <Code2 className="w-5 h-5 text-jira-blue shrink-0" />
-                <h3 className="font-bold text-sm sm:text-base text-jira-navy truncate">Trackr Query Language (TQL) guide</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowHelpModal(false)}
-                className="p-1 text-jira-gray-400 hover:text-jira-gray-700 rounded transition-colors shrink-0"
-              >
-                <X className="w-4 h-4" />
-              </button>
+      <Dialog open={showHelpModal} onOpenChange={setShowHelpModal}>
+        <DialogContent
+          size="lg"
+          title="TQL, Trackr's query language"
+          description="Pick an example to start from, or combine fields with AND, OR and NOT."
+          footer={<Button onClick={() => setShowHelpModal(false)}>Done</Button>}
+        >
+          <ul className="flex flex-col gap-1.5">
+            {EXAMPLES.map((example) => (
+              <li key={example.q}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange(example.q);
+                    setShowHelpModal(false);
+                  }}
+                  className="flex w-full flex-col items-start gap-0.5 rounded-control border border-subtle px-3 py-2 text-left hover:border-strong hover:bg-surface-sunk"
+                >
+                  <code className="break-all font-mono text-xs text-ink">{example.q}</code>
+                  <span className="text-xs text-ink-2">{example.desc}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-4 grid grid-cols-1 gap-4 border-t border-subtle pt-3 text-xs text-ink-2 sm:grid-cols-2">
+            <div>
+              <h3 className="mb-1 text-[13px] font-semibold text-ink">Fields</h3>
+              <p className="font-mono leading-5">
+                project, type, status, statusCategory, priority, assignee, reporter, sprint, fixVersion, labels, component, created, updated,
+                dueDate, storyPoints, summary, text
+              </p>
             </div>
-
-            <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 space-y-4 text-xs text-jira-gray-700">
-              <div>
-                <h4 className="font-bold text-jira-navy mb-1.5">Common Query Examples</h4>
-                <div className="space-y-1.5 font-mono text-[11px]">
-                  {[
-                    {
-                      q: 'project = "APOLLO" AND status = "In Progress"',
-                      desc: "All issues in Apollo currently in progress",
-                    },
-                    {
-                      q: "type in (Bug, Story) AND priority in (High, Highest)",
-                      desc: "High priority bugs and stories",
-                    },
-                    {
-                      q: "assignee = currentUser() AND statusCategory != Done",
-                      desc: "My open unresolved issues across all projects",
-                    },
-                    {
-                      q: "assignee is EMPTY AND sprint in openSprints()",
-                      desc: "Unassigned work in active sprints",
-                    },
-                    {
-                      q: "created >= -7d ORDER BY created DESC",
-                      desc: "Issues created within the last 7 days, newest first",
-                    },
-                    {
-                      q: 'summary ~ "memory leak" OR description ~ "crash"',
-                      desc: "Keyword search across issue titles and descriptions",
-                    },
-                  ].map((example, i) => (
-                    <div
-                      key={i}
-                      onClick={() => {
-                        onChange(example.q);
-                        setShowHelpModal(false);
-                      }}
-                      className="p-2 bg-jira-gray-50 hover:bg-jira-blue-light/50 border border-jira-gray-200 rounded cursor-pointer transition-colors group"
-                    >
-                      <div className="flex items-start justify-between gap-2 text-jira-blue font-semibold">
-                        <span className="break-all">{example.q}</span>
-                        <span className="text-[10px] text-jira-gray-400 group-hover:text-jira-blue flex items-center gap-0.5 shrink-0 pt-0.5">
-                          Use <ArrowRight className="w-2.5 h-2.5" />
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-jira-gray-600 font-sans mt-0.5">{example.desc}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-jira-gray-200">
-                <div>
-                  <h4 className="font-bold text-jira-navy mb-1">Supported Fields</h4>
-                  <ul className="list-disc list-inside space-y-0.5 text-jira-gray-600">
-                    <li><code className="font-mono">project</code> (key or name)</li>
-                    <li><code className="font-mono">type</code> (Bug, Story, Task, Epic)</li>
-                    <li><code className="font-mono">status</code>, <code className="font-mono">statusCategory</code></li>
-                    <li><code className="font-mono">priority</code> (Highest, High, Medium, Low, Lowest)</li>
-                    <li><code className="font-mono">assignee</code>, <code className="font-mono">reporter</code></li>
-                    <li><code className="font-mono">sprint</code>, <code className="font-mono">fixVersion</code></li>
-                    <li><code className="font-mono">labels</code>, <code className="font-mono">component</code></li>
-                    <li><code className="font-mono">created</code>, <code className="font-mono">updated</code>, <code className="font-mono">dueDate</code></li>
-                    <li><code className="font-mono">storyPoints</code>, <code className="font-mono">summary</code>, <code className="font-mono">text</code></li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-bold text-jira-navy mb-1">Dynamic Functions</h4>
-                  <ul className="list-disc list-inside space-y-0.5 text-jira-gray-600">
-                    <li><code className="font-mono">currentUser()</code></li>
-                    <li><code className="font-mono">openSprints()</code></li>
-                    <li><code className="font-mono">unreleasedVersions()</code></li>
-                    <li><code className="font-mono">now()</code>, <code className="font-mono">startOfDay()</code>, <code className="font-mono">endOfDay()</code></li>
-                    <li>Relative dates: <code className="font-mono">-7d</code>, <code className="font-mono">-24h</code>, <code className="font-mono">-2w</code>, <code className="font-mono">+3d</code></li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            <div className="px-4 py-3 sm:px-6 border-t border-jira-gray-200 flex justify-end shrink-0">
-              <button
-                type="button"
-                onClick={() => setShowHelpModal(false)}
-                className="px-4 py-1.5 bg-jira-blue hover:bg-jira-blue-hover text-white text-xs font-semibold rounded"
-              >
-                Got it
-              </button>
+            <div>
+              <h3 className="mb-1 text-[13px] font-semibold text-ink">Functions and dates</h3>
+              <p className="font-mono leading-5">currentUser(), openSprints(), unreleasedVersions(), now(), startOfDay(), endOfDay()</p>
+              <p className="mt-1">
+                Relative dates: <code className="font-mono">-7d</code>, <code className="font-mono">-24h</code>, <code className="font-mono">-2w</code>,{" "}
+                <code className="font-mono">+3d</code>
+              </p>
             </div>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

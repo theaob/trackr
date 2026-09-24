@@ -181,6 +181,56 @@ test.describe.serial("accessibility", () => {
     await expect(card("Done")).toBeVisible();
   });
 
+  test("issues: views, chips, TQL and a saved view", async () => {
+    await page.goto("/projects/APOLLO/issues");
+    await expect(page.getByRole("heading", { level: 1, name: "Issues" })).toBeVisible();
+    await expect(page.getByRole("list", { name: "Issues" }).getByText("Check the issue view")).toBeVisible();
+    await expectNoSeriousViolations(page, "Issues, split");
+
+    await page.getByRole("button", { name: "Table" }).click();
+    await expect(page.getByRole("table")).toBeVisible();
+    await expectNoSeriousViolations(page, "Issues, table");
+
+    // Every old preset is a view.
+    await page.getByRole("button", { name: /choose a view/ }).click();
+    for (const name of ["All issues", "My open issues", "Reported by me", "Recently updated", "Done", "High priority"]) {
+      await expect(page.getByRole("menuitemcheckbox", { name })).toBeVisible();
+    }
+    await expectNoSeriousViolations(page, "Issues, views menu");
+    await page.getByRole("menuitemcheckbox", { name: "Reported by me" }).click();
+    await expect(page).toHaveURL(/view=preset-reported/);
+    await expect(page.getByRole("table").getByText("Check the issue view")).toBeVisible();
+
+    // A chip writes TQL, and the TQL reads back into chips.
+    const filters = page.getByRole("group", { name: "Filters" });
+    await filters.getByRole("button", { name: /^Type/ }).click();
+    await page.getByRole("menuitemcheckbox", { name: "Bug" }).click();
+    await page.keyboard.press("Escape");
+    await expect(page.getByText("No issues match these filters.")).toBeVisible();
+    await filters.getByRole("button", { name: "Edit as TQL" }).click();
+    const tql = page.getByRole("combobox", { name: "TQL query" });
+    await expect(tql).toHaveValue(/type = "BUG"/);
+    await expectNoSeriousViolations(page, "Issues, TQL");
+    await tql.fill('project = "APOLLO" AND reporter = currentUser() ORDER BY created DESC');
+    await tql.press("Enter");
+    await expect(page.getByRole("table").getByText("Check the issue view")).toBeVisible();
+    await page.getByRole("button", { name: "Filters" }).click();
+    await expect(filters.getByRole("button", { name: "Reporter: Me" })).toBeVisible();
+
+    // Save it as a view of your own; it's there after a reload.
+    await page.getByRole("button", { name: /choose a view/ }).click();
+    await page.getByRole("menuitem", { name: "Save as a new view…" }).click();
+    const dialog = page.getByRole("dialog", { name: "Save as a new view" });
+    await dialog.getByLabel("Name").fill("Mine, newest first");
+    await expectNoSeriousViolations(page, "Save view dialog", "[role=dialog]");
+    await dialog.getByRole("button", { name: "Save view" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(/view=/);
+    await page.reload();
+    await expect(page.getByRole("button", { name: /Mine, newest first/ })).toBeVisible();
+    await expect(page.getByRole("list", { name: "Issues" }).getByText("Check the issue view")).toBeVisible();
+  });
+
   test("sign-in", async ({ browser }, testInfo) => {
     const signedOutContext = await browser.newContext({ baseURL: testInfo.project.use.baseURL });
     const signedOut = await signedOutContext.newPage();

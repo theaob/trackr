@@ -353,9 +353,9 @@ describe("Kanban Project Sprint Guardrails", () => {
         }))
       );
 
-      // Filter bar must not have Sprint filter
-      expect(html).not.toContain("Sprint: All");
+      // No sprint property on the issue beside the list, and no sprint chip in the filters
       expect(html).not.toContain('aria-label="Sprint"');
+      expect(html).not.toMatch(/>Sprint(: [^<]*)?<\/button>/);
     });
 
     it("renders Sprint filter and Split-view Sprint selector for Scrum projects", () => {
@@ -369,9 +369,7 @@ describe("Kanban Project Sprint Guardrails", () => {
         }))
       );
 
-      // Filter bar must have Sprint filter
-      expect(html).toContain("Sprint: All");
-      expect(html).toContain("Sprint 1");
+      // The issue beside the list has its Sprint property
       expect(html).toContain('aria-label="Sprint"');
     });
   });

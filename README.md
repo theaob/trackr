@@ -91,7 +91,8 @@ A modern, full-stack agile project management and issue tracking platform built 
     labels, an issue can only pick from the project's existing set -- not
     create a new one on the fly.
   - Bulk actions from the Issues list: select several issues and change their
-    status, assignee, or priority, add a label, or delete them all at once.
+    status, assignee, priority or fix version, add a label, or delete them
+    all at once.
 - 📝 **The issue view**, the same everywhere: in a panel over the board,
   backlog, roadmap and issue table, in the Issues split view, and on the
   issue's own page at `/projects/KEY/issues/KEY-12`, which every link,
@@ -121,11 +122,22 @@ A modern, full-stack agile project management and issue tracking platform built 
   - **Activity**: comments and the change history in one timeline, newest
     first, narrowed to either with **Comments** or **History**; older entries
     load 50 at a time.
-- 🔍 **Interactive Filtering**:
-  - Quick keyword search across issue keys and summaries.
-  - One-click teammate avatar filter buttons.
-  - "Only my issues" toggle.
-  - Issue type, priority & label selectors.
+- 🔍 **The Issues page**:
+  - **Views**: All issues, My open issues, Reported by me, Recently updated,
+    Done and High priority are built in. Save your own from the views menu
+    (the query and the columns), then update, rename or delete it. Saved
+    views are private to you and apply to whichever project you open them in.
+    The address bar keeps `?view=` or `?tql=`, so a link opens the same list.
+  - **Filter chips** for status, assignee, type and priority, plus reporter,
+    sprint, fix version and label from **+ Filter**, and a search box. Every
+    chip writes TQL: **Edit as TQL** shows the whole query, and **Filters**
+    turns it back into chips. Conditions the chips can't show stay as chips
+    of their own.
+  - **Table**: choose the columns, sort by clicking a header, and switch to a
+    compact density. **Export CSV** downloads the columns on screen.
+  - Select rows for bulk actions in the toolbar: status, assignee, priority,
+    fix version, add a label, or delete.
+  - **Split view**: the list on the left and the issue on the right.
 - 🔐 **Authentication & Access Control**:
   - Email/password sign-in backed by a signed, http-only session cookie.
   - PBKDF2-SHA512 password hashing (210k iterations) with transparent upgrades.
@@ -373,7 +385,9 @@ not publish an image unless they pass. The accessibility checks start the
 production build on a fresh database, walk through setup, and run
 [axe](https://github.com/dequelabs/axe-core) on the setup, sign-in and Projects
 pages, Home and Inbox, an issue's page and panel, the backlog and the board
-(where a card is also moved with its menu, the keyboard and the mouse); any
+(where a card is also moved with its menu, the keyboard and the mouse), and the
+Issues page (its split view, table, views menu and TQL editor, while choosing
+a view, adding a chip, running TQL and saving a view); any
 serious or critical finding fails the build. The tests include a check that every
 Tailwind class used under `src/` actually generates CSS, since Tailwind skips
 unknown classes silently.

@@ -588,7 +588,7 @@ export default function KanbanBoard({
   // readable card: four fit at 1280 px, and only boards with more scroll.
   const gridStyle = { gridTemplateColumns: `repeat(${COLUMNS.length}, minmax(220px, 1fr))` };
   const tql = boardFiltersToTQL(project.key, filters, { sprintOnly: !!activeSprint });
-  const moreFiltersHref = `/projects/${encodeURIComponent(project.key)}/issues?mode=tql&tql=${encodeURIComponent(tql)}`;
+  const moreFiltersHref = `/projects/${encodeURIComponent(project.key)}/issues?tql=${encodeURIComponent(tql)}`;
 
   const headerActions =
     (activeSprint && permissions.canManageSprints) || permissions.canManageVersions || !isKanban ? (

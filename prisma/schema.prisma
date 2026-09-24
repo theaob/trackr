@@ -35,6 +35,7 @@ model User {
   ledProjects         Project[]
   projectMembers      ProjectMember[]
   personalAccessTokens PersonalAccessToken[]
+  savedViews          SavedView[]
   createdAt           DateTime      @default(now())
 }
 
@@ -517,4 +518,20 @@ model InstanceSettings {
   // Whether anyone can create a local account from the sign-in page.
   allowSelfRegistration Boolean  @default(true)
   updatedAt             DateTime @updatedAt
+}
+
+/// An Issues page view someone saved: a TQL query (with no project, so it
+/// works in any project) and the columns to show. Private to its owner.
+model SavedView {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  tql       String
+  /// JSON array of column ids.
+  columns   String   @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
