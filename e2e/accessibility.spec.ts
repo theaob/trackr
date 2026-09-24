@@ -105,6 +105,8 @@ test.describe.serial("accessibility", () => {
     // The account dialogs and the shortcuts list.
     await page.getByRole("button", { name: /Ada Lovelace/ }).click();
     await page.getByRole("menuitem", { name: /Password/ }).click();
+    // With reduced motion, dialogs appear without fading in (so axe never sees one half drawn).
+    expect(await page.getByRole("dialog").evaluate((el) => getComputedStyle(el).animationName)).toBe("none");
     await expectNoSeriousViolations(page, "Password and sessions dialog", "[role=dialog]");
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: /Ada Lovelace/ }).click();

@@ -143,10 +143,12 @@ select:focus-visible,
 }
 
 /* Open/close animations (tailwindcss-animate) are decoration only; skip them
-   for anyone who has asked their system for less motion. */
+   for anyone who has asked their system for less motion. Overlays use them as
+   variants (data-[state=open]:animate-in), whose class names differ, hence
+   matching on the class attribute rather than .animate-in. */
 @media (prefers-reduced-motion: reduce) {
-  .animate-in,
-  .animate-out {
+  [class*="animate-in"],
+  [class*="animate-out"] {
     animation: none !important;
   }
 }
