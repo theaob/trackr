@@ -2,9 +2,10 @@
 
 import React, { createContext, useContext, useState, useRef, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useKeyboardShortcuts, type NavigateDestination } from "@/hooks/useKeyboardShortcuts";
 import KeyboardShortcutsModal from "@/components/common/KeyboardShortcutsModal";
 import SpotlightSearch from "@/components/common/SpotlightSearch";
+import { useCurrentUser } from "@/context/UserContext";
 
 interface KeyboardShortcutsContextType {
   isShortcutsModalOpen: boolean;
@@ -26,6 +27,7 @@ const KeyboardShortcutsContext = createContext<KeyboardShortcutsContextType>({
 
 export function KeyboardShortcutsProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const currentUserHasNewLayout = !!useCurrentUser().currentUser?.useNewLayout;
   const pathname = usePathname();
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
 
@@ -68,9 +70,11 @@ export function KeyboardShortcutsProvider({ children }: { children: React.ReactN
   }, [pathname]);
 
   const handleNavigate = useCallback(
-    (dest: "board" | "backlog" | "issues" | "roadmap" | "releases" | "reports" | "settings" | "projects") => {
-      if (dest === "projects") {
-        router.push("/projects");
+    (dest: NavigateDestination) => {
+      if (dest === "projects" || dest === "home" || dest === "inbox") {
+        // Home and Inbox belong to the new layout; on the classic one they
+        // redirect to Projects.
+        router.push(`/${dest}`);
         return;
       }
       if (projectKey) {
@@ -135,6 +139,13 @@ export function KeyboardShortcutsProvider({ children }: { children: React.ReactN
             <kbd className="font-mono font-bold bg-white/10 px-1 py-0.5 rounded">e</kbd> Reports ·{" "}
             <kbd className="font-mono font-bold bg-white/10 px-1 py-0.5 rounded">s</kbd> Settings ·{" "}
             <kbd className="font-mono font-bold bg-white/10 px-1 py-0.5 rounded">p</kbd> Projects
+            {currentUserHasNewLayout && (
+              <>
+                {" "}·{" "}
+                <kbd className="font-mono font-bold bg-white/10 px-1 py-0.5 rounded">h</kbd> Home ·{" "}
+                <kbd className="font-mono font-bold bg-white/10 px-1 py-0.5 rounded">n</kbd> Inbox
+              </>
+            )}
           </span>
         </div>
       )}

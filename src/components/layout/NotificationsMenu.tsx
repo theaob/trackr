@@ -11,6 +11,9 @@ import {
 import { Bell, Check, CheckCheck, Circle, Clock, ExternalLink } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { notifyShellCountsChanged } from "@/hooks/useShellCounts";
+import { notificationTarget } from "@/lib/notificationLinks";
 
 export default function NotificationsMenu() {
   const router = useRouter();
@@ -55,31 +58,14 @@ export default function NotificationsMenu() {
 
   const handleNotificationClick = async (notif: Notification) => {
     if (!notif.read) {
-      markNotificationAsRead(notif.id);
+      markNotificationAsRead(notif.id).then(notifyShellCountsChanged);
       setNotifications((prev) =>
         prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n))
       );
     }
     setIsOpen(false);
 
-    let targetLink = notif.link;
-    let extractedIssueKey: string | null = null;
-
-    const match =
-      notif.title.match(/\b([A-Z0-9]+-\d+)\b/) || notif.message.match(/\b([A-Z0-9]+-\d+)\b/);
-    if (match) {
-      extractedIssueKey = match[1];
-    }
-
-    if (targetLink) {
-      if (!targetLink.includes("selectedIssue=") && extractedIssueKey) {
-        const separator = targetLink.includes("?") ? "&" : "?";
-        targetLink = `${targetLink}${separator}selectedIssue=${extractedIssueKey}`;
-      }
-    } else if (extractedIssueKey) {
-      const projectKey = extractedIssueKey.split("-")[0];
-      targetLink = `/projects/${projectKey}/board?selectedIssue=${extractedIssueKey}`;
-    }
+    const { href: targetLink, issueKey: extractedIssueKey } = notificationTarget(notif);
 
     if (extractedIssueKey) {
       try {
@@ -105,6 +91,7 @@ export default function NotificationsMenu() {
     if (!res.success) {
       setNotifications(previous);
     }
+    notifyShellCountsChanged();
   };
 
   const handleMarkAllAsRead = async () => {
@@ -115,6 +102,7 @@ export default function NotificationsMenu() {
     if (!res.success) {
       setNotifications(previous);
     }
+    notifyShellCountsChanged();
   };
 
   if (!currentUser) {
@@ -131,6 +119,8 @@ export default function NotificationsMenu() {
         }}
         className="p-2 text-jira-gray-600 hover:text-jira-navy hover:bg-jira-gray-100 rounded-full transition-colors relative"
         title="Notifications"
+        aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
+        aria-expanded={isOpen}
       >
         <Bell className="w-4 h-4" />
         {unreadCount > 0 && (
@@ -252,6 +242,18 @@ export default function NotificationsMenu() {
               ))
             )}
           </div>
+          {currentUser.useNewLayout && (
+            <div className="border-t border-jira-gray-200 px-4 pt-2">
+              <Link
+                prefetch={false}
+                href="/inbox"
+                onClick={() => setIsOpen(false)}
+                className="block rounded py-1 text-center text-xs font-semibold text-jira-blue hover:text-jira-blue-hover"
+              >
+                Open Inbox
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -3,6 +3,7 @@ import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
 import { UserProvider } from "@/context/UserContext";
 import { KeyboardShortcutsProvider } from "@/context/KeyboardShortcutsContext";
+import { ToastProvider } from "@/components/ui/Toast";
 import { getCurrentUser } from "@/lib/auth/session";
 
 // Downloaded at build time and served from this origin: self-hosted installs
@@ -47,7 +48,9 @@ export default async function RootLayout({
     <html lang="en" className={`${plexSans.variable} ${plexMono.variable}`}>
       <body className="font-sans antialiased text-jira-navy bg-white">
         <UserProvider sessionUser={sessionUser}>
-          <KeyboardShortcutsProvider>{children}</KeyboardShortcutsProvider>
+          <ToastProvider>
+            <KeyboardShortcutsProvider>{children}</KeyboardShortcutsProvider>
+          </ToastProvider>
         </UserProvider>
       </body>
     </html>

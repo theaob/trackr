@@ -17,6 +17,19 @@ A modern, full-stack agile project management and issue tracking platform built 
   - Type `APOLLO-12`, or just `12` inside Apollo, to jump straight to an issue.
   - Arrow keys to move, Enter to open, ⌘/Ctrl+Enter for a new tab. `/` still
     filters the board, backlog and issue list in place.
+- 🧭 **New layout (opt-in)**: choose **Try the new layout** in the account menu.
+  - A rail on the left holds search, Home, Inbox and every project you're on,
+    with the current one's pages opened out. `[` collapses it to icons.
+  - **Home** shows open issues assigned to you, what's due or overdue this
+    week, issues you opened recently (kept in your browser only), and your
+    projects. It's where you land after signing in.
+  - **Inbox** lists every notification by day, with All/Unread and
+    mark-as-read; the bell stays as a quick preview.
+  - In ⌘K search, an empty query shows recently viewed issues, and `→` on an
+    issue opens its actions: open, assign to me, move to any status the
+    workflow allows, copy the link.
+  - `g h` goes to Home and `g n` to the Inbox. Switch back any time with
+    **Use the classic layout**.
 - 🔁 **Custom Workflows, per project**:
   - Add, rename, reorder, recolor, or delete statuses; the board shows one column per
     non-backlog status, in the order you set.
@@ -291,8 +304,8 @@ A few other changes are worth knowing about when upgrading:
 
 Every delivery carries `X-Trackr-Event` and `X-Trackr-Delivery`. The
 `X-Jira-Event` and `X-Jira-Delivery` copies are **deprecated** since 0.32.0:
-they are still sent in 0.32.x and will be removed in 0.33.0, so switch
-receivers to the `X-Trackr-*` names. Webhook filters use TQL, Trackr's query
+they are still sent in 0.32.x and 0.33.x and will be removed in 0.34.0, so
+switch receivers to the `X-Trackr-*` names. Webhook filters use TQL, Trackr's query
 language, with the same syntax as before.
 
 ## 🔒 Single Sign-On (OIDC)

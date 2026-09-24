@@ -100,6 +100,8 @@ const SIDES = {
 
 export interface SheetContentProps extends OverlayContentProps {
   side?: keyof typeof SIDES;
+  /** Classes for the scrolling body, e.g. "p-0" for content with its own padding. */
+  bodyClassName?: string;
 }
 
 /** A panel that slides in from an edge: navigation on phones, an issue beside a list. */
@@ -110,6 +112,7 @@ export function SheetContent({
   footer,
   side = "right",
   className,
+  bodyClassName,
   children,
   ...props
 }: SheetContentProps) {
@@ -126,10 +129,14 @@ export function SheetContent({
         )}
         {...props}
       >
-        <div className="border-b border-subtle px-5 py-4">
-          <Header title={title} description={description} showTitle={showTitle} />
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        {showTitle ? (
+          <div className="border-b border-subtle px-5 py-4">
+            <Header title={title} description={description} showTitle />
+          </div>
+        ) : (
+          <Header title={title} description={description} showTitle={false} />
+        )}
+        <div className={cn("min-h-0 flex-1 overflow-y-auto px-5 py-4", bodyClassName)}>{children}</div>
         {footer ? <div className="flex justify-end gap-2 border-t border-subtle px-5 py-3">{footer}</div> : null}
         <CloseButton />
       </RadixDialog.Content>

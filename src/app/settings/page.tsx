@@ -6,6 +6,8 @@ import { requireInstanceAdmin } from "@/lib/auth/guards";
 import Navbar from "@/components/layout/Navbar";
 import GeneralSettingsView from "@/components/settings/GeneralSettingsView";
 import { SearchProvider } from "@/context/SearchContext";
+import ShellPage from "@/components/shell/ShellPage";
+import { getCurrentUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,19 @@ export default async function SettingsPage() {
     getSystemInfo().catch(() => null),
   ]);
   const defaultProject = allProjects.length > 0 ? allProjects[0] : null;
+  const user = await getCurrentUser();
+
+  if (user?.useNewLayout) {
+    return (
+      <ShellPage projects={allProjects as any}>
+        <div className="flex flex-1 flex-col items-center overflow-y-auto bg-page p-6 md:p-10">
+          <div className="w-full max-w-4xl">
+            <GeneralSettingsView initialSystemInfo={systemInfo} />
+          </div>
+        </div>
+      </ShellPage>
+    );
+  }
 
   return (
     <SearchProvider>

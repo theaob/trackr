@@ -17,7 +17,8 @@
   --color-border-strong: 200 206 216;
   --color-ink: 22 27 38;
   --color-ink-2: 79 90 109;
-  --color-muted: 102 112 133;
+  /* #626C80: at least 4.5:1 on every light surface, sunk and accent-soft included. */
+  --color-muted: 98 108 128;
   --color-accent: 47 91 234;
   --color-accent-hover: 36 74 204;
   --color-accent-soft: 234 240 255;

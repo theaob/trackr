@@ -13,6 +13,19 @@ export function isInputElement(target: EventTarget | null): boolean {
   return false;
 }
 
+/** Where a "g then …" sequence goes. */
+export type NavigateDestination =
+  | "board"
+  | "backlog"
+  | "issues"
+  | "roadmap"
+  | "releases"
+  | "reports"
+  | "settings"
+  | "projects"
+  | "home"
+  | "inbox";
+
 export interface KeyboardShortcutHandlers {
   onCreateIssue?: () => void;
   onToggleSidebar?: () => void;
@@ -20,7 +33,7 @@ export interface KeyboardShortcutHandlers {
   onFocusSearch?: () => void;
   onOpenSpotlight?: () => void;
   onCloseModal?: () => void;
-  onNavigate?: (destination: "board" | "backlog" | "issues" | "roadmap" | "releases" | "reports" | "settings" | "projects") => void;
+  onNavigate?: (destination: NavigateDestination) => void;
 }
 
 export interface UseKeyboardShortcutsOptions {
@@ -115,6 +128,14 @@ export function useKeyboardShortcuts({ enabled = true, handlers }: UseKeyboardSh
           case "p":
             e.preventDefault();
             handlersRef.current.onNavigate?.("projects");
+            return;
+          case "h":
+            e.preventDefault();
+            handlersRef.current.onNavigate?.("home");
+            return;
+          case "n":
+            e.preventDefault();
+            handlersRef.current.onNavigate?.("inbox");
             return;
           default:
             // Any other key cancels the sequence and gets processed normally if matching

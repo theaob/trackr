@@ -15,11 +15,11 @@ const SHORTCUTS: ShortcutItem[] = [
   { keys: ["⌘ / Ctrl", "K"], description: "Search issues, pages and projects", category: "Global" },
   { keys: ["/"], description: "Filter the board, backlog or issue list (search elsewhere)", category: "Global" },
   { keys: ["?"], description: "Open keyboard shortcuts cheat sheet", category: "Global" },
-  { keys: ["["], description: "Toggle sidebar collapsed/expanded", category: "Global" },
+  { keys: ["["], description: "Collapse or expand the sidebar", category: "Global" },
   { keys: ["Esc"], description: "Close active modal, dropdown, or blur search", category: "Global" },
 
   // Navigation
-  { keys: ["g", "d"], description: "Go to Active Board", category: "Navigation" },
+  { keys: ["g", "d"], description: "Go to Board", category: "Navigation" },
   { keys: ["g", "b"], description: "Go to Backlog", category: "Navigation" },
   { keys: ["g", "i"], description: "Go to Issues navigator", category: "Navigation" },
   { keys: ["g", "r"], description: "Go to Roadmap", category: "Navigation" },
@@ -27,6 +27,8 @@ const SHORTCUTS: ShortcutItem[] = [
   { keys: ["g", "e"], description: "Go to Reports", category: "Navigation" },
   { keys: ["g", "s"], description: "Go to Project Settings", category: "Navigation" },
   { keys: ["g", "p"], description: "Go to All Projects", category: "Navigation" },
+  { keys: ["g", "h"], description: "Go to Home (new layout)", category: "Navigation" },
+  { keys: ["g", "n"], description: "Go to Inbox (new layout)", category: "Navigation" },
 
   // Forms & Dialogs
   { keys: ["←", "→"], description: "Navigate to previous / next issue", category: "Forms & Dialogs" },

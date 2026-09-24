@@ -27,6 +27,7 @@ import {
   LogOut,
   LogIn,
   Settings,
+  Sparkles,
 } from "lucide-react";
 import PersonalAccessTokensModal from "@/components/auth/PersonalAccessTokensModal";
 import AccountSecurityModal from "@/components/auth/AccountSecurityModal";
@@ -34,7 +35,7 @@ import { TrackrLogo } from "@/components/common/TrackrLogo";
 import UserAvatar from "@/components/common/UserAvatar";
 import { useProjectPermissions } from "@/hooks/useProjectPermissions";
 import { resolveUserProjectRole } from "@/lib/permissions";
-import { logout } from "@/lib/actions/auth";
+import { useAccountActions } from "@/hooks/useAccountActions";
 import { useModKeyLabel } from "@/hooks/useModKeyLabel";
 import { filterablePage } from "@/lib/spotlight";
 import { FILTER_PAGE_EVENT } from "@/components/common/SpotlightSearch";
@@ -55,7 +56,9 @@ export default function Navbar({
   onToggleMobileMenu,
 }: NavbarProps) {
   const pathname = usePathname();
-  const { currentUser, users, setCurrentUser, setUsers } = useCurrentUser();
+  const { currentUser } = useCurrentUser();
+  const { avatarUploading, uploadAvatar, deleteAvatar, signingOut, signOut, switchingLayout, switchLayout } =
+    useAccountActions();
   const permissions = useProjectPermissions(currentProject);
   const { searchQuery, setSearchQuery } = useSearch();
   const { openShortcutsModal, openSpotlight } = useKeyboardShortcutsContext();
@@ -76,8 +79,6 @@ export default function Navbar({
   const [showTokensModal, setShowTokensModal] = useState(false);
   const [showSecurityModal, setShowSecurityModal] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-  const [avatarUploading, setAvatarUploading] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const projectMenuRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -113,65 +114,11 @@ export default function Navbar({
     };
   }, []);
 
-  const handleSignOut = async () => {
-    setSigningOut(true);
-    try {
-      await logout();
-      // Full navigation, for the same reason as sign-in: a client-side replace
-      // racing a refresh can leave stale session state on screen.
-      window.location.assign("/login");
-    } catch {
-      setSigningOut(false);
-    }
-  };
-
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !currentUser) return;
-
-    setAvatarUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("avatar", file);
-
-      const res = await fetch(`/api/v1/users/${currentUser.id}/avatar`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setCurrentUser({ ...currentUser, avatarUrl: data.user.avatarUrl });
-        setUsers(users.map((u) => u.id === currentUser.id ? { ...u, avatarUrl: data.user.avatarUrl } : u));
-      }
-    } catch (err) {
-      console.error("Avatar upload failed:", err);
-    } finally {
-      setAvatarUploading(false);
-      if (avatarInputRef.current) avatarInputRef.current.value = "";
-    }
+    if (file) await uploadAvatar(file);
+    if (avatarInputRef.current) avatarInputRef.current.value = "";
   };
-
-  const handleAvatarDelete = async () => {
-    if (!currentUser) return;
-
-    setAvatarUploading(true);
-    try {
-      const res = await fetch(`/api/v1/users/${currentUser.id}/avatar`, {
-        method: "DELETE",
-      });
-
-      if (res.ok) {
-        setCurrentUser({ ...currentUser, avatarUrl: null });
-        setUsers(users.map((u) => u.id === currentUser.id ? { ...u, avatarUrl: null } : u));
-      }
-    } catch (err) {
-      console.error("Avatar delete failed:", err);
-    } finally {
-      setAvatarUploading(false);
-    }
-  };
-
 
   return (
     <header className="h-14 border-b border-jira-gray-300 bg-white px-3 sm:px-4 flex items-center justify-between select-none z-30 relative shadow-sm">
@@ -505,7 +452,7 @@ export default function Navbar({
                   </button>
                   {currentUser?.avatarUrl && (
                     <button
-                      onClick={handleAvatarDelete}
+                      onClick={deleteAvatar}
                       disabled={avatarUploading}
                       className="p-2 text-jira-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
                       title="Remove avatar"
@@ -554,9 +501,24 @@ export default function Navbar({
                 </div>
               )}
 
+              <div className="py-1 border-b border-jira-gray-200">
+                <button
+                  onClick={() => switchLayout(true)}
+                  disabled={switchingLayout}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-jira-navy hover:bg-jira-gray-100 transition-colors disabled:opacity-50"
+                >
+                  {switchingLayout ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-jira-blue" />
+                  ) : (
+                    <Sparkles className="w-3.5 h-3.5 text-jira-blue" />
+                  )}
+                  <span>Try the new layout</span>
+                </button>
+              </div>
+
               <div className="py-1">
                 <button
-                  onClick={handleSignOut}
+                  onClick={signOut}
                   disabled={signingOut}
                   className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-jira-navy hover:bg-jira-gray-100 transition-colors disabled:opacity-50"
                 >

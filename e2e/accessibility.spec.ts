@@ -60,6 +60,30 @@ test.describe.serial("accessibility", () => {
     await expectNoSeriousViolations(page, "Projects");
   });
 
+  test("new layout: Home, Inbox and a project page", async () => {
+    await page.goto("/projects");
+    await page.getByRole("button", { name: /Ada Lovelace/ }).first().click();
+    await page.getByRole("button", { name: "Try the new layout" }).click();
+    await page.waitForURL(/\/home/);
+    await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Assigned to you" })).toBeVisible();
+    await expectNoSeriousViolations(page, "Home");
+
+    await page.getByRole("link", { name: /^Inbox/ }).click();
+    await page.waitForURL(/\/inbox/);
+    await expect(page.getByText(/Your inbox is empty|Mark all as read/).first()).toBeVisible();
+    await expectNoSeriousViolations(page, "Inbox");
+
+    await page.goto("/projects");
+    await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toBeVisible();
+    await expectNoSeriousViolations(page, "Projects (new layout)");
+
+    // Back to classic, so a re-run starts from the same place.
+    await page.getByRole("button", { name: /Ada Lovelace/ }).click();
+    await page.getByRole("menuitem", { name: "Use the classic layout" }).click();
+    await page.waitForLoadState("load");
+  });
+
   test("sign-in", async ({ browser }, testInfo) => {
     const signedOutContext = await browser.newContext({ baseURL: testInfo.project.use.baseURL });
     const signedOut = await signedOutContext.newPage();

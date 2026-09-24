@@ -41,7 +41,7 @@ describe("Sidebar", () => {
   it("renders navigation items under planning section", () => {
     const html = renderToStaticMarkup(React.createElement(Sidebar, { project: mockProject }));
     expect(html).toContain("Planning");
-    expect(html).toContain("Active Board");
+    expect(html).toContain(">Board<");
     expect(html).toContain("Backlog");
     expect(html).toContain("Roadmap");
     expect(html).toContain("Issues");

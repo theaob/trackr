@@ -5,6 +5,7 @@ import ProjectsDirectoryView from "@/components/projects/ProjectsDirectoryView";
 import Navbar from "@/components/layout/Navbar";
 import { SearchProvider } from "@/context/SearchContext";
 import { getCurrentUser } from "@/lib/auth/session";
+import ShellPage from "@/components/shell/ShellPage";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,16 @@ export default async function ProjectsPage() {
   if (!user && allProjects.length === 0) redirect("/login");
 
   const defaultProject = allProjects.length > 0 ? allProjects[0] : null;
+
+  if (user?.useNewLayout) {
+    return (
+      <ShellPage projects={allProjects as any} users={users as any}>
+        <div className="flex flex-1 overflow-hidden">
+          <ProjectsDirectoryView initialProjects={projectsWithStats as any} users={users as any} />
+        </div>
+      </ShellPage>
+    );
+  }
 
   return (
     <SearchProvider>

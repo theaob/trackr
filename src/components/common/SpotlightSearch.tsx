@@ -3,7 +3,11 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  ArrowLeft,
   BarChart3,
+  Clock,
+  Copy,
+  ExternalLink,
   Filter,
   Kanban,
   Keyboard,
@@ -17,11 +21,23 @@ import {
   Search,
   Settings,
   Shield,
+  UserCheck,
+  ArrowRightLeft,
+  Link2,
 } from "lucide-react";
 import { useCurrentUser } from "@/context/UserContext";
 import { useModKeyLabel } from "@/hooks/useModKeyLabel";
 import { IssueTypeIcon, StatusBadge } from "@/components/common/IssueIcons";
-import { getSpotlightProjects, searchSpotlightIssues } from "@/lib/actions/search";
+import {
+  getSpotlightIssueActions,
+  getSpotlightProjects,
+  searchSpotlightIssues,
+  type SpotlightIssueActions,
+} from "@/lib/actions/search";
+import { updateIssue } from "@/lib/actions/issues";
+import { readRecentIssues } from "@/lib/recentIssuesStore";
+import { prettifyStatusName } from "@/lib/workflowDisplay";
+import { useToast } from "@/components/ui/Toast";
 import {
   PAGE_SHORTCUTS,
   SpotlightDestination,
@@ -65,6 +81,10 @@ interface Row {
   id: string;
   href?: string;
   run?: () => void;
+  /** An issue row: → opens its actions. */
+  issue?: { key: string; title: string };
+  /** What typing matches, for rows in an issue's actions list. */
+  searchText?: string;
   render: (active: boolean) => React.ReactNode;
 }
 
@@ -123,6 +143,11 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
   const [searching, setSearching] = useState(false);
   const [active, setActive] = useState(0);
   const searchSeq = useRef(0);
+  const { toast } = useToast();
+  // The actions list for one issue, entered with → on an issue row.
+  const [actionsFor, setActionsFor] = useState<{ key: string; title: string } | null>(null);
+  const [issueActions, setIssueActions] = useState<SpotlightIssueActions | null | "loading">(null);
+  const recent = useMemo(() => readRecentIssues(currentUser?.id).slice(0, 5), [currentUser?.id]);
 
   const currentProjectKey = projectKeyFromPath(pathname);
   const filterable = filterablePage(pathname);
@@ -147,7 +172,7 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
   }, []);
 
   useEffect(() => {
-    if (!q) {
+    if (!q || actionsFor) {
       searchSeq.current++;
       setIssues([]);
       setSearching(false);
@@ -165,11 +190,33 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
         });
     }, 120);
     return () => clearTimeout(timer);
-  }, [q, currentProjectKey]);
+  }, [q, currentProjectKey, actionsFor]);
 
   useEffect(() => {
     setActive(0);
-  }, [q]);
+  }, [q, actionsFor]);
+
+  const openActions = (issue: { key: string; title: string }) => {
+    setActionsFor(issue);
+    setQuery("");
+    setIssueActions("loading");
+    getSpotlightIssueActions(issue.key).then((result) => setIssueActions(result));
+  };
+  const closeActions = () => {
+    setActionsFor(null);
+    setIssueActions(null);
+    setQuery("");
+  };
+
+  const runIssueUpdate = async (issueId: string, data: Parameters<typeof updateIssue>[1], done: string) => {
+    const res = await updateIssue(issueId, data);
+    if (res && "success" in res && res.success === false) {
+      toast({ title: "Couldn't update the issue", description: res.error, tone: "danger" });
+      return;
+    }
+    toast({ title: done, tone: "success" });
+    router.refresh();
+  };
 
   const destinations = useMemo(
     () =>
@@ -219,9 +266,17 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
       };
     };
 
+    const actionsHint = (isActive: boolean) =>
+      isActive ? (
+        <span className="hidden sm:flex items-center gap-1 shrink-0 text-xs text-white/80">
+          <Keys keys={["→"]} active /> actions
+        </span>
+      ) : null;
+
     const issueRow = (issue: SpotlightIssue): Row => ({
       id: `issue:${issue.id}`,
       href: spotlightIssueHref(issue.projectKey, issue.key),
+      issue: { key: issue.key, title: issue.title },
       render: (isActive) => (
         <>
           <span className="w-7 flex justify-center shrink-0">
@@ -240,6 +295,23 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
           <span className={`hidden sm:inline-flex shrink-0 rounded ${isActive ? "bg-white" : ""}`}>
             <StatusBadge status={issue.status} color={issue.statusColor} className="max-w-[9rem]" />
           </span>
+          {actionsHint(isActive)}
+        </>
+      ),
+    });
+
+    const recentRow = (item: { key: string; title: string; projectKey: string }): Row => ({
+      id: `recent:${item.key}`,
+      href: spotlightIssueHref(item.projectKey, item.key),
+      issue: { key: item.key, title: item.title },
+      render: (isActive) => (
+        <>
+          <span className="w-7 flex justify-center shrink-0">
+            <Clock className="w-3.5 h-3.5" aria-hidden="true" />
+          </span>
+          <span className={`font-mono text-xs shrink-0 ${isActive ? "text-white/85" : "text-jira-gray-600"}`}>{item.key}</span>
+          <span className="min-w-0 flex-1 truncate font-medium">{item.title}</span>
+          {actionsHint(isActive)}
         </>
       ),
     });
@@ -279,7 +351,47 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
     }
 
     const result: Group[] = [];
-    if (!q) {
+    if (actionsFor) {
+      const info = issueActions && issueActions !== "loading" ? issueActions : null;
+      const href = spotlightIssueHref(info?.projectKey ?? actionsFor.key.replace(/-\d+$/, ""), actionsFor.key);
+      const absolute = () => new URL(href, window.location.origin).toString();
+      const copy = (text: string, what: string) => () => {
+        navigator.clipboard?.writeText(text).then(
+          () => toast({ title: `${what} copied`, tone: "success" }),
+          () => toast({ title: `Couldn't copy the ${what.toLowerCase()}`, tone: "danger" })
+        );
+      };
+      const rows: Row[] = [
+        { ...actionRow("act:open", `Open ${actionsFor.key}`, <ExternalLink className="w-4 h-4" />, () => {}), run: undefined, href, searchText: "open view" },
+        {
+          ...actionRow("act:newtab", "Open in a new tab", <ExternalLink className="w-4 h-4" />, () => window.open(href, "_blank", "noopener"), [modKey, "↵"]),
+          searchText: "open in a new tab window",
+        },
+      ];
+      if (info?.canEdit && !info.assignedToMe && currentUser) {
+        rows.push({
+          ...actionRow("act:assign", "Assign to me", <UserCheck className="w-4 h-4" />, () =>
+            runIssueUpdate(info.id, { assigneeId: currentUser.id }, `${info.key} assigned to you`)
+          ),
+          searchText: "assign to me take",
+        });
+      }
+      for (const move of info?.moves ?? []) {
+        const label = prettifyStatusName(move.name);
+        rows.push({
+          ...actionRow(`act:move:${move.name}`, <>Move to <span className="font-semibold">{label}</span></>, <ArrowRightLeft className="w-4 h-4" />, () =>
+            runIssueUpdate(info!.id, { status: move.name }, `${info!.key} moved to ${label}`)
+          ),
+          searchText: `move to status ${label} ${move.name}`,
+        });
+      }
+      rows.push({ ...actionRow("act:copy-link", "Copy link", <Link2 className="w-4 h-4" />, () => copy(absolute(), "Link")()), searchText: "copy link url share" });
+      rows.push({ ...actionRow("act:copy-key", `Copy “${actionsFor.key}”`, <Copy className="w-4 h-4" />, copy(actionsFor.key, "Key")), searchText: `copy key ${actionsFor.key}` });
+      const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+      const matching = rows.filter((r) => words.every((w) => (r.searchText ?? "").toLowerCase().includes(w)));
+      result.push({ label: `Actions on ${actionsFor.key}`, rows: matching });
+    } else if (!q) {
+      if (recent.length > 0) result.push({ label: "Recently viewed", rows: recent.map(recentRow) });
       const here = destinations.filter((d) => d.kind === "page" && d.current);
       const global = destinations.filter((d) => d.kind === "page" && !d.projectKey);
       const currentName = destinations.find((d) => d.kind === "project" && d.current)?.title;
@@ -302,7 +414,9 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
       result.push({ label: "Actions", rows: actions });
     }
     return result.filter((g) => g.rows.length > 0);
-  }, [q, issues, destinations, currentProjectKey, filterable, onCreateIssue, onShowShortcuts]);
+    // runIssueUpdate and toast only close over stable values.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, issues, destinations, currentProjectKey, filterable, onCreateIssue, onShowShortcuts, actionsFor, issueActions, recent, modKey, currentUser]);
 
   const rows = useMemo(() => groups.flatMap((g) => g.rows), [groups]);
   const activeIndex = rows.length === 0 ? -1 : Math.min(active, rows.length - 1);
@@ -332,6 +446,19 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
       e.preventDefault();
       e.stopPropagation();
     };
+    const input = e.currentTarget;
+    const caretAtEnd = input.selectionStart === input.value.length && input.selectionEnd === input.value.length;
+    const caretAtStart = input.selectionStart === 0 && input.selectionEnd === 0;
+    if (e.key === "ArrowRight" && !actionsFor && caretAtEnd && activeIndex >= 0 && rows[activeIndex]?.issue) {
+      stop();
+      openActions(rows[activeIndex].issue!);
+      return;
+    }
+    if (actionsFor && ((e.key === "ArrowLeft" && caretAtStart) || (e.key === "Backspace" && !query))) {
+      stop();
+      closeActions();
+      return;
+    }
     if (e.key === "ArrowDown") {
       stop();
       if (rows.length) setActive((activeIndex + 1) % rows.length);
@@ -344,6 +471,7 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
     } else if (e.key === "Escape") {
       stop();
       if (query) setQuery("");
+      else if (actionsFor) closeActions();
       else onClose();
     } else if (e.key === "Tab") {
       stop();
@@ -366,7 +494,19 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
         className="w-full max-w-[680px] rounded-2xl bg-white/95 sm:bg-white/85 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_24px_80px_rgba(9,30,66,0.30),0_2px_8px_rgba(9,30,66,0.12)] ring-1 ring-black/10 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
       >
         <div className="flex items-center gap-3 px-4 h-14">
-          <Search className="w-6 h-6 text-jira-gray-500 shrink-0" aria-hidden="true" />
+          {actionsFor ? (
+            <button
+              type="button"
+              onClick={closeActions}
+              aria-label={`Back to results (leaving actions on ${actionsFor.key})`}
+              className="flex items-center gap-1 shrink-0 rounded-md bg-jira-gray-100 px-2 py-1 font-mono text-xs text-jira-navy hover:bg-jira-gray-200"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
+              {actionsFor.key}
+            </button>
+          ) : (
+            <Search className="w-6 h-6 text-jira-gray-500 shrink-0" aria-hidden="true" />
+          )}
           <input
             ref={inputRef}
             id="spotlight-input"
@@ -381,20 +521,26 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search issues, pages and projects"
-            className="flex-1 min-w-0 bg-transparent text-[22px] font-light text-jira-navy placeholder:text-jira-gray-500"
+            placeholder={actionsFor ? `What to do with ${actionsFor.key}…` : "Search issues, pages and projects"}
+            aria-label={actionsFor ? `Actions on ${actionsFor.key}` : "Search issues, pages and projects"}
+            className="flex-1 min-w-0 bg-transparent text-[22px] font-light text-jira-navy placeholder:text-jira-gray-500 focus-visible:outline-none"
           />
-          {searching && <Loader2 className="w-4 h-4 text-jira-gray-500 animate-spin shrink-0" aria-label="Searching" />}
+          {(searching || issueActions === "loading") && (
+            <Loader2 className="w-4 h-4 text-jira-gray-500 animate-spin shrink-0" aria-label={searching ? "Searching" : "Loading actions"} />
+          )}
         </div>
 
-        {(rows.length > 0 || (q && !searching)) && (
+        {(rows.length > 0 || (q && !searching) || actionsFor) && (
           <div
             id="spotlight-results"
             role="listbox"
             aria-label="Results"
             className="border-t border-black/5 max-h-[min(440px,60vh)] overflow-y-auto overscroll-contain px-2 py-2"
           >
-            {rows.length === 0 && (
+            {rows.length === 0 && actionsFor && (
+              <div className="px-3 py-6 text-center text-sm text-jira-gray-600">No action matches “{q}”.</div>
+            )}
+            {rows.length === 0 && !actionsFor && (
               <div className="px-3 py-6 text-center text-sm text-jira-gray-600">
                 No results for <span className="font-semibold text-jira-navy">“{q}”</span>. Try an issue key such as{" "}
                 <span className="font-mono">{currentProjectKey ?? "APOLLO"}-12</span>.
@@ -442,6 +588,9 @@ export default function SpotlightSearch({ onClose, onCreateIssue, onShowShortcut
           </span>
           <span className="flex items-center gap-1.5">
             <Keys keys={[modKey, "↵"]} active={false} /> in a new tab
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Keys keys={actionsFor ? ["←"] : ["→"]} active={false} /> {actionsFor ? "back" : "issue actions"}
           </span>
           <span className="ml-auto flex items-center gap-1.5">
             <Keys keys={["esc"]} active={false} /> to close

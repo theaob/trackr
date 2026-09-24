@@ -56,7 +56,7 @@ export default function Sidebar({
     isAdministrative?: boolean;
   }> = [
     {
-      name: "Active Board",
+      name: "Board",
       href: `/projects/${project.key}/board`,
       icon: Kanban,
     },

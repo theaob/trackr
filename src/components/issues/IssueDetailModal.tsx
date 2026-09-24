@@ -15,6 +15,7 @@ import IssueDescriptionEditor from "@/components/issues/IssueDescriptionEditor";
 
 import Link from "next/link";
 import { useCurrentUser } from "@/context/UserContext";
+import { recordRecentIssue } from "@/lib/recentIssuesStore";
 import { updateIssue, deleteIssue, getIssueByKeyOrId, getOlderIssueHistory } from "@/lib/actions/issues";
 import {
   HistoryKind,
@@ -164,6 +165,19 @@ export default function IssueDetailModal({
         .finally(() => setIsLoadingVersions(false));
     }
   }, [versions, currentIssue?.projectId]);
+
+  // Remembered for Home and ⌘K search ("recently viewed"), in this browser only.
+  const viewedKey = currentIssue?.key;
+  const viewedTitle = currentIssue?.title;
+  const viewedProjectKey = currentIssue?.project?.key;
+  useEffect(() => {
+    if (!viewedKey || !viewedTitle) return;
+    recordRecentIssue(currentUser?.id, {
+      key: viewedKey,
+      title: viewedTitle,
+      projectKey: viewedProjectKey ?? viewedKey.replace(/-\d+$/, ""),
+    });
+  }, [currentUser?.id, viewedKey, viewedTitle, viewedProjectKey]);
 
   const issueId = issue?.id;
   useEffect(() => {

@@ -2,7 +2,8 @@
 
 import prisma from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
-import { accessibleProjectIds } from "@/lib/auth/guards";
+import { accessibleProjectIds, checkProjectPermission } from "@/lib/auth/guards";
+import { allowedNextStatusNames } from "@/lib/workflowDisplay";
 import { attachStatusColors } from "@/lib/statusColorLookup";
 import {
   SPOTLIGHT_MAX_QUERY,
@@ -96,5 +97,67 @@ export async function searchSpotlightIssues(
   } catch (error) {
     console.error("Failed to search issues:", error);
     return [];
+  }
+}
+
+export interface SpotlightIssueActions {
+  id: string;
+  key: string;
+  title: string;
+  status: string;
+  projectKey: string;
+  assignedToMe: boolean;
+  /** Whether the caller may edit it; assign and move are offered only then. */
+  canEdit: boolean;
+  /** Statuses the workflow allows moving to from the current one. */
+  moves: { name: string; color: string }[];
+}
+
+/**
+ * What ⌘K search can do to one issue, for its actions list. Null when the
+ * caller can't see the issue. The actions themselves go through updateIssue,
+ * which checks permission and the workflow again.
+ */
+export async function getSpotlightIssueActions(issueKey: string): Promise<SpotlightIssueActions | null> {
+  if (typeof issueKey !== "string" || !/^[A-Za-z][A-Za-z0-9]*-\d+$/.test(issueKey)) return null;
+  try {
+    const user = await getCurrentUser();
+    const projectIds = await accessibleProjectIds(user?.id ?? null);
+    if (projectIds.length === 0) return null;
+
+    const issue = await prisma.issue.findFirst({
+      where: { key: issueKey.toUpperCase(), projectId: { in: projectIds } },
+      select: { id: true, key: true, title: true, status: true, projectId: true, assigneeId: true, project: { select: { key: true } } },
+    });
+    if (!issue) return null;
+
+    const canEdit = user ? (await checkProjectPermission(user.id, issue.projectId, "EDIT_ISSUE")).allowed : false;
+    let moves: { name: string; color: string }[] = [];
+    if (canEdit) {
+      const [statuses, transitions] = await Promise.all([
+        prisma.workflowStatus.findMany({
+          where: { projectId: issue.projectId },
+          select: { id: true, name: true, color: true },
+          orderBy: { order: "asc" },
+        }),
+        prisma.workflowTransition.findMany({ where: { projectId: issue.projectId }, select: { fromId: true, toId: true } }),
+      ]);
+      const allowed = new Set(allowedNextStatusNames(issue.status, statuses, transitions));
+      moves = statuses.filter((s) => allowed.has(s.name) && s.name !== issue.status).map((s) => ({ name: s.name, color: s.color }));
+    }
+
+    return {
+      id: issue.id,
+      key: issue.key,
+      title: issue.title,
+      status: issue.status,
+      projectKey: issue.project.key,
+      assignedToMe: !!user && issue.assigneeId === user.id,
+      canEdit,
+      moves,
+    };
+  } catch (error) {
+    console.error("Failed to load issue actions:", error);
+    return null;
   }
 }

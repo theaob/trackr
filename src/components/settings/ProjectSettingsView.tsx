@@ -261,7 +261,7 @@ export default function ProjectSettingsView({
             className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-jira-blue hover:bg-jira-blue-hover text-white rounded-md text-xs font-semibold shadow-xs transition-colors"
           >
             <Kanban className="w-4 h-4" />
-            <span>Back to Active Board</span>
+            <span>Back to Board</span>
           </Link>
           <Link prefetch={false}
             href={`/projects/${project.key}/issues`}

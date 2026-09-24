@@ -217,7 +217,7 @@ describe("Mobile Viewport & Navigation", () => {
     expect(html).toContain("md:hidden fixed inset-0 z-50 flex");
     expect(html).toContain("bg-black/50");
     expect(html).toContain("Close navigation");
-    expect(html).toContain("Active Board");
+    expect(html).toContain(">Board<");
     expect(html).toContain("Backlog");
     expect(html).toContain("Switch Project");
   });
@@ -385,7 +385,7 @@ describe("Mobile Viewport & Navigation", () => {
     const asideIndex = html.indexOf("<aside");
     const mobileDrawerHtml = html.slice(0, asideIndex);
     expect(mobileDrawerHtml).not.toContain("Project Settings");
-    expect(mobileDrawerHtml).toContain("Active Board");
+    expect(mobileDrawerHtml).toContain(">Board<");
     expect(mobileDrawerHtml).toContain("Backlog");
 
     // Desktop sidebar section DOES contain Project Settings
@@ -436,7 +436,7 @@ describe("Mobile Viewport & Navigation", () => {
     // Mobile notice visible on md:hidden
     expect(html).toContain("md:hidden flex-1 flex flex-col items-center justify-center");
     expect(html).toContain("Desktop Only Feature");
-    expect(html).toContain("Back to Active Board");
+    expect(html).toContain("Back to Board");
     expect(html).toContain("Back to Issues");
 
     // Desktop settings layout wrapped in hidden md:block

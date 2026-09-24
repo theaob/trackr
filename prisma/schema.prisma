@@ -21,6 +21,8 @@ model User {
   // Part of every session cookie. Bumping it (password change, "sign out
   // everywhere") invalidates every cookie issued before.
   sessionVersion    Int        @default(0)
+  // The redesigned shell (rail, Home, Inbox), opt-in for one release.
+  useNewLayout      Boolean    @default(false)
   assignedIssues Issue[]       @relation("Assignee")
   reportedIssues Issue[]       @relation("Reporter")
   comments       Comment[]

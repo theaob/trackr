@@ -21,6 +21,8 @@ export interface SessionUser {
   role: string;
   canCreateProjects?: boolean;
   isInstanceAdmin?: boolean;
+  /** The redesigned shell, while it is opt-in. */
+  useNewLayout?: boolean;
 }
 
 /**

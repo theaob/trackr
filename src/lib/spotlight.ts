@@ -48,9 +48,9 @@ export interface SpotlightIssue {
 /** Longer queries are cut to this before they reach the database. */
 export const SPOTLIGHT_MAX_QUERY = 100;
 
-/** The same names and order as the project sidebar. */
-const PROJECT_PAGES: { id: SpotlightPageId; title: string; keywords: string; signedInOnly?: boolean }[] = [
-  { id: "board", title: "Active Board", keywords: "board kanban sprint columns" },
+/** The same names and order as the project sidebar and the rail. */
+export const PROJECT_PAGES: { id: SpotlightPageId; title: string; keywords: string; signedInOnly?: boolean }[] = [
+  { id: "board", title: "Board", keywords: "board active kanban sprint columns" },
   { id: "backlog", title: "Backlog", keywords: "sprints planning" },
   { id: "roadmap", title: "Roadmap", keywords: "epics timeline" },
   { id: "issues", title: "Issues", keywords: "list navigator search tql filter" },
