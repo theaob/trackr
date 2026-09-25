@@ -252,61 +252,62 @@ export async function setWorkflowTransition(
   }
 }
 
-export async function allowAllIncomingTransitions(projectId: string, toId: string) {
-  try {
-    await requireProjectPermission(projectId, "PROJECT_ADMIN");
-
-    const statuses = await prisma.workflowStatus.findMany({
-      where: { projectId },
-      select: { id: true },
-    });
-    const targetStatus = statuses.find((s) => s.id === toId);
-    if (!targetStatus) {
-      return { success: false as const, error: "Target status not found." };
-    }
-
-    const otherStatusIds = statuses.filter((s) => s.id !== toId).map((s) => s.id);
-    if (otherStatusIds.length === 0) {
-      return { success: true as const };
-    }
-
-    await prisma.$transaction(
-      otherStatusIds.map((fromId) =>
-        prisma.workflowTransition.upsert({
-          where: { fromId_toId: { fromId, toId } },
-          create: { projectId, fromId, toId },
-          update: {},
-        })
-      )
-    );
-
-    return { success: true as const };
-  } catch (error) {
-    return toActionError(error, "Failed to allow incoming transitions");
-  }
-}
-
-export async function clearStatusTransitions(
+/**
+ * Gives a status exactly these destinations (`to`) and sources (`from`), in
+ * one go; moves between other statuses are untouched.
+ */
+export async function setStatusTransitions(
   projectId: string,
   statusId: string,
-  direction: "incoming" | "outgoing" | "both" = "both"
+  data: { to: string[]; from: string[] }
 ) {
   try {
     await requireProjectPermission(projectId, "PROJECT_ADMIN");
 
-    if (direction === "incoming" || direction === "both") {
-      await prisma.workflowTransition.deleteMany({
-        where: { projectId, toId: statusId },
-      });
-    }
-    if (direction === "outgoing" || direction === "both") {
-      await prisma.workflowTransition.deleteMany({
-        where: { projectId, fromId: statusId },
-      });
-    }
+    const statuses = await prisma.workflowStatus.findMany({ where: { projectId }, select: { id: true } });
+    const ids = new Set(statuses.map((s) => s.id));
+    if (!ids.has(statusId)) return { success: false as const, error: "Status not found in this project." };
+
+    const to = [...new Set(data.to)].filter((id) => id !== statusId && ids.has(id));
+    const from = [...new Set(data.from)].filter((id) => id !== statusId && ids.has(id));
+
+    await prisma.$transaction([
+      prisma.workflowTransition.deleteMany({
+        where: { projectId, OR: [{ fromId: statusId }, { toId: statusId }] },
+      }),
+      prisma.workflowTransition.createMany({
+        data: [
+          ...to.map((toId) => ({ projectId, fromId: statusId, toId })),
+          ...from.map((fromId) => ({ projectId, fromId, toId: statusId })),
+        ],
+      }),
+    ]);
 
     return { success: true as const };
   } catch (error) {
-    return toActionError(error, "Failed to clear transitions");
+    return toActionError(error, "Failed to update transitions");
+  }
+}
+
+/** Lets issues move between any two statuses. */
+export async function allowEveryTransition(projectId: string) {
+  try {
+    await requireProjectPermission(projectId, "PROJECT_ADMIN");
+
+    const [statuses, existing] = await Promise.all([
+      prisma.workflowStatus.findMany({ where: { projectId }, select: { id: true } }),
+      prisma.workflowTransition.findMany({ where: { projectId }, select: { fromId: true, toId: true } }),
+    ]);
+    const have = new Set(existing.map((t) => `${t.fromId}:${t.toId}`));
+    const missing = statuses.flatMap((from) =>
+      statuses
+        .filter((to) => to.id !== from.id && !have.has(`${from.id}:${to.id}`))
+        .map((to) => ({ projectId, fromId: from.id, toId: to.id }))
+    );
+    if (missing.length) await prisma.workflowTransition.createMany({ data: missing });
+
+    return { success: true as const };
+  } catch (error) {
+    return toActionError(error, "Failed to allow every move");
   }
 }

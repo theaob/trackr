@@ -311,7 +311,7 @@ export default function ProjectSettingsView({
           Desktop Only Feature
         </h2>
         <p className="text-xs text-ink-2 max-w-sm mb-6 leading-relaxed">
-          Administrative features (project configuration, workflows, state transition graphs, access control, custom fields, and webhooks) are designed for desktop screens.
+          Administrative features (project configuration, workflows and their allowed moves, access control, custom fields, and webhooks) are designed for desktop screens.
         </p>
         <div className="flex flex-col gap-2.5 w-full max-w-xs">
           <Link prefetch={false}

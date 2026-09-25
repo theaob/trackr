@@ -69,11 +69,16 @@
   - With reduced motion turned on in the system, dialogs, menus and pop-overs
     appear without animating.
 - 🔁 **Custom Workflows, per project**:
-  - Add, rename, reorder, recolor, or delete statuses; the board shows one column per
-    non-backlog status, in the order you set.
-  - Define exactly which status can move to which with a transition matrix, enforced
-    everywhere a status can change (issue view, board drag-and-drop, the REST API) --
-    not just hidden from a dropdown.
+  - Add, rename, reorder (drag, or Move up/down from a status's menu), recolor, or
+    delete statuses; the board shows one column per non-backlog status, in the order
+    you set, and the settings page draws that flow at the top.
+  - Each status opens in a side panel with everything about it: name, colour,
+    category, whether it's a board column, its work-in-progress limit, and the
+    statuses issues in it can move to and arrive from.
+  - Define exactly which status can move to which, per status or in the table of
+    allowed moves; it's enforced everywhere a status can change (issue view, board
+    drag-and-drop, the REST API) -- not just hidden from a dropdown. A status nothing
+    leads to, or one issues can't leave, is flagged in the list.
   - Every project starts with the same five statuses as before (`Backlog`, `To Do`,
     `In Progress`, `In Review`, `Done`), fully interconnected, so nothing changes until
     an administrator edits it in **Project Settings → Workflow**, where each status

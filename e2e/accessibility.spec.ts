@@ -425,11 +425,28 @@ test.describe.serial("accessibility", () => {
     await nav.getByRole("button", { name: /^Webhooks/ }).click();
     await expect(page).toHaveURL(/section=webhooks/);
 
+    // Workflow: a status opens in a side panel; adding one gives it moves both ways.
     await nav.getByRole("button", { name: /^Workflow/ }).click();
-    await page.getByRole("button", { name: /^Colour of TODO/ }).click();
-    await expect(page.getByRole("group", { name: "Colour of TODO" })).toBeVisible();
-    await expectNoSeriousViolations(page, "Settings, status colours");
+    await page.getByRole("button", { name: "Edit To Do" }).click();
+    const statusPanel = page.getByRole("dialog", { name: "Edit To Do" });
+    await expect(statusPanel).toBeVisible();
+    await expectNoSeriousViolations(page, "Edit status panel", "[role=dialog]");
+    await statusPanel.getByRole("button", { name: /^Colour:/ }).click();
+    await expect(page.getByRole("group", { name: "Colour" })).toBeVisible();
+    await expectNoSeriousViolations(page, "Status colours", "[data-radix-popper-content-wrapper]");
     await page.keyboard.press("Escape");
+    await page.keyboard.press("Escape");
+    await expect(statusPanel).toBeHidden();
+
+    await page.getByRole("button", { name: "Add status", exact: true }).click();
+    const addPanel = page.getByRole("dialog", { name: "Add status" });
+    await addPanel.getByRole("textbox", { name: /Name/ }).fill("QA");
+    await addPanel.getByRole("button", { name: "Add status" }).click();
+    await expect(addPanel).toBeHidden();
+    await expect(page.getByRole("button", { name: "Edit QA" })).toBeVisible();
+    await expect(page.getByRole("checkbox", { name: "Move from QA to Done" })).toBeChecked();
+    await expect(page.getByRole("checkbox", { name: "Move from To Do to QA" })).toBeChecked();
+    await expectNoSeriousViolations(page, "Settings, workflow with a new status");
 
     await page.goto("/settings");
     await expect(page.getByRole("heading", { level: 1, name: "System settings" })).toBeVisible();
